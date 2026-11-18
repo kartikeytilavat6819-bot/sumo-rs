@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:06.720982-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket791/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket791/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket791/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket791/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket791/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="800"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="blocker" depart="0.00" departLane="target_0" departPos="0.00" departSpeed="0.00" departDelay="0.00" arrival="439.00" arrivalLane="target_0" arrivalPos="119.57" arrivalSpeed="0.50" duration="439.00" routeLength="119.57" waitingTime="0.00" waitingCount="0" stopTime="200.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_blocker fcd_blocker" vType="very_slow" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="victim" depart="6.00" departLane="beg2_0" departPos="100.00" departSpeed="0.00" departDelay="0.00" arrival="442.00" arrivalLane="target_0" arrivalPos="119.57" arrivalSpeed="6.79" duration="436.00" routeLength="157.78" waitingTime="199.00" waitingCount="1" stopTime="0.00" timeLoss="424.26" rerouteNo="0" devices="tripinfo_victim fcd_victim" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="perp" depart="6.00" departLane="beg3_0" departPos="110.00" departSpeed="0.00" departDelay="0.00" arrival="456.00" arrivalLane="target_0" arrivalPos="119.57" arrivalSpeed="1.00" duration="450.00" routeLength="133.96" waitingTime="208.00" waitingCount="2" stopTime="0.00" timeLoss="315.84" rerouteNo="0" devices="tripinfo_perp fcd_perp" vType="slow" speedFactor="1.00" vaporized=""/>
+</tripinfos>

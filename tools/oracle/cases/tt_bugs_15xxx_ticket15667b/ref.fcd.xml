@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:12:32.357113-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_15xxx_ticket15667b/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_15xxx_ticket15667b/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_15xxx_ticket15667b/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_15xxx_ticket15667b/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_15xxx_ticket15667b/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.5"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="v_0" x="98.50" y="98.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="40.00" pos="0.50" lane=":J1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="v_0" x="137.34" y="98.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.84" pos="35.34" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="v_0" x="177.08" y="98.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.74" pos="75.08" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="v_0" x="215.82" y="98.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.84" pos="15.82" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="v_0" x="255.25" y="98.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.43" pos="55.25" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="v_0" x="294.61" y="98.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.35" pos="94.61" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00"/>
+</fcd-export>

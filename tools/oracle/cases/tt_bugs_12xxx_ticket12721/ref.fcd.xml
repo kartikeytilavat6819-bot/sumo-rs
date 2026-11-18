@@ -1,0 +1,1162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:07:42.110343-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_12xxx_ticket12721/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_12xxx_ticket12721/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_12xxx_ticket12721/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_12xxx_ticket12721/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_12xxx_ticket12721/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.2"/>
+    </time>
+
+    <processing>
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="v_0" x="101.60" y="5.10" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="87.40" angle="0.00" type="longBike" speed="0.00" pos="87.40" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.20">
+        <vehicle id="v_0" x="101.60" y="5.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.50" pos="5.20" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="87.45" angle="0.00" type="longBike" speed="0.24" pos="87.45" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.40">
+        <vehicle id="v_0" x="101.60" y="5.40" angle="0.00" type="DEFAULT_VEHTYPE" speed="1.01" pos="5.40" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="87.54" angle="0.00" type="longBike" speed="0.45" pos="87.54" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.60">
+        <vehicle id="v_0" x="101.60" y="5.69" angle="0.00" type="DEFAULT_VEHTYPE" speed="1.44" pos="5.69" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="87.68" angle="0.00" type="longBike" speed="0.69" pos="87.68" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.80">
+        <vehicle id="v_0" x="101.60" y="6.07" angle="0.00" type="DEFAULT_VEHTYPE" speed="1.88" pos="6.07" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="87.86" angle="0.00" type="longBike" speed="0.90" pos="87.86" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="v_0" x="101.60" y="6.54" angle="0.00" type="DEFAULT_VEHTYPE" speed="2.38" pos="6.54" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="88.08" angle="0.00" type="longBike" speed="1.13" pos="88.08" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.20">
+        <vehicle id="v_0" x="101.60" y="7.12" angle="0.00" type="DEFAULT_VEHTYPE" speed="2.88" pos="7.12" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="88.35" angle="0.00" type="longBike" speed="1.33" pos="88.35" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.40">
+        <vehicle id="v_0" x="101.60" y="7.76" angle="0.00" type="DEFAULT_VEHTYPE" speed="3.23" pos="7.76" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="88.64" angle="0.00" type="longBike" speed="1.48" pos="0.24" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.60">
+        <vehicle id="v_0" x="101.60" y="8.51" angle="0.00" type="DEFAULT_VEHTYPE" speed="3.72" pos="8.51" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="88.97" angle="0.00" type="longBike" speed="1.62" pos="0.57" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.80">
+        <vehicle id="v_0" x="101.60" y="9.32" angle="0.00" type="DEFAULT_VEHTYPE" speed="4.09" pos="9.32" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="89.32" angle="0.00" type="longBike" speed="1.77" pos="0.92" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="v_0" x="101.60" y="10.24" angle="0.00" type="DEFAULT_VEHTYPE" speed="4.58" pos="10.24" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="89.72" angle="0.00" type="longBike" speed="2.01" pos="1.32" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.20">
+        <vehicle id="v_0" x="101.60" y="11.24" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.02" pos="11.24" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="90.16" angle="0.00" type="longBike" speed="2.19" pos="1.76" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.40">
+        <vehicle id="v_0" x="101.60" y="12.34" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.49" pos="12.34" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="90.63" angle="0.00" type="longBike" speed="2.36" pos="2.23" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.60">
+        <vehicle id="v_0" x="101.60" y="13.51" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.84" pos="13.51" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="91.15" angle="0.00" type="longBike" speed="2.59" pos="2.75" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.80">
+        <vehicle id="v_0" x="101.60" y="14.77" angle="0.00" type="DEFAULT_VEHTYPE" speed="6.31" pos="14.77" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="91.70" angle="0.00" type="longBike" speed="2.74" pos="3.30" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="v_0" x="101.60" y="16.12" angle="0.00" type="DEFAULT_VEHTYPE" speed="6.72" pos="16.12" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="92.29" angle="0.00" type="longBike" speed="2.95" pos="3.89" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.20">
+        <vehicle id="v_0" x="101.60" y="17.51" angle="0.00" type="DEFAULT_VEHTYPE" speed="6.98" pos="17.51" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="92.91" angle="0.00" type="longBike" speed="3.13" pos="4.51" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.40">
+        <vehicle id="v_0" x="101.60" y="19.01" angle="0.00" type="DEFAULT_VEHTYPE" speed="7.50" pos="19.01" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="93.57" angle="0.00" type="longBike" speed="3.28" pos="5.17" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.60">
+        <vehicle id="v_0" x="101.60" y="20.61" angle="0.00" type="DEFAULT_VEHTYPE" speed="7.99" pos="20.61" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="94.27" angle="0.00" type="longBike" speed="3.52" pos="5.87" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.80">
+        <vehicle id="v_0" x="101.60" y="22.26" angle="0.00" type="DEFAULT_VEHTYPE" speed="8.25" pos="22.26" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="95.01" angle="0.00" type="longBike" speed="3.68" pos="6.61" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="v_0" x="101.60" y="23.97" angle="0.00" type="DEFAULT_VEHTYPE" speed="8.55" pos="23.97" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="95.78" angle="0.00" type="longBike" speed="3.86" pos="7.38" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.20">
+        <vehicle id="v_0" x="101.60" y="25.74" angle="0.00" type="DEFAULT_VEHTYPE" speed="8.88" pos="25.74" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="96.59" angle="0.00" type="longBike" speed="4.05" pos="8.19" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.40">
+        <vehicle id="v_0" x="101.60" y="27.62" angle="0.00" type="DEFAULT_VEHTYPE" speed="9.38" pos="27.62" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="97.43" angle="0.00" type="longBike" speed="4.22" pos="9.03" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.60">
+        <vehicle id="v_0" x="101.60" y="29.60" angle="0.00" type="DEFAULT_VEHTYPE" speed="9.90" pos="29.60" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="98.32" angle="0.00" type="longBike" speed="4.43" pos="9.92" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.80">
+        <vehicle id="v_0" x="101.60" y="31.65" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.25" pos="31.65" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="99.25" angle="0.00" type="longBike" speed="4.66" pos="10.85" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="v_0" x="101.60" y="33.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.51" pos="33.75" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="100.21" angle="0.00" type="longBike" speed="4.79" pos="11.81" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.20">
+        <vehicle id="v_0" x="101.60" y="35.93" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.90" pos="35.93" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="101.21" angle="0.00" type="longBike" speed="4.99" pos="12.81" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.40">
+        <vehicle id="v_0" x="101.60" y="38.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.32" pos="38.20" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="102.24" angle="0.00" type="longBike" speed="5.15" pos="13.84" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.60">
+        <vehicle id="v_0" x="101.60" y="40.52" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.61" pos="40.52" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="103.31" angle="0.00" type="longBike" speed="5.39" pos="14.91" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.80">
+        <vehicle id="v_0" x="101.60" y="42.93" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.07" pos="42.93" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="104.41" angle="0.00" type="longBike" speed="5.49" pos="16.01" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="v_0" x="101.60" y="45.42" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.43" pos="45.42" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="105.52" angle="0.00" type="longBike" speed="5.52" pos="17.12" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.20">
+        <vehicle id="v_0" x="101.60" y="47.96" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.72" pos="47.96" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="106.61" angle="0.00" type="longBike" speed="5.48" pos="18.21" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.40">
+        <vehicle id="v_0" x="101.60" y="50.58" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.09" pos="50.58" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="107.70" angle="0.00" type="longBike" speed="5.44" pos="19.30" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.60">
+        <vehicle id="v_0" x="101.60" y="53.28" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.49" pos="53.28" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="108.70" angle="0.00" type="longBike" speed="5.02" pos="20.30" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.80">
+        <vehicle id="v_0" x="101.60" y="56.03" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.74" pos="56.03" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="109.59" angle="0.00" type="longBike" speed="4.43" pos="21.19" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="v_0" x="101.60" y="58.79" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.80" pos="58.79" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="110.37" angle="0.00" type="longBike" speed="3.90" pos="21.97" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.20">
+        <vehicle id="v_0" x="101.60" y="61.56" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.84" pos="61.56" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="111.03" angle="0.00" type="longBike" speed="3.30" pos="22.63" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.40">
+        <vehicle id="v_0" x="101.60" y="64.31" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.74" pos="64.31" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="111.58" angle="0.00" type="longBike" speed="2.74" pos="23.18" lane=":C_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.60">
+        <vehicle id="v_0" x="101.60" y="67.03" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.64" pos="67.03" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.01" angle="0.00" type="longBike" speed="2.17" pos="0.41" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.80">
+        <vehicle id="v_0" x="101.60" y="69.78" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.71" pos="69.78" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.33" angle="0.00" type="longBike" speed="1.57" pos="0.73" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="v_0" x="101.60" y="72.51" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.65" pos="72.51" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.52" angle="0.00" type="longBike" speed="0.98" pos="0.92" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.20">
+        <vehicle id="v_0" x="101.60" y="75.23" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.65" pos="75.23" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.38" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.40">
+        <vehicle id="v_0" x="101.60" y="77.78" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.75" pos="77.78" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.60">
+        <vehicle id="v_0" x="101.60" y="80.16" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.87" pos="80.16" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.80">
+        <vehicle id="v_0" x="101.60" y="82.35" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.97" pos="82.35" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="v_0" x="101.60" y="84.36" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.07" pos="84.36" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.20">
+        <vehicle id="v_0" x="101.60" y="86.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="9.17" pos="86.20" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.40">
+        <vehicle id="v_0" x="101.60" y="87.86" angle="0.00" type="DEFAULT_VEHTYPE" speed="8.29" pos="87.86" lane="SC_1" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.60">
+        <vehicle id="v_0" x="101.75" y="89.32" angle="1.77" type="DEFAULT_VEHTYPE" speed="7.39" pos="0.94" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.80">
+        <vehicle id="v_0" x="101.97" y="90.61" angle="4.25" type="DEFAULT_VEHTYPE" speed="6.50" pos="2.24" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="v_0" x="102.15" y="91.71" angle="6.38" type="DEFAULT_VEHTYPE" speed="5.60" pos="3.36" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.20">
+        <vehicle id="v_0" x="102.31" y="92.64" angle="8.17" type="DEFAULT_VEHTYPE" speed="4.70" pos="4.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.40">
+        <vehicle id="v_0" x="102.43" y="93.39" angle="9.50" type="DEFAULT_VEHTYPE" speed="3.80" pos="5.06" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.60">
+        <vehicle id="v_0" x="102.73" y="93.88" angle="11.94" type="DEFAULT_VEHTYPE" speed="2.90" pos="5.64" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.80">
+        <vehicle id="v_0" x="102.96" y="94.20" angle="13.97" type="DEFAULT_VEHTYPE" speed="2.00" pos="6.04" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="v_0" x="103.09" y="94.38" angle="15.11" type="DEFAULT_VEHTYPE" speed="1.10" pos="6.26" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.31" type="DEFAULT_VEHTYPE" speed="0.20" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.01" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.60" angle="0.00" type="longBike" speed="0.00" pos="1.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.64" angle="0.00" type="longBike" speed="0.22" pos="1.04" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.73" angle="0.00" type="longBike" speed="0.43" pos="1.13" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="112.86" angle="0.00" type="longBike" speed="0.65" pos="1.26" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="113.03" angle="0.00" type="longBike" speed="0.84" pos="1.43" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="113.23" angle="0.00" type="longBike" speed="1.01" pos="1.63" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="113.48" angle="0.00" type="longBike" speed="1.25" pos="1.88" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.60">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="113.77" angle="0.00" type="longBike" speed="1.47" pos="2.17" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.80">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="114.10" angle="0.00" type="longBike" speed="1.62" pos="2.50" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="114.45" angle="0.00" type="longBike" speed="1.78" pos="2.85" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.20">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="114.84" angle="0.00" type="longBike" speed="1.92" pos="3.24" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.40">
+        <vehicle id="v_0" x="103.11" y="94.42" angle="15.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="6.30" lane=":C_1_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="115.25" angle="0.00" type="longBike" speed="2.07" pos="3.65" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.60">
+        <vehicle id="v_0" x="103.17" y="94.50" angle="15.86" type="DEFAULT_VEHTYPE" speed="0.52" pos="0.00" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="115.69" angle="0.00" type="longBike" speed="2.20" pos="4.09" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.80">
+        <vehicle id="v_0" x="103.29" y="94.67" angle="16.91" type="DEFAULT_VEHTYPE" speed="1.02" pos="0.21" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="116.17" angle="0.00" type="longBike" speed="2.41" pos="4.57" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="v_0" x="103.45" y="94.90" angle="18.36" type="DEFAULT_VEHTYPE" speed="1.40" pos="0.49" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="116.68" angle="0.00" type="longBike" speed="2.53" pos="5.08" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.20">
+        <vehicle id="v_0" x="103.67" y="95.21" angle="20.34" type="DEFAULT_VEHTYPE" speed="1.90" pos="0.87" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="117.21" angle="0.00" type="longBike" speed="2.69" pos="5.61" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.40">
+        <vehicle id="v_0" x="103.93" y="95.58" angle="22.72" type="DEFAULT_VEHTYPE" speed="2.28" pos="1.32" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="117.78" angle="0.00" type="longBike" speed="2.84" pos="6.18" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.60">
+        <vehicle id="v_0" x="104.25" y="96.03" angle="25.57" type="DEFAULT_VEHTYPE" speed="2.74" pos="1.87" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="118.38" angle="0.00" type="longBike" speed="2.96" pos="6.78" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.80">
+        <vehicle id="v_0" x="104.61" y="96.55" angle="28.85" type="DEFAULT_VEHTYPE" speed="3.16" pos="2.50" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="119.02" angle="0.00" type="longBike" speed="3.20" pos="7.42" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="v_0" x="105.01" y="97.11" angle="32.45" type="DEFAULT_VEHTYPE" speed="3.45" pos="3.19" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="119.68" angle="0.00" type="longBike" speed="3.33" pos="8.08" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.20">
+        <vehicle id="v_0" x="105.69" y="97.45" angle="39.36" type="DEFAULT_VEHTYPE" speed="3.80" pos="3.96" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="120.38" angle="0.00" type="longBike" speed="3.48" pos="8.78" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.40">
+        <vehicle id="v_0" x="106.42" y="97.83" angle="43.90" type="DEFAULT_VEHTYPE" speed="4.10" pos="4.77" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="121.10" angle="0.00" type="longBike" speed="3.61" pos="9.50" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.60">
+        <vehicle id="v_0" x="107.20" y="98.23" angle="48.85" type="DEFAULT_VEHTYPE" speed="4.39" pos="5.65" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="121.86" angle="0.00" type="longBike" speed="3.78" pos="10.26" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.80">
+        <vehicle id="v_0" x="108.04" y="98.66" angle="54.15" type="DEFAULT_VEHTYPE" speed="4.71" pos="6.60" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="122.65" angle="0.00" type="longBike" speed="3.97" pos="11.05" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="v_0" x="108.96" y="99.13" angle="59.90" type="DEFAULT_VEHTYPE" speed="5.19" pos="7.63" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="123.49" angle="0.00" type="longBike" speed="4.18" pos="11.89" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.20">
+        <vehicle id="v_0" x="110.04" y="99.38" angle="66.05" type="DEFAULT_VEHTYPE" speed="5.62" pos="8.76" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="124.36" angle="0.00" type="longBike" speed="4.40" pos="12.76" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.40">
+        <vehicle id="v_0" x="111.24" y="99.52" angle="70.94" type="DEFAULT_VEHTYPE" speed="6.02" pos="9.96" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="125.27" angle="0.00" type="longBike" speed="4.55" pos="13.67" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.60">
+        <vehicle id="v_0" x="112.51" y="99.67" angle="76.16" type="DEFAULT_VEHTYPE" speed="6.38" pos="11.24" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="126.23" angle="0.00" type="longBike" speed="4.77" pos="14.63" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.80">
+        <vehicle id="v_0" x="113.87" y="99.84" angle="81.74" type="DEFAULT_VEHTYPE" speed="6.89" pos="12.61" lane=":C_3_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="127.21" angle="0.00" type="longBike" speed="4.92" pos="15.61" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="v_0" x="115.31" y="100.00" angle="83.25" type="DEFAULT_VEHTYPE" speed="7.21" pos="0.11" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="128.23" angle="0.00" type="longBike" speed="5.08" pos="16.63" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.20">
+        <vehicle id="v_0" x="116.83" y="100.00" angle="85.35" type="DEFAULT_VEHTYPE" speed="7.62" pos="1.63" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="129.27" angle="0.00" type="longBike" speed="5.21" pos="17.67" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.40">
+        <vehicle id="v_0" x="118.43" y="100.00" angle="87.56" type="DEFAULT_VEHTYPE" speed="8.01" pos="3.23" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="130.35" angle="0.00" type="longBike" speed="5.39" pos="18.75" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.60">
+        <vehicle id="v_0" x="120.14" y="100.00" angle="89.91" type="DEFAULT_VEHTYPE" speed="8.52" pos="4.94" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="131.44" angle="0.00" type="longBike" speed="5.46" pos="19.84" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.80">
+        <vehicle id="v_0" x="121.91" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.87" pos="6.71" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="132.54" angle="0.00" type="longBike" speed="5.49" pos="20.94" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="v_0" x="123.74" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.15" pos="8.54" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="133.64" angle="0.00" type="longBike" speed="5.50" pos="22.04" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.20">
+        <vehicle id="v_0" x="125.64" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.49" pos="10.44" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="134.73" angle="0.00" type="longBike" speed="5.47" pos="23.13" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.40">
+        <vehicle id="v_0" x="127.60" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.82" pos="12.40" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="135.82" angle="0.00" type="longBike" speed="5.44" pos="24.22" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.60">
+        <vehicle id="v_0" x="129.62" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.10" pos="14.42" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="136.93" angle="0.00" type="longBike" speed="5.52" pos="25.33" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.80">
+        <vehicle id="v_0" x="131.71" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.45" pos="16.51" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="138.04" angle="0.00" type="longBike" speed="5.55" pos="26.44" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="v_0" x="133.88" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.87" pos="18.68" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="139.13" angle="0.00" type="longBike" speed="5.49" pos="27.53" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.20">
+        <vehicle id="v_0" x="136.11" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.14" pos="20.91" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="140.23" angle="0.00" type="longBike" speed="5.47" pos="28.63" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.40">
+        <vehicle id="v_0" x="138.42" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.55" pos="23.22" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="141.33" angle="0.00" type="longBike" speed="5.49" pos="29.73" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.60">
+        <vehicle id="v_0" x="140.80" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.90" pos="25.60" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="142.43" angle="0.00" type="longBike" speed="5.53" pos="30.83" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.80">
+        <vehicle id="v_0" x="143.24" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.19" pos="28.04" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="143.53" angle="0.00" type="longBike" speed="5.48" pos="31.93" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="v_0" x="145.75" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.54" pos="30.55" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="144.62" angle="0.00" type="longBike" speed="5.47" pos="33.02" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.20">
+        <vehicle id="v_0" x="148.32" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.86" pos="33.12" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="145.71" angle="0.00" type="longBike" speed="5.45" pos="34.11" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.40">
+        <vehicle id="v_0" x="150.95" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.14" pos="35.75" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="146.80" angle="0.00" type="longBike" speed="5.44" pos="35.20" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.60">
+        <vehicle id="v_0" x="153.68" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.65" pos="38.48" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="147.90" angle="0.00" type="longBike" speed="5.50" pos="36.30" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.80">
+        <vehicle id="v_0" x="156.42" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.71" pos="41.22" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="149.00" angle="0.00" type="longBike" speed="5.51" pos="37.40" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="v_0" x="159.19" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.88" pos="43.99" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="150.09" angle="0.00" type="longBike" speed="5.45" pos="38.49" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.20">
+        <vehicle id="v_0" x="161.95" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.79" pos="46.75" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="151.19" angle="0.00" type="longBike" speed="5.51" pos="39.59" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.40">
+        <vehicle id="v_0" x="164.71" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.79" pos="49.51" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="152.30" angle="0.00" type="longBike" speed="5.54" pos="40.70" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.60">
+        <vehicle id="v_0" x="167.48" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.82" pos="52.28" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="153.41" angle="0.00" type="longBike" speed="5.53" pos="41.81" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.80">
+        <vehicle id="v_0" x="170.23" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.79" pos="55.03" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="154.51" angle="0.00" type="longBike" speed="5.53" pos="42.91" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="v_0" x="172.97" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.71" pos="57.77" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="155.62" angle="0.00" type="longBike" speed="5.51" pos="44.02" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.20">
+        <vehicle id="v_0" x="175.71" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.67" pos="60.51" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="156.71" angle="0.00" type="longBike" speed="5.45" pos="45.11" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.40">
+        <vehicle id="v_0" x="178.45" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.71" pos="63.25" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="157.82" angle="0.00" type="longBike" speed="5.54" pos="46.22" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.60">
+        <vehicle id="v_0" x="181.21" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.80" pos="66.01" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="158.92" angle="0.00" type="longBike" speed="5.52" pos="47.32" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.80">
+        <vehicle id="v_0" x="183.95" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.69" pos="68.75" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="160.03" angle="0.00" type="longBike" speed="5.55" pos="48.43" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="v_0" x="186.71" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.79" pos="71.51" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="161.13" angle="0.00" type="longBike" speed="5.48" pos="49.53" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.20">
+        <vehicle id="v_0" x="189.47" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.84" pos="74.27" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="162.23" angle="0.00" type="longBike" speed="5.54" pos="50.63" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.40">
+        <vehicle id="v_0" x="192.21" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.66" pos="77.01" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="163.34" angle="0.00" type="longBike" speed="5.50" pos="51.74" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.60">
+        <vehicle id="v_0" x="194.94" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.67" pos="79.74" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="164.44" angle="0.00" type="longBike" speed="5.53" pos="52.84" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.80">
+        <vehicle id="v_0" x="197.68" y="100.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.68" pos="82.48" lane="CE_0" slope="0.00"/>
+        <vehicle id="v_1" x="104.20" y="165.54" angle="0.00" type="longBike" speed="5.52" pos="53.94" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="v_1" x="104.20" y="166.64" angle="0.00" type="longBike" speed="5.49" pos="55.04" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.20">
+        <vehicle id="v_1" x="104.20" y="167.74" angle="0.00" type="longBike" speed="5.48" pos="56.14" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.40">
+        <vehicle id="v_1" x="104.20" y="168.85" angle="0.00" type="longBike" speed="5.55" pos="57.25" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.60">
+        <vehicle id="v_1" x="104.20" y="169.94" angle="0.00" type="longBike" speed="5.48" pos="58.34" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.80">
+        <vehicle id="v_1" x="104.20" y="171.05" angle="0.00" type="longBike" speed="5.55" pos="59.45" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="v_1" x="104.20" y="172.15" angle="0.00" type="longBike" speed="5.48" pos="60.55" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.20">
+        <vehicle id="v_1" x="104.20" y="173.26" angle="0.00" type="longBike" speed="5.55" pos="61.66" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.40">
+        <vehicle id="v_1" x="104.20" y="174.36" angle="0.00" type="longBike" speed="5.48" pos="62.76" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.60">
+        <vehicle id="v_1" x="104.20" y="175.45" angle="0.00" type="longBike" speed="5.48" pos="63.85" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.80">
+        <vehicle id="v_1" x="104.20" y="176.56" angle="0.00" type="longBike" speed="5.54" pos="64.96" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="v_1" x="104.20" y="177.65" angle="0.00" type="longBike" speed="5.46" pos="66.05" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.20">
+        <vehicle id="v_1" x="104.20" y="178.75" angle="0.00" type="longBike" speed="5.47" pos="67.15" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.40">
+        <vehicle id="v_1" x="104.20" y="179.84" angle="0.00" type="longBike" speed="5.46" pos="68.24" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.60">
+        <vehicle id="v_1" x="104.20" y="180.94" angle="0.00" type="longBike" speed="5.49" pos="69.34" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.80">
+        <vehicle id="v_1" x="104.20" y="182.04" angle="0.00" type="longBike" speed="5.50" pos="70.44" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="v_1" x="104.20" y="183.13" angle="0.00" type="longBike" speed="5.48" pos="71.53" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.20">
+        <vehicle id="v_1" x="104.20" y="184.23" angle="0.00" type="longBike" speed="5.49" pos="72.63" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.40">
+        <vehicle id="v_1" x="104.20" y="185.32" angle="0.00" type="longBike" speed="5.45" pos="73.72" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.60">
+        <vehicle id="v_1" x="104.20" y="186.42" angle="0.00" type="longBike" speed="5.51" pos="74.82" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.80">
+        <vehicle id="v_1" x="104.20" y="187.53" angle="0.00" type="longBike" speed="5.54" pos="75.93" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="v_1" x="104.20" y="188.63" angle="0.00" type="longBike" speed="5.50" pos="77.03" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.20">
+        <vehicle id="v_1" x="104.20" y="189.74" angle="0.00" type="longBike" speed="5.53" pos="78.14" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.40">
+        <vehicle id="v_1" x="104.20" y="190.84" angle="0.00" type="longBike" speed="5.48" pos="79.24" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.60">
+        <vehicle id="v_1" x="104.20" y="191.93" angle="0.00" type="longBike" speed="5.45" pos="80.33" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.80">
+        <vehicle id="v_1" x="104.20" y="193.03" angle="0.00" type="longBike" speed="5.50" pos="81.43" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="v_1" x="104.20" y="194.12" angle="0.00" type="longBike" speed="5.49" pos="82.52" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.20">
+        <vehicle id="v_1" x="104.20" y="195.22" angle="0.00" type="longBike" speed="5.48" pos="83.62" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.40">
+        <vehicle id="v_1" x="104.20" y="196.31" angle="0.00" type="longBike" speed="5.47" pos="84.71" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.60">
+        <vehicle id="v_1" x="104.20" y="197.40" angle="0.00" type="longBike" speed="5.45" pos="85.80" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.80">
+        <vehicle id="v_1" x="104.20" y="198.50" angle="0.00" type="longBike" speed="5.50" pos="86.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="v_1" x="104.20" y="199.60" angle="0.00" type="longBike" speed="5.46" pos="88.00" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.20"/>
+</fcd-export>

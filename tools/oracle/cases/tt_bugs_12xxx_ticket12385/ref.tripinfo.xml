@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:07:25.276419-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_12xxx_ticket12385/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_12xxx_ticket12385/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_bugs_12xxx_ticket12385/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_12xxx_ticket12385/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_12xxx_ticket12385/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_12xxx_ticket12385/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <containerinfo id="cf_0.0" depart="0.00" type="DEFAULT_CONTAINERTYPE" duration="52.00" waitingTime="35.00" timeLoss="2.55" traveltime="17.00">
+        <stop duration="0.00" arrival="0.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="35.00" vehicle="v_0" depart="35.00" arrival="52.00" arrivalPos="71.18" duration="17.00" routeLength="103.89" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="52.00" waitingTime="35.00" timeLoss="2.55" traveltime="17.00">
+        <stop duration="0.00" arrival="0.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="35.00" vehicle="v_0" depart="35.00" arrival="52.00" arrivalPos="71.18" duration="17.00" routeLength="103.89" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.1" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="51.00" waitingTime="34.00" timeLoss="2.55" traveltime="17.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="52.00" arrivalPos="71.18" duration="17.00" routeLength="103.89" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.1" depart="1.00" type="DEFAULT_CONTAINERTYPE" duration="52.00" waitingTime="34.00" timeLoss="2.55" traveltime="18.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="53.00" arrivalPos="71.18" duration="18.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.2" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="52.00" waitingTime="34.00" timeLoss="2.55" traveltime="18.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="53.00" arrivalPos="71.18" duration="18.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.3" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="53.00" waitingTime="34.00" timeLoss="2.55" traveltime="19.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="54.00" arrivalPos="71.18" duration="19.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.2" depart="2.00" type="DEFAULT_CONTAINERTYPE" duration="53.00" waitingTime="33.00" timeLoss="2.55" traveltime="20.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="55.00" arrivalPos="71.18" duration="20.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.4" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="54.00" waitingTime="34.00" timeLoss="2.55" traveltime="20.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="55.00" arrivalPos="71.18" duration="20.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.5" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="55.00" waitingTime="34.00" timeLoss="2.55" traveltime="21.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="56.00" arrivalPos="71.18" duration="21.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.3" depart="3.00" type="DEFAULT_CONTAINERTYPE" duration="54.00" waitingTime="32.00" timeLoss="2.55" traveltime="22.00">
+        <stop duration="0.00" arrival="3.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="32.00" vehicle="v_0" depart="35.00" arrival="57.00" arrivalPos="71.18" duration="22.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.6" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="56.00" waitingTime="34.00" timeLoss="2.55" traveltime="22.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="57.00" arrivalPos="71.18" duration="22.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.7" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="57.00" waitingTime="34.00" timeLoss="2.55" traveltime="23.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="58.00" arrivalPos="71.18" duration="23.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.4" depart="4.00" type="DEFAULT_CONTAINERTYPE" duration="55.00" waitingTime="31.00" timeLoss="2.55" traveltime="24.00">
+        <stop duration="0.00" arrival="4.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="31.00" vehicle="v_0" depart="35.00" arrival="59.00" arrivalPos="71.18" duration="24.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.8" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="58.00" waitingTime="34.00" timeLoss="2.55" traveltime="24.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="59.00" arrivalPos="71.18" duration="24.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.9" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="59.00" waitingTime="34.00" timeLoss="2.55" traveltime="25.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="60.00" arrivalPos="71.18" duration="25.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.5" depart="5.00" type="DEFAULT_CONTAINERTYPE" duration="56.00" waitingTime="30.00" timeLoss="2.55" traveltime="26.00">
+        <stop duration="0.00" arrival="5.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="30.00" vehicle="v_0" depart="35.00" arrival="61.00" arrivalPos="71.18" duration="26.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.10" depart="1.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="60.00" waitingTime="34.00" timeLoss="2.55" traveltime="26.00">
+        <stop duration="0.00" arrival="1.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="34.00" vehicle="v_0" depart="35.00" arrival="61.00" arrivalPos="71.18" duration="26.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.11" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="60.00" waitingTime="33.00" timeLoss="2.55" traveltime="27.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="62.00" arrivalPos="71.18" duration="27.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.6" depart="6.00" type="DEFAULT_CONTAINERTYPE" duration="57.00" waitingTime="29.00" timeLoss="2.55" traveltime="28.00">
+        <stop duration="0.00" arrival="6.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="29.00" vehicle="v_0" depart="35.00" arrival="63.00" arrivalPos="71.18" duration="28.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.12" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="61.00" waitingTime="33.00" timeLoss="2.55" traveltime="28.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="63.00" arrivalPos="71.18" duration="28.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.13" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="62.00" waitingTime="33.00" timeLoss="2.55" traveltime="29.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="64.00" arrivalPos="71.18" duration="29.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.7" depart="7.00" type="DEFAULT_CONTAINERTYPE" duration="58.00" waitingTime="28.00" timeLoss="2.55" traveltime="30.00">
+        <stop duration="0.00" arrival="7.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="28.00" vehicle="v_0" depart="35.00" arrival="65.00" arrivalPos="71.18" duration="30.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.14" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="63.00" waitingTime="33.00" timeLoss="2.55" traveltime="30.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="65.00" arrivalPos="71.18" duration="30.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.15" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="64.00" waitingTime="33.00" timeLoss="2.55" traveltime="31.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="66.00" arrivalPos="71.18" duration="31.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.8" depart="8.00" type="DEFAULT_CONTAINERTYPE" duration="59.00" waitingTime="27.00" timeLoss="2.55" traveltime="32.00">
+        <stop duration="0.00" arrival="8.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="27.00" vehicle="v_0" depart="35.00" arrival="67.00" arrivalPos="71.18" duration="32.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.16" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="65.00" waitingTime="33.00" timeLoss="2.55" traveltime="32.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="67.00" arrivalPos="71.18" duration="32.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.17" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="66.00" waitingTime="33.00" timeLoss="2.55" traveltime="33.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="68.00" arrivalPos="71.18" duration="33.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <containerinfo id="cf_0.9" depart="9.00" type="DEFAULT_CONTAINERTYPE" duration="60.00" waitingTime="26.00" timeLoss="2.55" traveltime="34.00">
+        <stop duration="0.00" arrival="9.00" arrivalPos="57.45" actType="waiting"/>
+        <transport waitingTime="26.00" vehicle="v_0" depart="35.00" arrival="69.00" arrivalPos="71.18" duration="34.00" routeLength="103.84" timeLoss="2.55"/>
+    </containerinfo>
+    <personinfo id="pf_0.18" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="67.00" waitingTime="33.00" timeLoss="2.55" traveltime="34.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="69.00" arrivalPos="71.18" duration="34.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <personinfo id="pf_0.19" depart="2.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="68.00" waitingTime="33.00" timeLoss="2.55" traveltime="35.00">
+        <stop duration="0.00" arrival="2.00" arrivalPos="57.45" actType="waiting"/>
+        <ride waitingTime="33.00" vehicle="v_0" depart="35.00" arrival="70.00" arrivalPos="71.18" duration="35.00" routeLength="103.84" timeLoss="2.55"/>
+    </personinfo>
+    <tripinfo id="v_0" depart="0.00" departLane="WC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="79.00" arrivalLane="CE_0" arrivalPos="100.00" arrivalSpeed="7.04" duration="79.00" routeLength="188.00" waitingTime="1.00" waitingCount="1" stopTime="40.00" timeLoss="12.36" rerouteNo="0" devices="tripinfo_v_0 fcd_v_0 person_v_0 container_v_0" vType="t_0" speedFactor="1.00" vaporized=""/>
+</tripinfos>

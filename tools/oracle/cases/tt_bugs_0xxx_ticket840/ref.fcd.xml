@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:18.502450-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket840/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket840/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket840/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket840/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket840/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="collider" x="255.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="40.00" pos="255.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="466.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="466.25" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="collider" x="294.44" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.44" pos="294.44" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="492.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="35.59" pos="492.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="506.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="1.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="collider" x="333.99" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.55" pos="333.99" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="526.64" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="34.64" pos="21.89" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="546.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="41.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="collider" x="373.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.78" pos="373.77" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="562.62" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="35.98" pos="57.87" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="586.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="81.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="collider" x="412.89" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.11" pos="412.89" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="598.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="35.45" pos="93.32" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="626.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="121.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="collider" x="451.69" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.80" pos="451.69" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="634.35" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.29" pos="129.60" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="666.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="161.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="collider" x="491.60" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.91" pos="491.60" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="671.10" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.75" pos="166.35" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="706.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="201.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="collider" x="531.53" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.93" pos="26.78" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="708.67" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="37.57" pos="203.92" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="746.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="241.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="collider" x="571.28" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.74" pos="66.53" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="746.02" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="37.35" pos="241.27" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="786.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="281.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="collider" x="611.18" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.91" pos="106.43" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="784.15" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.13" pos="279.40" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="826.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="321.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="collider" x="649.95" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.76" pos="145.20" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="822.88" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.73" pos="318.13" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="866.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="361.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="collider" x="688.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.83" pos="184.02" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="861.19" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.32" pos="356.44" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="906.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="401.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="collider" x="727.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.01" pos="223.03" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="900.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.98" pos="395.42" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="946.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="441.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="collider" x="767.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.54" pos="262.57" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="939.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.89" pos="434.32" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="986.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="481.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="collider" x="806.56" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.23" pos="301.81" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="977.96" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.89" pos="473.21" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1026.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="521.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="collider" x="845.79" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.24" pos="341.04" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1016.24" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.28" pos="511.49" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1066.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="561.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="collider" x="885.26" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.46" pos="380.51" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1055.48" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.24" pos="550.73" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1106.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="601.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="collider" x="924.13" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.87" pos="419.38" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1094.06" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.58" pos="589.31" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1146.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="641.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="collider" x="963.90" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.77" pos="459.15" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1133.91" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.85" pos="629.16" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1186.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="681.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="collider" x="1003.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.89" pos="499.03" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1173.01" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.10" pos="668.26" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1226.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="721.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="collider" x="1042.80" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.02" pos="538.05" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1212.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.15" pos="707.42" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1266.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="761.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="collider" x="1082.53" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.73" pos="577.78" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1251.33" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.16" pos="746.58" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1306.25" y="498.35" angle="90.00" type="long" speed="40.00" pos="801.50" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="collider" x="1122.13" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.60" pos="617.38" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1290.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.45" pos="786.02" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1345.24" y="498.35" angle="90.00" type="long" speed="38.99" pos="840.49" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="collider" x="1161.73" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.59" pos="656.98" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1328.91" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.13" pos="824.16" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1379.73" y="498.35" angle="90.00" type="long" speed="34.49" pos="874.98" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="collider" x="1200.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.81" pos="695.79" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1363.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="34.10" pos="858.25" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1409.72" y="498.35" angle="90.00" type="long" speed="29.99" pos="904.97" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="collider" x="1239.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.33" pos="735.12" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1392.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="29.86" pos="888.12" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1435.21" y="498.35" angle="90.00" type="long" speed="25.49" pos="930.46" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="collider" x="1279.26" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.39" pos="774.51" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1418.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.00" pos="914.12" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1456.19" y="498.35" angle="90.00" type="long" speed="20.99" pos="951.44" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="collider" x="1318.04" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.79" pos="813.29" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1440.36" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="21.50" pos="935.61" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1472.68" y="498.35" angle="90.00" type="long" speed="16.49" pos="967.93" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="collider" x="1352.92" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="34.88" pos="848.17" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1457.36" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="17.00" pos="952.61" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1484.67" y="498.35" angle="90.00" type="long" speed="11.99" pos="979.92" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="collider" x="1383.30" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.38" pos="878.55" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1469.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.50" pos="965.11" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1492.16" y="498.35" angle="90.00" type="long" speed="7.49" pos="987.41" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="collider" x="1409.19" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="25.88" pos="904.44" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1477.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.00" pos="973.11" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1502.25" y="498.35" angle="90.00" type="long" speed="10.09" pos="7.00" lane=":end_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="collider" x="1430.57" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="21.38" pos="925.82" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1487.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.14" pos="982.25" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1514.94" y="498.35" angle="90.00" type="long" speed="12.69" pos="10.19" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="collider" x="1449.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.97" pos="944.79" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1493.06" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.06" pos="988.31" lane="middle_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1530.23" y="498.35" angle="90.00" type="long" speed="15.29" pos="25.48" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="collider" x="1465.03" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.49" pos="960.28" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1501.30" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.24" pos="6.05" lane=":end_2_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1548.12" y="498.35" angle="90.00" type="long" speed="17.89" pos="43.37" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="collider" x="1478.75" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.73" pos="974.00" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1511.97" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.67" pos="7.22" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1568.60" y="498.35" angle="90.00" type="long" speed="20.49" pos="63.85" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="collider" x="1487.98" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.23" pos="983.23" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1524.09" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.12" pos="19.34" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1591.69" y="498.35" angle="90.00" type="long" speed="23.09" pos="86.94" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="collider" x="1493.53" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.55" pos="988.78" lane="middle_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1537.64" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.55" pos="32.89" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1617.38" y="498.35" angle="90.00" type="long" speed="25.69" pos="112.63" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="collider" x="1500.69" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.16" pos="5.44" lane=":end_2_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1553.34" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.70" pos="48.59" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1645.67" y="498.35" angle="90.00" type="long" speed="28.29" pos="140.92" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="collider" x="1509.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.99" pos="4.93" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1570.51" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="17.17" pos="65.76" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1676.56" y="498.35" angle="90.00" type="long" speed="30.89" pos="171.81" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="collider" x="1520.99" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.31" pos="16.24" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1589.71" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="19.20" pos="84.96" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1710.05" y="498.35" angle="90.00" type="long" speed="33.49" pos="205.30" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="collider" x="1534.20" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.21" pos="29.45" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1610.69" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="20.98" pos="105.94" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1746.14" y="498.35" angle="90.00" type="long" speed="36.09" pos="241.39" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="collider" x="1549.82" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.62" pos="45.07" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1633.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="22.48" pos="128.42" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1784.83" y="498.35" angle="90.00" type="long" speed="38.69" pos="280.08" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="collider" x="1567.95" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.13" pos="63.20" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1657.48" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="24.31" pos="152.73" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1824.83" y="498.35" angle="90.00" type="long" speed="40.00" pos="320.08" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="collider" x="1587.99" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="20.04" pos="83.24" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1683.85" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.38" pos="179.10" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1864.83" y="498.35" angle="90.00" type="long" speed="40.00" pos="360.08" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="collider" x="1609.91" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="21.92" pos="105.16" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1711.95" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="28.10" pos="207.20" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1904.83" y="498.35" angle="90.00" type="long" speed="40.00" pos="400.08" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="collider" x="1633.26" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="23.35" pos="128.51" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1741.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="29.73" pos="236.93" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1944.83" y="498.35" angle="90.00" type="long" speed="40.00" pos="440.08" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="collider" x="1658.90" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="25.64" pos="154.15" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1772.99" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="31.31" pos="268.24" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="1984.83" y="498.35" angle="90.00" type="long" speed="40.00" pos="480.08" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="collider" x="1686.69" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.78" pos="181.94" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1805.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="32.69" pos="300.93" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2024.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="24.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="collider" x="1715.83" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="29.14" pos="211.08" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1839.95" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="34.26" pos="335.20" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2064.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="64.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="collider" x="1746.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.49" pos="241.57" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1875.81" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="35.86" pos="371.06" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2104.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="104.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="collider" x="1779.08" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="32.76" pos="274.33" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1913.51" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="37.70" pos="408.76" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2144.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="144.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="collider" x="1814.10" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="35.02" pos="309.35" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1952.70" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.19" pos="447.95" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2184.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="184.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="collider" x="1851.01" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.91" pos="346.26" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="1992.36" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.66" pos="487.61" lane="end_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2224.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="224.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="collider" x="1889.49" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.48" pos="384.74" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2031.85" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.59" pos="31.85" lane="rend_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2264.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="264.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="collider" x="1929.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.83" pos="424.57" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2071.46" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.62" pos="71.46" lane="rend_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2304.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="304.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="collider" x="1968.36" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.05" pos="463.61" lane="end_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2111.06" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.60" pos="111.06" lane="rend_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2344.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="344.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="collider" x="2007.69" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.43" pos="7.69" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2150.26" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.20" pos="150.26" lane="rend_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2384.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="384.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="collider" x="2047.61" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.92" pos="47.61" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2189.12" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.86" pos="189.12" lane="rend_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2424.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="424.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="collider" x="2086.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.17" pos="86.78" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2229.08" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.96" pos="229.08" lane="rend_0" slope="0.00"/>
+        <vehicle id="partialOccupator" x="2464.73" y="498.35" angle="90.00" type="long" speed="40.00" pos="464.73" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="collider" x="2125.48" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.71" pos="125.48" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2268.43" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.36" pos="268.43" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="collider" x="2164.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.19" pos="164.68" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2308.42" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.99" pos="308.42" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="collider" x="2203.82" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.14" pos="203.82" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2347.97" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.55" pos="347.97" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="collider" x="2243.50" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.68" pos="243.50" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2386.98" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.01" pos="386.98" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="collider" x="2282.39" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.90" pos="282.39" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2425.85" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.87" pos="425.85" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="collider" x="2321.56" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.17" pos="321.56" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertion_bug" x="2465.48" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.63" pos="465.48" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="collider" x="2361.45" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.89" pos="361.45" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="collider" x="2400.76" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.31" pos="400.76" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="collider" x="2440.06" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="39.30" pos="440.06" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="collider" x="2478.99" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="38.93" pos="478.99" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00"/>
+</fcd-export>

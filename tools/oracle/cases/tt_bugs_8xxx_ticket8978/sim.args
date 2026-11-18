@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --step-method.ballistic -b 30 -a tools/oracle/cases/tt_bugs_8xxx_ticket8978/input_additional.add.xml

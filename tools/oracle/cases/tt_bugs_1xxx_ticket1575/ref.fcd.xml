@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:02:08.854856-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_1xxx_ticket1575/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_1xxx_ticket1575/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1575/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1575/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1575/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="collider" x="51.65" y="44.34" angle="0.00" type="tCollider" speed="0.00" pos="49.00" lane="beg2_0" slope="0.00"/>
+        <vehicle id="long" x="60.00" y="48.35" angle="90.00" type="tLong" speed="17.00" pos="0.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="collider" x="51.65" y="45.16" angle="0.00" type="tCollider" speed="0.90" pos="49.90" lane="beg2_0" slope="0.00"/>
+        <vehicle id="long" x="77.00" y="48.35" angle="90.00" type="tLong" speed="17.00" pos="17.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="collider" x="51.65" y="45.16" angle="0.00" type="tCollider" speed="0.00" pos="49.90" lane="beg2_0" slope="0.00"/>
+        <vehicle id="long" x="94.00" y="48.35" angle="90.00" type="tLong" speed="17.00" pos="34.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="collider" x="56.06" y="48.35" angle="39.44" type="tCollider" speed="2.60" pos="2.50" lane="middle_0" slope="0.00"/>
+        <vehicle id="long" x="111.00" y="48.35" angle="90.00" type="tLong" speed="17.00" pos="51.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="collider" x="58.79" y="48.35" angle="90.00" type="tCollider" speed="5.20" pos="7.70" lane="middle_0" slope="0.00"/>
+        <vehicle id="long" x="128.00" y="48.35" angle="90.00" type="tLong" speed="17.00" pos="68.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="collider" x="65.50" y="48.35" angle="90.00" type="tCollider" speed="7.80" pos="5.50" lane="end_0" slope="0.00"/>
+        <vehicle id="long" x="145.00" y="48.35" angle="90.00" type="tLong" speed="17.00" pos="85.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="collider" x="75.90" y="48.35" angle="90.00" type="tCollider" speed="10.40" pos="15.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="collider" x="88.90" y="48.35" angle="90.00" type="tCollider" speed="13.00" pos="28.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="collider" x="104.50" y="48.35" angle="90.00" type="tCollider" speed="15.60" pos="44.50" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="collider" x="122.70" y="48.35" angle="90.00" type="tCollider" speed="18.20" pos="62.70" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="collider" x="142.70" y="48.35" angle="90.00" type="tCollider" speed="20.00" pos="82.70" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00"/>
+</fcd-export>

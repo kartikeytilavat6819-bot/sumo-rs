@@ -317,8 +317,10 @@ impl MSVehicleTransfer {
                 // get the lane on which this vehicle should continue
                 // first select all the lanes which allow continuation onto nextEdge
                 //   then pick the one which is least occupied
+                // C++ passes the possibly-null allowedLanes() pointer directly; getFreeLane
+                // falls back to allowedLanes(vclass) when it is null. Never deref it here.
                 let l: Ptr<MSLane> = if !nextEdge.is_null() {
-                    e.get_free_lane(Ptr::from_mut(e.allowed_lanes(&nextEdge, vclass, false).m()), vclass, departPos)
+                    e.get_free_lane(e.allowed_lanes(&nextEdge, vclass, false), vclass, departPos)
                 } else {
                     e.get_free_lane(Ptr::null(), vclass, departPos)
                 };

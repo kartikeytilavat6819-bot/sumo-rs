@@ -22,12 +22,22 @@ def parse(path):
         raise SystemExit(f"INCOMPLETE {path}: {e}")
 
 
+def time_seconds(v):
+    """SUMO writes times >1 day as D:HH:MM:SS; plain seconds otherwise."""
+    if ":" not in v:
+        return float(v)
+    sec = 0.0
+    for part in v.split(":"):
+        sec = sec * 60 + float(part)
+    return sec
+
+
 def check(args):
     for x in args.xml:
         parse(x)
     if args.tripinfo:
         root = parse(args.tripinfo)
-        arrivals = [float(t.get("arrival")) for t in root.iter("tripinfo") if t.get("arrival")]
+        arrivals = [time_seconds(t.get("arrival")) for t in root.iter("tripinfo") if t.get("arrival")]
     else:
         arrivals = []
     if args.stat:

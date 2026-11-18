@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:13:17.440259-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_16xxx_ticket16779/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_16xxx_ticket16779/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_16xxx_ticket16779/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_16xxx_ticket16779/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_16xxx_ticket16779/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.action value="warn"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="ego" depart="0.00" departLane="E3_0" departPos="5.10" departSpeed="26.11" departDelay="0.00" arrival="16.00" arrivalLane="E2_0" arrivalPos="96.00" arrivalSpeed="26.11" duration="16.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.30" rerouteNo="1" devices="tripinfo_ego routing_ego fcd_ego" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="follow" depart="4.00" departLane="E3_0" departPos="97.90" departSpeed="21.60" departDelay="0.00" arrival="17.00" arrivalLane="E2_0" arrivalPos="96.00" arrivalSpeed="27.78" duration="13.00" routeLength="302.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.73" rerouteNo="1" devices="tripinfo_follow routing_follow fcd_follow" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="block" depart="0.00" departLane="E0_1" departPos="40.00" departSpeed="0.00" departDelay="0.00" arrival="71.00" arrivalLane="E1_0" arrivalPos="92.00" arrivalSpeed="27.78" duration="71.00" routeLength="154.00" waitingTime="0.00" waitingCount="0" stopTime="60.00" timeLoss="0.00" rerouteNo="1" devices="tripinfo_block routing_block fcd_block" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="block2" depart="0.00" departLane="E0_1" departPos="20.00" departSpeed="0.00" departDelay="0.00" arrival="72.00" arrivalLane="E1_0" arrivalPos="92.00" arrivalSpeed="27.78" duration="72.00" routeLength="174.00" waitingTime="0.00" waitingCount="0" stopTime="60.00" timeLoss="0.82" rerouteNo="1" devices="tripinfo_block2 routing_block2 fcd_block2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

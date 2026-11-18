@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:04:58.121800-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_4xxx_ticket4518/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_4xxx_ticket4518/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_bugs_4xxx_ticket4518/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4518/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4518/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4518/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <device.rerouting.probability value="1"/>
+        <device.rerouting.threads value="4"/>
+    </routing>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pedestrian_1_2360" depart="6.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="192.00" waitingTime="4.00" timeLoss="25.98" traveltime="192.00">
+        <ride waitingTime="0.00" vehicle="pedestrian_1_2360_tr" depart="6.00" arrival="54.00" arrivalPos="33.49" duration="48.00" routeLength="526.95" timeLoss="6.51"/>
+        <walk depart="54.00" departPos="33.49" arrival="198.00" arrivalPos="119.80" duration="144.00" routeLength="172.96" timeLoss="19.47" maxSpeed="1.39" waitingTime="4.00"/>
+    </personinfo>
+    <personinfo id="pedestrian_1_3518" depart="8.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="257.00" waitingTime="0.00" timeLoss="48.84" traveltime="257.00">
+        <ride waitingTime="0.00" vehicle="pedestrian_1_3518_tr" depart="8.00" arrival="100.00" arrivalPos="33.48" duration="92.00" routeLength="777.01" timeLoss="32.25"/>
+        <walk depart="100.00" departPos="33.48" arrival="265.00" arrivalPos="239.60" duration="165.00" routeLength="206.12" timeLoss="16.59" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedestrian_1_1096" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="299.00" waitingTime="0.00" timeLoss="38.87" traveltime="299.00">
+        <ride waitingTime="0.00" vehicle="pedestrian_1_1096_tr" depart="0.00" arrival="133.00" arrivalPos="33.49" duration="133.00" routeLength="1504.85" timeLoss="21.27"/>
+        <walk depart="133.00" departPos="33.49" arrival="299.00" arrivalPos="239.60" duration="166.00" routeLength="206.11" timeLoss="17.60" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedestrian_1_2312" depart="7.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="302.00" waitingTime="0.00" timeLoss="58.39" traveltime="302.00">
+        <ride waitingTime="0.00" vehicle="pedestrian_1_2312_tr" depart="7.00" arrival="143.00" arrivalPos="33.48" duration="136.00" routeLength="1277.01" timeLoss="40.80"/>
+        <walk depart="143.00" departPos="33.48" arrival="309.00" arrivalPos="239.60" duration="166.00" routeLength="206.12" timeLoss="17.59" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedestrian_1_1417" depart="9.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="369.00" waitingTime="51.00" timeLoss="132.12" traveltime="369.00">
+        <ride waitingTime="0.00" vehicle="pedestrian_1_1417_tr" depart="9.00" arrival="189.00" arrivalPos="33.48" duration="180.00" routeLength="1493.07" timeLoss="67.64"/>
+        <walk depart="189.00" departPos="33.48" arrival="378.00" arrivalPos="119.80" duration="189.00" routeLength="172.94" timeLoss="64.48" maxSpeed="1.39" waitingTime="51.00"/>
+    </personinfo>
+    <tripinfo id="pedestrian_1_1096_tr" depart="0.00" departLane="D0C0_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="905.00" arrivalLane="B1C1_1" arrivalPos="27.50" arrivalSpeed="12.22" duration="905.00" routeLength="3451.78" waitingTime="7.00" waitingCount="3" stopTime="600.00" timeLoss="49.50" rerouteNo="1" devices="tripinfo_pedestrian_1_1096_tr routing_pedestrian_1_1096_tr fcd_pedestrian_1_1096_tr person_pedestrian_1_1096_tr" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="pedestrian_1_2360_tr" depart="6.00" departLane="C0D0_2" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="906.00" arrivalLane="D0D1_1" arrivalPos="27.50" arrivalSpeed="13.12" duration="900.00" routeLength="2530.30" waitingTime="72.00" waitingCount="3" stopTime="600.00" timeLoss="111.54" rerouteNo="1" devices="tripinfo_pedestrian_1_2360_tr routing_pedestrian_1_2360_tr fcd_pedestrian_1_2360_tr person_pedestrian_1_2360_tr" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="pedestrian_1_3518_tr" depart="8.00" departLane="top3D1_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="951.00" arrivalLane="D0C0_1" arrivalPos="27.50" arrivalSpeed="13.88" duration="943.00" routeLength="2767.16" waitingTime="89.00" waitingCount="4" stopTime="600.00" timeLoss="136.75" rerouteNo="1" devices="tripinfo_pedestrian_1_3518_tr routing_pedestrian_1_3518_tr fcd_pedestrian_1_3518_tr person_pedestrian_1_3518_tr" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="pedestrian_1_1417_tr" depart="9.00" departLane="A0A1_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="995.00" arrivalLane="B0A0_1" arrivalPos="27.50" arrivalSpeed="12.20" duration="986.00" routeLength="3440.01" waitingTime="83.00" waitingCount="7" stopTime="600.00" timeLoss="130.65" rerouteNo="1" devices="tripinfo_pedestrian_1_1417_tr routing_pedestrian_1_1417_tr fcd_pedestrian_1_1417_tr person_pedestrian_1_1417_tr" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="pedestrian_1_2312_tr" depart="7.00" departLane="left1A1_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="996.00" arrivalLane="C1C0_1" arrivalPos="27.50" arrivalSpeed="13.41" duration="989.00" routeLength="3280.37" waitingTime="97.00" waitingCount="5" stopTime="600.00" timeLoss="147.25" rerouteNo="1" devices="tripinfo_pedestrian_1_2312_tr routing_pedestrian_1_2312_tr fcd_pedestrian_1_2312_tr person_pedestrian_1_2312_tr" vType="default" speedFactor="1.00" vaporized=""/>
+</tripinfos>

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:04:45.742030-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_4xxx_ticket4180/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_4xxx_ticket4180/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4180/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4180/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4180/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="ES_passenger" x="130.72" y="129.03" angle="88.39" type="passenger" speed="0.00" pos="130.65" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="ES_passenger" x="131.48" y="129.05" angle="88.39" type="passenger" speed="0.75" pos="131.40" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="ES_passenger" x="133.18" y="129.10" angle="88.39" type="passenger" speed="1.71" pos="133.11" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="ES_passenger" x="136.03" y="129.18" angle="88.39" type="passenger" speed="2.84" pos="135.96" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="ES_passenger" x="139.82" y="129.28" angle="88.39" type="passenger" speed="3.79" pos="139.75" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="ES_passenger" x="140.20" y="129.30" angle="88.39" type="passenger" speed="0.38" pos="140.13" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="ES_passenger" x="140.21" y="129.30" angle="88.39" type="passenger" speed="0.01" pos="140.14" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.01" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="ES_passenger" x="140.22" y="129.30" angle="88.39" type="passenger" speed="0.00" pos="140.15" lane="EW1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="ES_passenger" x="141.64" y="130.21" angle="78.47" type="passenger" speed="1.44" pos="0.09" lane="EW2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="ES_passenger" x="144.27" y="130.25" angle="78.88" type="passenger" speed="2.64" pos="2.72" lane="EW2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="ES_passenger" x="148.31" y="128.83" angle="106.00" type="passenger" speed="4.13" pos="1.95" lane=":C_9_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="ES_passenger" x="152.55" y="126.56" angle="117.86" type="passenger" speed="4.90" pos="6.85" lane=":C_9_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="ES_passenger" x="155.67" y="121.51" angle="151.51" type="passenger" speed="6.09" pos="12.94" lane=":C_9_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="ES_passenger" x="156.13" y="114.57" angle="177.95" type="passenger" speed="7.01" pos="5.96" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="ES_passenger" x="156.42" y="106.65" angle="177.95" type="passenger" speed="7.92" pos="13.88" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="ES_passenger" x="156.75" y="97.37" angle="177.95" type="passenger" speed="9.29" pos="23.17" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="ES_passenger" x="157.11" y="87.15" angle="177.95" type="passenger" speed="10.22" pos="33.39" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="ES_passenger" x="157.52" y="75.64" angle="177.95" type="passenger" speed="11.52" pos="44.91" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="ES_passenger" x="157.98" y="62.85" angle="177.95" type="passenger" speed="12.79" pos="57.70" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="ES_passenger" x="158.48" y="48.83" angle="177.95" type="passenger" speed="14.03" pos="71.73" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="ES_passenger" x="159.01" y="34.02" angle="177.95" type="passenger" speed="14.82" pos="86.55" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="ES_passenger" x="159.54" y="19.13" angle="177.95" type="passenger" speed="14.90" pos="101.45" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="ES_passenger" x="160.07" y="4.45" angle="177.95" type="passenger" speed="14.68" pos="116.13" lane="NS2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00"/>
+</fcd-export>

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.rerouting.period 100 --device.rerouting.probability 1 --time-to-teleport 20 -t

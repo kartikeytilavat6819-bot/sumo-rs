@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:07:47.141248-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_7xxx_ticket7131/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_7xxx_ticket7131/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_7xxx_ticket7131/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_7xxx_ticket7131/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_7xxx_ticket7131/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker1" x="92.11" y="98.47" angle="89.96" type="long" speed="0.00" pos="92.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="99.03" y="92.94" angle="358.41" type="side" speed="0.00" pos="92.93" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker1" x="94.71" y="98.47" angle="89.98" type="long" speed="2.60" pos="1.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.90" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker1" x="99.92" y="98.47" angle="90.04" type="long" speed="5.20" pos="6.80" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker1" x="107.73" y="98.46" angle="90.04" type="long" speed="7.80" pos="14.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="blocker2" x="92.11" y="98.47" angle="89.96" type="long" speed="0.00" pos="92.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker1" x="118.07" y="99.37" angle="82.09" type="long" speed="10.40" pos="7.23" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker2" x="94.71" y="98.47" angle="89.98" type="long" speed="2.60" pos="1.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker1" x="125.30" y="100.17" angle="85.51" type="long" speed="7.29" pos="1.21" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="99.92" y="98.47" angle="90.04" type="long" speed="5.20" pos="6.80" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="2.79" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="107.73" y="98.46" angle="90.04" type="long" speed="7.80" pos="14.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="blocker3" x="92.11" y="98.47" angle="89.96" type="long" speed="0.00" pos="92.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="116.24" y="99.02" angle="84.42" type="long" speed="8.53" pos="5.36" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="94.71" y="98.47" angle="89.98" type="long" speed="2.60" pos="1.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="4.03" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="99.92" y="98.47" angle="90.04" type="long" speed="5.20" pos="6.80" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="107.73" y="98.46" angle="90.04" type="long" speed="7.80" pos="14.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.31" y="98.60" angle="88.51" type="long" speed="4.58" pos="1.41" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="98.99" y="96.39" angle="359.08" type="side" speed="2.60" pos="2.50" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.08" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="103.66" y="98.07" angle="71.10" type="side" speed="5.20" pos="7.70" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="2.34" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="preventChange.0" x="93.01" y="98.47" angle="89.96" type="uncooperative" speed="5.26" pos="93.01" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="preventChange.0" x="95.85" y="92.01" angle="172.44" type="uncooperative" speed="7.86" pos="1.84" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="68.07" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="68.07" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="46.58" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="46.58" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="25.09" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="25.09" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="3.60" y="98.40" angle="89.96" type="uncooperative" speed="13.89" pos="3.60" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="73.11" y="101.65" angle="89.96" type="DEFAULT_VEHTYPE" speed="5.00" pos="73.11" lane="WC_1" slope="0.00"/>
+        <vehicle id="preventChange.0" x="96.14" y="81.56" angle="178.41" type="uncooperative" speed="10.46" pos="12.30" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="81.96" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="81.96" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="60.47" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="60.47" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="38.98" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="38.98" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="17.49" y="98.41" angle="89.96" type="uncooperative" speed="13.89" pos="17.49" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="80.07" y="101.66" angle="89.96" type="DEFAULT_VEHTYPE" speed="6.96" pos="80.07" lane="WC_1" slope="0.00"/>
+        <vehicle id="preventChange.0" x="96.50" y="68.50" angle="178.41" type="uncooperative" speed="13.06" pos="25.36" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="95.19" y="96.96" angle="109.21" type="uncooperative" speed="13.89" pos="2.74" lane=":cluster_C_gneJ0_1_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="74.36" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="74.36" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="52.87" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="52.87" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="31.38" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="31.38" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="9.89" y="98.41" angle="89.96" type="uncooperative" speed="13.89" pos="9.89" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="82.53" y="101.66" angle="89.96" type="DEFAULT_VEHTYPE" speed="2.46" pos="82.53" lane="WC_1" slope="0.00"/>
+        <vehicle id="preventChange.0" x="96.89" y="54.62" angle="178.41" type="uncooperative" speed="13.89" pos="39.25" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="96.10" y="83.15" angle="178.41" type="uncooperative" speed="13.89" pos="10.71" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="88.25" y="98.47" angle="89.96" type="uncooperative" speed="13.89" pos="88.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="66.76" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="66.76" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="45.27" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="45.27" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="23.78" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="23.78" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="2.29" y="98.40" angle="89.96" type="uncooperative" speed="13.89" pos="2.29" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="86.37" y="101.66" angle="89.96" type="DEFAULT_VEHTYPE" speed="3.84" pos="86.37" lane="WC_1" slope="0.00"/>
+        <vehicle id="preventChange.0" x="97.27" y="40.73" angle="178.41" type="uncooperative" speed="13.89" pos="53.14" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="96.48" y="69.26" angle="178.41" type="uncooperative" speed="13.89" pos="24.60" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="95.89" y="90.74" angle="176.66" type="uncooperative" speed="13.89" pos="3.11" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="80.65" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="80.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="59.16" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="59.16" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="37.67" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="37.67" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="16.18" y="98.41" angle="89.96" type="uncooperative" speed="13.89" pos="16.18" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="92.70" y="101.67" angle="89.96" type="DEFAULT_VEHTYPE" speed="6.33" pos="92.70" lane="WC_1" slope="0.00"/>
+        <vehicle id="preventChange.0" x="97.66" y="26.85" angle="178.41" type="uncooperative" speed="13.89" pos="67.03" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="96.87" y="55.38" angle="178.41" type="uncooperative" speed="13.89" pos="38.49" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="96.27" y="76.86" angle="178.41" type="uncooperative" speed="13.89" pos="17.00" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="94.42" y="97.99" angle="95.60" type="uncooperative" speed="13.89" pos="1.43" lane=":cluster_C_gneJ0_1_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="73.05" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="73.05" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="51.56" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="51.56" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="30.07" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="30.07" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="8.58" y="98.41" angle="89.96" type="uncooperative" speed="13.89" pos="8.58" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="94.53" y="101.67" angle="89.98" type="DEFAULT_VEHTYPE" speed="1.83" pos="1.43" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.0" x="98.04" y="12.97" angle="178.41" type="uncooperative" speed="13.89" pos="80.92" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.1" x="97.25" y="41.49" angle="178.41" type="uncooperative" speed="13.89" pos="52.38" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="96.66" y="62.97" angle="178.41" type="uncooperative" speed="13.89" pos="30.89" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="96.06" y="84.46" angle="178.41" type="uncooperative" speed="13.89" pos="9.40" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="86.94" y="98.47" angle="89.96" type="uncooperative" speed="13.89" pos="86.94" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="65.45" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="65.45" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="43.96" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="43.96" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="22.47" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="22.47" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="0.98" y="98.40" angle="89.96" type="uncooperative" speed="13.89" pos="0.98" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="98.38" y="101.67" angle="90.04" type="DEFAULT_VEHTYPE" speed="3.85" pos="5.28" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.1" x="97.63" y="27.61" angle="178.41" type="uncooperative" speed="13.89" pos="66.27" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="97.04" y="49.09" angle="178.41" type="uncooperative" speed="13.89" pos="44.78" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="96.44" y="70.57" angle="178.41" type="uncooperative" speed="13.89" pos="23.29" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="95.85" y="92.05" angle="172.30" type="uncooperative" speed="13.89" pos="1.80" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="79.34" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="79.34" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="57.85" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="57.85" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="36.36" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="36.36" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="14.87" y="98.41" angle="89.96" type="uncooperative" speed="13.89" pos="14.87" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.17" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="4.79" pos="10.07" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.1" x="98.02" y="13.73" angle="178.41" type="uncooperative" speed="13.89" pos="80.16" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.2" x="97.42" y="35.21" angle="178.41" type="uncooperative" speed="13.89" pos="58.67" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="96.83" y="56.69" angle="178.41" type="uncooperative" speed="13.89" pos="37.18" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="96.23" y="78.17" angle="178.41" type="uncooperative" speed="13.89" pos="15.69" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="93.23" y="98.44" angle="90.30" type="uncooperative" speed="13.89" pos="0.12" lane=":cluster_C_gneJ0_1_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="71.74" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="71.74" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="50.25" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="50.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="28.76" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="28.76" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="7.27" y="98.41" angle="89.96" type="uncooperative" speed="13.89" pos="7.27" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.29" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.2" x="97.81" y="21.32" angle="178.41" type="uncooperative" speed="13.89" pos="72.56" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="97.21" y="42.80" angle="178.41" type="uncooperative" speed="13.89" pos="51.07" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="96.62" y="64.28" angle="178.41" type="uncooperative" speed="13.89" pos="29.58" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="96.02" y="85.76" angle="178.41" type="uncooperative" speed="13.89" pos="8.09" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="85.63" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="85.63" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="64.14" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="64.14" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="42.65" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="42.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="21.16" y="98.42" angle="89.96" type="uncooperative" speed="13.89" pos="21.16" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.2" x="98.19" y="7.44" angle="178.41" type="uncooperative" speed="13.89" pos="86.45" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.3" x="97.60" y="28.92" angle="178.41" type="uncooperative" speed="13.89" pos="64.96" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="97.00" y="50.40" angle="178.41" type="uncooperative" speed="13.89" pos="43.47" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="96.41" y="71.88" angle="178.41" type="uncooperative" speed="13.89" pos="21.98" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="95.81" y="93.36" angle="163.16" type="uncooperative" speed="13.89" pos="0.49" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="78.03" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="78.03" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="56.54" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="56.54" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="35.05" y="98.43" angle="89.96" type="uncooperative" speed="13.89" pos="35.05" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.3" x="97.98" y="15.03" angle="178.41" type="uncooperative" speed="13.89" pos="78.85" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="97.39" y="36.52" angle="178.41" type="uncooperative" speed="13.89" pos="57.36" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="96.79" y="58.00" angle="178.41" type="uncooperative" speed="13.89" pos="35.87" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="96.20" y="79.48" angle="178.41" type="uncooperative" speed="13.89" pos="14.38" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="91.92" y="98.47" angle="89.96" type="uncooperative" speed="13.89" pos="91.92" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="70.43" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="70.43" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="48.94" y="98.44" angle="89.96" type="uncooperative" speed="13.89" pos="48.94" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.3" x="98.37" y="1.15" angle="178.41" type="uncooperative" speed="13.89" pos="92.74" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.4" x="97.77" y="22.63" angle="178.41" type="uncooperative" speed="13.89" pos="71.25" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="97.18" y="44.11" angle="178.41" type="uncooperative" speed="13.89" pos="49.76" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="96.58" y="65.59" angle="178.41" type="uncooperative" speed="13.89" pos="28.27" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="95.99" y="87.07" angle="178.41" type="uncooperative" speed="13.89" pos="6.78" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="84.32" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="84.32" lane="WC_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="62.83" y="98.45" angle="89.96" type="uncooperative" speed="13.89" pos="62.83" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.4" x="98.16" y="8.75" angle="178.41" type="uncooperative" speed="13.89" pos="85.14" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.5" x="97.56" y="30.23" angle="178.41" type="uncooperative" speed="13.89" pos="63.65" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="96.97" y="51.71" angle="178.41" type="uncooperative" speed="13.89" pos="42.16" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="96.37" y="73.19" angle="178.41" type="uncooperative" speed="13.89" pos="20.67" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="95.71" y="94.67" angle="146.46" type="uncooperative" speed="13.89" pos="5.10" lane=":cluster_C_gneJ0_1_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="76.72" y="98.46" angle="89.96" type="uncooperative" speed="13.89" pos="76.72" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.5" x="97.95" y="16.34" angle="178.41" type="uncooperative" speed="13.89" pos="77.54" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="97.35" y="37.82" angle="178.41" type="uncooperative" speed="13.89" pos="56.05" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="96.76" y="59.31" angle="178.41" type="uncooperative" speed="13.89" pos="34.56" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="96.16" y="80.79" angle="178.41" type="uncooperative" speed="13.89" pos="13.07" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="90.61" y="98.47" angle="89.96" type="uncooperative" speed="13.89" pos="90.61" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.5" x="98.33" y="2.46" angle="178.41" type="uncooperative" speed="13.89" pos="91.43" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.6" x="97.74" y="23.94" angle="178.41" type="uncooperative" speed="13.89" pos="69.94" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="97.14" y="45.42" angle="178.41" type="uncooperative" speed="13.89" pos="48.45" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="96.55" y="66.90" angle="178.41" type="uncooperative" speed="13.89" pos="26.96" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="95.95" y="88.38" angle="178.41" type="uncooperative" speed="13.89" pos="5.47" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.6" x="98.12" y="10.06" angle="178.41" type="uncooperative" speed="13.89" pos="83.83" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.7" x="97.53" y="31.54" angle="178.41" type="uncooperative" speed="13.89" pos="62.34" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="96.93" y="53.02" angle="178.41" type="uncooperative" speed="13.89" pos="40.85" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="96.34" y="74.50" angle="178.41" type="uncooperative" speed="13.89" pos="19.36" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.7" x="97.91" y="17.65" angle="178.41" type="uncooperative" speed="13.89" pos="76.23" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="97.32" y="39.13" angle="178.41" type="uncooperative" speed="13.89" pos="54.74" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="96.72" y="60.62" angle="178.41" type="uncooperative" speed="13.89" pos="33.25" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.7" x="98.29" y="3.77" angle="178.41" type="uncooperative" speed="13.89" pos="90.12" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.8" x="97.70" y="25.25" angle="178.41" type="uncooperative" speed="13.89" pos="68.63" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="97.10" y="46.73" angle="178.41" type="uncooperative" speed="13.89" pos="47.14" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.8" x="98.08" y="11.37" angle="178.41" type="uncooperative" speed="13.89" pos="82.52" lane="CS_0" slope="0.00"/>
+        <vehicle id="preventChange.9" x="97.49" y="32.85" angle="178.41" type="uncooperative" speed="13.89" pos="61.03" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.9" x="97.87" y="18.96" angle="178.41" type="uncooperative" speed="13.89" pos="74.92" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blocker1" x="130.68" y="100.16" angle="90.13" type="long" speed="2.60" pos="6.60" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="preventChange.9" x="98.26" y="5.08" angle="178.41" type="uncooperative" speed="13.89" pos="88.81" lane="CS_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blocker1" x="135.88" y="100.14" angle="90.13" type="long" speed="5.20" pos="11.80" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="122.78" y="100.07" angle="81.28" type="long" speed="2.60" pos="12.00" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blocker1" x="143.68" y="100.13" angle="90.13" type="long" speed="7.80" pos="19.60" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="127.98" y="100.16" angle="88.91" type="long" speed="5.20" pos="3.90" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="114.99" y="98.79" angle="86.63" type="long" speed="2.60" pos="4.10" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="103.46" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="0.00" pos="10.37" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blocker1" x="154.08" y="100.10" angle="90.13" type="long" speed="10.40" pos="30.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="135.78" y="100.14" angle="90.13" type="long" speed="7.80" pos="11.70" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="120.10" y="99.78" angle="79.32" type="long" speed="5.20" pos="9.30" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="mustChange" x="105.90" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="2.44" pos="12.81" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="side" x="108.58" y="98.46" angle="85.44" type="side" speed="2.60" pos="0.02" lane="CC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blocker1" x="167.08" y="100.07" angle="90.13" type="long" speed="13.00" pos="43.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="146.18" y="100.12" angle="90.13" type="long" speed="10.40" pos="22.10" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="127.88" y="100.16" angle="88.83" type="long" speed="7.80" pos="3.80" lane="C2E_0" slope="0.00"/>
+        <vehicle id="mustChange" x="108.50" y="101.66" angle="90.04" type="DEFAULT_VEHTYPE" speed="2.60" pos="15.41" lane=":cluster_C_gneJ0_2_1" slope="0.00"/>
+        <vehicle id="side" x="113.75" y="98.93" angle="84.60" type="side" speed="5.20" pos="2.88" lane=":C2_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blocker1" x="180.97" y="100.04" angle="90.13" type="long" speed="13.89" pos="56.89" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="159.18" y="100.09" angle="90.13" type="long" speed="13.00" pos="35.10" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="138.28" y="100.14" angle="90.13" type="long" speed="10.40" pos="14.20" lane="C2E_0" slope="0.00"/>
+        <vehicle id="mustChange" x="110.46" y="98.49" angle="89.65" type="DEFAULT_VEHTYPE" speed="1.92" pos="1.90" lane="CC2_0" slope="0.00"/>
+        <vehicle id="side" x="118.96" y="104.15" angle="33.87" type="side" speed="7.80" pos="10.68" lane=":C2_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blocker1" x="194.86" y="100.01" angle="90.13" type="long" speed="13.89" pos="70.78" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="173.07" y="100.06" angle="90.13" type="long" speed="13.89" pos="48.99" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="151.28" y="100.11" angle="90.13" type="long" speed="13.00" pos="27.20" lane="C2E_0" slope="0.00"/>
+        <vehicle id="mustChange" x="113.87" y="98.71" angle="87.15" type="DEFAULT_VEHTYPE" speed="3.42" pos="2.98" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="120.49" y="114.42" angle="6.82" type="side" speed="10.40" pos="8.23" lane="C2N_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blocker2" x="186.96" y="100.03" angle="90.13" type="long" speed="13.89" pos="62.88" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="165.17" y="100.08" angle="90.13" type="long" speed="13.89" pos="41.09" lane="C2E_0" slope="0.00"/>
+        <vehicle id="mustChange" x="119.45" y="99.65" angle="79.76" type="DEFAULT_VEHTYPE" speed="5.65" pos="8.63" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="122.03" y="127.33" angle="6.82" type="side" speed="13.00" pos="21.23" lane="C2N_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blocker3" x="179.06" y="100.05" angle="90.13" type="long" speed="13.89" pos="54.98" lane="C2E_0" slope="0.00"/>
+        <vehicle id="mustChange" x="126.96" y="100.16" angle="88.27" type="DEFAULT_VEHTYPE" speed="7.54" pos="2.88" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blocker3" x="192.95" y="100.02" angle="90.13" type="long" speed="13.89" pos="68.87" lane="C2E_0" slope="0.00"/>
+        <vehicle id="mustChange" x="135.96" y="100.14" angle="90.13" type="DEFAULT_VEHTYPE" speed="9.00" pos="11.88" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="mustChange" x="146.31" y="100.12" angle="90.13" type="DEFAULT_VEHTYPE" speed="10.35" pos="22.23" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="mustChange" x="158.56" y="100.09" angle="90.13" type="DEFAULT_VEHTYPE" speed="12.25" pos="34.48" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="mustChange" x="172.24" y="100.06" angle="90.13" type="DEFAULT_VEHTYPE" speed="13.68" pos="48.16" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="mustChange" x="185.26" y="100.03" angle="90.13" type="DEFAULT_VEHTYPE" speed="13.02" pos="61.18" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="mustChange" x="198.65" y="100.00" angle="90.13" type="DEFAULT_VEHTYPE" speed="13.39" pos="74.57" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00"/>
+</fcd-export>

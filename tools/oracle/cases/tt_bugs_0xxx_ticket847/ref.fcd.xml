@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:20.298418-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket847/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket847/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket847/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket847/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket847/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="priority" x="1445.72" y="498.35" angle="90.00" type="high_accel_low_decel" speed="0.00" pos="950.00" lane="middle_0" slope="0.00"/>
+        <vehicle id="should_break" x="1501.65" y="488.32" angle="0.00" type="low_accel_and_slow" speed="0.00" pos="493.00" lane="right2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="priority" x="1451.67" y="498.35" angle="90.00" type="high_accel_low_decel" speed="6.00" pos="956.00" lane="middle_0" slope="0.00"/>
+        <vehicle id="should_break" x="1501.65" y="490.30" angle="0.00" type="low_accel_and_slow" speed="2.00" pos="495.00" lane="right2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="priority" x="1463.55" y="498.35" angle="90.00" type="high_accel_low_decel" speed="12.00" pos="968.00" lane="middle_0" slope="0.00"/>
+        <vehicle id="should_break" x="1501.65" y="494.26" angle="0.00" type="low_accel_and_slow" speed="4.00" pos="499.00" lane="right2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="priority" x="1481.38" y="498.35" angle="90.00" type="high_accel_low_decel" speed="18.00" pos="986.00" lane="middle_0" slope="0.00"/>
+        <vehicle id="should_break" x="1501.65" y="495.15" angle="0.00" type="low_accel_and_slow" speed="0.90" pos="499.90" lane="right2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="priority" x="1514.65" y="498.35" angle="90.00" type="high_accel_low_decel" speed="24.00" pos="10.00" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1501.65" y="495.15" angle="0.00" type="low_accel_and_slow" speed="0.00" pos="499.90" lane="right2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="priority" x="1542.19" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="37.80" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1506.63" y="498.35" angle="38.91" type="low_accel_and_slow" speed="2.00" pos="1.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="priority" x="1569.73" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="65.60" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1510.59" y="498.35" angle="90.00" type="low_accel_and_slow" speed="4.00" pos="5.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="priority" x="1597.26" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="93.40" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1516.54" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="11.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="priority" x="1624.80" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="121.20" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1522.48" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="17.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="priority" x="1652.33" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="149.00" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1528.42" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="23.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="priority" x="1679.87" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="176.80" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1534.36" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="29.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="priority" x="1707.41" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="204.60" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1540.31" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="35.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="priority" x="1734.94" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="232.40" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1546.25" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="41.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="priority" x="1762.48" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="260.20" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1552.19" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="47.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="priority" x="1790.01" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="288.00" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1558.14" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="53.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="priority" x="1817.55" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="315.80" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1564.08" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="59.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="priority" x="1845.09" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="343.60" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1570.02" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="65.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="priority" x="1872.62" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="371.40" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1575.97" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="71.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="priority" x="1900.16" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="399.20" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1581.91" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="77.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="priority" x="1927.69" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="427.00" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1587.85" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="83.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="priority" x="1955.23" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="454.80" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1593.79" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="89.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="priority" x="1982.77" y="498.35" angle="90.00" type="high_accel_low_decel" speed="27.80" pos="482.60" lane="end_0" slope="0.00"/>
+        <vehicle id="should_break" x="1599.74" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="95.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="should_break" x="1605.68" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="101.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="should_break" x="1611.62" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="107.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="should_break" x="1617.57" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="113.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="should_break" x="1623.51" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="119.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="should_break" x="1629.45" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="125.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="should_break" x="1635.40" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="131.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="should_break" x="1641.34" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="137.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="should_break" x="1647.28" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="143.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="should_break" x="1653.22" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="149.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="should_break" x="1659.17" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="155.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="should_break" x="1665.11" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="161.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="should_break" x="1671.05" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="167.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="should_break" x="1677.00" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="173.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="should_break" x="1682.94" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="179.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="should_break" x="1688.88" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="185.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="should_break" x="1694.83" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="191.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="should_break" x="1700.77" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="197.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="should_break" x="1706.71" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="203.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="should_break" x="1712.65" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="209.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="should_break" x="1718.60" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="215.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="should_break" x="1724.54" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="221.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="should_break" x="1730.48" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="227.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="should_break" x="1736.43" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="233.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="should_break" x="1742.37" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="239.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="should_break" x="1748.31" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="245.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="should_break" x="1754.26" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="251.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="should_break" x="1760.20" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="257.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="should_break" x="1766.14" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="263.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="should_break" x="1772.08" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="269.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="should_break" x="1778.03" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="275.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="should_break" x="1783.97" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="281.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="should_break" x="1789.91" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="287.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="should_break" x="1795.86" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="293.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="should_break" x="1801.80" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="299.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="should_break" x="1807.74" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="305.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="should_break" x="1813.69" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="311.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="should_break" x="1819.63" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="317.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="should_break" x="1825.57" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="323.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="should_break" x="1831.51" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="329.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="should_break" x="1837.46" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="335.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="should_break" x="1843.40" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="341.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="should_break" x="1849.34" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="347.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="should_break" x="1855.29" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="353.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="should_break" x="1861.23" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="359.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="should_break" x="1867.17" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="365.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="should_break" x="1873.12" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="371.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="should_break" x="1879.06" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="377.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="should_break" x="1885.00" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="383.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="should_break" x="1890.94" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="389.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="should_break" x="1896.89" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="395.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="should_break" x="1902.83" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="401.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="should_break" x="1908.77" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="407.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="should_break" x="1914.72" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="413.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="should_break" x="1920.66" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="419.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="should_break" x="1926.60" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="425.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="should_break" x="1932.55" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="431.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="should_break" x="1938.49" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="437.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="should_break" x="1944.43" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="443.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="should_break" x="1950.37" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="449.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="should_break" x="1956.32" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="455.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="should_break" x="1962.26" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="461.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="should_break" x="1968.20" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="467.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="should_break" x="1974.15" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="473.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="should_break" x="1980.09" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="479.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="should_break" x="1986.03" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="485.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="should_break" x="1991.98" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="491.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="should_break" x="1997.92" y="498.35" angle="90.00" type="low_accel_and_slow" speed="6.00" pos="497.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00"/>
+</fcd-export>

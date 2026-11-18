@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --time-to-teleport 400 -a tools/oracle/cases/tt_bugs_15xxx_ticket15757b/input_additional.add.xml

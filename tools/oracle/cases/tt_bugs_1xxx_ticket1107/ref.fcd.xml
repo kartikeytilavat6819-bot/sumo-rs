@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:00:50.828057-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_1xxx_ticket1107/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_1xxx_ticket1107/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1107/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1107/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1107/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport value="5"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="33.10" y="13.06" angle="359.50" type="DEFAULT_VEHTYPE" speed="13.89" pos="5.10" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="50.99" y="46.43" angle="89.87" type="long" speed="9.97" pos="15.10" lane="middle2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="32.97" y="26.95" angle="359.50" type="DEFAULT_VEHTYPE" speed="13.89" pos="18.99" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="60.96" y="46.46" angle="89.87" type="long" speed="9.97" pos="25.07" lane="middle2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="32.89" y="36.56" angle="359.50" type="DEFAULT_VEHTYPE" speed="9.61" pos="28.60" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="66.33" y="46.47" angle="89.87" type="long" speed="5.47" pos="0.03" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="41.67" angle="359.50" type="DEFAULT_VEHTYPE" speed="5.11" pos="33.71" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.97" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="42.28" angle="359.50" type="DEFAULT_VEHTYPE" speed="0.61" pos="34.32" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="fast_follower" x="-50.26" y="47.62" angle="90.87" type="DEFAULT_VEHTYPE" speed="13.89" pos="5.10" lane="beg1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="42.28" angle="359.50" type="DEFAULT_VEHTYPE" speed="0.00" pos="34.32" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="fast_follower" x="-36.37" y="47.41" angle="90.87" type="DEFAULT_VEHTYPE" speed="13.89" pos="18.99" lane="beg1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="42.28" angle="359.50" type="DEFAULT_VEHTYPE" speed="0.00" pos="34.32" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="fast_follower" x="-22.49" y="47.20" angle="90.87" type="DEFAULT_VEHTYPE" speed="13.89" pos="32.88" lane="beg1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="42.28" angle="359.50" type="DEFAULT_VEHTYPE" speed="0.00" pos="34.32" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="fast_follower" x="-8.60" y="46.99" angle="90.87" type="DEFAULT_VEHTYPE" speed="13.89" pos="46.77" lane="beg1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="42.28" angle="359.50" type="DEFAULT_VEHTYPE" speed="0.00" pos="34.32" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="fast_follower" x="5.29" y="46.78" angle="90.87" type="DEFAULT_VEHTYPE" speed="13.89" pos="60.66" lane="beg1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="32.84" y="42.28" angle="359.50" type="DEFAULT_VEHTYPE" speed="0.00" pos="34.32" lane="beg2_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="fast_follower" x="19.17" y="46.57" angle="90.87" type="DEFAULT_VEHTYPE" speed="13.89" pos="74.55" lane="beg1_0" slope="0.00"/>
+        <vehicle id="victim" x="67.30" y="46.47" angle="89.89" type="long" speed="0.00" pos="1.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="fast_follower" x="32.47" y="47.93" angle="71.22" type="DEFAULT_VEHTYPE" speed="13.89" pos="3.40" lane=":gneJ1_3_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="40.89" y="46.41" angle="89.87" type="DEFAULT_VEHTYPE" speed="8.06" pos="5.00" lane="middle2_0" slope="0.00"/>
+        <vehicle id="victim" x="69.90" y="46.46" angle="89.95" type="long" speed="2.60" pos="3.60" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="fast_follower" x="33.05" y="61.77" angle="1.08" type="DEFAULT_VEHTYPE" speed="13.89" pos="12.24" lane="end1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="48.95" y="46.43" angle="89.87" type="DEFAULT_VEHTYPE" speed="8.06" pos="13.06" lane="middle2_0" slope="0.00"/>
+        <vehicle id="victim" x="75.10" y="46.44" angle="90.06" type="long" speed="5.20" pos="8.80" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="fast_follower" x="33.31" y="75.65" angle="1.08" type="DEFAULT_VEHTYPE" speed="13.89" pos="26.13" lane="end1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="55.93" y="46.45" angle="89.87" type="DEFAULT_VEHTYPE" speed="6.98" pos="20.04" lane="middle2_0" slope="0.00"/>
+        <vehicle id="victim" x="82.90" y="46.41" angle="90.20" type="long" speed="7.80" pos="16.60" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="fast_follower" x="33.58" y="89.54" angle="1.08" type="DEFAULT_VEHTYPE" speed="13.89" pos="40.02" lane="end1_0" slope="0.00"/>
+        <vehicle id="unsafe_insertion_after_teleport" x="64.62" y="46.47" angle="89.87" type="DEFAULT_VEHTYPE" speed="8.69" pos="28.73" lane="middle2_0" slope="0.00"/>
+        <vehicle id="victim" x="93.30" y="46.38" angle="90.20" type="long" speed="10.40" pos="27.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="75.21" y="46.44" angle="90.20" type="DEFAULT_VEHTYPE" speed="10.70" pos="8.91" lane="end2_0" slope="0.00"/>
+        <vehicle id="victim" x="106.30" y="46.33" angle="90.20" type="long" speed="13.00" pos="40.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="88.40" y="46.39" angle="90.20" type="DEFAULT_VEHTYPE" speed="13.20" pos="22.10" lane="end2_0" slope="0.00"/>
+        <vehicle id="victim" x="120.19" y="46.28" angle="90.20" type="long" speed="13.89" pos="53.89" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="102.29" y="46.34" angle="90.20" type="DEFAULT_VEHTYPE" speed="13.89" pos="35.99" lane="end2_0" slope="0.00"/>
+        <vehicle id="victim" x="134.08" y="46.23" angle="90.20" type="long" speed="13.89" pos="67.78" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="116.18" y="46.30" angle="90.20" type="DEFAULT_VEHTYPE" speed="13.89" pos="49.88" lane="end2_0" slope="0.00"/>
+        <vehicle id="victim" x="147.97" y="46.19" angle="90.20" type="long" speed="13.89" pos="81.67" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="130.07" y="46.25" angle="90.20" type="DEFAULT_VEHTYPE" speed="13.89" pos="63.77" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="unsafe_insertion_after_teleport" x="143.96" y="46.20" angle="90.20" type="DEFAULT_VEHTYPE" speed="13.89" pos="77.66" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00"/>
+</fcd-export>

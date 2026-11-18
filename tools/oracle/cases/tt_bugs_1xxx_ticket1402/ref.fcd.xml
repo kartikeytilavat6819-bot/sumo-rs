@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:01:02.744147-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_1xxx_ticket1402/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_1xxx_ticket1402/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1402/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1402/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1402/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="fast_follower" x="248.50" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="147.00" lane="end_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="301.50" y="0.00" angle="70.19" type="DEFAULT_VEHTYPE" speed="36.00" pos="0.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="fast_follower" x="284.50" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="183.00" lane="end_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="337.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="36.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="fast_follower" x="320.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="18.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="373.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="72.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="fast_follower" x="356.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="54.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="409.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="108.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="fast_follower" x="392.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="90.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="445.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="144.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="fast_follower" x="428.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="126.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="481.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="180.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="fast_follower" x="464.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="162.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="517.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="216.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="fast_follower" x="500.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="198.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="553.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="252.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="fast_follower" x="536.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="234.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="589.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="288.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="fast_follower" x="572.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="270.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="625.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="324.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="fast_follower" x="608.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="306.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="661.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="360.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="fast_follower" x="644.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="342.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="697.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="396.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="fast_follower" x="680.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="378.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="733.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="432.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="fast_follower" x="716.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="414.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="769.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="468.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="fast_follower" x="752.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="450.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="805.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="504.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="fast_follower" x="788.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="486.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="841.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="540.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="fast_follower" x="824.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="522.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="877.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="576.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="fast_follower" x="860.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="558.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="913.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="612.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="fast_follower" x="896.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="594.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="949.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="648.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="fast_follower" x="932.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="630.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="985.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="684.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="fast_follower" x="968.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="666.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1021.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="720.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="fast_follower" x="1004.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="702.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1057.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="756.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="fast_follower" x="1040.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="738.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1093.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="792.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="fast_follower" x="1076.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="774.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1129.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="828.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="fast_follower" x="1112.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="810.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1165.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="864.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="fast_follower" x="1148.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="846.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1201.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="900.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="fast_follower" x="1184.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="882.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1237.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="936.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="fast_follower" x="1220.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="918.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1273.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="972.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="fast_follower" x="1256.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="954.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1309.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1008.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="fast_follower" x="1292.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="990.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1345.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1044.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="fast_follower" x="1328.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1026.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1381.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1080.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="fast_follower" x="1364.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1062.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1417.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1116.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="fast_follower" x="1400.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1098.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1453.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1152.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="fast_follower" x="1436.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1134.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1489.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1188.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="fast_follower" x="1472.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1170.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1525.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1224.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="fast_follower" x="1508.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1206.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1561.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1260.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="fast_follower" x="1544.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1242.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1597.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1296.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="fast_follower" x="1580.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1278.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1633.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1332.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="fast_follower" x="1616.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1314.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1669.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1368.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="fast_follower" x="1652.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1350.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1705.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1404.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="fast_follower" x="1688.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1386.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1741.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1440.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="fast_follower" x="1724.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1422.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1777.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1476.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="fast_follower" x="1760.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1458.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1813.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1512.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="fast_follower" x="1796.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1494.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1849.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1548.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="fast_follower" x="1832.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1530.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1885.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1584.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="fast_follower" x="1868.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1566.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1921.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1620.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="fast_follower" x="1904.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1602.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1957.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1656.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="fast_follower" x="1940.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1638.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="1993.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1692.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="fast_follower" x="1976.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1674.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2029.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1728.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="fast_follower" x="2012.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1710.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2065.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1764.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="fast_follower" x="2048.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1746.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2101.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1800.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="fast_follower" x="2084.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1782.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2137.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1836.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="fast_follower" x="2120.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1818.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2173.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1872.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="fast_follower" x="2156.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1854.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2209.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1908.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="fast_follower" x="2192.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1890.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2245.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1944.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="fast_follower" x="2228.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1926.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2281.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1980.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="fast_follower" x="2264.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1962.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2317.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2016.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="fast_follower" x="2300.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="1998.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2353.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2052.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="fast_follower" x="2336.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2034.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2389.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2088.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="fast_follower" x="2372.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2070.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2425.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2124.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="fast_follower" x="2408.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2106.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2461.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2160.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="fast_follower" x="2444.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2142.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2497.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2196.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="fast_follower" x="2480.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2178.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2533.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2232.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="fast_follower" x="2516.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2214.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2569.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2268.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="fast_follower" x="2552.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2250.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2605.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2304.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="fast_follower" x="2588.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2286.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2641.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2340.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="fast_follower" x="2624.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2322.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2677.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2376.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="fast_follower" x="2660.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2358.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2713.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2412.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="fast_follower" x="2696.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2394.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2749.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2448.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="fast_follower" x="2732.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2430.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2785.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2484.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="fast_follower" x="2768.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2466.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2821.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2520.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="fast_follower" x="2804.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2502.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2857.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2556.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="fast_follower" x="2840.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2538.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2893.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2592.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="fast_follower" x="2876.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2574.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2929.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2628.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="fast_follower" x="2912.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2610.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="2965.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2664.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="fast_follower" x="2948.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2646.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3001.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2700.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="fast_follower" x="2984.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2682.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3037.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2736.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="fast_follower" x="3020.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2718.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3073.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2772.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="fast_follower" x="3056.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2754.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3109.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2808.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="fast_follower" x="3092.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2790.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3145.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2844.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="fast_follower" x="3128.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2826.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3181.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2880.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="fast_follower" x="3164.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2862.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3217.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2916.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="fast_follower" x="3200.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2898.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3253.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2952.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="fast_follower" x="3236.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2934.58" lane="end2_0" slope="0.00"/>
+        <vehicle id="insert_step_0" x="3289.50" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2988.00" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="fast_follower" x="3272.08" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="36.00" pos="2970.58" lane="end2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00"/>
+</fcd-export>

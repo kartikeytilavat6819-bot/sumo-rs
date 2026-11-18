@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import collections
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -52,18 +53,33 @@ OUTPUT_OPTS = (
     "--tripinfo-output", "--fcd-output", "--statistic-output", "--summary",
     "--summary-output", "--vehroute-output", "--vehroutes", "--stop-output",
     "--personinfo-output", "--person-summary-output", "--lanechange-output",
-    "--emissions-output", "--queue-output", "--tls-state-output",
+    "--emissions-output", "--emission-output", "--queue-output", "--tls-state-output",
     "--tls-switch-output", "--tls-state-switch-output", "--tls-program-output",
     "--full-output", "--emergency-output", "--collision-output",
     "--safety-output", "--battery-output", "--chargingstation-output",
-    "--rail-signal-output", "--person-route-output", "--link-output",
+    "--chargingstations-output", "--elechybrid-output", "--overheadwiresegments-output",
+    "--substations-output", "--person-fcd-output", "--amitran-output",
+    "--rail-signal-output", "--person-route-output", "--personroute-output", "--link-output",
     "--weights-output", "--deadlock-output", "--ssm-output", "--bh-output",
     "--save-state.files", "--save-state.times", "--movereminder-output",
+    "--all-pairs-output", "--bt-output", "--calibrator-output", "--detector-output",
+    "--detectors-poi-output", "--edgedata-output", "--emitters-output", "--emitters-poi-output",
+    "--end-reroute-output", "--flow-output", "--intermodal-network-output",
+    "--intermodal-weight-output", "--lanedata-output", "--matsim-output", "--netload-output",
+    "--parking-output", "--polygon-output", "--ptline-output", "--ptstop-output",
+    "--railsignal-block-output", "--railsignal-vehicle-output", "--routes-output",
+    "--street-sign-output", "--sum-output", "--variable-speed-sign-output", "--vtype-output",
 )
 ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
 
 # run_all.sh / make_sim_refs.sh always pass these; a duplicate is a hard error.
 HARNESS_FLAGS = ("--no-step-log",)
+
+# run_all.sh only writes tripinfo/fcd/statistic. Sub-options of any other output
+# whose file option we strip would make sumo error (e.g. "A vehroute-output file
+# is needed for exit times"), so they are dropped from sim.args.
+HARNESS_OUTPUTS = ("--tripinfo-output", "--fcd-output", "--statistic-output")
+OUTPUT_CANON = {"--vehroutes": "--vehroute-output", "--summary": "--summary-output"}
 
 # A token containing any of these means the test cannot run headless with sumo.
 SKIP_MARKERS = (
@@ -119,6 +135,7 @@ def collate_options(option_files, app="sumo"):
     for f in files:
         with open(f, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
+        clear_options = None
         for o in shlex.split(text):
             if skip:
                 skip = False
@@ -128,6 +145,21 @@ def collate_options(option_files, app="sumo"):
                 continue
             if o == "{CLEAR}":
                 app_options = []
+                continue
+            if o == "{CLEAR":
+                clear_options = []
+                continue
+            if clear_options is not None:
+                if o[-1] == "}":
+                    clear_options.append(o[:-1])
+                    num_clear = len(clear_options)
+                    for idx in range(len(app_options) - num_clear + 1):
+                        if app_options[idx:idx + num_clear] == clear_options:
+                            del app_options[idx:idx + num_clear]
+                            clear_options = None
+                            break
+                else:
+                    clear_options.append(o)
                 continue
             if o == "-" and o in app_options:  # never happens, kept for parity
                 continue
@@ -182,6 +214,8 @@ def parse_file_options(tokens):
             additions.extend(x for x in val.split(",") if x)
         else:
             outputs.append((name, val))
+    stripped = {OUTPUT_CANON.get(n, n) for n, _ in outputs} - set(HARNESS_OUTPUTS)
+    sim = [t for t in sim if not any(t.startswith(o + ".") for o in stripped)]
     return sim, net, routes, additions, outputs
 
 
@@ -230,14 +264,17 @@ def copy_inputs(test_dir, potentials, config_files, chosen):
 
 
 def is_route_file(path: str) -> bool:
-    """Cheap check: a route file has a <routes>/<trip> root or .rou/.rou.xml suffix."""
+    """Cheap check: a route file has a <routes> root or .rou/.rou.xml suffix."""
     name = os.path.basename(path).lower()
     if name.endswith(".rou.xml") or name.endswith(".rou") or ".rou." in name:
         return True
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
-            head = fh.read(2048)
-        return "<routes" in head or "<trip" in head or "<vehicle" in head
+            head = fh.read(4096)
+        # skip the XML declaration and comments before looking at the root element
+        body = re.sub(r"<\?.*?\?>|<!--.*?-->", "", head, flags=re.S)
+        m = re.search(r"<([A-Za-z_][\w.-]*)", body)
+        return bool(m) and m.group(1) == "routes"
     except OSError:
         return False
 
@@ -247,6 +284,7 @@ def import_one(source, tests_sumo, force=False):
     source = realpath(source)
     rel = os.path.relpath(source, realpath(tests_sumo))
     name = "tt_" + rel.replace(os.sep, "_")
+    case_dir = join(CASES, name)
 
     option_files, config_files, potentials = collect_files_and_config(source, tests_sumo)
     tokens = collate_options(option_files, "sumo")
@@ -257,6 +295,14 @@ def import_one(source, tests_sumo, force=False):
     for marker in SKIP_MARKERS:
         if marker in joined:
             return None, "needs external tool/GUI/TraCI: " + marker
+
+    # Negative tests (expected error / non-zero exit) produce no tripinfo/fcd/stat,
+    # so make_sim_refs.sh cannot build a reference. Skip them at import time.
+    ec = join(source, "exitcode.sumo")
+    if os.path.isfile(ec):
+        with open(ec, encoding="utf-8", errors="replace") as fh:
+            if fh.read().strip() not in ("", "0"):
+                return None, "expected-error test (non-zero exitcode.sumo)"
 
     sim, net, routes, additions, outputs = parse_file_options(tokens)
 
@@ -283,14 +329,19 @@ def import_one(source, tests_sumo, force=False):
             # use "tools/oracle/cases/<case>/<file>" for the same reason).
             kept_additions.append(os.path.relpath(
                 join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
+    empty_route = False
     if not route_path:
-        return None, "no route input"
+        # Some tests define their vehicles only inside an additional file. The
+        # harness always passes -r, so give it an empty route file in that case.
+        if kept_additions:
+            empty_route = True
+        else:
+            return None, "no route input"
 
-    case_dir = join(CASES, name)
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
-    chosen = [net, os.path.basename(route_path)]
+    chosen = [net] + ([] if empty_route else [os.path.basename(route_path)])
     chosen += [os.path.basename(resolve(a, potentials)) for a in additions if resolve(a, potentials)]
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
@@ -303,7 +354,11 @@ def import_one(source, tests_sumo, force=False):
 
     # Normalised, stable inputs for run_all.sh.
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))
-    shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    if empty_route:
+        with open(join(case_dir, "routes.rou"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write('<?xml version="1.0" encoding="UTF-8"?>\n<routes/>\n')
+    else:
+        shutil.copy2(route_path, join(case_dir, "routes.rou"))
 
     sim_args = list(sim)
     if kept_additions:
@@ -328,7 +383,7 @@ def import_one(source, tests_sumo, force=False):
     return name, {
         "source": rel,
         "net": os.path.basename(net_path),
-        "route": os.path.basename(route_path),
+        "route": "(empty)" if empty_route else os.path.basename(route_path),
         "additions": sorted(set(kept_additions)),
         "outputs": [n for n, _ in outputs],
         "sim_args": sim_args,

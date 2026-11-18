@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:05:05.953292-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_5xxx_ticket5420/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_5xxx_ticket5420/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_5xxx_ticket5420/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_5xxx_ticket5420/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_5xxx_ticket5420/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <max-depart-delay value="1"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker" x="104.95" y="0.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="0.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker" x="104.95" y="2.60" angle="0.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="2.60" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker" x="104.95" y="7.80" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="7.80" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker" x="104.95" y="15.60" angle="0.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="15.60" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker" x="104.95" y="26.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="26.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker" x="104.95" y="39.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="39.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker" x="104.95" y="52.89" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="52.89" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker" x="104.95" y="66.78" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="66.78" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker" x="104.95" y="80.67" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="80.67" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker" x="104.95" y="94.56" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="2.61" lane=":C_11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker" x="104.95" y="108.45" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="0.40" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker" x="104.95" y="122.34" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="14.29" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker" x="104.95" y="136.23" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="28.18" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker" x="104.95" y="150.12" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="42.07" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker" x="104.95" y="164.01" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="55.96" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker" x="104.95" y="177.90" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="69.85" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker" x="104.95" y="191.79" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="83.74" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00"/>
+</fcd-export>
