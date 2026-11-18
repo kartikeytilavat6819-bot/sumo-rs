@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -a tools/oracle/cases/tt_output_e3_persons_walk_open/input_additional.add.xml

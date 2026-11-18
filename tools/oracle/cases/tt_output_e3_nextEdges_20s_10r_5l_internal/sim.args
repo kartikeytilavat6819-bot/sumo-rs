@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --aggregate-warnings 5 -a tools/oracle/cases/tt_output_e3_nextEdges_20s_10r_5l_internal/input_additional.add.xml
