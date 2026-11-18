@@ -38,12 +38,12 @@ run_ng() { # idx
   local -a a; read -ra a <<< "$opts"
   timeout 300 "$CARGO_TARGET_DIR/debug/netgenerate" "${a[@]}" -o "$d/rust.net.xml" > "$d/rust.log" 2>&1; local rr=$?
   timeout 300 "$SUMO_PRISTINE_BIN/netgenerate" "${a[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1; local cr=$?
-  local V=PASS D=ok; local LN="s#$d/cpp#OUT#g; s#$d/rust#OUT#g; //s///"
+  local V=PASS D=ok LN="s#$d/cpp#OUT#g; s#$d/rust#OUT#g; s/\r\$//"
   if grep -q panicked "$d/rust.log"; then V=FAIL; D="PANIC $(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')"
   elif [ $rr -ne $cr ]; then V=FAIL; D="exit rust=$rr cpp=$cr: $(grep -m1 -i error "$d/rust.log")"
   elif [ $cr -eq 0 ]; then
     python3 "$B/compare_net.py" "$d/cpp.net.xml" "$d/rust.net.xml" > "$d/net.log" 2>&1 || { V=FAIL; D="$(head -1 "$d/net.log") | $(grep SUMMARY "$d/net.log")"; }
-    if [ $V = PASS ] && ! diff -q <(sed 's/\r$//' "$d/cpp.log") <(sed 's/\r$//' "$d/rust.log") >/dev/null; then V=FAIL; D="log differs: $(diff <(sed 's/\r$//' "$d/cpp.log") <(sed 's/\r$//' "$d/rust.log") | head -2 | tr '\n' ' ')"; fi
+    if [ $V = PASS ] && ! diff -q <(sed "$LN" "$d/cpp.log") <(sed "$LN" "$d/rust.log") >/dev/null; then V=FAIL; D="log differs: $(diff <(sed "$LN" "$d/cpp.log") <(sed "$LN" "$d/rust.log") | head -2 | tr '\n' ' ')"; fi
   fi
   printf '%s\t%s\t%s\n' "$n" "$V" "$D" >> "$OUT/ng.tsv"
 }
