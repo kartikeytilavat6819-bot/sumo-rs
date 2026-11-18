@@ -58,8 +58,7 @@ fn msveh_to_traffic_object(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
     Ptr::from_mut(&mut v.m().base.base.base)
 }
 
-// shortcut: MSPModel::SAFETY_GAP (msp_model.rs) is not ported yet, this stub holds the C++ value 1.0, upgrade when MSPModel constants are ported
-const MSPMODEL_SAFETY_GAP: f64 = 1.0;
+use crate::microsim::transportables::msp_model::MSPMODEL_SAFETY_GAP;
 use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 
 /// C++ implicit upcast SUMOVehicle* -> SUMOTrafficObject* (base sub-object, same address)

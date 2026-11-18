@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use utils::common::std_defs::INVALID_DOUBLE;
 
-// shortcut: these constants are C++ file-local/class statics (MSTrainHelper.cpp/.h), kept here until a shared home exists
+// C++ MSTrainHelper.cpp file-local/class statics; they stay in this module as in the C++ file
 const PEDESTRIAN_RADIUS_EXTRA_TOLERANCE: f64 = 0.01;
 const MIN_SCALED_CARRIAGE_LENGTH: f64 = 5.0;
 

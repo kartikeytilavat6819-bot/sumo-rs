@@ -3,10 +3,8 @@
 use crate::prelude::*;
 use std::cell::Cell;
 
-// shortcut: STOP_*_SET belong to SUMOVehicleParameter.h, not ported yet, move them there
-// C++ MSVehicle.h: static const int STOP_STARTED_SET = 2 << 17;
-const STOP_STARTED_SET: i32 = 2 << 17;
-const STOP_END_SET: i32 = 2;
+// STOP_STARTED_SET and STOP_END_SET live in utils/vehicle/SUMOVehicleParameter.h (ported to sumo_vehicle_parameter.rs)
+use crate::utils::vehicle::sumo_vehicle_parameter::{STOP_END_SET, STOP_STARTED_SET};
 
 /// Definition of vehicle stop (position and duration)
 /// C++ class `MSStop` (microsim/MSStop.h)

@@ -402,8 +402,7 @@ impl MSTransportable {
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, isPerson: bool) -> Self {
         let numerical_id = MY_CURRENT_NUMERICAL_INDEX.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        // shortcut: C++ stage->init(this) and MSDevice::buildTransportableDevices need the final address of the object, which a
-        // constructor returning Self does not have; the caller must run them after boxing, upgrade when constructors return Box/Ptr
+        // Devices and stage->init(this) need the final address: the builders (MSTransportableControl::build_person/build_container) run them after boxing
         let mut t = MSTransportable {
             base: SUMOTrafficObject::new(&pars.id),
             myParameter: pars,
