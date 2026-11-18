@@ -1188,7 +1188,6 @@ impl NBNetBuilder {
         } else {
             self.myEdgeCont.append_turnarounds_2(explicitTurnarounds, oc.get_bool("no-turnarounds.tls").unwrap());
         }
-        eprintln!("OC68 turnarounds: no-turnarounds={} stop-turn-exists={} stop-turn={} stops={}", oc.get_bool("no-turnarounds").unwrap(), oc.exists("railway.topology.repair.stop-turn"), oc.get_bool("railway.topology.repair.stop-turn").unwrap_or(false), self.myPTStopCont.get_stops().len());
         if oc.exists("railway.topology.repair.stop-turn") && oc.get_bool("railway.topology.repair.stop-turn").unwrap() && self.myPTStopCont.get_stops().len() > 0 {
             // allow direction reversal at all bidi-edges with stops
             self.myEdgeCont.append_railway_turnarounds(&self.myPTStopCont);
