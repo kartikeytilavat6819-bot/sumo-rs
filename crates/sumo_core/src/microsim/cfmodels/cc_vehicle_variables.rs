@@ -87,8 +87,8 @@ pub struct CC_VehicleVariables {
     /// CC desired speed
     pub ccDesiredSpeed: f64,
     pub ccKp: f64,
-    /// currently active controller
-    pub activeController: ACTIVE_CONTROLLER,
+    /// currently active controller (raw int: C++ casts any int to enum Plexe::ACTIVE_CONTROLLER)
+    pub activeController: i32,
     /// fake controller data.
     pub fakeData: CC_VehicleVariables_FAKE_CONTROLLER_DATA,
     /// L matrix
@@ -232,7 +232,7 @@ impl CC_VehicleVariables {
             leaderInitialized: false, caccInitialized: false,
             useFixedAcceleration: 0, fixedAcceleration: 0.,
             crashed: false,
-            ccDesiredSpeed: 14., ccKp: 1., activeController: ACTIVE_CONTROLLER::DRIVER,
+            ccDesiredSpeed: 14., ccKp: 1., activeController: ACTIVE_CONTROLLER::DRIVER as i32,
             fakeData: CC_VehicleVariables_FAKE_CONTROLLER_DATA {
                 frontDistance: 0., frontSpeed: 0., frontAcceleration: 0., frontControllerAcceleration: 0.,
                 leaderSpeed: 0., leaderAcceleration: 0., leaderControllerAcceleration: 0.,
