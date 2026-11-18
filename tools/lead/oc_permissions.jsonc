@@ -1,0 +1,26 @@
+// Copied by tools/lead/oc_agent.sh into each OpenCode agent's worktree as opencode.jsonc (git-excluded).
+// Agents edit only their worktree, read the official C++ source, and never build, push or touch the VMs.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    { "action": "external_directory", "resource": "*", "effect": "deny" },
+    { "action": "external_directory", "resource": "C:/Users/karti/sumo-src/*", "effect": "allow" },
+    { "action": "external_directory", "resource": "C:\\Users\\karti\\sumo-src\\*", "effect": "allow" },
+    { "action": "read", "resource": "C:/Users/karti/sumo-src/**", "effect": "allow" },
+    { "action": "edit", "resource": "C:/Users/karti/sumo-src/**", "effect": "deny" },
+    { "action": "edit", "resource": "C:\\Users\\karti\\sumo-src\\**", "effect": "deny" },
+    { "action": "shell", "resource": "*", "effect": "allow" },
+    { "action": "shell", "resource": "*cargo*", "effect": "deny" },
+    { "action": "shell", "resource": "*rustc*", "effect": "deny" },
+    { "action": "shell", "resource": "*git push*", "effect": "deny" },
+    { "action": "shell", "resource": "*git worktree*", "effect": "deny" },
+    { "action": "shell", "resource": "*git checkout*", "effect": "deny" },
+    { "action": "shell", "resource": "*git reset*", "effect": "deny" },
+    { "action": "shell", "resource": "*vm_gate*", "effect": "deny" },
+    { "action": "shell", "resource": "*gcloud*", "effect": "deny" },
+    { "action": "shell", "resource": "*ssh*", "effect": "deny" },
+    { "action": "shell", "resource": "*kaggle*", "effect": "deny" },
+    { "action": "shell", "resource": "*rm -r*", "effect": "deny" },
+    { "action": "shell", "resource": "*Remove-Item*", "effect": "deny" }
+  ]
+}

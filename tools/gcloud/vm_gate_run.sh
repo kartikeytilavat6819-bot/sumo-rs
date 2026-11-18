@@ -36,6 +36,12 @@ if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarout
   OUT=/tmp/dua$slot timeout 600 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
   echo "duarouter oracle: PASS=$(grep -c $'\tPASS\t' /tmp/dua$slot/results.tsv) of $(($(wc -l < /tmp/dua$slot/results.tsv) - 1))"; grep -v $'\tPASS\t' /tmp/dua$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
 fi
+# netconvert option rows outside run_all (h08); one summary line + the non-PASS row names
+if [ -f tools/oracle/run_netopts_new.sh ]; then
+  rm -rf /tmp/netopts2_$slot; NETOPTS2_OUT=/tmp/netopts2_$slot timeout 900 bash tools/oracle/run_netopts_new.sh >/dev/null 2>&1
+  T=/tmp/netopts2_$slot/summary.tsv
+  echo "netopts_new: PASS=$(grep -c $'\tPASS\t' $T 2>/dev/null) of $(cat $T 2>/dev/null | wc -l); not passing: $(grep -v $'\tPASS\t' $T 2>/dev/null | cut -f1,2 | tr '\t\n' ': ')"
+fi
 cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target
