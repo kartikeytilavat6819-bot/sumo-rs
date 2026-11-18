@@ -19,7 +19,7 @@ normalize() { grep -v 'generated on' "$1" | sed -E 's#/(ref|cand)/#/SIDE/#g'; }
 
 gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   local s=$1 d=$2 mode lanes jt nil p e sidewalks feat algo rf rep rmloop taz unsorted
-  local maxalt rcm wf vt flows igerr randflow seed input x xkeep
+  local maxalt rcm wf vt flows igerr randflow seed input x xkeep person
   mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1   # warm-up
   r 5; algo=(dijkstra astar CH CHWrapper CCH); algo=${algo[$R]}   # arcflag: covered by static oracle case (segfaults on random nets)
   r 3; mode=(grid grid spider rand); mode=${mode[$R]}
@@ -63,8 +63,20 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   r 3; flows=$R    # 0 => use --flow-files instead of --trip-files
   r 4; igerr=$R    # 0 => --ignore-errors
   r 4; randflow=$R # 0 => --randomize-flows (only meaningful with flows)
+  r 3; person=$R   # 0 => add walking personTrips
   r 3; local si=$R; seed=$((s + si * 17))
 
+  if [ $person = 0 ]; then
+    "$PY" - "$d/trips.xml" "$d/persons.xml" <<'PYEOF'
+import sys, xml.etree.ElementTree as ET
+r = ET.parse(sys.argv[1]).getroot()
+out = ET.Element('trips')
+for i, t in enumerate(r.findall('trip')[:4]):
+    p = ET.SubElement(out, 'person', {'id': 'p%d' % i, 'depart': t.get('depart', '0')})
+    ET.SubElement(p, 'personTrip', {'from': t.get('from'), 'to': t.get('to')})
+ET.ElementTree(out).write(sys.argv[2])
+PYEOF
+  fi
   input="--trip-files $d/trips.xml"
   [ $flows = 0 ] && {
     "$PY" - "$d/trips.xml" "$d/flows.xml" "$e" <<'PYEOF'
@@ -118,6 +130,7 @@ ET.ElementTree(root).write(target)
 PYEOF
     if [ $flows = 0 ]; then input="--flow-files $d/flows_taz.xml"; else input="--trip-files $d/trips_taz.xml"; fi
   fi
+  [ $person = 0 ] && input="$input,$d/persons.xml"
 
   local a="--net-file $d/ref_simple.net.xml $input --seed $seed --output-file @DIR@/routes.rou.xml --no-step-log true"
   a="$a --routing-algorithm $algo $x"
@@ -129,6 +142,10 @@ PYEOF
   [ $unsorted = 0 ] && a="$a --unsorted-input true"
   [ $igerr = 0 ] && a="$a --ignore-errors true"
   [ $flows = 0 ] && [ $randflow = 0 ] && a="$a --randomize-flows true"
+  if [ $person = 0 ]; then
+    r 3; local wfs=(0.5 0.75 1.0); a="$a --persontrip.walkfactor ${wfs[$R]}"
+    r 2; local wops=(0.8 1.0); a="$a --persontrip.walk-opposite-factor ${wops[$R]}"
+  fi
   if [ $maxalt -gt 1 ]; then
     a="$a --max-alternatives $maxalt --alternatives-output @DIR@/alts.xml"
     if [ $rcm = logit ]; then
@@ -187,7 +204,7 @@ run_cmp() {  # run_cmp <dir>; sets DIFF; 0 PASS, 1 FAIL, 2 PANIC/TIMEOUT, 3 REFF
 
 dump_case() {  # dump_case <dir>: print every input file as base64 so the case can be rebuilt off-VM
   local d=$1 f
-  for f in ref_simple.net.xml trips.xml flows.xml weights.xml taz.add.xml trips_taz.xml flows_taz.xml dua.args; do
+  for f in ref_simple.net.xml trips.xml flows.xml persons.xml weights.xml taz.add.xml trips_taz.xml flows_taz.xml dua.args; do
     [ -f "$d/$f" ] || continue
     printf 'FILE %s %s\n' "$f" "$(base64 -w0 "$d/$f")"
   done
