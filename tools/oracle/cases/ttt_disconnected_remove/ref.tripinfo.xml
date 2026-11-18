@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T02:48:54.477651-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ttt_disconnected_remove/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ttt_disconnected_remove/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc23/tools/oracle/cases/ttt_disconnected_remove/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc23/tools/oracle/cases/ttt_disconnected_remove/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc23/tools/oracle/cases/ttt_disconnected_remove/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="100"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <time-to-teleport.disconnected value="5"/>
+        <time-to-teleport.remove value="true"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="d0" depart="0.00" departLane="E1_0" departPos="5.10" departSpeed="14.72" departDelay="0.00" arrival="37.00" arrivalLane="E1_0" arrivalPos="400.00" arrivalSpeed="0.00" duration="37.00" routeLength="394.90" waitingTime="6.00" waitingCount="1" stopTime="0.00" timeLoss="10.18" rerouteNo="0" devices="tripinfo_d0 fcd_d0" vType="DEFAULT_VEHTYPE" speedFactor="1.06" vaporized="teleport"/>
+    <tripinfo id="d1" depart="2.00" departLane="E1_0" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="46.00" arrivalLane="E1_0" arrivalPos="400.00" arrivalSpeed="0.00" duration="44.00" routeLength="394.90" waitingTime="7.00" waitingCount="2" stopTime="0.00" timeLoss="13.70" rerouteNo="0" devices="tripinfo_d1 fcd_d1" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized="teleport"/>
+</tripinfos>
