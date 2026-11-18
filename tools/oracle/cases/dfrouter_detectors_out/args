@@ -1,0 +1,1 @@
+--net-file tools/oracle/cases/dfrouter_data/input_tri.net.xml --detector-files tools/oracle/cases/dfrouter_data/input_tri.det.xml --detector-output @DIR@/detectors_def.det.xml --detectors-poi-output @DIR@/detectors.poi.xml

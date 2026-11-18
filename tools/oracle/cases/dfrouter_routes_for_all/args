@@ -1,0 +1,1 @@
+--net-file tools/oracle/cases/dfrouter_data/mid.net.xml --detector-files tools/oracle/cases/dfrouter_data/mid.det.xml --routes-for-all --measure-files tools/oracle/cases/dfrouter_data/mid_flows.txt --routes-output @DIR@/routes.rou.xml --emitters-output @DIR@/emitters.add.xml -e 60

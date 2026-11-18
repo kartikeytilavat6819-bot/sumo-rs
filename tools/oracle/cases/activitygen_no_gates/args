@@ -1,0 +1,1 @@
+--net-file tools/oracle/cases/activitygen_data/activitygen-example.net.xml --stat-file tools/oracle/cases/activitygen_data/no_gates.stat.xml --output-file @DIR@/routes.rou.xml --seed 5
