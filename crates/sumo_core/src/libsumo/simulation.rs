@@ -1005,7 +1005,8 @@ impl Simulation {
             let mut resultCand: Vec<TraCIStage> = Vec::new();
             let mut vehicle: Ptr<SUMOVehicle> = Ptr::null();
             if let Some(ref vehPar) = vehPar {
-                let vehControl2 = MSNet::get_instance().m().get_vehicle_control();
+                let net2 = MSNet::get_instance();
+                let vehControl2 = net2.m().get_vehicle_control();
                 let type_ = vehControl2.get_v_type(&vehPar.vtypeid, Ptr::null(), false);
                 let isTaxi = !type_.is_null() && type_.get_id() == DEFAULT_TAXITYPE_ID && vehPar.line == "taxi";
                 if type_.is_null() {
@@ -1048,7 +1049,8 @@ impl Simulation {
                 }
             }
             if !vehicle.is_null() {
-                let vehControl3 = MSNet::get_instance().m().get_vehicle_control();
+                let net3 = MSNet::get_instance();
+                let vehControl3 = net3.m().get_vehicle_control();
                 vehControl3.delete_vehicle(vehicle, true, false);
                 vehControl3.discount_routing_vehicle();
             }
