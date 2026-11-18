@@ -34,7 +34,11 @@ if [ $rc -ne 0 ]; then echo "BUILD FAILED"; exit 1; fi
 (cd "$CARGO_TARGET_DIR/debug" && ln -sf sumo sumo.exe && ln -sf netconvert netconvert.exe)
 # official-suite tt_ cases: wave2 runs all of them; an agent branch only the ones it adds/changes ($3 = list file)
 [ -n "${3:-}" ] && [ -f "$3" ] && export TT_FILTER="$(cat "$3")"
-case "$2" in wave2\ *) export RUN_SHARDS=8;; *) export RUN_SHARDS=2;; esac
+# shards follow the free cores: 16 cores / gates running on this VM, 2..8; wave2 (all tt_ cases) at least 4
+active=$(ls /home/gate/run_*.sh 2>/dev/null | wc -l); [ "$active" -lt 1 ] && active=1
+shards=$((16 / active)); [ $shards -lt 2 ] && shards=2; [ $shards -gt 8 ] && shards=8
+case "$2" in wave2\ *) [ $shards -lt 4 ] && shards=4;; esac
+export RUN_SHARDS=$shards
 bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|TIMEOUT|PASS=|STALE|MISSING'
 bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
 if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
