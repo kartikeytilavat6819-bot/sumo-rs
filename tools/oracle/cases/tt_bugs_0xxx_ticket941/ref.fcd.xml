@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:34.318431-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket941/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket941/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket941/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket941/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket941/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="priority" x="0.00" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="0.00" lane="main1_1" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-37.00" angle="0.00" type="t2" speed="9.79" pos="63.00" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="priority" x="13.32" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.32" pos="13.32" lane="main1_1" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-27.23" angle="0.00" type="t2" speed="9.77" pos="72.77" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="priority" x="26.56" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.24" pos="26.56" lane="main1_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-19.46" angle="0.00" type="t2" speed="7.77" pos="80.54" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="priority" x="40.19" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.63" pos="40.19" lane="main1_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-13.69" angle="0.00" type="t2" speed="5.77" pos="86.31" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="priority" x="52.93" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.73" pos="52.93" lane="main1_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-9.92" angle="0.00" type="t2" speed="3.77" pos="90.08" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="priority" x="66.67" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.74" pos="66.67" lane="main1_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-8.15" angle="0.00" type="t2" speed="1.77" pos="91.85" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="priority" x="79.82" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.15" pos="79.82" lane="main1_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-8.15" angle="0.00" type="t2" speed="0.00" pos="91.85" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="priority" x="93.41" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.59" pos="93.41" lane="main1_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-8.15" angle="0.00" type="t2" speed="0.00" pos="91.85" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="priority" x="106.80" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.39" pos="2.05" lane="main2_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-8.15" angle="0.00" type="t2" speed="0.00" pos="91.85" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="priority" x="119.52" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.72" pos="14.77" lane="main2_0" slope="0.00"/>
+        <vehicle id="yield" x="101.65" y="-8.15" angle="0.00" type="t2" speed="0.00" pos="91.85" lane="side_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="priority" x="133.41" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="28.66" lane="main2_0" slope="0.00"/>
+        <vehicle id="yield" x="101.72" y="-7.56" angle="0.79" type="t2" speed="0.60" pos="0.50" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="priority" x="146.87" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.46" pos="42.12" lane="main2_0" slope="0.00"/>
+        <vehicle id="yield" x="102.01" y="-6.41" angle="4.17" type="t2" speed="1.20" pos="1.70" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="priority" x="160.59" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.72" pos="55.84" lane="main2_0" slope="0.00"/>
+        <vehicle id="yield" x="103.28" y="-5.21" angle="20.56" type="t2" speed="1.80" pos="3.50" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="priority" x="173.92" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.33" pos="69.17" lane="main2_0" slope="0.00"/>
+        <vehicle id="yield" x="105.65" y="-4.95" angle="60.31" type="t2" speed="2.40" pos="0.90" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="yield" x="108.65" y="-4.95" angle="88.25" type="t2" speed="3.00" pos="3.90" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="yield" x="112.25" y="-4.95" angle="90.00" type="t2" speed="3.60" pos="7.50" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="yield" x="116.45" y="-4.95" angle="90.00" type="t2" speed="4.20" pos="11.70" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="yield" x="121.25" y="-4.95" angle="90.00" type="t2" speed="4.80" pos="16.50" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="yield" x="126.65" y="-4.95" angle="90.00" type="t2" speed="5.40" pos="21.90" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="yield" x="132.65" y="-4.95" angle="90.00" type="t2" speed="6.00" pos="27.90" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="yield" x="139.25" y="-4.95" angle="90.00" type="t2" speed="6.60" pos="34.50" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="yield" x="146.45" y="-4.95" angle="90.00" type="t2" speed="7.20" pos="41.70" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="yield" x="154.25" y="-4.95" angle="90.00" type="t2" speed="7.80" pos="49.50" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="yield" x="162.65" y="-4.95" angle="90.00" type="t2" speed="8.40" pos="57.90" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="yield" x="171.65" y="-4.95" angle="90.00" type="t2" speed="9.00" pos="66.90" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="yield" x="181.25" y="-4.95" angle="90.00" type="t2" speed="9.60" pos="76.50" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="yield" x="191.45" y="-4.95" angle="90.00" type="t2" speed="10.20" pos="86.70" lane="main2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00"/>
+</fcd-export>

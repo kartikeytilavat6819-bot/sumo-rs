@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:36:34.927794-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_lanechange/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_lanechange/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_lanechange/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_lanechange/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_lanechange/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="horizontal01" depart="100.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="0.00" arrival="301.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="201.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_horizontal01 fcd_horizontal01" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal02" depart="104.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="4.00" arrival="305.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="201.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_horizontal02 fcd_horizontal02" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal03" depart="108.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="8.00" arrival="309.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="201.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_horizontal03 fcd_horizontal03" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal04" depart="112.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="12.00" arrival="313.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="201.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_horizontal04 fcd_horizontal04" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal05" depart="116.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="16.00" arrival="317.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="201.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_horizontal05 fcd_horizontal05" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal06" depart="120.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="20.00" arrival="321.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="201.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_horizontal06 fcd_horizontal06" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal07" depart="124.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="24.00" arrival="385.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="261.00" routeLength="2250.00" waitingTime="51.00" waitingCount="1" stopTime="0.00" timeLoss="66.68" rerouteNo="0" devices="tripinfo_horizontal07 fcd_horizontal07" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal08" depart="128.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="28.00" arrival="386.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="258.00" routeLength="2250.00" waitingTime="49.00" waitingCount="1" stopTime="0.00" timeLoss="64.31" rerouteNo="0" devices="tripinfo_horizontal08 fcd_horizontal08" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal11" depart="132.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="32.00" arrival="388.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="256.00" routeLength="2250.00" waitingTime="46.00" waitingCount="1" stopTime="0.00" timeLoss="61.73" rerouteNo="0" devices="tripinfo_horizontal11 fcd_horizontal11" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal12" depart="136.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="36.00" arrival="389.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="253.00" routeLength="2250.00" waitingTime="43.00" waitingCount="1" stopTime="0.00" timeLoss="59.25" rerouteNo="0" devices="tripinfo_horizontal12 fcd_horizontal12" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal13" depart="140.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="40.00" arrival="391.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="251.00" routeLength="2250.00" waitingTime="41.00" waitingCount="1" stopTime="0.00" timeLoss="56.70" rerouteNo="0" devices="tripinfo_horizontal13 fcd_horizontal13" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal14" depart="144.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="44.00" arrival="392.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="248.00" routeLength="2250.00" waitingTime="38.00" waitingCount="1" stopTime="0.00" timeLoss="54.22" rerouteNo="0" devices="tripinfo_horizontal14 fcd_horizontal14" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal15" depart="148.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="48.00" arrival="393.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="245.00" routeLength="2250.00" waitingTime="35.00" waitingCount="1" stopTime="0.00" timeLoss="51.69" rerouteNo="0" devices="tripinfo_horizontal15 fcd_horizontal15" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal16" depart="152.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="52.00" arrival="395.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="243.00" routeLength="2250.00" waitingTime="33.00" waitingCount="1" stopTime="0.00" timeLoss="49.22" rerouteNo="0" devices="tripinfo_horizontal16 fcd_horizontal16" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal17" depart="156.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="56.00" arrival="396.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="240.00" routeLength="2250.00" waitingTime="30.00" waitingCount="1" stopTime="0.00" timeLoss="46.58" rerouteNo="0" devices="tripinfo_horizontal17 fcd_horizontal17" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal18" depart="160.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="60.00" arrival="398.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="238.00" routeLength="2250.00" waitingTime="28.00" waitingCount="1" stopTime="0.00" timeLoss="43.95" rerouteNo="0" devices="tripinfo_horizontal18 fcd_horizontal18" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal21" depart="164.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="64.00" arrival="399.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="235.00" routeLength="2250.00" waitingTime="25.00" waitingCount="1" stopTime="0.00" timeLoss="41.51" rerouteNo="0" devices="tripinfo_horizontal21 fcd_horizontal21" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal22" depart="168.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="68.00" arrival="401.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="233.00" routeLength="2250.00" waitingTime="22.00" waitingCount="1" stopTime="0.00" timeLoss="39.03" rerouteNo="0" devices="tripinfo_horizontal22 fcd_horizontal22" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal23" depart="172.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="72.00" arrival="402.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="230.00" routeLength="2250.00" waitingTime="20.00" waitingCount="1" stopTime="0.00" timeLoss="36.42" rerouteNo="0" devices="tripinfo_horizontal23 fcd_horizontal23" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal24" depart="176.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="76.00" arrival="404.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="228.00" routeLength="2250.00" waitingTime="17.00" waitingCount="1" stopTime="0.00" timeLoss="33.96" rerouteNo="0" devices="tripinfo_horizontal24 fcd_horizontal24" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal25" depart="180.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="80.00" arrival="405.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="225.00" routeLength="2250.00" waitingTime="14.00" waitingCount="1" stopTime="0.00" timeLoss="31.35" rerouteNo="0" devices="tripinfo_horizontal25 fcd_horizontal25" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal26" depart="184.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="84.00" arrival="407.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="223.00" routeLength="2250.00" waitingTime="12.00" waitingCount="1" stopTime="0.00" timeLoss="28.90" rerouteNo="0" devices="tripinfo_horizontal26 fcd_horizontal26" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal27" depart="188.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="88.00" arrival="408.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="220.00" routeLength="2250.00" waitingTime="9.00" waitingCount="1" stopTime="0.00" timeLoss="26.29" rerouteNo="0" devices="tripinfo_horizontal27 fcd_horizontal27" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal28" depart="192.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="92.00" arrival="410.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="218.00" routeLength="2250.00" waitingTime="6.00" waitingCount="1" stopTime="0.00" timeLoss="23.85" rerouteNo="0" devices="tripinfo_horizontal28 fcd_horizontal28" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

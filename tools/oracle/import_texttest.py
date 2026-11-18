@@ -247,6 +247,7 @@ def import_one(source, tests_sumo, force=False):
     source = realpath(source)
     rel = os.path.relpath(source, realpath(tests_sumo))
     name = "tt_" + rel.replace(os.sep, "_")
+    case_dir = join(CASES, name)
 
     option_files, config_files, potentials = collect_files_and_config(source, tests_sumo)
     tokens = collate_options(option_files, "sumo")
@@ -257,6 +258,14 @@ def import_one(source, tests_sumo, force=False):
     for marker in SKIP_MARKERS:
         if marker in joined:
             return None, "needs external tool/GUI/TraCI: " + marker
+
+    # Negative tests (expected error / non-zero exit) produce no tripinfo/fcd/stat,
+    # so make_sim_refs.sh cannot build a reference. Skip them at import time.
+    ec = join(source, "exitcode.sumo")
+    if os.path.isfile(ec):
+        with open(ec, encoding="utf-8", errors="replace") as fh:
+            if fh.read().strip() not in ("", "0"):
+                return None, "expected-error test (non-zero exitcode.sumo)"
 
     sim, net, routes, additions, outputs = parse_file_options(tokens)
 
@@ -286,7 +295,6 @@ def import_one(source, tests_sumo, force=False):
     if not route_path:
         return None, "no route input"
 
-    case_dir = join(CASES, name)
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 

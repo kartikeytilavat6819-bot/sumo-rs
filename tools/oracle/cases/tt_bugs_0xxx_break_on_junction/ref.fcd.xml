@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:36:19.146533-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_break_on_junction/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_break_on_junction/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_break_on_junction/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_break_on_junction/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_break_on_junction/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="23100"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="23100.00">
+        <vehicle id="yield" x="9379.78" y="11588.98" angle="230.63" type="pkwNah2b" speed="0.00" pos="4.10" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23101.00">
+        <vehicle id="yield" x="9377.62" y="11587.20" angle="230.63" type="pkwNah2b" speed="2.80" pos="6.90" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23102.00">
+        <vehicle id="priority" x="9253.63" y="11693.61" angle="167.55" type="pkwNah3" speed="0.00" pos="30.00" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9373.29" y="11583.65" angle="230.63" type="pkwNah2b" speed="5.60" pos="12.50" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23103.00">
+        <vehicle id="priority" x="9254.22" y="11690.98" angle="167.55" type="pkwNah3" speed="2.70" pos="32.70" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9366.79" y="11578.32" angle="230.63" type="pkwNah2b" speed="8.40" pos="20.90" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23104.00">
+        <vehicle id="priority" x="9255.38" y="11685.71" angle="167.55" type="pkwNah3" speed="5.40" pos="38.10" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9358.14" y="11571.22" angle="230.63" type="pkwNah2b" speed="11.20" pos="32.10" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23105.00">
+        <vehicle id="priority" x="9257.16" y="11677.82" angle="167.04" type="pkwNah3" speed="8.10" pos="46.20" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9347.40" y="11562.40" angle="230.63" type="pkwNah2b" speed="13.89" pos="45.99" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23106.00">
+        <vehicle id="priority" x="9259.59" y="11667.30" angle="167.00" type="pkwNah3" speed="10.80" pos="57.00" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9336.66" y="11553.59" angle="230.63" type="pkwNah2b" speed="13.89" pos="59.88" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23107.00">
+        <vehicle id="priority" x="9262.62" y="11654.16" angle="167.00" type="pkwNah3" speed="13.50" pos="70.50" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9325.92" y="11544.78" angle="230.63" type="pkwNah2b" speed="13.89" pos="73.77" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23108.00">
+        <vehicle id="priority" x="9265.74" y="11640.64" angle="167.00" type="pkwNah3" speed="13.89" pos="84.39" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9315.19" y="11535.97" angle="230.63" type="pkwNah2b" speed="13.89" pos="87.66" lane="-51808425_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23109.00">
+        <vehicle id="priority" x="9269.34" y="11627.25" angle="162.44" type="pkwNah3" speed="13.89" pos="98.28" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9302.11" y="11533.16" angle="296.07" type="pkwNah2b" speed="13.89" pos="1.33" lane="51808368_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23110.00">
+        <vehicle id="priority" x="9273.53" y="11614.02" angle="162.44" type="pkwNah3" speed="13.89" pos="112.17" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9298.17" y="11546.48" angle="343.53" type="pkwNah2b" speed="13.89" pos="15.22" lane="51808368_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23111.00">
+        <vehicle id="priority" x="9277.71" y="11600.79" angle="162.44" type="pkwNah3" speed="13.89" pos="126.06" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9294.30" y="11547.96" angle="169.51" type="pkwNah2b" speed="13.89" pos="3.27" lane="-51808368_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23112.00">
+        <vehicle id="priority" x="9281.90" y="11587.56" angle="162.44" type="pkwNah3" speed="13.89" pos="139.95" lane="-51808367_1" slope="0.00"/>
+        <vehicle id="yield" x="9298.23" y="11534.64" angle="163.56" type="pkwNah2b" speed="13.89" pos="17.16" lane="-51808368_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23113.00">
+        <vehicle id="priority" x="9286.09" y="11574.33" angle="162.44" type="pkwNah3" speed="13.89" pos="153.84" lane="-51808367_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23114.00">
+        <vehicle id="priority" x="9290.27" y="11561.09" angle="162.44" type="pkwNah3" speed="13.89" pos="167.73" lane="-51808367_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23115.00">
+        <vehicle id="priority" x="9293.42" y="11550.91" angle="162.85" type="pkwNah3" speed="10.65" pos="0.19" lane="-51808368_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23116.00">
+        <vehicle id="priority" x="9295.17" y="11545.01" angle="163.56" type="pkwNah3" speed="6.15" pos="6.35" lane="-51808368_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23117.00"/>
+</fcd-export>

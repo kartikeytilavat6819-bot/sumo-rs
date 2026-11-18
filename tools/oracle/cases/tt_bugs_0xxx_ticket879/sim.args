@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --device.rerouting.probability 1 --device.rerouting.with-taz --device.rerouting.period -1 --device.rerouting.adaptation-interval 0 -a tools/oracle/cases/tt_bugs_0xxx_ticket879/input_districts.taz.xml

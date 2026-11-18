@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:31.218678-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket889/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket889/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket889/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket889/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket889/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="14"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="priority" x="4.95" y="-15.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="85.00" lane="gneE3_1" slope="0.00"/>
+        <vehicle id="yield" x="5.13" y="21.28" angle="180.43" type="DEFAULT_VEHTYPE" speed="0.00" pos="74.00" lane="gneE0_2" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="priority" x="4.95" y="-12.40" angle="0.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="87.60" lane="gneE3_1" slope="0.00"/>
+        <vehicle id="yield" x="5.11" y="18.68" angle="180.43" type="DEFAULT_VEHTYPE" speed="2.60" pos="76.60" lane="gneE0_2" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="priority" x="4.95" y="-7.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="92.80" lane="gneE3_1" slope="0.00"/>
+        <vehicle id="yield" x="5.08" y="13.48" angle="180.43" type="DEFAULT_VEHTYPE" speed="5.20" pos="81.80" lane="gneE0_2" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="priority" x="5.51" y="0.57" angle="6.04" type="DEFAULT_VEHTYPE" speed="7.80" pos="5.38" lane=":gneJ2_7_0" slope="0.00"/>
+        <vehicle id="yield" x="5.06" y="11.48" angle="180.43" type="DEFAULT_VEHTYPE" speed="2.00" pos="83.80" lane="gneE0_2" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="priority" x="8.35" y="10.55" angle="14.10" type="DEFAULT_VEHTYPE" speed="10.40" pos="15.78" lane=":gneJ2_7_0" slope="0.00"/>
+        <vehicle id="yield" x="5.18" y="9.57" angle="178.93" type="DEFAULT_VEHTYPE" speed="1.91" pos="1.81" lane=":gneJ2_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="priority" x="8.55" y="23.54" angle="0.35" type="DEFAULT_VEHTYPE" speed="13.00" pos="12.18" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="yield" x="5.18" y="9.57" angle="178.93" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.81" lane=":gneJ2_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="priority" x="8.64" y="37.43" angle="0.35" type="DEFAULT_VEHTYPE" speed="13.89" pos="26.07" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="yield" x="5.35" y="6.98" angle="176.77" type="DEFAULT_VEHTYPE" speed="2.60" pos="4.41" lane=":gneJ2_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="priority" x="8.72" y="51.32" angle="0.35" type="DEFAULT_VEHTYPE" speed="13.89" pos="39.96" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="yield" x="6.54" y="1.94" angle="166.26" type="DEFAULT_VEHTYPE" speed="5.20" pos="9.61" lane=":gneJ2_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="priority" x="8.81" y="65.21" angle="0.35" type="DEFAULT_VEHTYPE" speed="13.89" pos="53.85" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="yield" x="12.83" y="-1.65" angle="106.57" type="DEFAULT_VEHTYPE" speed="7.80" pos="1.26" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="priority" x="8.89" y="79.10" angle="0.35" type="DEFAULT_VEHTYPE" speed="13.89" pos="67.74" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="yield" x="23.23" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="11.66" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="priority" x="8.98" y="92.99" angle="0.35" type="DEFAULT_VEHTYPE" speed="13.89" pos="81.63" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="yield" x="36.23" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="24.66" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="yield" x="50.12" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="38.55" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="yield" x="64.01" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="52.44" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="yield" x="77.90" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="66.33" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+</fcd-export>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:21.068103-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket848/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket848/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket848/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket848/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket848/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker" x="-49.28" y="75.43" angle="270.00" type="long" speed="0.00" pos="29.00" lane="gneE15_2" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker" x="-50.28" y="75.43" angle="270.00" type="long" speed="1.00" pos="30.00" lane="gneE15_2" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker" x="-50.28" y="75.43" angle="270.00" type="long" speed="0.00" pos="30.00" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="green" x="-13.98" y="90.19" angle="179.10" type="long" speed="0.00" pos="35.00" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker" x="-50.28" y="75.43" angle="270.00" type="long" speed="0.00" pos="30.00" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="green" x="-13.94" y="87.59" angle="179.10" type="long" speed="2.60" pos="37.60" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker" x="-52.88" y="75.43" angle="270.00" type="long" speed="2.60" pos="32.60" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="green" x="-13.92" y="86.21" angle="179.10" type="long" speed="1.38" pos="38.98" lane="gneE7_1" slope="0.00"/>
+        <vehicle id="priority" x="20.88" y="82.83" angle="276.98" type="short" speed="13.00" pos="0.00" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker" x="-58.08" y="75.43" angle="270.00" type="long" speed="5.20" pos="37.80" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="green" x="-14.14" y="82.24" angle="179.91" type="long" speed="3.98" pos="2.98" lane=":gneJ13_9_0" slope="0.00"/>
+        <vehicle id="priority" x="7.88" y="82.48" angle="268.45" type="short" speed="13.00" pos="13.00" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker" x="-65.88" y="75.43" angle="270.00" type="long" speed="7.80" pos="45.60" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="green" x="-16.89" y="76.53" angle="188.41" type="long" speed="6.58" pos="9.56" lane=":gneJ13_9_0" slope="0.00"/>
+        <vehicle id="priority" x="2.97" y="82.34" angle="268.45" type="short" speed="4.91" pos="17.91" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="green" x="-25.82" y="75.43" angle="227.13" type="long" speed="9.18" pos="5.54" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="priority" x="2.56" y="82.33" angle="268.45" type="short" speed="0.41" pos="18.32" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="green" x="-37.59" y="75.43" angle="268.39" type="long" speed="11.78" pos="17.31" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="priority" x="-0.40" y="81.83" angle="263.55" type="short" speed="3.01" pos="2.91" lane=":gneJ13_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="green" x="-51.48" y="75.43" angle="270.00" type="long" speed="13.89" pos="31.20" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="priority" x="-5.78" y="80.41" angle="254.62" type="short" speed="5.61" pos="8.52" lane=":gneJ13_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="green" x="-65.37" y="75.43" angle="270.00" type="long" speed="13.89" pos="45.09" lane="gneE15_2" slope="0.00"/>
+        <vehicle id="priority" x="-13.06" y="76.62" angle="242.78" type="short" speed="8.21" pos="16.73" lane=":gneJ13_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="priority" x="-23.76" y="75.43" angle="267.42" type="short" speed="10.81" pos="3.48" lane="gneE15_2" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="priority" x="-36.76" y="75.43" angle="270.00" type="short" speed="13.00" pos="16.48" lane="gneE15_2" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="priority" x="-49.76" y="75.43" angle="270.00" type="short" speed="13.00" pos="29.48" lane="gneE15_2" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="priority" x="-62.76" y="75.43" angle="270.00" type="short" speed="13.00" pos="42.48" lane="gneE15_2" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00"/>
+</fcd-export>

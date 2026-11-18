@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:11.778286-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket802/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket802/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket802/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket802/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket802/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="swap_to_left" x="980.00" y="0.00" angle="90.00" type="DEFAULT_VEHTYPE" speed="40.00" pos="980.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="swap_to_left" x="1019.03" y="5.77" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="6.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="swap_to_left" x="1058.14" y="14.16" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="46.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="swap_to_left" x="1097.25" y="22.55" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="86.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="swap_to_left" x="1136.36" y="30.94" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="126.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="swap_to_left" x="1175.47" y="39.33" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="166.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="swap_to_left" x="1214.58" y="47.72" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="206.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="swap_to_left" x="1253.69" y="56.11" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="246.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="swap_to_left" x="1292.80" y="64.51" angle="77.89" type="DEFAULT_VEHTYPE" speed="40.00" pos="286.79" lane="e2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="swap_to_left" x="1331.73" y="71.73" angle="76.51" type="DEFAULT_VEHTYPE" speed="40.00" pos="21.15" lane="end1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="swap_to_left" x="1370.63" y="81.06" angle="76.51" type="DEFAULT_VEHTYPE" speed="40.00" pos="61.15" lane="end1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00"/>
+</fcd-export>

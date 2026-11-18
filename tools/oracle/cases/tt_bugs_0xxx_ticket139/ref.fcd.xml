@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:36:38.412553-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket139/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket139/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket139/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket139/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket139/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="10"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00"/>
+    <timestep time="1.00">
+        <vehicle id="always_right" x="3.08" y="498.35" angle="90.00" type="PkwClass_2" speed="0.00" pos="3.10" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="always_right" x="4.87" y="498.35" angle="90.00" type="PkwClass_2" speed="1.80" pos="4.90" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="always_right" x="8.45" y="498.35" angle="90.00" type="PkwClass_2" speed="3.60" pos="8.50" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="always_right" x="13.82" y="498.35" angle="90.00" type="PkwClass_2" speed="5.40" pos="13.90" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="always_right" x="20.97" y="498.35" angle="90.00" type="PkwClass_2" speed="7.20" pos="21.10" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="always_right" x="29.92" y="498.35" angle="90.00" type="PkwClass_2" speed="9.00" pos="30.10" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="always_right" x="40.65" y="498.35" angle="90.00" type="PkwClass_2" speed="10.80" pos="40.90" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="always_right" x="51.70" y="498.35" angle="90.00" type="PkwClass_2" speed="11.11" pos="52.01" lane="1fi_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="always_right" x="62.74" y="498.35" angle="90.00" type="PkwClass_2" speed="11.11" pos="63.12" lane="1fi_0" slope="0.00"/>
+    </timestep>
+</fcd-export>

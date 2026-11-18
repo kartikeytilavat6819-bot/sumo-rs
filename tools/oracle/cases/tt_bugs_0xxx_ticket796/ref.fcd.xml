@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:09.399791-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket796/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket796/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket796/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket796/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket796/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="collider" x="3135.86" y="20648.05" angle="145.53" type="DEFAULT_VEHTYPE" speed="55.56" pos="180.00" lane="beg2_0" slope="0.00"/>
+        <vehicle id="reckless" x="3329.37" y="20390.08" angle="244.32" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.00" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="collider" x="3167.15" y="20602.46" angle="145.53" type="DEFAULT_VEHTYPE" speed="55.30" pos="235.30" lane="beg2_0" slope="0.00"/>
+        <vehicle id="reckless" x="3327.79" y="20389.32" angle="244.32" type="DEFAULT_VEHTYPE" speed="1.75" pos="96.75" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="collider" x="3197.94" y="20557.61" angle="145.53" type="DEFAULT_VEHTYPE" speed="54.40" pos="289.69" lane="beg2_0" slope="0.00"/>
+        <vehicle id="reckless" x="3324.49" y="20387.73" angle="244.32" type="DEFAULT_VEHTYPE" speed="3.66" pos="100.41" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="collider" x="3229.29" y="20511.93" angle="145.53" type="DEFAULT_VEHTYPE" speed="55.41" pos="345.10" lane="beg2_0" slope="0.00"/>
+        <vehicle id="reckless" x="3320.74" y="20385.93" angle="244.32" type="DEFAULT_VEHTYPE" speed="4.16" pos="104.57" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="collider" x="3260.32" y="20466.73" angle="145.53" type="DEFAULT_VEHTYPE" speed="54.82" pos="399.92" lane="beg2_0" slope="0.00"/>
+        <vehicle id="reckless" x="3320.37" y="20385.75" angle="244.32" type="DEFAULT_VEHTYPE" speed="0.41" pos="104.98" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="collider" x="3291.59" y="20421.17" angle="145.53" type="DEFAULT_VEHTYPE" speed="55.26" pos="455.17" lane="beg2_0" slope="0.00"/>
+        <vehicle id="reckless" x="3320.22" y="20385.68" angle="244.32" type="DEFAULT_VEHTYPE" speed="0.16" pos="105.15" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="collider" x="3322.75" y="20375.79" angle="145.46" type="DEFAULT_VEHTYPE" speed="55.05" pos="6.76" lane="end_0" slope="0.00"/>
+        <vehicle id="reckless" x="3320.15" y="20385.64" angle="244.32" type="DEFAULT_VEHTYPE" speed="0.08" pos="105.23" lane="beg1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="collider" x="3354.11" y="20330.63" angle="144.30" type="DEFAULT_VEHTYPE" speed="54.99" pos="61.74" lane="end_0" slope="0.00"/>
+        <vehicle id="reckless" x="3318.71" y="20384.56" angle="240.29" type="DEFAULT_VEHTYPE" speed="1.82" pos="1.70" lane=":n_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="collider" x="3386.15" y="20286.03" angle="144.30" type="DEFAULT_VEHTYPE" speed="54.91" pos="116.65" lane="end_0" slope="0.00"/>
+        <vehicle id="reckless" x="3318.82" y="20381.56" angle="197.16" type="DEFAULT_VEHTYPE" speed="3.27" pos="4.97" lane=":n_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="reckless" x="3321.59" y="20377.47" angle="145.92" type="DEFAULT_VEHTYPE" speed="4.94" pos="4.72" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="reckless" x="3325.37" y="20371.98" angle="145.46" type="DEFAULT_VEHTYPE" speed="6.67" pos="11.38" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="reckless" x="3329.96" y="20365.32" angle="145.46" type="DEFAULT_VEHTYPE" speed="8.09" pos="19.47" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="reckless" x="3335.50" y="20357.27" angle="145.46" type="DEFAULT_VEHTYPE" speed="9.77" pos="29.24" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="reckless" x="3341.98" y="20347.86" angle="145.46" type="DEFAULT_VEHTYPE" speed="11.43" pos="40.67" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="reckless" x="3349.29" y="20337.33" angle="144.78" type="DEFAULT_VEHTYPE" speed="12.82" pos="53.49" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="reckless" x="3357.80" y="20325.50" angle="144.30" type="DEFAULT_VEHTYPE" speed="14.57" pos="68.06" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="reckless" x="3367.53" y="20311.95" angle="144.30" type="DEFAULT_VEHTYPE" speed="16.69" pos="84.74" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="reckless" x="3378.07" y="20297.28" angle="144.30" type="DEFAULT_VEHTYPE" speed="18.06" pos="102.80" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="reckless" x="3389.79" y="20280.97" angle="144.30" type="DEFAULT_VEHTYPE" speed="20.08" pos="122.88" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="reckless" x="3403.81" y="20264.25" angle="139.25" type="DEFAULT_VEHTYPE" speed="21.83" pos="144.72" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00"/>
+</fcd-export>

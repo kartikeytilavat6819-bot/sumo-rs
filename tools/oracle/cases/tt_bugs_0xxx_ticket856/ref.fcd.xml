@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:37:24.951271-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_0xxx_ticket856/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_0xxx_ticket856/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket856/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket856/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_0xxx_ticket856/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="yield" x="820.88" y="1737.54" angle="114.87" type="low_decel" speed="10.05" pos="36.00" lane="beg1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="priority" x="871.79" y="1717.20" angle="295.78" type="high_accel" speed="10.23" pos="90.00" lane="beg2_3" slope="0.00"/>
+        <vehicle id="yield" x="829.97" y="1733.33" angle="114.87" type="low_decel" speed="10.02" pos="46.02" lane="beg1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="priority" x="864.02" y="1724.62" angle="295.79" type="high_accel" speed="10.23" pos="100.23" lane="beg2_2" slope="0.00"/>
+        <vehicle id="yield" x="836.34" y="1730.37" angle="114.87" type="low_decel" speed="7.02" pos="53.04" lane="beg1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="priority" x="860.30" y="1730.09" angle="295.79" type="high_accel" speed="5.73" pos="105.95" lane="beg2_1" slope="0.00"/>
+        <vehicle id="yield" x="839.99" y="1728.68" angle="114.87" type="low_decel" speed="4.02" pos="57.07" lane="beg1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="priority" x="859.19" y="1730.62" angle="295.79" type="high_accel" speed="1.23" pos="107.18" lane="beg2_1" slope="0.00"/>
+        <vehicle id="yield" x="846.35" y="1726.89" angle="103.91" type="low_decel" speed="6.62" pos="5.50" lane=":b9_7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="priority" x="859.19" y="1730.62" angle="295.79" type="high_accel" speed="0.00" pos="107.18" lane="beg2_1" slope="0.00"/>
+        <vehicle id="yield" x="854.39" y="1730.84" angle="53.26" type="low_decel" speed="9.22" pos="14.72" lane=":b9_7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="priority" x="860.63" y="1733.59" angle="295.79" type="high_accel" speed="0.00" pos="107.18" lane="beg2_0" slope="0.00"/>
+        <vehicle id="yield" x="860.60" y="1740.79" angle="27.63" type="low_decel" speed="11.82" pos="2.89" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="priority" x="860.05" y="1739.62" angle="10.23" type="high_accel" speed="7.00" pos="1.60" lane="end_0" slope="0.00"/>
+        <vehicle id="yield" x="866.49" y="1753.37" angle="25.09" type="low_decel" speed="13.89" pos="16.78" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="priority" x="865.12" y="1750.44" angle="25.09" type="high_accel" speed="11.95" pos="13.55" lane="end_0" slope="0.00"/>
+        <vehicle id="yield" x="872.38" y="1765.95" angle="25.09" type="low_decel" speed="13.89" pos="30.67" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="priority" x="870.46" y="1761.85" angle="25.09" type="high_accel" speed="12.60" pos="26.15" lane="end_0" slope="0.00"/>
+        <vehicle id="yield" x="878.27" y="1778.53" angle="25.09" type="low_decel" speed="13.89" pos="44.56" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="priority" x="875.98" y="1773.65" angle="25.09" type="high_accel" speed="13.03" pos="39.18" lane="end_0" slope="0.00"/>
+        <vehicle id="yield" x="884.16" y="1791.11" angle="25.09" type="low_decel" speed="13.89" pos="58.45" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="priority" x="881.63" y="1785.71" angle="25.09" type="high_accel" speed="13.32" pos="52.49" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="priority" x="887.52" y="1798.29" angle="25.09" type="high_accel" speed="13.89" pos="66.38" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00"/>
+</fcd-export>
