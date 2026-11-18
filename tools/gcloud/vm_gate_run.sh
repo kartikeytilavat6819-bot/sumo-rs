@@ -20,6 +20,7 @@ cd "$SRC"
 # run_all writes a new run-$$ dir per run; the slot is locked, so its old results can go (they filled the disk)
 rm -rf "$SCORE_OUT"; find /tmp -maxdepth 1 -name '*.tgz' -mmin +60 -delete 2>/dev/null
 PKGS="-p sumo -p netconvert"; [ -d crates/duarouter ] && PKGS="$PKGS -p duarouter"
+for t in netgenerate polyconvert; do [ -d crates/$t ] && PKGS="$PKGS -p $t"; done
 cargo build $PKGS --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 # a stale incremental cache can crash rustc (ICE): drop it and build once more
 if [ $rc -ne 0 ] && grep -aqE 'internal compiler error|incremental' /tmp/build$slot.log; then
@@ -36,6 +37,8 @@ if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarout
   OUT=/tmp/dua$slot timeout 600 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
   echo "duarouter oracle: PASS=$(grep -c $'\tPASS\t' /tmp/dua$slot/results.tsv) of $(($(wc -l < /tmp/dua$slot/results.tsv) - 1))"; grep -v $'\tPASS\t' /tmp/dua$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
 fi
+# netgenerate / polyconvert oracles (tools/oracle/run_gen_poly.sh)
+[ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
 cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target
