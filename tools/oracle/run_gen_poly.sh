@@ -38,7 +38,7 @@ run_ng() { # idx
   local -a a; read -ra a <<< "$opts"
   timeout 300 "$CARGO_TARGET_DIR/debug/netgenerate" "${a[@]}" -o "$d/rust.net.xml" > "$d/rust.log" 2>&1; local rr=$?
   timeout 300 "$SUMO_PRISTINE_BIN/netgenerate" "${a[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1; local cr=$?
-  local V=PASS D=ok
+  local V=PASS D=ok LN="s#$d/cpp#OUT#g; s#$d/rust#OUT#g; s/$//"
   if grep -q panicked "$d/rust.log"; then V=FAIL; D="PANIC $(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')"
   elif [ $rr -ne $cr ]; then V=FAIL; D="exit rust=$rr cpp=$cr: $(grep -m1 -i error "$d/rust.log")"
   elif [ $cr -eq 0 ]; then
@@ -54,7 +54,7 @@ run_pc() {
   mkdir -p "$d/cpp" "$d/rust"
   timeout 300 "$CARGO_TARGET_DIR/debug/polyconvert" "${ra[@]}" > "$d/rust.log" 2>&1; local rr=$?
   timeout 300 "$SUMO_PRISTINE_BIN/polyconvert" "${ca[@]}" > "$d/cpp.log" 2>&1; local cr=$?
-  local V=PASS D=ok norm='/generated on/d; s/\r$//'
+  local V=PASS D=ok norm="s#$d/cpp#OUT#g; s#$d/rust#OUT#g; /generated on/d; s/\r\$//"
   if grep -q panicked "$d/rust.log"; then V=FAIL; D="PANIC $(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')"
   elif [ $rr -ne $cr ]; then V=FAIL; D="exit rust=$rr cpp=$cr: $(grep -m1 -i error "$d/rust.log")"
   elif [ $cr -eq 0 ] && ! diff -q <(sed -e "$norm" "$d/cpp/out.xml") <(sed -e "$norm" "$d/rust/out.xml") >/dev/null 2>&1; then
@@ -70,9 +70,9 @@ report() { # tool tsv
 WANT=${1:-all}
 for t in ng pc; do
   [ "$WANT" != all ] && [ "$WANT" != "$( [ $t = ng ] && echo netgenerate || echo polyconvert)" ] && continue
-  if [ $t = ng ]; then tool=netgenerate; n=${#NG[@]}; else tool=polyconvert; n=${#PC[@]}; fi
+  if [ $t = ng ]; then tool=netgenerate; cnt=${#NG[@]}; else tool=polyconvert; cnt=${#PC[@]}; fi
   if [ ! -x "$SUMO_PRISTINE_BIN/$tool" ]; then echo "$tool oracle: pristine $SUMO_PRISTINE_BIN/$tool MISSING"; continue; fi
   if [ ! -x "$CARGO_TARGET_DIR/debug/$tool" ]; then echo "$tool oracle: our binary MISSING"; continue; fi
-  for ((i=0;i<n;i++)); do run_$t $i; done
+  for ((i=0;i<cnt;i++)); do run_$t $i; done
   report $tool "$OUT/$t.tsv"
 done
