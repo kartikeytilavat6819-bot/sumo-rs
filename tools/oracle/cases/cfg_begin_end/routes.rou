@@ -1,0 +1,8 @@
+<routes>
+    <!-- Departures before, at and after the simulation begin (100 s). -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0"/>
+    <route id="r" edges="A"/>
+    <vehicle id="early" type="car" route="r" depart="20" departSpeed="max"/>
+    <vehicle id="at" type="car" route="r" depart="100" departSpeed="max"/>
+    <flow id="f" type="car" route="r" begin="110.00" end="150.00" period="8.00" departSpeed="max"/>
+</routes>
