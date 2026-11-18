@@ -7963,11 +7963,21 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn collision_stop_time(&self) -> SUMOTime {
-        if self.myStops.is_empty() || !self.myStops.front().unwrap().pars.collision {
+        let dbg = self.get_id() == "WE.1";
+        let r = if self.myStops.is_empty() || !self.myStops.front().unwrap().pars.collision {
             self.myCollisionImmunity
         } else {
             std::cmp::max(0, self.myStops.front().unwrap().duration)
+        };
+        if dbg {
+            let t = MSNet::get_instance().get_current_time_step();
+            let info = if self.myStops.is_empty() { "no-stops".to_string() } else {
+                let f = self.myStops.front().unwrap();
+                format!("n={} reached={} dur={} collision={} lane={} edge={}", self.myStops.len(), f.reached, f.duration, f.pars.collision, f.lane.get_id(), f.edge)
+            };
+            eprintln!("DBG collision_stop_time WE.1 t={} r={} {}", t, r, info);
         }
+        r
     }
 
     /// C++: `bool MSVehicle::brokeDown() const` [const]
@@ -8382,6 +8392,9 @@ impl MSVehicle {
         let stop: Ptr<MSStop> = Ptr::from_mut(self.myStops.front_mut().unwrap());
         let time: SUMOTime = MSNet::get_instance().get_current_time_step();
         let me: Ptr<MSVehicle> = Ptr::from_mut(self);
+        if self.get_id() == "WE.1" {
+            eprintln!("DBG process_next_stop WE.1 t={} reached={} dur={} lane={} stopLane={} pos={}", time, stop.reached, stop.duration, self.myLane.get_id(), stop.lane.get_id(), self.myState.myPos);
+        }
         if stop.reached {
             stop.m().duration -= self.get_action_step_length();
             if self.get_speed() > 0.0 {
