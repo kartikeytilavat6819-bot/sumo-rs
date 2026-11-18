@@ -2303,7 +2303,8 @@ impl MSLCM_LC2013 {
         } else {
             // memory decay factor for this action step
             let memoryFactor = 1. - (1. - LOOK_AHEAD_SPEED_MEMORY) * self.myVehicle.get_action_step_length_secs();
-            debug_assert!(memoryFactor > 0.);
+            // C++ has assert(memoryFactor > 0.) here; official release builds compile it out and
+            // keep the formula below (negative factors are possible with a large action step).
             self.myLookAheadSpeed = max2(LOOK_AHEAD_MIN_SPEED,
                 memoryFactor * self.myLookAheadSpeed + (1. - memoryFactor) * self.myVehicle.get_speed());
         }
