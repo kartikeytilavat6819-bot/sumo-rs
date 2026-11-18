@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T11:35:27.992169-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-18T12:38:08.332195-05:00 by Eclipse SUMO sumo 1.28.0
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -21,6 +21,7 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 
     <output>
         <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\AppData\Local\Temp\oc62_discard_fcd.xml"/>
         <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_junction_control_no_tls_multique\ref.tripinfo.xml"/>
         <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_junction_control_no_tls_multique\ref.stat.xml"/>
     </output>
@@ -45,7 +46,7 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 -->
 
 <statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
-    <performance clockBegin="297764.00" clockEnd="297778.31" clockDuration="14.32" traciDuration="24.89" realTimeFactor="1151.22" vehicleUpdatesPerSecond="260014.60" personUpdatesPerSecond="0.00" begin="0.00" end="16482.00" duration="16482.00"/>
+    <performance clockBegin="301524.37" clockEnd="301556.29" clockDuration="31.92" traciDuration="33.69" realTimeFactor="516.35" vehicleUpdatesPerSecond="116623.72" personUpdatesPerSecond="0.00" begin="0.00" end="16482.00" duration="16482.00"/>
     <vehicles loaded="5400" inserted="5400" running="0" waiting="0"/>
     <teleports total="57" jam="0" yield="57" wrongLane="0"/>
     <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>

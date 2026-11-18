@@ -7,15 +7,18 @@ cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
 SUMO="$BIN/sumo.exe"
 [ -x "$SUMO" ] || SUMO="$BIN/sumo"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc62-spot
+OUT=/tmp/oc62-spot
 rm -rf "$OUT"; mkdir -p "$OUT"
 
 CASES="
 tt_meso_bugs_no_teleporting_backwards
 tt_meso_bugs_ticket747
 tt_meso_bugs_ticket1502
+tt_meso_bugs_ticket1502b
 tt_meso_edge_type_default
 tt_meso_junction_control_plain
+tt_meso_junction_control_no_control
+tt_meso_junction_control_tls_coordination_good_control
 tt_meso_lane_queue_no_queue
 tt_meso_tau_vehicle_tau
 tt_meso_teleport_single_jump

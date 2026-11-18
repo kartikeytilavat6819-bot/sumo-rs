@@ -45,8 +45,8 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     /// Constructor
     // EdgeFloatTimeLineRetriever_EdgeEffort(MSNet& net) : myNet(net) {}
     #[allow(unused_variables)]
-    pub fn new(net: &mut MSNet) -> Self {
-        NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort { base: (), myNet: Ptr::from_mut(net) }
+    pub fn new(net: Ptr<MSNet>) -> Self {
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort { base: (), myNet: net }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeEffort::~EdgeFloatTimeLineRetriever_EdgeEffort() noexcept` [virtual]
@@ -108,8 +108,8 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     /// Constructor
     // EdgeFloatTimeLineRetriever_EdgeTravelTime(MSNet& net) : myNet(net) {}
     #[allow(unused_variables)]
-    pub fn new(net: &mut MSNet) -> Self {
-        NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime { base: (), myNet: Ptr::from_mut(net) }
+    pub fn new(net: Ptr<MSNet>) -> Self {
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime { base: (), myNet: net }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime() noexcept` [virtual]
@@ -142,6 +142,18 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
         }
     }
 
+}
+
+impl utils::xml::saxweights_handler::EdgeFloatTimeLineRetriever for NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
+    fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort::add_edge_weight(self, id, val, beg, end)
+    }
+}
+
+impl utils::xml::saxweights_handler::EdgeFloatTimeLineRetriever for NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
+    fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime::add_edge_weight(self, id, val, beg, end)
+    }
 }
 
 /// The main interface for loading a microsim
@@ -545,7 +557,30 @@ impl NLBuilder {
             if !self.myOptions.is_usable_file_list("weight-files").unwrap() {
                 return false;
             }
-            // shortcut: SAXWeightsHandler / ToRetrieveDefinition and the EdgeFloatTimeLineRetriever base are not ported, so weight files are not parsed yet; upgrade when SAXWeightsHandler lands
+            // build and prepare the weights handler
+            // travel time, first (always used)
+            let mut ttRetriever = NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime::new(self.myNet);
+            let mut eRetriever = NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort::new(self.myNet);
+            let mut retrieverDefs = vec![utils::xml::saxweights_handler::ToRetrieveDefinition::new(
+                "traveltime", true, &mut ttRetriever)];
+            // the measure to use, then
+            let mut measure = self.myOptions.get_string("weight-attribute").unwrap();
+            if !self.myOptions.is_default("weight-attribute") {
+                if measure == "CO" || measure == "CO2" || measure == "HC" || measure == "PMx"
+                        || measure == "NOx" || measure == "fuel" || measure == "electricity" {
+                    measure = format!("{measure}_perVeh");
+                }
+                retrieverDefs.push(utils::xml::saxweights_handler::ToRetrieveDefinition::new(
+                    &measure, true, &mut eRetriever));
+            }
+            let mut handler = utils::xml::saxweights_handler::SAXWeightsHandler::new(retrieverDefs, "");
+            let files = self.myOptions.get_string_vector("weight-files").unwrap().clone();
+            for f in files.iter() {
+                write_message(&format!("Loading weights from '{f}'..."));
+                if !utils::xml::xml_sub_sys::run_parser(&mut handler, f, false, false, false, true).unwrap() {
+                    return false;
+                }
+            }
         }
 
         // load the previous state if wished
