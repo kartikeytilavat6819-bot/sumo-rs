@@ -10,7 +10,7 @@ use super::shape::{gch_using_geo_projection, gch_x2cartesian, DEFAULT_ANGLE, DEF
 #[repr(C)]
 pub struct ShapeHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: GenericSAXHandler, // shortcut: SUMOSAXHandler not ported yet, placeholder base
+    pub base: GenericSAXHandler, // SUMOSAXHandler is GenericSAXHandler in this port (utils::xml::sumo_sax_handler::new)
     /// reference to shape container in which all Shares are being added
     pub myShapeContainer: Ptr<ShapeContainer>,
     /// The prefix to use

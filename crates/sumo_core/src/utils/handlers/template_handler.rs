@@ -69,7 +69,7 @@ impl TemplateHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_template(options: &mut OptionsCont, templateString: &str) {
-        // shortcut: the XML parser (quick-xml) lives in the utils crate and sumo_core cannot reach it, so the template text cannot be read, upgrade when utils exposes a SAX entry point that accepts this handler
+        // shortcut: TemplateHandler::parseTemplate is called only from netedit (GUI), which is not ported; upgrade when netedit is ported (the SAX entry point utils::xml::SUMOSAXReader::parse_string exists)
         panic!("TemplateHandler::parseTemplate: cannot parse template '{}' yet", templateString);
     }
 

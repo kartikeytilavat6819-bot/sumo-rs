@@ -21,7 +21,7 @@ pub const NUMERICAL_EPS: f64 = 0.001;
 
 /// C++ `InvalidArgument`
 // shortcut: local stand-in for UtilExceptions::InvalidArgument (common has ProcessError::InvalidArgument);
-// switching changes the return type of split_at / move2side_custom and their callers, do it in one pass
+// switching changes the return type of split_at / move2side_custom, whose ~33 callers in sumo_core are outside this area
 #[derive(Debug, Clone, PartialEq)]
 pub struct InvalidArgument(pub String);
 

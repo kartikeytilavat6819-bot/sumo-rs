@@ -16991,18 +16991,30 @@ impl MSVehicle_WaitingTimeCollector {
     // }
     #[allow(unused_variables)]
     pub fn set_state(&mut self, state: &str) {
-        // shortcut: C++ istringstream stops at the first unparsable token; here unparsable tokens are skipped
-        let mut tokens = state.split_whitespace().filter_map(|t| t.parse::<i64>().ok());
-        if let Some(memory) = tokens.next() {
-            self.myMemorySize = memory;
-        }
-        let mut numIntervals = tokens.next().unwrap_or(0);
-        while numIntervals > 0 {
-            match (tokens.next(), tokens.next()) {
-                (Some(begin), Some(end)) => self.myWaitingIntervals.push_back((begin, end)),
-                _ => break,
+        // istringstream semantics: a failed extraction stores 0 and sets failbit, later extractions leave the value untouched
+        let mut tokens = state.split_whitespace();
+        let mut failed = false;
+        let mut extract = |v: &mut i64| {
+            if failed {
+                return;
             }
+            match tokens.next().and_then(|t| t.parse::<i64>().ok()) {
+                Some(x) => *v = x,
+                None => {
+                    *v = 0;
+                    failed = true;
+                }
+            }
+        };
+        let mut numIntervals: i64 = 0;
+        let (mut begin, mut end): (i64, i64) = (0, 0);
+        extract(&mut self.myMemorySize);
+        extract(&mut numIntervals);
+        while numIntervals > 0 {
             numIntervals -= 1;
+            extract(&mut begin);
+            extract(&mut end);
+            self.myWaitingIntervals.push_back((begin, end));
         }
     }
 
