@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/rail_all_bidi/rail_all_bidi.nod.xml --edge-files tools/oracle/cases/rail_all_bidi/rail_all_bidi.edg.xml --railway.topology.all-bidi

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <!-- north track: eastbound only -->
+    <edge id="wN_n1" from="wN" to="n1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="n1_n2" from="n1" to="n2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="n2_eN" from="n2" to="eN" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <!-- south track: westbound only -->
+    <edge id="eS_s2" from="eS" to="s2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="s2_s1" from="s2" to="s1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="s1_wS" from="s1" to="wS" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+</edges>
