@@ -1,0 +1,32 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+    <route id="rL" edges="E0 E1 E2"/>
+    <vehicle id="tb0" type="bus" route="rL" line="L1" depart="0.00">
+        <stop busStop="bs0" duration="10.00" triggered="person"/>
+        <stop busStop="bs1" duration="10.00"/>
+    </vehicle>
+    <vehicle id="tb1" type="bus" route="rL" line="L1" depart="40.00">
+        <stop busStop="bs0" duration="10.00" triggered="person"/>
+        <stop busStop="bs1" duration="10.00"/>
+    </vehicle>
+    <vehicle id="tb2" type="bus" route="rL" line="L1" depart="80.00">
+        <stop busStop="bs0" duration="10.00" triggered="person"/>
+        <stop busStop="bs1" duration="10.00"/>
+    </vehicle>
+    <person id="tr0" type="ped" depart="15.00" departPos="50.00">
+        <ride from="E0" busStop="bs1" lines="L1"/>
+    </person>
+    <person id="tr1" type="ped" depart="18.00" departPos="50.00">
+        <ride from="E0" busStop="bs1" lines="L1"/>
+    </person>
+    <person id="tr2" type="ped" depart="55.00" departPos="50.00">
+        <ride from="E0" busStop="bs1" lines="L1"/>
+    </person>
+    <person id="tr3" type="ped" depart="58.00" departPos="50.00">
+        <ride from="E0" busStop="bs1" lines="L1"/>
+    </person>
+    <person id="tr4" type="ped" depart="95.00" departPos="50.00">
+        <ride from="E0" busStop="bs1" lines="L1"/>
+    </person>
+</routes>

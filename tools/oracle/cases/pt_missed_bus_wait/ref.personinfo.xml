@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T02:09:15.022779-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/pt_missed_bus_wait/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/pt_missed_bus_wait/routes.rou"/>
+        <additional-files value="tools/oracle/cases/pt_missed_bus_wait/pt_missed_bus_wait.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_missed_bus_wait/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_missed_bus_wait/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_missed_bus_wait/ref.personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_missed_bus_wait/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_missed_bus_wait/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="mw0" depart="25.00" type="ped" speedFactor="1.06" duration="81.00" waitingTime="55.00" timeLoss="4.20" traveltime="26.00">
+        <ride waitingTime="55.00" vehicle="l1b" depart="80.00" arrival="106.00" arrivalPos="59.98" duration="26.00" routeLength="200.19" timeLoss="4.20"/>
+    </personinfo>
+    <personinfo id="mw1" depart="50.00" type="ped" speedFactor="0.94" duration="56.00" waitingTime="30.00" timeLoss="4.20" traveltime="26.00">
+        <ride waitingTime="30.00" vehicle="l1b" depart="80.00" arrival="106.00" arrivalPos="59.98" duration="26.00" routeLength="200.19" timeLoss="4.20"/>
+    </personinfo>
+    <personinfo id="mw2" depart="90.00" type="ped" speedFactor="1.01" duration="77.00" waitingTime="50.00" timeLoss="5.39" traveltime="27.00">
+        <ride waitingTime="50.00" vehicle="l1c" depart="140.00" arrival="167.00" arrivalPos="59.99" duration="27.00" routeLength="200.24" timeLoss="5.39"/>
+    </personinfo>
+</tripinfos>
