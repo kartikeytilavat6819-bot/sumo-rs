@@ -25,6 +25,52 @@ fn as_charging_station(p: Ptr<MSStoppingPlace>) -> Ptr<MSChargingStation> {
     Ptr::from_raw(p.as_raw() as *mut MSChargingStation)
 }
 
+// MSDevice_StationFinder derives from MSStoppingPlaceRerouter (its base2). Install a table
+// forwarding that base's pure virtuals to the concrete implementations on this device.
+fn station_finder_of(spr: &mut MSStoppingPlaceRerouter) -> &mut MSDevice_StationFinder {
+    let p = (spr as *mut MSStoppingPlaceRerouter as *mut u8)
+        .wrapping_sub(std::mem::offset_of!(MSDevice_StationFinder, base2)) as *mut MSDevice_StationFinder;
+    unsafe { &mut *p }
+}
+fn sf_get_stopping_place_occupancy(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
+    station_finder_of(spr).get_stopping_place_occupancy(sp, veh)
+}
+fn sf_get_last_step_stopping_place_occupancy(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
+    station_finder_of(spr).get_last_step_stopping_place_occupancy(sp, veh)
+}
+fn sf_get_stopping_place_capacity(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>) -> f64 {
+    station_finder_of(spr).get_stopping_place_capacity(sp)
+}
+fn sf_remember_blocked_stopping_place(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, blocked: bool) {
+    station_finder_of(spr).remember_blocked_stopping_place(veh, sp, blocked)
+}
+fn sf_remember_stopping_place_score(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, score: &str) {
+    station_finder_of(spr).remember_stopping_place_score(veh, sp, score)
+}
+fn sf_reset_stopping_place_scores(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) {
+    station_finder_of(spr).reset_stopping_place_scores(veh)
+}
+fn sf_saw_blocked_stopping_place(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
+    station_finder_of(spr).saw_blocked_stopping_place(veh, sp, local)
+}
+fn sf_get_number_stopping_place_reroutes(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) -> i32 {
+    station_finder_of(spr).get_number_stopping_place_reroutes(veh)
+}
+fn sf_set_number_stopping_place_reroutes(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, value: i32) {
+    station_finder_of(spr).set_number_stopping_place_reroutes(veh, value)
+}
+static MS_DEVICE_STATION_FINDER_STOPPING_PLACE_REROUTER_VT: MSStoppingPlaceRerouterVt = MSStoppingPlaceRerouterVt {
+    get_stopping_place_occupancy: sf_get_stopping_place_occupancy,
+    get_last_step_stopping_place_occupancy: sf_get_last_step_stopping_place_occupancy,
+    get_stopping_place_capacity: sf_get_stopping_place_capacity,
+    remember_blocked_stopping_place: sf_remember_blocked_stopping_place,
+    remember_stopping_place_score: sf_remember_stopping_place_score,
+    reset_stopping_place_scores: sf_reset_stopping_place_scores,
+    saw_blocked_stopping_place: sf_saw_blocked_stopping_place,
+    get_number_stopping_place_reroutes: sf_get_number_stopping_place_reroutes,
+    set_number_stopping_place_reroutes: sf_set_number_stopping_place_reroutes,
+};
+
 /// C++ `SUMOVehicleParameter::Stop stopPar` as filled in by each charging-stop caller (charging station, parking, lane, positions)
 fn charging_stop_par(cs: Ptr<MSChargingStation>) -> SUMOVehicleParameter_Stop {
     let mut stopPar = SUMOVehicleParameter_Stop::default();
@@ -353,6 +399,7 @@ impl MSDevice_StationFinder {
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
         this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
         this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
+        this.base2.vt = &MS_DEVICE_STATION_FINDER_STOPPING_PLACE_REROUTER_VT;
         this
     }
 

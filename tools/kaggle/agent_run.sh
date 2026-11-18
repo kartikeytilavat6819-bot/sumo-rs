@@ -18,7 +18,8 @@ for d in tools/oracle/cases/tt_devices_*/; do
       >"$OUT/$c.log" 2>&1
   rc=$?
   if [ "$rc" -ne 0 ]; then
-    printf '%-62s rc=%s %s\n' "$c" "$rc" "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-80)"
+    printf '%-62s rc=%s\n' "$c" "$rc"
+    grep -A8 -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-160 | sed 's/^/    /'
     continue
   fi
   d1=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1 | head -1)

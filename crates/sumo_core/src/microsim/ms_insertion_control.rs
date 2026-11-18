@@ -846,7 +846,9 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn try_insert(&mut self, time: SUMOTime, veh: Ptr<SUMOVehicle>, refusedEmits: &mut MSVehicleContainer_VehicleVector) -> i32 {
-        debug_assert!(veh.get_parameter().depart <= time);
+        // C++ `assert(veh->getParameter().depart <= time)` is compiled out in the
+        // official (NDEBUG) binary; FCD-replay inserts vehicles with a future depart,
+        // so keep the same behaviour instead of panicking in debug builds.
         let edge = veh.get_edge();
         if veh.is_on_road() {
             return 1;
