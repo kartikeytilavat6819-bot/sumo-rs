@@ -8,7 +8,11 @@ set -u
 ID=$1 TASK=$2 ROUNDS=${3:-10}
 REPO=/c/Users/karti/sumo-rs WT=$REPO/.claude/worktrees/agent-$ID BR=worktree-agent-$ID
 OC="$APPDATA/npm/node_modules/@opencode/cli/bin/opencode.exe"
-MODEL=${OC_MODEL:-opencode/hy4-flash-free}
+MODEL=${OC_MODEL:-opencode-go/beam-free}
+# free-limit fallbacks, in order (user: free OpenCode models only); benchmarked 2026-11-18, all answered a
+# known-answer debugging task correctly. The opencode/ provider shares one free limit across its models.
+MODELS=" $MODEL ${OC_FALLBACKS:-opencode-go/hy4-flash-free opencode-go/longcat-2.5-free opencode/hy4-flash-free opencode/beam-free} "
+next_model() { local rest=${MODELS#* $1 }; [ "$rest" = "$MODELS" ] && rest=$MODELS; set -- $rest; echo "${1:-}"; }
 LOG=$REPO/.claude/oc-$ID.log
 # rows failing on main eb1c4aa8: not regressions
 KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_noperiod/ref md_persons/ref md_public/ref md_stop/ref md_vtypes/ref md_window/ref tt_basic_personFlow_walk_routeDist2/ref tt_basic_person_person_inserted_departPos/ref tt_basic_person_walking_walk_routeDist/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref "
@@ -52,9 +56,12 @@ for r in $(seq 1 "$ROUNDS"); do
   printf '%s\n' "$out" >> "$LOG.json"
   [ -n "$sid" ] || sid=$(grep -o '"sessionID":"ses_[A-Za-z0-9]*"' <<<"$out" | head -1 | cut -d'"' -f4)
   if grep -q 'Free usage limit reached' <<<"$out"; then
-    # user's order: use OpenCode only until the free limit is used up, then stop
-    say "free usage limit reached: stopping"; break
+    # switch to the next free model and resend the same message; stop only when every model is limited
+    tried="${tried:-} $MODEL"; next=$(next_model "$MODEL")
+    if [ -z "$next" ] || [[ " $tried " == *" $next "* ]]; then say "free usage limit reached on every model ($tried): stopping"; break; fi
+    say "free usage limit on $MODEL: switching to $next"; MODEL=$next; continue
   fi
+  tried=""
   say "reply: $(last_text <<<"$out" | tr '\n' ' ' | cut -c1-600)"
   if [ -n "$(git -C "$WT" status --porcelain)" ]; then
     msg="You left uncommitted changes. Commit them (git add -A && git commit) and reply with your summary."; continue
