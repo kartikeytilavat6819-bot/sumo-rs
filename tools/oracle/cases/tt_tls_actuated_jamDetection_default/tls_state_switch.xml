@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:55:15.208181-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_tls_actuated_jamDetection_default//ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_tls_actuated_jamDetection_default//routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_tls_actuated_jamDetection_default/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_actuated_jamDetection_default//ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_actuated_jamDetection_default//ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_actuated_jamDetection_default//ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport value="1000"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tlsStates xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tlsstates_file.xsd">
+    <tlsState time="0.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="5.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="8.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="13.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="16.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="21.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="24.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="29.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="32.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="37.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="40.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="45.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="48.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="98.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="101.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="115.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="118.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="168.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="171.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="185.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="188.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="238.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="241.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="249.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="252.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="302.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="305.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="325.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="328.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="378.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="381.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="398.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="401.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="451.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="454.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="459.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="462.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="512.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="515.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="520.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="523.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="573.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="576.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="581.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="584.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+    <tlsState time="634.00" id="C" programID="0" phase="1" state="yyyrrryyyrrr"/>
+    <tlsState time="637.00" id="C" programID="0" phase="2" state="rrrGGgrrrGGg"/>
+    <tlsState time="642.00" id="C" programID="0" phase="3" state="rrryyyrrryyy"/>
+    <tlsState time="645.00" id="C" programID="0" phase="0" state="GGgrrrGGgrrr"/>
+</tlsStates>

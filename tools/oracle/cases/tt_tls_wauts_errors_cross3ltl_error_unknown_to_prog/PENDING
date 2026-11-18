@@ -1,0 +1,2 @@
+Official sumo exits 1 (error-only test): Can not switch tls '0' to program 'x';
+No tripinfo/fcd output, so it cannot be an oracle row.

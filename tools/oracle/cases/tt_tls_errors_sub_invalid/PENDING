@@ -1,0 +1,2 @@
+Official sumo exits 1 (error-only test): Another logic with id '0' and programID '0' exists.
+No tripinfo/fcd output, so it cannot be an oracle row.

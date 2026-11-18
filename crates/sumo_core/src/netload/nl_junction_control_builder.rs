@@ -1073,9 +1073,15 @@ impl NLJunctionControlBuilder {
         for logic in self.myAdditionalLogics.iter() {
             logic.m().init(self.myDetectorBuilder.m());
         }
-        // delay parameter loading until initialization
+        // delay parameter loading until initialization.
+        // C++ `Parameterised::updateParameters` calls the virtual setParameter for each
+        // key/value; dispatch through MSTrafficLightLogic::set_parameter so subclasses
+        // (actuated, delay-based, NEMA) apply parameter-specific state (jam-threshold,
+        // max-gap, linkMinDur/MaxDur, ...), not just the raw parameter map.
         for (logic, params) in self.myLogicParams.iter() {
-            logic.m().base2.update_parameters(params);
+            for (key, value) in params.iter() {
+                logic.m().set_parameter(key.as_str(), value.as_str());
+            }
         }
     }
 

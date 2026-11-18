@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 100 --no-duration-log -e 300 -a tools/oracle/cases/tt_tls_wauts_begin100_cross3ltl_switch100_200_off500/input_additional.add.xml

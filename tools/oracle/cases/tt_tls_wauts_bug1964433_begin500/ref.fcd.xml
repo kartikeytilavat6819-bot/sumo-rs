@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T13:34:45.377068-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_tls_wauts_bug1964433_begin500//ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_tls_wauts_bug1964433_begin500//routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_tls_wauts_bug1964433_begin500/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_wauts_bug1964433_begin500//ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_wauts_bug1964433_begin500//ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_wauts_bug1964433_begin500//ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="500"/>
+        <end value="600"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="500.00"/>
+    <timestep time="501.00"/>
+    <timestep time="502.00"/>
+    <timestep time="503.00"/>
+    <timestep time="504.00"/>
+    <timestep time="505.00"/>
+    <timestep time="506.00"/>
+    <timestep time="507.00"/>
+    <timestep time="508.00"/>
+    <timestep time="509.00"/>
+    <timestep time="510.00"/>
+    <timestep time="511.00"/>
+    <timestep time="512.00"/>
+    <timestep time="513.00"/>
+    <timestep time="514.00"/>
+    <timestep time="515.00"/>
+    <timestep time="516.00"/>
+    <timestep time="517.00"/>
+    <timestep time="518.00"/>
+    <timestep time="519.00"/>
+    <timestep time="520.00"/>
+    <timestep time="521.00"/>
+    <timestep time="522.00"/>
+    <timestep time="523.00"/>
+    <timestep time="524.00"/>
+    <timestep time="525.00"/>
+    <timestep time="526.00"/>
+    <timestep time="527.00"/>
+    <timestep time="528.00"/>
+    <timestep time="529.00"/>
+    <timestep time="530.00"/>
+    <timestep time="531.00"/>
+    <timestep time="532.00"/>
+    <timestep time="533.00"/>
+    <timestep time="534.00"/>
+    <timestep time="535.00"/>
+    <timestep time="536.00"/>
+    <timestep time="537.00"/>
+    <timestep time="538.00"/>
+    <timestep time="539.00"/>
+    <timestep time="540.00"/>
+    <timestep time="541.00"/>
+    <timestep time="542.00"/>
+    <timestep time="543.00"/>
+    <timestep time="544.00"/>
+    <timestep time="545.00"/>
+    <timestep time="546.00"/>
+    <timestep time="547.00"/>
+    <timestep time="548.00"/>
+    <timestep time="549.00"/>
+    <timestep time="550.00"/>
+    <timestep time="551.00"/>
+    <timestep time="552.00"/>
+    <timestep time="553.00"/>
+    <timestep time="554.00"/>
+    <timestep time="555.00"/>
+    <timestep time="556.00"/>
+    <timestep time="557.00"/>
+    <timestep time="558.00"/>
+    <timestep time="559.00"/>
+    <timestep time="560.00"/>
+    <timestep time="561.00"/>
+    <timestep time="562.00"/>
+    <timestep time="563.00"/>
+    <timestep time="564.00"/>
+    <timestep time="565.00"/>
+    <timestep time="566.00"/>
+    <timestep time="567.00"/>
+    <timestep time="568.00"/>
+    <timestep time="569.00"/>
+    <timestep time="570.00"/>
+    <timestep time="571.00"/>
+    <timestep time="572.00"/>
+    <timestep time="573.00"/>
+    <timestep time="574.00"/>
+    <timestep time="575.00"/>
+    <timestep time="576.00"/>
+    <timestep time="577.00"/>
+    <timestep time="578.00"/>
+    <timestep time="579.00"/>
+    <timestep time="580.00"/>
+    <timestep time="581.00"/>
+    <timestep time="582.00"/>
+    <timestep time="583.00"/>
+    <timestep time="584.00"/>
+    <timestep time="585.00"/>
+    <timestep time="586.00"/>
+    <timestep time="587.00"/>
+    <timestep time="588.00"/>
+    <timestep time="589.00"/>
+    <timestep time="590.00"/>
+    <timestep time="591.00"/>
+    <timestep time="592.00"/>
+    <timestep time="593.00"/>
+    <timestep time="594.00"/>
+    <timestep time="595.00"/>
+    <timestep time="596.00"/>
+    <timestep time="597.00"/>
+    <timestep time="598.00"/>
+    <timestep time="599.00"/>
+</fcd-export>
