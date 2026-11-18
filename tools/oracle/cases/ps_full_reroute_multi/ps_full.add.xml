@@ -1,0 +1,11 @@
+<additional>
+    <parkingArea id="pa0" lane="E1_0" startPos="100.00" endPos="140.00" roadsideCapacity="1"/>
+    <parkingArea id="pa1" lane="E1_1" startPos="160.00" endPos="200.00" roadsideCapacity="1"/>
+    <parkingArea id="pa2" lane="E0_0" startPos="250.00" endPos="290.00" roadsideCapacity="1"/>
+    <rerouter id="rr0" edges="E0">
+        <interval begin="0" end="400">
+            <parkingAreaReroute id="pa1"/>
+            <parkingAreaReroute id="pa2"/>
+        </interval>
+    </rerouter>
+</additional>

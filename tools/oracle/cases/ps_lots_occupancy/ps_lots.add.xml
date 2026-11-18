@@ -1,0 +1,9 @@
+<additional>
+    <parkingArea id="paL" lane="E1_0" startPos="20.00" endPos="240.00" roadsideCapacity="0" angle="0">
+        <space x="350.00" y="-6.00" width="2.50" length="5.00" angle="0"/>
+        <space x="390.00" y="-6.00" width="2.50" length="5.00" angle="0"/>
+        <space x="430.00" y="-6.00" width="2.50" length="5.00" angle="0"/>
+        <space x="470.00" y="-6.00" width="2.50" length="5.00" angle="0"/>
+        <space x="510.00" y="-6.00" width="2.50" length="5.00" angle="0"/>
+    </parkingArea>
+</additional>

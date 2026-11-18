@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:15:21.005015-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ps_maneuver_length/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ps_maneuver_length/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ps_maneuver_length/ps_maneuver.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_maneuver_length/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_maneuver_length/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_maneuver_length/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="220"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="m1" depart="8.00" departLane="E0_0" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="111.00" arrivalLane="E2_0" arrivalPos="296.00" arrivalSpeed="12.45" duration="103.00" routeLength="895.30" waitingTime="0.00" waitingCount="0" stopTime="25.00" timeLoss="5.33" rerouteNo="0" devices="tripinfo_m1 fcd_m1" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="m0" depart="0.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="113.00" arrivalLane="E2_0" arrivalPos="296.00" arrivalSpeed="12.76" duration="113.00" routeLength="895.30" waitingTime="1.00" waitingCount="1" stopTime="35.00" timeLoss="8.77" rerouteNo="0" devices="tripinfo_m0 fcd_m0" vType="car" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="m2" depart="16.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="130.00" arrivalLane="E2_0" arrivalPos="296.00" arrivalSpeed="12.76" duration="114.00" routeLength="895.30" waitingTime="22.00" waitingCount="1" stopTime="20.00" timeLoss="24.84" rerouteNo="0" devices="tripinfo_m2 fcd_m2" vType="car" speedFactor="1.01" vaporized=""/>
+</tripinfos>

@@ -1,0 +1,3 @@
+<additional>
+    <parkingArea id="paL" lane="E1_0" startPos="80.00" endPos="160.00" roadsideCapacity="2" length="7.00" angle="10"/>
+</additional>

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/ps_departpos_stop/ps_dpos.nod.xml --edge-files tools/oracle/cases/ps_departpos_stop/ps_dpos.edg.xml

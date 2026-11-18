@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:11:35.604567-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ps_ttt_longstop/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ps_ttt_longstop/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_ttt_longstop/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_ttt_longstop/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_ttt_longstop/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="20"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="follow.0" depart="10.00" departLane="E0_0" departPos="5.10" departSpeed="12.47" departDelay="0.00" arrival="112.00" arrivalLane="E2_0" arrivalPos="300.00" arrivalSpeed="13.52" duration="102.00" routeLength="895.00" waitingTime="36.00" waitingCount="2" stopTime="0.00" timeLoss="44.86" rerouteNo="0" devices="tripinfo_follow.0 fcd_follow.0" vType="car" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="follow.1" depart="18.00" departLane="E0_0" departPos="5.10" departSpeed="7.33" departDelay="0.00" arrival="136.00" arrivalLane="E2_0" arrivalPos="300.00" arrivalSpeed="13.83" duration="118.00" routeLength="895.00" waitingTime="49.00" waitingCount="3" stopTime="0.00" timeLoss="60.77" rerouteNo="0" devices="tripinfo_follow.1 fcd_follow.1" vType="car" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="follow.2" depart="26.00" departLane="E0_0" departPos="5.10" departSpeed="3.43" departDelay="0.00" arrival="159.00" arrivalLane="E2_0" arrivalPos="300.00" arrivalSpeed="12.91" duration="133.00" routeLength="895.00" waitingTime="56.00" waitingCount="4" stopTime="0.00" timeLoss="76.66" rerouteNo="0" devices="tripinfo_follow.2 fcd_follow.2" vType="car" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="follow.3" depart="34.00" departLane="E0_0" departPos="5.10" departSpeed="2.60" departDelay="0.00" arrival="195.00" arrivalLane="E2_0" arrivalPos="300.00" arrivalSpeed="11.49" duration="161.00" routeLength="895.00" waitingTime="69.00" waitingCount="4" stopTime="0.00" timeLoss="92.59" rerouteNo="0" devices="tripinfo_follow.3 fcd_follow.3" vType="car" speedFactor="0.83" vaporized=""/>
+</tripinfos>

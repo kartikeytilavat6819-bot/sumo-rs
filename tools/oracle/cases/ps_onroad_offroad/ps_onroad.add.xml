@@ -1,0 +1,4 @@
+<additional>
+    <parkingArea id="paOff" lane="E1_1" startPos="100.00" endPos="140.00" roadsideCapacity="2"/>
+    <parkingArea id="paOn" lane="E1_0" startPos="100.00" endPos="140.00" roadsideCapacity="2" onRoad="true"/>
+</additional>

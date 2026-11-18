@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:12:28.541910-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ps_parking_lane_block/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ps_parking_lane_block/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_parking_lane_block/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_parking_lane_block/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc08/tools/oracle/cases/ps_parking_lane_block/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="220"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="p0" depart="0.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="113.00" arrivalLane="E2_0" arrivalPos="296.00" arrivalSpeed="12.80" duration="113.00" routeLength="895.30" waitingTime="0.00" waitingCount="0" stopTime="40.00" timeLoss="4.10" rerouteNo="0" devices="tripinfo_p0 fcd_p0" vType="car" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="p1" depart="8.00" departLane="E0_0" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="120.00" arrivalLane="E2_0" arrivalPos="296.00" arrivalSpeed="12.47" duration="112.00" routeLength="895.30" waitingTime="0.00" waitingCount="0" stopTime="34.00" timeLoss="4.97" rerouteNo="0" devices="tripinfo_p1 fcd_p1" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="p2" depart="16.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="122.00" arrivalLane="E2_0" arrivalPos="296.00" arrivalSpeed="13.50" duration="106.00" routeLength="895.30" waitingTime="0.00" waitingCount="0" stopTime="30.00" timeLoss="7.41" rerouteNo="0" devices="tripinfo_p2 fcd_p2" vType="car" speedFactor="1.01" vaporized=""/>
+</tripinfos>

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/ps_duration_until_triggered/ps_dut.nod.xml --edge-files tools/oracle/cases/ps_duration_until_triggered/ps_dut.edg.xml
