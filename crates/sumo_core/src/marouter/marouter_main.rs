@@ -294,8 +294,12 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
             "astar" => leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ttOp), None, net.has_permissions(), false).with_compute()),
             "CH" if !net.has_permissions() => leak_router(CHRouter::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ROEdge::get_travel_time_static), SVC_IGNORING, weightPeriod, net.has_permissions(), false).with_compute()),
             "CHWrapper" | "CH" => leak_router(CHRouterWrapper::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ROEdge::get_travel_time_static), begin, end, weightPeriod, net.has_permissions(), oc.get_int("routing-threads").unwrap_or_else(|e| panic!("{e}"))).with_compute()),
-            // shortcut: CCH needs ROCCHGraph and ROCCHMetrics wired to the CCHRouter operation, and SUMOAbstractRouter_Operation is still Unmapped, upgrade when that type is mapped
-            "CCH" => panic!("shortcut: routing algorithm 'CCH' is not wired in marouter yet"),
+            "CCH" => {
+                let cchGraph: Ptr<ROCCHGraph> = Ptr::from_raw(Box::into_raw(Box::new(CCHGraph::new(&ROEdge::get_all_edges()))));
+                ROCCHMetrics::init(cchGraph, ROEdge::get_travel_time_static, begin, utils::common::time::SUMOTIME_MAX);
+                let fallback = leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ROEdge::get_travel_time_static), None, net.has_permissions(), false).with_compute());
+                leak_router(CCHRouter::<ROEdge, ROVehicle, ROCCHGraph>::new(cchGraph, ROCCHMetrics::get, Some(ROEdge::get_travel_time_static), ignoreErrors, fallback, None, Some(ROCCHMetrics::reset)))
+            }
             _ => {
                 panic!("{}", ProcessError::new(format!("Unknown routing Algorithm '{}'!", routingAlgorithm)));
             }
