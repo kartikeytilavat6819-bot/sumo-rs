@@ -1330,11 +1330,12 @@ impl RONet {
     pub fn add_flow(&mut self, flow: Ptr<SUMOVehicleParameter>, randomize: bool) -> bool {
         let id = flow.id.clone();
         if randomize && flow.repetitionOffset >= 0 {
-            let maxV = (flow.repetitionNumber * flow.repetitionOffset) as f64;
+            let maxV: SUMOTime = flow.repetitionNumber * flow.repetitionOffset;
             let mut deps: Vec<SUMOTime> = Vec::new();
             for _ in 0..flow.repetitionNumber {
-                let r = utils::common::rand_helper::with_default(|rng| rng.rand_max(maxV));
-                deps.push((flow.depart as f64 + r) as SUMOTime);
+                // long long overload of RandHelper::rand (integer draw)
+                let r = utils::common::rand_helper::with_default(|rng| rng.rand_i64(maxV));
+                deps.push(flow.depart + r);
             }
             let v = self.myDepartures.entry(id.clone()).or_default();
             v.extend(deps);
