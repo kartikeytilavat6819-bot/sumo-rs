@@ -1953,6 +1953,9 @@ impl NBNodeCont {
             for j in current.m().get_edges_to_join() {
                 let begin = j.0;
                 let continuation = j.1;
+                if std::env::var_os("OC63_DEBUG").is_some() {
+                    eprintln!("OC63 join at {} begin={} cont={}", current.m().get_id(), begin.m().get_id(), continuation.m().get_id());
+                }
                 begin.m().append(continuation);
                 continuation.m().get_to_node().m().replace_incoming(continuation, begin, 0);
                 if let Some(itTL) = tlsLookup.get(&continuation).cloned() {
@@ -1974,6 +1977,14 @@ impl NBNodeCont {
         // erase all
         for n in toRemove.iter().copied() {
             self.extract(n, true);
+        }
+        if std::env::var_os("OC63_DEBUG").is_some() {
+            for id in ["A1A0", "A0B0", "B0A0"] {
+                let e = ec.retrieve(id, false);
+                if !e.is_null() {
+                    eprintln!("OC63 after {} to={} geom={}", id, e.m().get_to_node().m().get_id(), e.m().get_geometry().size());
+                } else { eprintln!("OC63 after {} absent", id); }
+            }
         }
         toRemove.len() as i32
     }
