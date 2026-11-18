@@ -1,0 +1,1 @@
+--end 200 --device.rerouting.probability 1 --device.rerouting.period 10 --device.rerouting.adaptation-interval 5 --additional-files tools/oracle/cases/rr_output/closing.add.xml

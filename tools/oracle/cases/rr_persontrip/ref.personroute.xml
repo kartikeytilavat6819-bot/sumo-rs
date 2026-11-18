@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:44:58.516530-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rr_persontrip/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rr_persontrip/routes.rou"/>
+        <additional-files value="tools/oracle/cases/rr_persontrip/ped_pt.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.fcd.xml"/>
+        <person-summary-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.personsummary.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.tripinfo.xml"/>
+        <personroute-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.personroute.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <routing>
+        <person-device.rerouting.probability value="1"/>
+        <person-device.rerouting.period value="20"/>
+        <person-device.rerouting.scope value="trip"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <person id="p1" type="ped" depart="15.00" departPos="10.00" arrival="119.00">
+        <walk edges="E0 E1"/>
+    </person>
+
+    <person id="p3" type="ped" depart="45.00" arrival="143.00">
+        <walk edges="E1 E2"/>
+    </person>
+
+    <person id="p0" type="ped" depart="5.00" arrival="169.00">
+        <walk edges="E0 E1 E2"/>
+    </person>
+
+</routes>

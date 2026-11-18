@@ -1,0 +1,25 @@
+<routes>
+    <vType id="fastRR" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="5"/>
+    </vType>
+    <vType id="slowRR" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="20"/>
+    </vType>
+    <vType id="noRR" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5"/>
+    <route id="via_top" edges="10 11 13"/>
+    <route id="via_bottom" edges="10 12 13"/>
+    <vehicle id="a0" type="fastRR" route="via_top" depart="0"/>
+    <vehicle id="b0" type="slowRR" route="via_top" depart="1"/>
+    <vehicle id="c0" type="noRR" route="via_top" depart="2">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="10"/>
+    </vehicle>
+    <vehicle id="a1" type="fastRR" route="via_top" depart="3"/>
+    <vehicle id="b1" type="slowRR" route="via_top" depart="4"/>
+    <vehicle id="c1" type="noRR" route="via_top" depart="5"/>
+    <vehicle id="a2" type="fastRR" route="via_top" depart="6"/>
+    <vehicle id="b2" type="slowRR" route="via_top" depart="7"/>
+    <vehicle id="c2" type="noRR" route="via_top" depart="8"/>
+</routes>

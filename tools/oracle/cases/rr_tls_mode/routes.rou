@@ -1,0 +1,12 @@
+<routes>
+    <!-- 4-arm TLS junction x: incoming W0/S0, outgoing E0/N0. E0 will be closed. -->
+    <vType id="car" maxSpeed="13.89"/>
+    <vehicle id="w0" type="car" depart="0" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s0" type="car" depart="2" departSpeed="max"><route edges="S0 E0"/></vehicle>
+    <vehicle id="w1" type="car" depart="4" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s1" type="car" depart="6" departSpeed="max"><route edges="S0 E0"/></vehicle>
+    <vehicle id="w2" type="car" depart="8" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s2" type="car" depart="10" departSpeed="max"><route edges="S0 E0"/></vehicle>
+    <vehicle id="w3" type="car" depart="12" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s3" type="car" depart="14" departSpeed="max"><route edges="S0 E0"/></vehicle>
+</routes>
