@@ -64,6 +64,13 @@ impl ROJTRRouter {
     /// C++: `void ROJTRRouter::~ROJTRRouter() noexcept` [virtual]
     /// Destructor
     // ROJTRRouter::~ROJTRRouter() {}
+    /// Installs compute/clone into the base so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches them.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(|base, from, to, vehicle, time, into, silent| Ptr::from_mut(base).cast::<ROJTRRouter>().m().compute(from, to, vehicle, time, into, silent));
+        self.base.myClone = Some(|base| Ptr::from_mut(base).cast::<ROJTRRouter>().m().clone());
+        self
+    }
+
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         // C++ destructor body is empty
@@ -75,7 +82,7 @@ impl ROJTRRouter {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
-        let router = ROJTRRouter::new(self.myUnbuildIsWarningOnly, self.myAcceptAllDestination, self.myMaxEdges, self.myIgnoreClasses, self.myAllowLoops, self.myDiscountSources);
+        let router = ROJTRRouter::new(self.myUnbuildIsWarningOnly, self.myAcceptAllDestination, self.myMaxEdges, self.myIgnoreClasses, self.myAllowLoops, self.myDiscountSources).with_compute();
         Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<SUMOAbstractRouter<ROEdge, ROVehicle>>()
     }
 
