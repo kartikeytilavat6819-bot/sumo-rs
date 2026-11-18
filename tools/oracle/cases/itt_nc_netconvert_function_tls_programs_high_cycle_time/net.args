@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_tls_programs_high_cycle_time/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_tls_programs_high_cycle_time/input_plain.nod.xml --tls.green.time 31

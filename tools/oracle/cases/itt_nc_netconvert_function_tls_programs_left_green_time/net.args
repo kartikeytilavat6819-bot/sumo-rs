@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_tls_programs_left_green_time/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_tls_programs_left_green_time/input_plain.nod.xml --tls.left-green.time 0 --no-internal-links --no-turnarounds

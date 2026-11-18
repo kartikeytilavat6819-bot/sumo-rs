@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_function_railway_signals_sharp_angle_bidi/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_railway_signals_sharp_angle_bidi/input_plain.nod.xml --connection-files=tools/oracle/cases/itt_nc_netconvert_function_railway_signals_sharp_angle_bidi/input_plain.con.xml -p plain

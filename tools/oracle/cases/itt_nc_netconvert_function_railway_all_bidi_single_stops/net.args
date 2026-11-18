@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_railway_all_bidi_single_stops/input_net.net.xml -v --railway.topology.all-bidi --ptstop-files tools/oracle/cases/itt_nc_netconvert_function_railway_all_bidi_single_stops/input_ptstops.xml --ptstop-output.no-bidi

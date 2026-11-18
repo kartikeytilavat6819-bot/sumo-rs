@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_tls_programs_discard_input_net_discard_simple_actuated_rebuild/input_net.net.xml --tls.discard-simple --tls.default-type actuated --tls.rebuild
