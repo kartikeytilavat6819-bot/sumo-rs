@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:07:26.935936-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_diffWidth/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_diffWidth/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_diffWidth/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_diffWidth/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_diffWidth/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.2"/>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="ego" x="0.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="0.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="ego" x="5.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="5.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="ego" x="10.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="10.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="ego" x="15.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="15.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="ego" x="20.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="20.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="ego" x="25.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="25.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="ego" x="30.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="30.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="ego" x="35.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="35.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="ego" x="40.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="40.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="ego" x="45.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="45.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="ego" x="50.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="50.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="ego" x="55.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="55.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="ego" x="60.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="60.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="ego" x="65.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="65.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="ego" x="70.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="70.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="ego" x="75.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="75.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="ego" x="80.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="80.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="ego" x="85.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="85.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="ego" x="90.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="90.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="ego" x="95.00" y="-4.40" angle="90.00" type="tEgo" speed="5.00" pos="95.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="ego" x="99.85" y="-4.55" angle="91.72" type="tEgo" speed="5.00" pos="5.00" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="ego" x="104.74" y="-4.69" angle="91.72" type="tEgo" speed="5.00" pos="10.00" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="ego" x="109.76" y="-4.70" angle="90.09" type="tEgo" speed="5.00" pos="4.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="ego" x="114.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="9.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="ego" x="119.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="14.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="ego" x="124.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="19.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="ego" x="129.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="24.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="ego" x="134.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="29.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="ego" x="139.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="34.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="ego" x="144.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="39.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="ego" x="149.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="44.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="ego" x="154.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="49.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="ego" x="159.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="54.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="ego" x="164.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="59.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="ego" x="169.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="64.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="ego" x="174.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="69.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="ego" x="179.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="74.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="ego" x="184.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="79.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="ego" x="189.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="84.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="ego" x="194.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="89.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="ego" x="199.76" y="-4.70" angle="90.00" type="tEgo" speed="5.00" pos="94.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00"/>
+</fcd-export>

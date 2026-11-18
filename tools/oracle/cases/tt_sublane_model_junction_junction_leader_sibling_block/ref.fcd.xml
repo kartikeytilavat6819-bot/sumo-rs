@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:07:25.437869-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_block/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_block/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_block/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_block/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_junction_junction_leader_sibling_block/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.8"/>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker" x="55.00" y="-5.65" angle="90.00" type="tBlocker" speed="13.89" pos="55.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="0.00" y="-2.65" angle="90.00" type="tEgo" speed="13.89" pos="0.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker" x="68.89" y="-5.05" angle="87.52" type="tBlocker" speed="13.89" pos="68.89" lane="beg_0" slope="0.00"/>
+        <vehicle id="blocker2" x="55.00" y="-5.65" angle="90.00" type="tBlocker" speed="11.52" pos="55.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="13.89" y="-2.65" angle="90.00" type="tEgo" speed="13.89" pos="13.89" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker" x="82.78" y="-5.05" angle="90.00" type="tBlocker" speed="13.89" pos="82.78" lane="beg_0" slope="0.00"/>
+        <vehicle id="blocker2" x="66.52" y="-5.05" angle="87.02" type="tBlocker" speed="11.52" pos="66.52" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="27.78" y="-2.65" angle="90.00" type="tEgo" speed="13.89" pos="27.78" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker" x="96.68" y="-5.34" angle="93.28" type="tBlocker" speed="13.86" pos="1.64" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="blocker2" x="78.83" y="-5.05" angle="90.00" type="tBlocker" speed="12.31" pos="78.83" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="41.67" y="-2.65" angle="90.00" type="tEgo" speed="13.89" pos="41.67" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker" x="105.78" y="-8.35" angle="103.43" type="tBlocker" speed="9.36" pos="0.78" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="91.63" y="-5.05" angle="90.00" type="tBlocker" speed="12.80" pos="91.63" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="55.56" y="-2.65" angle="90.00" type="tEgo" speed="13.89" pos="55.56" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker" x="110.64" y="-8.35" angle="90.00" type="tBlocker" speed="4.86" pos="5.64" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="99.78" y="-6.59" angle="107.60" type="tBlocker" speed="8.30" pos="4.93" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="69.45" y="-1.65" angle="85.88" type="tEgo" speed="13.89" pos="69.45" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.36" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="3.80" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="83.34" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="83.34" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="97.18" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="2.23" lane=":gneJ1_0_2" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="110.89" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="5.89" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="124.78" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="19.78" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="138.67" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="33.67" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="152.56" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="47.56" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="166.45" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="61.45" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="180.34" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="75.34" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="ego" x="194.23" y="-1.65" angle="90.00" type="tEgo" speed="13.89" pos="89.23" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocker" x="111.00" y="-8.35" angle="90.00" type="tBlocker" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocker" x="113.60" y="-8.35" angle="90.00" type="tBlocker" speed="2.60" pos="8.60" lane="end_0" slope="0.00"/>
+        <vehicle id="blocker2" x="103.44" y="-8.08" angle="114.10" type="tBlocker" speed="0.00" pos="8.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocker" x="118.80" y="-8.35" angle="90.00" type="tBlocker" speed="5.20" pos="13.80" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocker" x="126.60" y="-8.35" angle="90.00" type="tBlocker" speed="7.80" pos="21.60" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocker" x="137.00" y="-8.35" angle="90.00" type="tBlocker" speed="10.40" pos="32.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocker" x="150.00" y="-8.35" angle="90.00" type="tBlocker" speed="13.00" pos="45.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocker" x="163.89" y="-8.35" angle="90.00" type="tBlocker" speed="13.89" pos="58.89" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocker" x="177.78" y="-8.35" angle="90.00" type="tBlocker" speed="13.89" pos="72.78" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocker" x="191.67" y="-8.35" angle="90.00" type="tBlocker" speed="13.89" pos="86.67" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00"/>
+</fcd-export>

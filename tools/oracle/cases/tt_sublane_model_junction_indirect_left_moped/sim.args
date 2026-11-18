@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --lateral-resolution 0.8 -a tools/oracle/cases/tt_sublane_model_junction_indirect_left_moped/input_additional.add.xml

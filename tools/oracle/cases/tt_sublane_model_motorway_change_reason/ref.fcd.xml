@@ -1,0 +1,1351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:07:54.340584-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_motorway_change_reason/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_motorway_change_reason/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_motorway_change_reason/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_motorway_change_reason/ref.tripinfo.xml"/>
+        <lanechange-output.started value="true"/>
+        <lanechange-output.ended value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_motorway_change_reason/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.5"/>
+    </time>
+
+    <processing>
+        <lateral-resolution value="3.5"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="car_Lead" x="14.00" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="14.00" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.50">
+        <vehicle id="car_Lead" x="19.55" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="19.55" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="car_Lead" x="24.98" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="24.98" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.50">
+        <vehicle id="car_Lead" x="30.40" y="-8.75" angle="90.00" type="truck_lead" speed="10.85" pos="30.40" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="car_Lead" x="35.95" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="35.95" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.50">
+        <vehicle id="car_Lead" x="41.38" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="41.38" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="car_Lead" x="46.84" y="-8.75" angle="90.00" type="truck_lead" speed="10.93" pos="46.84" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.50">
+        <vehicle id="car_Lead" x="52.21" y="-8.75" angle="90.00" type="truck_lead" speed="10.93" pos="2.21" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="car_Lead" x="57.74" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="7.74" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.50">
+        <vehicle id="car_Lead" x="63.13" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="13.13" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="car_Lead" x="68.59" y="-8.75" angle="90.00" type="truck_lead" speed="10.91" pos="18.59" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.50">
+        <vehicle id="car_Lead" x="74.08" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="24.08" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="car_Lead" x="79.50" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="29.50" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.50">
+        <vehicle id="car_Lead" x="85.05" y="-8.75" angle="90.00" type="truck_lead" speed="11.10" pos="35.05" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="car_Lead" x="90.44" y="-8.75" angle="90.00" type="truck_lead" speed="10.79" pos="40.44" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.50">
+        <vehicle id="car_Lead" x="95.98" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="45.98" lane="gneE1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="car_Lead" x="101.35" y="-8.75" angle="90.00" type="truck_lead" speed="10.93" pos="1.35" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.50">
+        <vehicle id="car_Lead" x="106.82" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="6.82" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="car_Lead" x="112.26" y="-8.75" angle="90.00" type="truck_lead" speed="10.88" pos="12.26" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="5.00" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="5.00" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.50">
+        <vehicle id="car_Lead" x="117.66" y="-8.75" angle="90.00" type="truck_lead" speed="10.79" pos="17.66" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="10.55" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="10.55" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="car_Lead" x="123.20" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="23.20" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="16.11" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="16.11" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.50">
+        <vehicle id="car_Lead" x="128.69" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="28.69" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="21.66" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="21.66" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="car_Lead" x="134.11" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="34.11" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="27.22" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="27.22" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.50">
+        <vehicle id="car_Lead" x="139.57" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="39.57" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="32.77" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="32.77" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="car_Lead" x="145.02" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="45.02" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="38.33" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="38.33" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.50">
+        <vehicle id="car_Lead" x="150.41" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="0.41" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="43.88" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.88" lane="gneE0_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="14.00" y="-5.25" angle="90.00" type="truck_overtake" speed="16.67" pos="14.00" lane="gneE0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="car_Lead" x="155.86" y="-8.75" angle="90.00" type="truck_lead" speed="10.91" pos="5.86" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="49.44" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="49.44" lane="gneE0_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="22.29" y="-5.25" angle="90.00" type="truck_overtake" speed="16.57" pos="22.29" lane="gneE0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.50">
+        <vehicle id="car_Lead" x="161.34" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="11.34" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="54.89" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.89" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="30.61" y="-5.25" angle="90.00" type="truck_overtake" speed="16.65" pos="30.61" lane="gneE0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="car_Lead" x="166.79" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="16.79" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="60.45" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="10.45" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="38.91" y="-5.25" angle="90.00" type="truck_overtake" speed="16.60" pos="38.91" lane="gneE0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.50">
+        <vehicle id="car_Lead" x="172.25" y="-8.75" angle="90.00" type="truck_lead" speed="10.93" pos="22.25" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="66.00" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="16.00" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="47.21" y="-5.25" angle="90.00" type="truck_overtake" speed="16.59" pos="47.21" lane="gneE0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="car_Lead" x="177.75" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="27.75" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="71.56" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="21.56" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="55.41" y="-5.25" angle="90.00" type="truck_overtake" speed="16.60" pos="5.41" lane="gneE1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.50">
+        <vehicle id="car_Lead" x="183.29" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="33.29" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="77.11" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="27.11" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="63.64" y="-5.25" angle="90.00" type="truck_overtake" speed="16.46" pos="13.64" lane="gneE1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="car_Lead" x="188.72" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="38.72" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="82.67" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="32.67" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="71.96" y="-5.25" angle="90.00" type="truck_overtake" speed="16.64" pos="21.96" lane="gneE1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.50">
+        <vehicle id="car_Lead" x="194.27" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="44.27" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="88.22" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="38.22" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="80.22" y="-5.25" angle="90.00" type="truck_overtake" speed="16.51" pos="30.22" lane="gneE1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="car_Lead" x="199.78" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="49.78" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="93.78" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.78" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="88.53" y="-5.25" angle="90.00" type="truck_overtake" speed="16.63" pos="38.53" lane="gneE1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.50">
+        <vehicle id="car_Lead" x="205.08" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="5.08" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="99.33" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="49.33" lane="gneE1_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="96.72" y="-5.25" angle="90.00" type="truck_overtake" speed="16.37" pos="46.72" lane="gneE1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="car_Lead" x="210.55" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="10.55" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="104.79" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.79" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="104.80" y="-5.25" angle="90.00" type="truck_overtake" speed="16.37" pos="4.80" lane="gneE2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.50">
+        <vehicle id="car_Lead" x="215.96" y="-8.75" angle="90.00" type="truck_lead" speed="10.82" pos="15.96" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="110.34" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="10.34" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="112.98" y="-5.25" angle="90.00" type="truck_overtake" speed="16.35" pos="12.98" lane="gneE2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="car_Lead" x="221.50" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="21.50" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="115.90" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.90" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="121.30" y="-5.25" angle="90.00" type="truck_overtake" speed="16.65" pos="21.30" lane="gneE2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.50">
+        <vehicle id="car_Lead" x="226.98" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="26.98" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="121.45" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="21.45" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="129.59" y="-5.25" angle="90.00" type="truck_overtake" speed="16.59" pos="29.59" lane="gneE2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="car_Lead" x="232.50" y="-8.75" angle="90.00" type="truck_lead" speed="11.04" pos="32.50" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="127.01" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="27.01" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="137.83" y="-5.25" angle="90.00" type="truck_overtake" speed="16.47" pos="37.83" lane="gneE2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.50">
+        <vehicle id="car_Lead" x="237.94" y="-8.75" angle="90.00" type="truck_lead" speed="10.88" pos="37.94" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="132.56" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="32.56" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="146.12" y="-5.25" angle="90.00" type="truck_overtake" speed="16.58" pos="46.12" lane="gneE2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="car_Lead" x="243.45" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="43.45" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="138.12" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="38.12" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="154.35" y="-5.25" angle="90.00" type="truck_overtake" speed="16.67" pos="4.35" lane="gneE3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.50">
+        <vehicle id="car_Lead" x="248.92" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="48.92" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="143.67" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.67" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="162.58" y="-5.25" angle="90.00" type="truck_overtake" speed="16.45" pos="12.58" lane="gneE3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="car_Lead" x="254.25" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="4.25" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="149.23" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="49.23" lane="gneE2_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="170.86" y="-5.25" angle="90.00" type="truck_overtake" speed="16.56" pos="20.86" lane="gneE3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.50">
+        <vehicle id="car_Lead" x="259.74" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="9.74" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="154.69" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.68" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="179.12" y="-5.25" angle="90.00" type="truck_overtake" speed="16.52" pos="29.12" lane="gneE3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="car_Lead" x="265.30" y="-8.75" angle="90.00" type="truck_lead" speed="11.10" pos="15.30" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="160.24" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="10.24" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="187.31" y="-5.50" angle="91.02" type="truck_overtake" speed="16.38" pos="37.31" lane="gneE3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23.50">
+        <vehicle id="car_Lead" x="270.70" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="20.70" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="165.64" y="-8.75" angle="90.00" type="car_ACC" speed="10.80" pos="15.64" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="195.64" y="-6.00" angle="92.46" type="truck_overtake" speed="16.66" pos="45.64" lane="gneE3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="car_Lead" x="276.20" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="26.20" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="171.19" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="21.19" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="203.80" y="-6.50" angle="93.05" type="truck_overtake" speed="16.52" pos="3.80" lane="gneE4_1" slope="0.00"/>
+    </timestep>
+    <timestep time="24.50">
+        <vehicle id="car_Lead" x="281.71" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="31.71" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="176.75" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.75" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="211.97" y="-7.00" angle="93.32" type="truck_overtake" speed="16.35" pos="11.97" lane="gneE4_1" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="car_Lead" x="287.15" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="37.15" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="182.30" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="32.30" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="220.19" y="-7.50" angle="93.41" type="truck_overtake" speed="16.43" pos="20.19" lane="gneE4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.50">
+        <vehicle id="car_Lead" x="292.63" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="42.63" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="187.86" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.86" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="228.47" y="-8.00" angle="93.44" type="truck_overtake" speed="16.56" pos="28.47" lane="gneE4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="car_Lead" x="298.05" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="48.05" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="193.41" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.41" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="236.77" y="-8.50" angle="93.44" type="truck_overtake" speed="16.60" pos="36.77" lane="gneE4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.50">
+        <vehicle id="car_Lead" x="303.38" y="-8.75" angle="90.00" type="truck_lead" speed="10.85" pos="3.38" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="198.97" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.97" lane="gneE3_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="245.08" y="-8.75" angle="92.42" type="truck_overtake" speed="16.63" pos="45.08" lane="gneE4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="car_Lead" x="308.80" y="-8.75" angle="90.00" type="truck_lead" speed="10.85" pos="8.80" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="204.42" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.42" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="253.16" y="-8.75" angle="91.01" type="truck_overtake" speed="16.37" pos="3.16" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.50">
+        <vehicle id="car_Lead" x="314.21" y="-8.75" angle="90.00" type="truck_lead" speed="10.81" pos="14.21" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="209.98" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.98" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="261.46" y="-8.75" angle="90.41" type="truck_overtake" speed="16.58" pos="11.46" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="car_Lead" x="319.69" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="19.69" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="215.53" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.53" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="269.65" y="-8.75" angle="90.17" type="truck_overtake" speed="16.39" pos="19.65" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.50">
+        <vehicle id="car_Lead" x="325.12" y="-8.75" angle="90.00" type="truck_lead" speed="10.85" pos="25.12" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="221.09" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="21.09" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="277.79" y="-8.75" angle="90.07" type="truck_overtake" speed="16.27" pos="27.79" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="car_Lead" x="330.56" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="30.56" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="226.64" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.64" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="285.59" y="-8.75" angle="90.03" type="truck_overtake" speed="15.60" pos="35.59" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.50">
+        <vehicle id="car_Lead" x="336.01" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="36.01" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="232.20" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="32.20" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="293.13" y="-8.75" angle="90.01" type="truck_overtake" speed="15.09" pos="43.13" lane="gneE5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="car_Lead" x="341.53" y="-8.75" angle="90.00" type="truck_lead" speed="11.04" pos="41.53" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="237.75" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.75" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="300.40" y="-8.75" angle="90.01" type="truck_overtake" speed="14.73" pos="0.40" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.50">
+        <vehicle id="car_Lead" x="347.04" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="47.04" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="243.31" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.31" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="307.59" y="-8.50" angle="88.98" type="truck_overtake" speed="14.38" pos="7.59" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="car_Lead" x="352.41" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="2.41" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="248.86" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.86" lane="gneE4_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="314.61" y="-8.00" angle="87.45" type="truck_overtake" speed="14.04" pos="14.61" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.50">
+        <vehicle id="car_Lead" x="357.86" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="7.86" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="254.32" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.32" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="321.43" y="-7.50" angle="86.65" type="truck_overtake" speed="13.65" pos="21.43" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="car_Lead" x="363.27" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="13.27" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="259.87" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.87" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="328.07" y="-7.00" angle="86.19" type="truck_overtake" speed="13.28" pos="28.07" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.50">
+        <vehicle id="car_Lead" x="368.83" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="18.83" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="265.43" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.43" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="334.51" y="-6.50" angle="85.90" type="truck_overtake" speed="12.88" pos="34.51" lane="gneE6_1" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="car_Lead" x="374.36" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="24.36" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="270.98" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.98" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="340.93" y="-6.00" angle="85.74" type="truck_overtake" speed="12.83" pos="40.93" lane="gneE6_1" slope="0.00"/>
+    </timestep>
+    <timestep time="33.50">
+        <vehicle id="car_Lead" x="379.87" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="29.87" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="276.54" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.54" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="347.17" y="-5.75" angle="86.62" type="truck_overtake" speed="12.48" pos="47.17" lane="gneE6_1" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="car_Lead" x="385.41" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="35.41" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="282.09" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="32.09" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="353.56" y="-5.25" angle="86.14" type="truck_overtake" speed="12.97" pos="3.56" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="34.50">
+        <vehicle id="car_Lead" x="390.89" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="40.89" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="287.65" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.65" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="360.28" y="-5.25" angle="87.99" type="truck_overtake" speed="13.44" pos="10.28" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="car_Lead" x="396.37" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="46.37" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="293.20" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.20" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="367.24" y="-5.25" angle="88.99" type="truck_overtake" speed="13.93" pos="17.24" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="35.50">
+        <vehicle id="car_Lead" x="401.75" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="1.75" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="298.76" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.76" lane="gneE5_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="374.51" y="-5.25" angle="89.51" type="truck_overtake" speed="14.53" pos="24.51" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="car_Lead" x="407.22" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="7.22" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="304.21" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.21" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="382.00" y="-5.25" angle="89.77" type="truck_overtake" speed="14.98" pos="32.00" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="36.50">
+        <vehicle id="car_Lead" x="412.67" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="12.67" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="309.77" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.77" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="389.72" y="-5.25" angle="89.90" type="truck_overtake" speed="15.43" pos="39.72" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="car_Lead" x="418.15" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="18.15" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="315.32" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.32" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="397.67" y="-5.25" angle="89.96" type="truck_overtake" speed="15.91" pos="47.67" lane="gneE7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="37.50">
+        <vehicle id="car_Lead" x="423.68" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="23.68" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="320.88" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.88" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="405.84" y="-5.25" angle="89.98" type="truck_overtake" speed="16.53" pos="5.84" lane="gneE8_1" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="car_Lead" x="429.19" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="29.19" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="326.43" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.43" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="414.09" y="-5.25" angle="89.99" type="truck_overtake" speed="16.52" pos="14.09" lane="gneE8_1" slope="0.00"/>
+    </timestep>
+    <timestep time="38.50">
+        <vehicle id="car_Lead" x="434.65" y="-8.75" angle="90.00" type="truck_lead" speed="10.93" pos="34.65" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="331.99" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.99" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="422.38" y="-5.25" angle="90.00" type="truck_overtake" speed="16.57" pos="22.38" lane="gneE8_1" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="car_Lead" x="440.16" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="40.16" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="337.54" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.54" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="430.56" y="-5.25" angle="90.00" type="truck_overtake" speed="16.35" pos="30.56" lane="gneE8_1" slope="0.00"/>
+    </timestep>
+    <timestep time="39.50">
+        <vehicle id="car_Lead" x="445.63" y="-8.85" angle="90.42" type="truck_lead" speed="10.93" pos="45.63" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="343.10" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="43.10" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="438.79" y="-5.25" angle="90.00" type="truck_overtake" speed="16.47" pos="38.79" lane="gneE8_1" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="car_Lead" x="451.08" y="-8.85" angle="90.25" type="truck_lead" speed="11.09" pos="1.08" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="348.65" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.65" lane="gneE6_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="446.98" y="-5.25" angle="90.00" type="truck_overtake" speed="16.38" pos="46.98" lane="gneE8_1" slope="0.00"/>
+    </timestep>
+    <timestep time="40.50">
+        <vehicle id="car_Lead" x="456.63" y="-8.85" angle="90.15" type="truck_lead" speed="11.10" pos="6.63" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="354.11" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.11" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="455.16" y="-5.25" angle="90.00" type="truck_overtake" speed="16.56" pos="5.16" lane="gneE9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="car_Lead" x="462.17" y="-8.85" angle="90.09" type="truck_lead" speed="11.09" pos="12.17" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="359.66" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.66" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="463.40" y="-5.25" angle="90.00" type="truck_overtake" speed="16.47" pos="13.40" lane="gneE9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="41.50">
+        <vehicle id="car_Lead" x="467.65" y="-8.85" angle="90.06" type="truck_lead" speed="10.96" pos="17.65" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="365.22" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.22" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="471.67" y="-5.25" angle="90.00" type="truck_overtake" speed="16.55" pos="21.67" lane="gneE9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="car_Lead" x="473.15" y="-8.85" angle="90.03" type="truck_lead" speed="11.01" pos="23.15" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="370.77" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.77" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="479.86" y="-5.25" angle="90.00" type="truck_overtake" speed="16.38" pos="29.86" lane="gneE9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="42.50">
+        <vehicle id="car_Lead" x="478.68" y="-8.85" angle="90.02" type="truck_lead" speed="11.06" pos="28.68" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="376.33" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.33" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="488.16" y="-5.25" angle="90.00" type="truck_overtake" speed="16.59" pos="38.16" lane="gneE9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="car_Lead" x="484.16" y="-8.85" angle="90.01" type="truck_lead" speed="10.96" pos="34.16" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="381.88" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.88" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="496.35" y="-5.25" angle="90.00" type="truck_overtake" speed="16.38" pos="46.35" lane="gneE9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="43.50">
+        <vehicle id="car_Lead" x="489.69" y="-8.85" angle="90.01" type="truck_lead" speed="11.05" pos="39.69" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="387.44" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.44" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="504.51" y="-5.25" angle="90.00" type="truck_overtake" speed="16.52" pos="4.51" lane="gneE9.34_1" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="car_Lead" x="495.21" y="-8.75" angle="89.59" type="truck_lead" speed="11.05" pos="45.21" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="392.99" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.99" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="512.69" y="-5.50" angle="91.02" type="truck_overtake" speed="16.37" pos="12.69" lane="gneE9.34_1" slope="0.00"/>
+    </timestep>
+    <timestep time="44.50">
+        <vehicle id="car_Lead" x="500.62" y="-8.75" angle="89.75" type="truck_lead" speed="11.01" pos="0.62" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="398.55" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.55" lane="gneE7_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="520.91" y="-6.00" angle="92.47" type="truck_overtake" speed="16.44" pos="20.91" lane="gneE9.34_1" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="car_Lead" x="506.06" y="-8.75" angle="89.85" type="truck_lead" speed="10.89" pos="6.06" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="404.00" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="4.00" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="529.14" y="-6.50" angle="93.06" type="truck_overtake" speed="16.45" pos="29.14" lane="gneE9.34_1" slope="0.00"/>
+    </timestep>
+    <timestep time="45.50">
+        <vehicle id="car_Lead" x="511.61" y="-8.75" angle="89.91" type="truck_lead" speed="11.09" pos="11.61" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="409.56" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.56" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="537.38" y="-7.00" angle="93.30" type="truck_overtake" speed="16.49" pos="37.38" lane="gneE9.34_1" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="car_Lead" x="517.09" y="-8.75" angle="89.94" type="truck_lead" speed="10.97" pos="17.09" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="415.11" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.11" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="545.57" y="-7.50" angle="93.42" type="truck_overtake" speed="16.38" pos="45.57" lane="gneE9.34_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.50">
+        <vehicle id="car_Lead" x="522.52" y="-8.75" angle="89.97" type="truck_lead" speed="10.86" pos="22.52" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="420.67" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.67" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="553.64" y="-8.00" angle="93.47" type="truck_overtake" speed="16.35" pos="3.64" lane="gneE10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="car_Lead" x="527.92" y="-8.75" angle="89.98" type="truck_lead" speed="10.79" pos="27.92" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="426.22" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.22" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="561.90" y="-8.50" angle="93.47" type="truck_overtake" speed="16.51" pos="11.90" lane="gneE10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.50">
+        <vehicle id="car_Lead" x="533.35" y="-8.75" angle="89.99" type="truck_lead" speed="10.86" pos="33.35" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="431.78" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.78" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="570.15" y="-8.75" angle="92.45" type="truck_overtake" speed="16.50" pos="20.15" lane="gneE10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="car_Lead" x="538.76" y="-8.75" angle="89.99" type="truck_lead" speed="10.83" pos="38.76" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="437.33" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.33" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="578.47" y="-8.75" angle="90.99" type="truck_overtake" speed="16.64" pos="28.47" lane="gneE10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.50">
+        <vehicle id="car_Lead" x="544.16" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="44.16" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="442.89" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.89" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="586.67" y="-8.75" angle="90.41" type="truck_overtake" speed="16.41" pos="36.67" lane="gneE10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="car_Lead" x="549.70" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="49.70" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="448.44" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.44" lane="gneE8_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="594.96" y="-8.75" angle="90.17" type="truck_overtake" speed="16.58" pos="44.96" lane="gneE10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.50">
+        <vehicle id="car_Lead" x="555.12" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="5.12" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="453.90" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.90" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="603.07" y="-8.75" angle="90.07" type="truck_overtake" speed="16.43" pos="3.07" lane="gneE11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="car_Lead" x="560.63" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="10.63" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="459.45" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.45" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="611.27" y="-8.75" angle="90.03" type="truck_overtake" speed="16.40" pos="11.27" lane="gneE11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.50">
+        <vehicle id="car_Lead" x="566.17" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="16.17" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="465.01" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="15.01" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="619.55" y="-8.75" angle="90.01" type="truck_overtake" speed="16.57" pos="19.55" lane="gneE11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="car_Lead" x="571.72" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="21.72" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="470.56" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.56" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="627.87" y="-8.75" angle="90.00" type="truck_overtake" speed="16.63" pos="27.87" lane="gneE11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.50">
+        <vehicle id="car_Lead" x="577.21" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="27.21" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="476.12" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.12" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="636.12" y="-8.75" angle="90.00" type="truck_overtake" speed="16.51" pos="36.12" lane="gneE11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="car_Lead" x="582.66" y="-8.75" angle="90.00" type="truck_lead" speed="10.91" pos="32.66" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="481.67" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.67" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="644.35" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="44.35" lane="gneE11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.50">
+        <vehicle id="car_Lead" x="588.07" y="-8.75" angle="90.00" type="truck_lead" speed="10.81" pos="38.07" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="487.23" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.23" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="652.44" y="-8.75" angle="90.00" type="truck_overtake" speed="16.38" pos="2.44" lane="gneE12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="car_Lead" x="593.61" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="43.61" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="492.78" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.78" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="660.77" y="-8.75" angle="90.00" type="truck_overtake" speed="16.67" pos="10.77" lane="gneE12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.50">
+        <vehicle id="car_Lead" x="599.12" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="49.12" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="498.34" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.34" lane="gneE9_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="668.98" y="-8.75" angle="90.00" type="truck_overtake" speed="16.41" pos="18.98" lane="gneE12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="car_Lead" x="604.55" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="4.55" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="503.79" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.79" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="677.16" y="-8.75" angle="90.00" type="truck_overtake" speed="16.37" pos="27.16" lane="gneE12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.50">
+        <vehicle id="car_Lead" x="610.03" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="10.03" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="509.35" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.35" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="685.35" y="-8.75" angle="90.00" type="truck_overtake" speed="16.37" pos="35.35" lane="gneE12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="car_Lead" x="615.54" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="15.54" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="514.90" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.90" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="693.62" y="-8.75" angle="90.00" type="truck_overtake" speed="16.55" pos="43.62" lane="gneE12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.50">
+        <vehicle id="car_Lead" x="620.99" y="-8.75" angle="90.00" type="truck_lead" speed="10.91" pos="20.99" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="520.46" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.46" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="701.80" y="-8.75" angle="90.00" type="truck_overtake" speed="16.56" pos="1.80" lane="gneE13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="car_Lead" x="626.50" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="26.50" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="526.01" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="26.01" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="709.98" y="-8.75" angle="90.00" type="truck_overtake" speed="16.35" pos="9.98" lane="gneE13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.50">
+        <vehicle id="car_Lead" x="631.96" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="31.96" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="531.57" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.57" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="718.25" y="-8.75" angle="90.00" type="truck_overtake" speed="16.55" pos="18.25" lane="gneE13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="car_Lead" x="637.51" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="37.51" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="537.12" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.12" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="726.49" y="-8.75" angle="90.00" type="truck_overtake" speed="16.47" pos="26.49" lane="gneE13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.50">
+        <vehicle id="car_Lead" x="643.01" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="43.01" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="542.68" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.68" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="734.77" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="34.77" lane="gneE13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="car_Lead" x="648.52" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="48.52" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="548.23" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.23" lane="gneE9.34_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="743.05" y="-8.75" angle="90.00" type="truck_overtake" speed="16.56" pos="43.05" lane="gneE13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.50">
+        <vehicle id="car_Lead" x="653.95" y="-8.75" angle="90.00" type="truck_lead" speed="11.04" pos="3.95" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="553.69" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.69" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="751.22" y="-8.75" angle="90.00" type="truck_overtake" speed="16.53" pos="1.22" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="car_Lead" x="659.38" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="9.38" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="559.24" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.24" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="759.54" y="-8.75" angle="90.00" type="truck_overtake" speed="16.64" pos="9.54" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.50">
+        <vehicle id="car_Lead" x="664.77" y="-8.75" angle="90.00" type="truck_lead" speed="10.79" pos="14.77" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="564.80" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.80" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="767.73" y="-8.75" angle="90.00" type="truck_overtake" speed="16.40" pos="17.73" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="car_Lead" x="670.30" y="-8.75" angle="90.00" type="truck_lead" speed="11.05" pos="20.30" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="570.35" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.35" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="776.02" y="-8.75" angle="90.00" type="truck_overtake" speed="16.58" pos="26.02" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.50">
+        <vehicle id="car_Lead" x="675.78" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="25.78" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="575.91" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.91" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="784.32" y="-8.75" angle="90.00" type="truck_overtake" speed="16.59" pos="34.32" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="car_Lead" x="681.30" y="-8.75" angle="90.00" type="truck_lead" speed="11.05" pos="31.30" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="581.46" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.46" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="792.57" y="-8.75" angle="90.00" type="truck_overtake" speed="16.50" pos="42.57" lane="gneE14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.50">
+        <vehicle id="car_Lead" x="686.75" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="36.75" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="587.02" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="37.02" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="800.69" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="0.69" lane="gneE15_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="car_Lead" x="692.29" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="42.29" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="592.57" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.57" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="809.01" y="-8.75" angle="90.00" type="truck_overtake" speed="16.64" pos="9.01" lane="gneE15_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.50">
+        <vehicle id="car_Lead" x="697.80" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="47.80" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="598.13" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.13" lane="gneE10_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="817.28" y="-8.75" angle="90.00" type="truck_overtake" speed="16.54" pos="17.28" lane="gneE15_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="car_Lead" x="703.11" y="-8.75" angle="90.00" type="truck_lead" speed="10.82" pos="3.11" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="603.58" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.58" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="825.49" y="-8.75" angle="90.00" type="truck_overtake" speed="16.41" pos="25.49" lane="gneE15_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.50">
+        <vehicle id="car_Lead" x="708.65" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="8.65" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="609.14" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.14" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="833.82" y="-8.75" angle="90.00" type="truck_overtake" speed="16.67" pos="33.82" lane="gneE15_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="car_Lead" x="714.09" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="14.09" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="614.69" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.69" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="842.08" y="-8.75" angle="90.00" type="truck_overtake" speed="16.51" pos="42.08" lane="gneE15_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.50">
+        <vehicle id="car_Lead" x="719.58" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="19.58" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="620.25" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.25" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="850.23" y="-8.75" angle="90.00" type="truck_overtake" speed="16.52" pos="0.23" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="car_Lead" x="724.97" y="-8.75" angle="90.00" type="truck_lead" speed="10.79" pos="24.97" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="625.80" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.80" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="858.51" y="-8.75" angle="90.00" type="truck_overtake" speed="16.54" pos="8.51" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.50">
+        <vehicle id="car_Lead" x="730.50" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="30.50" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="631.36" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.36" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="866.83" y="-8.75" angle="90.00" type="truck_overtake" speed="16.65" pos="16.83" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="car_Lead" x="735.90" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="35.90" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="636.91" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.91" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="875.05" y="-8.75" angle="90.00" type="truck_overtake" speed="16.44" pos="25.05" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.50">
+        <vehicle id="car_Lead" x="741.31" y="-8.75" angle="90.00" type="truck_lead" speed="10.81" pos="41.31" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="642.47" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.47" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="883.23" y="-8.75" angle="90.00" type="truck_overtake" speed="16.35" pos="33.23" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="car_Lead" x="746.84" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="46.84" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="648.02" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="48.02" lane="gneE11_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="891.54" y="-8.75" angle="90.00" type="truck_overtake" speed="16.63" pos="41.54" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.50">
+        <vehicle id="car_Lead" x="752.25" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="2.25" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="653.48" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.48" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="899.82" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="49.82" lane="gneE16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="car_Lead" x="757.72" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="7.72" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="659.03" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="9.03" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="907.97" y="-8.75" angle="90.00" type="truck_overtake" speed="16.49" pos="7.97" lane="gneE17_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.50">
+        <vehicle id="car_Lead" x="763.22" y="-8.75" angle="90.00" type="truck_lead" speed="11.00" pos="13.22" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="664.59" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.59" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="916.28" y="-8.75" angle="90.00" type="truck_overtake" speed="16.61" pos="16.28" lane="gneE17_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="car_Lead" x="768.73" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="18.73" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="670.14" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.14" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="924.46" y="-8.75" angle="90.00" type="truck_overtake" speed="16.36" pos="24.46" lane="gneE17_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.50">
+        <vehicle id="car_Lead" x="774.18" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="24.18" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="675.70" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.70" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="932.67" y="-8.75" angle="90.00" type="truck_overtake" speed="16.42" pos="32.67" lane="gneE17_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="car_Lead" x="779.67" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="29.67" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="681.25" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.25" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="940.90" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="40.90" lane="gneE17_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.50">
+        <vehicle id="car_Lead" x="785.17" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="35.17" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="686.81" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.81" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="949.12" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="49.12" lane="gneE17_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="car_Lead" x="790.68" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="40.68" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="692.36" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.36" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="957.32" y="-8.75" angle="90.00" type="truck_overtake" speed="16.59" pos="7.32" lane="gneE18_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.50">
+        <vehicle id="car_Lead" x="796.16" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="46.16" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="697.92" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.92" lane="gneE12_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="965.53" y="-8.75" angle="90.00" type="truck_overtake" speed="16.44" pos="15.53" lane="gneE18_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="car_Lead" x="801.51" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="1.51" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="703.37" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.37" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="973.78" y="-8.75" angle="90.00" type="truck_overtake" speed="16.49" pos="23.78" lane="gneE18_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.50">
+        <vehicle id="car_Lead" x="806.97" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="6.97" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="708.93" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.93" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="982.02" y="-8.75" angle="90.00" type="truck_overtake" speed="16.48" pos="32.02" lane="gneE18_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="car_Lead" x="812.52" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="12.52" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="714.48" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.48" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="990.22" y="-8.75" angle="90.00" type="truck_overtake" speed="16.39" pos="40.22" lane="gneE18_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.50">
+        <vehicle id="car_Lead" x="818.02" y="-8.75" angle="90.00" type="truck_lead" speed="11.00" pos="18.02" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="720.04" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="20.04" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="998.54" y="-8.75" angle="90.00" type="truck_overtake" speed="16.64" pos="48.54" lane="gneE18_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="car_Lead" x="823.43" y="-8.75" angle="90.00" type="truck_lead" speed="10.83" pos="23.43" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="725.59" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.59" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1006.68" y="-8.75" angle="90.00" type="truck_overtake" speed="16.50" pos="6.68" lane="gneE19_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.50">
+        <vehicle id="car_Lead" x="828.91" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="28.91" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="731.15" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.15" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1014.96" y="-8.75" angle="90.00" type="truck_overtake" speed="16.55" pos="14.96" lane="gneE19_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="car_Lead" x="834.36" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="34.36" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="736.70" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.70" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1023.19" y="-8.75" angle="90.00" type="truck_overtake" speed="16.46" pos="23.19" lane="gneE19_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.50">
+        <vehicle id="car_Lead" x="839.80" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="39.80" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="742.26" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.26" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1031.49" y="-8.75" angle="90.00" type="truck_overtake" speed="16.60" pos="31.49" lane="gneE19_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="car_Lead" x="845.31" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="45.31" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="747.81" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.81" lane="gneE13_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1039.82" y="-8.75" angle="90.00" type="truck_overtake" speed="16.66" pos="39.82" lane="gneE19_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.50">
+        <vehicle id="car_Lead" x="850.75" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="0.75" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="753.27" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.27" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1048.06" y="-8.75" angle="90.00" type="truck_overtake" speed="16.48" pos="48.06" lane="gneE19_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="car_Lead" x="856.22" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="6.22" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="758.82" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.82" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1056.25" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="6.25" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.50">
+        <vehicle id="car_Lead" x="861.68" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="11.68" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="764.38" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.38" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1064.48" y="-8.75" angle="90.00" type="truck_overtake" speed="16.46" pos="14.48" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="car_Lead" x="867.09" y="-8.75" angle="90.00" type="truck_lead" speed="10.82" pos="17.09" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="769.93" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.93" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1072.76" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="22.76" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.50">
+        <vehicle id="car_Lead" x="872.59" y="-8.75" angle="90.00" type="truck_lead" speed="11.00" pos="22.59" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="775.49" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.49" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1080.98" y="-8.75" angle="90.00" type="truck_overtake" speed="16.44" pos="30.98" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="car_Lead" x="878.11" y="-8.75" angle="90.00" type="truck_lead" speed="11.04" pos="28.11" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="781.04" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="31.04" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1089.25" y="-8.75" angle="90.00" type="truck_overtake" speed="16.53" pos="39.25" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.50">
+        <vehicle id="car_Lead" x="883.62" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="33.62" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="786.60" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.60" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1097.48" y="-8.75" angle="90.00" type="truck_overtake" speed="16.47" pos="47.48" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="car_Lead" x="889.09" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="39.09" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="792.15" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.15" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1105.58" y="-8.75" angle="90.00" type="truck_overtake" speed="16.39" pos="5.58" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.50">
+        <vehicle id="car_Lead" x="894.62" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="44.62" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="797.71" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.71" lane="gneE14_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1113.91" y="-8.75" angle="90.00" type="truck_overtake" speed="16.67" pos="13.91" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="car_Lead" x="900.00" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="0.09" lane=":J_19_0_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="803.16" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.16" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1122.20" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="22.20" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.50">
+        <vehicle id="car_Lead" x="905.41" y="-8.75" angle="90.00" type="truck_lead" speed="10.83" pos="5.41" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="808.72" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.72" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1130.42" y="-8.75" angle="90.00" type="truck_overtake" speed="16.44" pos="30.42" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="car_Lead" x="910.90" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="10.90" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="814.27" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.27" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1138.64" y="-8.75" angle="90.00" type="truck_overtake" speed="16.46" pos="38.64" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.50">
+        <vehicle id="car_Lead" x="916.42" y="-8.75" angle="90.00" type="truck_lead" speed="11.04" pos="16.42" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="819.83" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.83" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1146.87" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="46.87" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="car_Lead" x="921.95" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="21.95" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="825.38" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.38" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1154.95" y="-8.75" angle="90.00" type="truck_overtake" speed="16.36" pos="4.95" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.50">
+        <vehicle id="car_Lead" x="927.43" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="27.43" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="830.94" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.94" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1163.21" y="-8.75" angle="90.00" type="truck_overtake" speed="16.53" pos="13.21" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="car_Lead" x="932.82" y="-8.75" angle="90.00" type="truck_lead" speed="10.79" pos="32.82" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="836.49" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.49" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1171.47" y="-8.75" angle="90.00" type="truck_overtake" speed="16.51" pos="21.47" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.50">
+        <vehicle id="car_Lead" x="938.25" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="38.25" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="842.05" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="42.05" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1179.80" y="-8.75" angle="90.00" type="truck_overtake" speed="16.66" pos="29.80" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="car_Lead" x="943.79" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="43.79" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="847.60" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.60" lane="gneE15_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1188.02" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="38.02" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.50">
+        <vehicle id="car_Lead" x="949.27" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="49.27" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="853.06" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="3.06" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1196.21" y="-8.75" angle="90.00" type="truck_overtake" speed="16.38" pos="46.21" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="car_Lead" x="954.72" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="4.72" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="858.61" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.61" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1204.33" y="-8.75" angle="90.00" type="truck_overtake" speed="16.44" pos="4.33" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.50">
+        <vehicle id="car_Lead" x="960.28" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="10.28" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="864.17" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.17" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1212.65" y="-8.75" angle="90.00" type="truck_overtake" speed="16.64" pos="12.65" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="car_Lead" x="965.82" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="15.82" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="869.72" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.72" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1220.90" y="-8.75" angle="90.00" type="truck_overtake" speed="16.49" pos="20.90" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.50">
+        <vehicle id="car_Lead" x="971.25" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="21.25" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="875.28" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.28" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1229.22" y="-8.75" angle="90.00" type="truck_overtake" speed="16.66" pos="29.22" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="car_Lead" x="976.76" y="-8.75" angle="90.00" type="truck_lead" speed="11.00" pos="26.76" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="880.83" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.83" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1237.51" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="37.51" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.50">
+        <vehicle id="car_Lead" x="982.23" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="32.23" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="886.39" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.39" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1245.83" y="-8.75" angle="90.00" type="truck_overtake" speed="16.63" pos="45.83" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="car_Lead" x="987.69" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="37.69" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="891.94" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.94" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1254.02" y="-8.75" angle="90.00" type="truck_overtake" speed="16.58" pos="4.02" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.50">
+        <vehicle id="car_Lead" x="993.22" y="-8.75" angle="90.00" type="truck_lead" speed="11.06" pos="43.22" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="897.50" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.50" lane="gneE16_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1262.27" y="-8.75" angle="90.00" type="truck_overtake" speed="16.52" pos="12.27" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="car_Lead" x="998.64" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="48.64" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="902.95" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.95" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1270.47" y="-8.75" angle="90.00" type="truck_overtake" speed="16.39" pos="20.47" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.50">
+        <vehicle id="car_Lead" x="1003.96" y="-8.75" angle="90.00" type="truck_lead" speed="10.85" pos="3.96" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="908.51" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.51" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1278.73" y="-8.75" angle="90.00" type="truck_overtake" speed="16.52" pos="28.73" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="car_Lead" x="1009.40" y="-8.75" angle="90.00" type="truck_lead" speed="10.88" pos="9.40" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="914.06" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="14.06" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1286.93" y="-8.75" angle="90.00" type="truck_overtake" speed="16.39" pos="36.93" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.50">
+        <vehicle id="car_Lead" x="1014.80" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="14.80" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="919.62" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.62" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1295.11" y="-8.75" angle="90.00" type="truck_overtake" speed="16.37" pos="45.11" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="car_Lead" x="1020.36" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="20.36" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="925.17" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.17" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1303.25" y="-8.75" angle="90.00" type="truck_overtake" speed="16.48" pos="3.25" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.50">
+        <vehicle id="car_Lead" x="1025.79" y="-8.75" angle="90.00" type="truck_lead" speed="10.88" pos="25.79" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="930.73" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.73" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1311.48" y="-8.75" angle="90.00" type="truck_overtake" speed="16.45" pos="11.48" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="car_Lead" x="1031.27" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="31.27" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="936.28" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.28" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1319.76" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="19.76" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.50">
+        <vehicle id="car_Lead" x="1036.78" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="36.78" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="941.84" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.84" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1327.95" y="-8.75" angle="90.00" type="truck_overtake" speed="16.38" pos="27.95" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="car_Lead" x="1042.29" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="42.29" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="947.39" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.39" lane="gneE17_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1336.14" y="-8.75" angle="90.00" type="truck_overtake" speed="16.37" pos="36.14" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.50">
+        <vehicle id="car_Lead" x="1047.76" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="47.76" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="952.85" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.85" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1344.47" y="-8.75" angle="90.00" type="truck_overtake" speed="16.66" pos="44.47" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="car_Lead" x="1053.12" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="3.12" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="958.40" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.40" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1352.70" y="-8.75" angle="90.00" type="truck_overtake" speed="16.65" pos="2.70" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.50">
+        <vehicle id="car_Lead" x="1058.57" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="8.57" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="963.96" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.96" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1360.98" y="-8.75" angle="90.00" type="truck_overtake" speed="16.57" pos="10.98" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="car_Lead" x="1064.05" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="14.05" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="969.51" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.51" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1369.25" y="-8.75" angle="90.00" type="truck_overtake" speed="16.52" pos="19.25" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.50">
+        <vehicle id="car_Lead" x="1069.49" y="-8.75" angle="90.00" type="truck_lead" speed="10.88" pos="19.49" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="975.07" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="25.07" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1377.58" y="-8.75" angle="90.00" type="truck_overtake" speed="16.67" pos="27.58" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="car_Lead" x="1074.95" y="-8.75" angle="90.00" type="truck_lead" speed="10.92" pos="24.95" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="980.62" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.62" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1385.86" y="-8.75" angle="90.00" type="truck_overtake" speed="16.56" pos="35.86" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.50">
+        <vehicle id="car_Lead" x="1080.49" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="30.49" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="986.18" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.18" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1394.11" y="-8.75" angle="90.00" type="truck_overtake" speed="16.50" pos="44.11" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="car_Lead" x="1085.96" y="-8.75" angle="90.00" type="truck_lead" speed="10.95" pos="35.96" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="991.73" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.73" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1402.31" y="-8.75" angle="90.00" type="truck_overtake" speed="16.60" pos="2.31" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.50">
+        <vehicle id="car_Lead" x="1091.51" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="41.51" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="997.29" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.29" lane="gneE18_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1410.49" y="-8.75" angle="90.00" type="truck_overtake" speed="16.36" pos="10.49" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="car_Lead" x="1097.05" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="47.05" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1002.74" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.74" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1418.69" y="-8.75" angle="90.00" type="truck_overtake" speed="16.40" pos="18.69" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.50">
+        <vehicle id="car_Lead" x="1102.51" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="2.51" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1008.30" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.30" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1426.88" y="-8.75" angle="90.00" type="truck_overtake" speed="16.38" pos="26.88" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="car_Lead" x="1108.01" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="8.01" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1013.85" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.85" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1435.21" y="-8.75" angle="90.00" type="truck_overtake" speed="16.66" pos="35.21" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.50">
+        <vehicle id="car_Lead" x="1113.44" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="13.44" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1019.41" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.41" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1443.48" y="-8.75" angle="90.00" type="truck_overtake" speed="16.53" pos="43.48" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="car_Lead" x="1118.98" y="-8.75" angle="90.00" type="truck_lead" speed="11.09" pos="18.98" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1024.96" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.96" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1451.69" y="-8.75" angle="90.00" type="truck_overtake" speed="16.62" pos="1.69" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.50">
+        <vehicle id="car_Lead" x="1124.43" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="24.43" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1030.52" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.52" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1460.00" y="-8.75" angle="90.00" type="truck_overtake" speed="16.62" pos="10.00" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="car_Lead" x="1129.91" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="29.91" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1036.07" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="36.07" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1468.19" y="-8.75" angle="90.00" type="truck_overtake" speed="16.38" pos="18.19" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.50">
+        <vehicle id="car_Lead" x="1135.34" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="35.34" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1041.63" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.63" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1476.51" y="-8.75" angle="90.00" type="truck_overtake" speed="16.63" pos="26.51" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="car_Lead" x="1140.85" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="40.85" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1047.18" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.18" lane="gneE19_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1484.78" y="-8.75" angle="90.00" type="truck_overtake" speed="16.55" pos="34.78" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.50">
+        <vehicle id="car_Lead" x="1146.27" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="46.27" lane="gneE21_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1052.64" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.64" lane="gneE20_0" slope="0.00"/>
+        <vehicle id="car_overtake" x="1493.02" y="-8.75" angle="90.00" type="truck_overtake" speed="16.47" pos="43.02" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="car_Lead" x="1151.65" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="1.65" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1058.19" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.19" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.50">
+        <vehicle id="car_Lead" x="1157.09" y="-8.75" angle="90.00" type="truck_lead" speed="10.88" pos="7.09" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1063.75" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.75" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="car_Lead" x="1162.49" y="-8.75" angle="90.00" type="truck_lead" speed="10.81" pos="12.49" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1069.30" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.30" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.50">
+        <vehicle id="car_Lead" x="1167.94" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="17.94" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1074.86" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.86" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="car_Lead" x="1173.43" y="-8.75" angle="90.00" type="truck_lead" speed="10.99" pos="23.43" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1080.41" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.41" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.50">
+        <vehicle id="car_Lead" x="1178.83" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="28.83" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1085.97" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.97" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="car_Lead" x="1184.32" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="34.32" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1091.52" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.52" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.50">
+        <vehicle id="car_Lead" x="1189.77" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="39.77" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1097.08" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="47.08" lane="gneE20_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="car_Lead" x="1195.18" y="-8.75" angle="90.00" type="truck_lead" speed="10.82" pos="45.18" lane="gneE22_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1102.53" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.53" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.50">
+        <vehicle id="car_Lead" x="1200.52" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="0.52" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1108.09" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="8.09" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="car_Lead" x="1205.96" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="5.96" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1113.64" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.64" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.50">
+        <vehicle id="car_Lead" x="1211.51" y="-8.75" angle="90.00" type="truck_lead" speed="11.10" pos="11.51" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1119.20" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.20" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="car_Lead" x="1217.02" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="17.02" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1124.75" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.75" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.50">
+        <vehicle id="car_Lead" x="1222.57" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="22.57" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1130.31" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.31" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="car_Lead" x="1227.99" y="-8.75" angle="90.00" type="truck_lead" speed="10.83" pos="27.99" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1135.86" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.86" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.50">
+        <vehicle id="car_Lead" x="1233.42" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="33.42" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1141.42" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.42" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="car_Lead" x="1238.86" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="38.86" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1146.97" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.97" lane="gneE21_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.50">
+        <vehicle id="car_Lead" x="1244.32" y="-8.75" angle="90.00" type="truck_lead" speed="10.91" pos="44.32" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1152.43" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.43" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="car_Lead" x="1249.75" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="49.75" lane="gneE23_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1157.98" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.98" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.50">
+        <vehicle id="car_Lead" x="1255.20" y="-8.75" angle="90.00" type="truck_lead" speed="11.10" pos="5.20" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1163.54" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.54" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="car_Lead" x="1260.71" y="-8.75" angle="90.00" type="truck_lead" speed="11.02" pos="10.71" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1169.09" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="19.09" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.50">
+        <vehicle id="car_Lead" x="1266.23" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="16.23" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1174.65" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.65" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="car_Lead" x="1271.73" y="-8.75" angle="90.00" type="truck_lead" speed="11.00" pos="21.73" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1180.20" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.20" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.50">
+        <vehicle id="car_Lead" x="1277.27" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="27.27" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1185.76" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.76" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="car_Lead" x="1282.70" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="32.70" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1191.31" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.31" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.50">
+        <vehicle id="car_Lead" x="1288.23" y="-8.75" angle="90.00" type="truck_lead" speed="11.05" pos="38.23" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1196.87" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.87" lane="gneE22_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="car_Lead" x="1293.63" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="43.63" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1202.32" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.32" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.50">
+        <vehicle id="car_Lead" x="1299.12" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="49.12" lane="gneE24_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1207.88" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.88" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="car_Lead" x="1304.55" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="4.55" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1213.43" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.43" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.50">
+        <vehicle id="car_Lead" x="1309.96" y="-8.75" angle="90.00" type="truck_lead" speed="10.82" pos="9.96" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1218.99" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="18.99" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="car_Lead" x="1315.40" y="-8.75" angle="90.00" type="truck_lead" speed="10.87" pos="15.40" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1224.54" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.54" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.50">
+        <vehicle id="car_Lead" x="1320.90" y="-8.75" angle="90.00" type="truck_lead" speed="11.01" pos="20.90" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1230.10" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="30.10" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="car_Lead" x="1326.35" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="26.35" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1235.65" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.65" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.50">
+        <vehicle id="car_Lead" x="1331.76" y="-8.75" angle="90.00" type="truck_lead" speed="10.83" pos="31.76" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1241.21" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.21" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="car_Lead" x="1337.28" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="37.28" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1246.76" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.76" lane="gneE23_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.50">
+        <vehicle id="car_Lead" x="1342.82" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="42.82" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1252.22" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.22" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="car_Lead" x="1348.36" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="48.36" lane="gneE25_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1257.77" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.77" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.50">
+        <vehicle id="car_Lead" x="1353.78" y="-8.75" angle="90.00" type="truck_lead" speed="11.05" pos="3.78" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1263.33" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.33" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="car_Lead" x="1359.20" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="9.20" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1268.88" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="18.88" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.50">
+        <vehicle id="car_Lead" x="1364.65" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="14.65" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1274.44" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.44" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="car_Lead" x="1370.14" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="20.14" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1279.99" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="29.99" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.50">
+        <vehicle id="car_Lead" x="1375.70" y="-8.75" angle="90.00" type="truck_lead" speed="11.11" pos="25.70" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1285.55" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.55" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="car_Lead" x="1381.10" y="-8.75" angle="90.00" type="truck_lead" speed="10.80" pos="31.10" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1291.10" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.10" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.50">
+        <vehicle id="car_Lead" x="1386.54" y="-8.75" angle="90.00" type="truck_lead" speed="10.89" pos="36.54" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1296.66" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.66" lane="gneE24_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="car_Lead" x="1391.97" y="-8.75" angle="90.00" type="truck_lead" speed="10.85" pos="41.97" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1302.11" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.11" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.50">
+        <vehicle id="car_Lead" x="1397.37" y="-8.75" angle="90.00" type="truck_lead" speed="10.81" pos="47.37" lane="gneE26_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1307.67" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.67" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="car_Lead" x="1402.74" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="2.74" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1313.22" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.22" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.50">
+        <vehicle id="car_Lead" x="1408.28" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="8.28" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1318.78" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="18.78" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="car_Lead" x="1413.82" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="13.82" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1324.33" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.33" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.50">
+        <vehicle id="car_Lead" x="1419.23" y="-8.75" angle="90.00" type="truck_lead" speed="10.84" pos="19.23" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1329.89" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="29.89" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="car_Lead" x="1424.72" y="-8.75" angle="90.00" type="truck_lead" speed="10.97" pos="24.72" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1335.44" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.44" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.50">
+        <vehicle id="car_Lead" x="1430.22" y="-8.75" angle="90.00" type="truck_lead" speed="11.00" pos="30.22" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1341.00" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="41.00" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="car_Lead" x="1435.77" y="-8.75" angle="90.00" type="truck_lead" speed="11.10" pos="35.77" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1346.55" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.55" lane="gneE25_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.50">
+        <vehicle id="car_Lead" x="1441.22" y="-8.75" angle="90.00" type="truck_lead" speed="10.90" pos="41.22" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1352.01" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="2.01" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="car_Lead" x="1446.74" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="46.74" lane="gneE27_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1357.56" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.56" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.50">
+        <vehicle id="car_Lead" x="1452.13" y="-8.75" angle="90.00" type="truck_lead" speed="10.98" pos="2.13" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1363.12" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.12" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="car_Lead" x="1457.60" y="-8.75" angle="90.00" type="truck_lead" speed="10.94" pos="7.60" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1368.67" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="18.67" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.50">
+        <vehicle id="car_Lead" x="1463.03" y="-8.75" angle="90.00" type="truck_lead" speed="10.86" pos="13.03" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1374.23" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.23" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="car_Lead" x="1468.56" y="-8.75" angle="90.00" type="truck_lead" speed="11.07" pos="18.56" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1379.78" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="29.78" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.50">
+        <vehicle id="car_Lead" x="1474.08" y="-8.75" angle="90.00" type="truck_lead" speed="11.03" pos="24.08" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1385.34" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.34" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="car_Lead" x="1479.60" y="-8.75" angle="90.00" type="truck_lead" speed="11.05" pos="29.60" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1390.89" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="40.89" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.50">
+        <vehicle id="car_Lead" x="1485.08" y="-8.75" angle="90.00" type="truck_lead" speed="10.96" pos="35.08" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1396.45" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.45" lane="gneE26_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="car_Lead" x="1490.49" y="-8.75" angle="90.00" type="truck_lead" speed="10.82" pos="40.49" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1401.90" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="1.90" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.50">
+        <vehicle id="car_Lead" x="1496.03" y="-8.75" angle="90.00" type="truck_lead" speed="11.08" pos="46.03" lane="gneE28_0" slope="0.00"/>
+        <vehicle id="car_TJC" x="1407.46" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.46" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="car_TJC" x="1413.01" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="13.01" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.50">
+        <vehicle id="car_TJC" x="1418.57" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="18.57" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="car_TJC" x="1424.12" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.12" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.50">
+        <vehicle id="car_TJC" x="1429.68" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="29.68" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="car_TJC" x="1435.23" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.23" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.50">
+        <vehicle id="car_TJC" x="1440.79" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="40.79" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="car_TJC" x="1446.34" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.34" lane="gneE27_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.50">
+        <vehicle id="car_TJC" x="1451.80" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="1.80" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="car_TJC" x="1457.35" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="7.35" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.50">
+        <vehicle id="car_TJC" x="1462.91" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="12.91" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="car_TJC" x="1468.46" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="18.46" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.50">
+        <vehicle id="car_TJC" x="1474.02" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="24.02" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="car_TJC" x="1479.57" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="29.57" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.50">
+        <vehicle id="car_TJC" x="1485.13" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="35.13" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="car_TJC" x="1490.68" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="40.68" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.50">
+        <vehicle id="car_TJC" x="1496.24" y="-8.75" angle="90.00" type="car_ACC" speed="11.11" pos="46.24" lane="gneE28_0" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00"/>
+</fcd-export>
