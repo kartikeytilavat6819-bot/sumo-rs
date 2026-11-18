@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:06:57.104356-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/accel_lane_ramps/accel_lane_ramps.nod.xml"/>
+        <edge-files value="tools/oracle/cases/accel_lane_ramps/accel_lane_ramps.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/accel_lane_ramps/ref_simple.net.xml"/>
+    </output>
+
+    <ramp_guessing>
+        <ramps.guess value="true"/>
+    </ramp_guessing>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,50.00" convBoundary="0.00,0.00,900.00,50.00" origBoundary="0.00,-50.00,900.00,0.00" projParameter="!"/>
+
+    <edge id=":H1-AddedOnRampNode_0" function="internal">
+        <lane id=":H1-AddedOnRampNode_0_0" index="0" speed="33.33" length="8.00" shape="396.00,45.20 404.00,45.20"/>
+        <lane id=":H1-AddedOnRampNode_0_1" index="1" speed="33.33" length="8.00" shape="396.00,48.40 404.00,48.40"/>
+    </edge>
+    <edge id=":n1_0" function="internal">
+        <lane id=":n1_0_0" index="0" speed="23.61" length="3.44" shape="298.57,41.52 299.55,41.79 300.24,41.94 300.94,41.99 301.96,42.00"/>
+    </edge>
+    <edge id=":n1_1" function="internal">
+        <lane id=":n1_1_0" index="0" speed="33.33" length="3.46" shape="298.50,45.20 301.96,45.20"/>
+        <lane id=":n1_1_1" index="1" speed="33.33" length="3.46" shape="298.50,48.40 301.96,48.40"/>
+    </edge>
+    <edge id=":n2_0" function="internal">
+        <lane id=":n2_0_0" index="0" speed="33.33" length="0.10" shape="600.00,45.20 600.00,45.20"/>
+        <lane id=":n2_0_1" index="1" speed="33.33" length="0.10" shape="600.00,48.40 600.00,48.40"/>
+    </edge>
+
+    <edge id="H0" from="n0" to="n1" priority="-1">
+        <lane id="H0_0" index="0" speed="33.33" length="298.50" shape="0.00,45.20 298.50,45.20"/>
+        <lane id="H0_1" index="1" speed="33.33" length="298.50" shape="0.00,48.40 298.50,48.40"/>
+    </edge>
+    <edge id="H1" from="H1-AddedOnRampNode" to="n2" priority="-1">
+        <lane id="H1_0" index="0" speed="33.33" length="196.00" shape="404.00,45.20 600.00,45.20"/>
+        <lane id="H1_1" index="1" speed="33.33" length="196.00" shape="404.00,48.40 600.00,48.40"/>
+    </edge>
+    <edge id="H1-AddedOnRampEdge" from="n1" to="H1-AddedOnRampNode" priority="-1">
+        <lane id="H1-AddedOnRampEdge_0" index="0" speed="33.33" length="94.04" acceleration="1" shape="301.96,42.00 396.00,42.00"/>
+        <lane id="H1-AddedOnRampEdge_1" index="1" speed="33.33" length="94.04" shape="301.96,45.20 396.00,45.20"/>
+        <lane id="H1-AddedOnRampEdge_2" index="2" speed="33.33" length="94.04" shape="301.96,48.40 396.00,48.40"/>
+    </edge>
+    <edge id="H2" from="n2" to="n3" priority="-1">
+        <lane id="H2_0" index="0" speed="33.33" length="300.00" shape="600.00,45.20 900.00,45.20"/>
+        <lane id="H2_1" index="1" speed="33.33" length="300.00" shape="600.00,48.40 900.00,48.40"/>
+    </edge>
+    <edge id="R0" from="n4" to="n1" priority="-1" shape="150.00,0.00 300.00,43.60">
+        <lane id="R0_0" index="0" speed="13.89" length="154.25" shape="150.45,-1.54 298.57,41.52"/>
+    </edge>
+
+    <junction id="H1-AddedOnRampNode" type="priority" x="400.00" y="50.00" incLanes="H1-AddedOnRampEdge_0 H1-AddedOnRampEdge_1 H1-AddedOnRampEdge_2" intLanes=":H1-AddedOnRampNode_0_0 :H1-AddedOnRampNode_0_1" shape="404.00,50.00 404.00,43.60 400.97,42.77 399.03,41.23 397.79,40.64 396.00,40.40 396.00,50.00">
+        <request index="0" response="00" foes="00" cont="0"/>
+        <request index="1" response="00" foes="00" cont="0"/>
+    </junction>
+    <junction id="n0" type="dead_end" x="0.00" y="50.00" incLanes="" intLanes="" shape="0.00,50.00 0.00,43.60"/>
+    <junction id="n1" type="priority" x="300.00" y="50.00" incLanes="R0_0 H0_0 H0_1" intLanes=":n1_0_0 :n1_1_0 :n1_1_1" shape="301.96,50.00 301.96,40.40 300.85,40.38 300.46,40.35 300.08,40.27 299.63,40.16 299.02,39.98 298.12,43.05 298.50,43.60 298.50,50.00">
+        <request index="0" response="000" foes="000" cont="0"/>
+        <request index="1" response="000" foes="000" cont="0"/>
+        <request index="2" response="000" foes="000" cont="0"/>
+    </junction>
+    <junction id="n2" type="priority" x="600.00" y="50.00" incLanes="H1_0 H1_1" intLanes=":n2_0_0 :n2_0_1" shape="600.00,50.00 600.00,43.60 600.00,50.00">
+        <request index="0" response="00" foes="00" cont="0"/>
+        <request index="1" response="00" foes="00" cont="0"/>
+    </junction>
+    <junction id="n3" type="dead_end" x="900.00" y="50.00" incLanes="H2_0 H2_1" intLanes="" shape="900.00,43.60 900.00,50.00"/>
+    <junction id="n4" type="dead_end" x="150.00" y="0.00" incLanes="" intLanes="" shape="150.00,0.00 150.89,-3.07"/>
+
+    <connection from="H0" to="H1-AddedOnRampEdge" fromLane="0" toLane="1" via=":n1_1_0" dir="s" state="M"/>
+    <connection from="H0" to="H1-AddedOnRampEdge" fromLane="1" toLane="2" via=":n1_1_1" dir="s" state="M"/>
+    <connection from="H1" to="H2" fromLane="0" toLane="0" via=":n2_0_0" dir="s" state="M"/>
+    <connection from="H1" to="H2" fromLane="1" toLane="1" via=":n2_0_1" dir="s" state="M"/>
+    <connection from="H1-AddedOnRampEdge" to="H1" fromLane="1" toLane="0" via=":H1-AddedOnRampNode_0_0" dir="s" state="M"/>
+    <connection from="H1-AddedOnRampEdge" to="H1" fromLane="2" toLane="1" via=":H1-AddedOnRampNode_0_1" dir="s" state="M"/>
+    <connection from="R0" to="H1-AddedOnRampEdge" fromLane="0" toLane="0" via=":n1_0_0" dir="s" state="M"/>
+
+    <connection from=":H1-AddedOnRampNode_0" to="H1" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":H1-AddedOnRampNode_0" to="H1" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from=":n1_0" to="H1-AddedOnRampEdge" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":n1_1" to="H1-AddedOnRampEdge" fromLane="0" toLane="1" dir="s" state="M"/>
+    <connection from=":n1_1" to="H1-AddedOnRampEdge" fromLane="1" toLane="2" dir="s" state="M"/>
+    <connection from=":n2_0" to="H2" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":n2_0" to="H2" fromLane="1" toLane="1" dir="s" state="M"/>
+
+</net>

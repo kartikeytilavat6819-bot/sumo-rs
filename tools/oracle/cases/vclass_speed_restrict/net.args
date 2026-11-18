@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/vclass_speed_restrict/vclass_speed_restrict.nod.xml --edge-files tools/oracle/cases/vclass_speed_restrict/vclass_speed_restrict.edg.xml --type-files tools/oracle/cases/vclass_speed_restrict/vclass_speed_restrict.typ.xml

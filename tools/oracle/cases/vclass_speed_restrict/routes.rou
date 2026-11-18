@@ -1,0 +1,15 @@
+<routes>
+    <vType id="car" vClass="passenger" length="5.00" maxSpeed="33.33" accel="2.60" decel="4.50"/>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="33.33" accel="1.20" decel="2.50"/>
+    <vType id="truck" vClass="truck" length="8.00" maxSpeed="33.33" accel="1.00" decel="3.00"/>
+    <vType id="hov" vClass="hov" length="5.00" maxSpeed="33.33" accel="2.60" decel="4.50"/>
+    <vType id="taxi" vClass="taxi" length="5.00" maxSpeed="33.33" accel="3.00" decel="4.50"/>
+    <vType id="amb" vClass="emergency" length="6.00" maxSpeed="33.33" accel="3.00" decel="4.50"/>
+    <route id="r" edges="E0 E1"/>
+    <vehicle id="car0" type="car" route="r" depart="0" departSpeed="max"/>
+    <vehicle id="bus0" type="bus" route="r" depart="2" departSpeed="max"/>
+    <vehicle id="truck0" type="truck" route="r" depart="4" departSpeed="max"/>
+    <vehicle id="hov0" type="hov" route="r" depart="6" departSpeed="max"/>
+    <vehicle id="taxi0" type="taxi" route="r" depart="8" departSpeed="max"/>
+    <vehicle id="amb0" type="amb" route="r" depart="10" departSpeed="max"/>
+</routes>

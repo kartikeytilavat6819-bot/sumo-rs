@@ -1,0 +1,14 @@
+<routes>
+    <vType id="car" vClass="passenger" length="5.00" maxSpeed="16.67" accel="2.60" decel="4.50"/>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.00" accel="1.20" decel="2.50"/>
+    <vType id="coach" vClass="coach" length="12.00" maxSpeed="14.00" accel="1.20" decel="2.50"/>
+    <route id="r" edges="E0 E1"/>
+    <!-- buses may stay on E1 lane 2, cars starting there must change left before E1 -->
+    <vehicle id="bus0" type="bus" route="r" depart="0" departLane="2" departSpeed="max"/>
+    <vehicle id="car0" type="car" route="r" depart="3" departLane="2" departSpeed="max"/>
+    <vehicle id="car1" type="car" route="r" depart="6" departLane="2" departSpeed="max"/>
+    <vehicle id="coach0" type="coach" route="r" depart="9" departLane="2" departSpeed="max"/>
+    <vehicle id="car2" type="car" route="r" depart="12" departLane="2" departSpeed="max"/>
+    <vehicle id="bus1" type="bus" route="r" depart="15" departLane="2" departSpeed="max"/>
+    <vehicle id="car3" type="car" route="r" depart="20" departLane="1" departSpeed="max"/>
+</routes>

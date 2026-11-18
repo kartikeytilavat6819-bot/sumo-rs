@@ -1,0 +1,8 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="33.33" accel="2.60" decel="4.50"/>
+    <vType id="rampCar" length="5.00" maxSpeed="13.89" accel="2.00" decel="4.50"/>
+    <route id="hw" edges="H0 H1-AddedOnRampEdge H1 H2"/>
+    <route id="on" edges="R0 H1-AddedOnRampEdge H1 H2"/>
+    <flow id="hwFlow" type="car" route="hw" begin="0" end="80" period="5" departLane="best" departSpeed="max"/>
+    <flow id="rampFlow" type="rampCar" route="on" begin="2" end="80" period="8" departLane="best" departSpeed="max"/>
+</routes>

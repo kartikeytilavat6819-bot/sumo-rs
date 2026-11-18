@@ -1,0 +1,13 @@
+<routes>
+    <vType id="car" vClass="passenger" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <route id="r" edges="E0 E1"/>
+    <vehicle id="bus0" type="bus" route="r" depart="0" departSpeed="max"/>
+    <vehicle id="car0" type="car" route="r" depart="2" departSpeed="max"/>
+    <vehicle id="bus1" type="bus" route="r" depart="4" departSpeed="max" departLane="allowed"/>
+    <vehicle id="car1" type="car" route="r" depart="6" departSpeed="max" departLane="allowed"/>
+    <vehicle id="car2" type="car" route="r" depart="8" departSpeed="max"/>
+    <vehicle id="bus2" type="bus" route="r" depart="10" departSpeed="max"/>
+    <vehicle id="car3" type="car" route="r" depart="12" departSpeed="max" departLane="free"/>
+    <vehicle id="bus3" type="bus" route="r" depart="14" departSpeed="max" departLane="allowed"/>
+</routes>

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/lc_change_restrict/lc_change_restrict.nod.xml --edge-files tools/oracle/cases/lc_change_restrict/lc_change_restrict.edg.xml

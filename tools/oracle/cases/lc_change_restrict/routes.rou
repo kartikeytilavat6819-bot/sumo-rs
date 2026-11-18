@@ -1,0 +1,18 @@
+<routes>
+    <vType id="car" vClass="passenger" length="5.00" maxSpeed="22.22" accel="2.60" decel="4.50"/>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="18.00" accel="1.20" decel="2.50"/>
+    <vType id="truck" vClass="truck" length="8.00" maxSpeed="12.00" accel="1.00" decel="3.00"/>
+    <route id="r" edges="E0 E1"/>
+    <!-- slow blockers on the right and left lanes -->
+    <vehicle id="blk2" type="truck" route="r" depart="0" departLane="2" departSpeed="max"/>
+    <vehicle id="blk0" type="truck" route="r" depart="1" departLane="0" departSpeed="max"/>
+    <!-- cars on lane 2 may change left (changeLeft=passenger on lane 2 is unspecified -> allowed) -->
+    <vehicle id="c2a" type="car" route="r" depart="3" departLane="2" departSpeed="max"/>
+    <vehicle id="c2b" type="car" route="r" depart="6" departLane="2" departSpeed="max"/>
+    <!-- cars on lane 0 are forbidden from changing left (changeLeft="bus" on lane 0) -->
+    <vehicle id="c0a" type="car" route="r" depart="9" departLane="0" departSpeed="max"/>
+    <vehicle id="c0b" type="car" route="r" depart="12" departLane="0" departSpeed="max"/>
+    <!-- a bus on lane 0 may change left -->
+    <vehicle id="b0" type="bus" route="r" depart="15" departLane="0" departSpeed="max"/>
+    <vehicle id="c1" type="car" route="r" depart="20" departLane="1" departSpeed="max"/>
+</routes>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:20:27.355812-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/disallow_truck_lane/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/disallow_truck_lane/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc09/tools/oracle/cases/disallow_truck_lane/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc09/tools/oracle/cases/disallow_truck_lane/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc09/tools/oracle/cases/disallow_truck_lane/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="t0" depart="0.00" departLane="E0_1" departPos="8.10" departSpeed="11.44" departDelay="0.00" arrival="65.00" arrivalLane="E1_1" arrivalPos="400.00" arrivalSpeed="13.64" duration="65.00" routeLength="792.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.71" rerouteNo="0" devices="tripinfo_t0 fcd_t0" vType="truck" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="c0" depart="2.00" departLane="E0_0" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="67.00" arrivalLane="E1_0" arrivalPos="400.00" arrivalSpeed="12.24" duration="65.00" routeLength="795.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.58" rerouteNo="0" devices="tripinfo_c0 fcd_c0" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="c1" depart="6.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="68.00" arrivalLane="E1_1" arrivalPos="400.00" arrivalSpeed="13.73" duration="62.00" routeLength="795.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.80" rerouteNo="0" devices="tripinfo_c1 fcd_c1" vType="car" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="t1" depart="4.00" departLane="E0_1" departPos="8.10" departSpeed="11.17" departDelay="0.00" arrival="70.00" arrivalLane="E1_1" arrivalPos="400.00" arrivalSpeed="13.64" duration="66.00" routeLength="792.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.83" rerouteNo="0" devices="tripinfo_t1 fcd_t1" vType="truck" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="t2" depart="8.00" departLane="E0_1" departPos="8.10" departSpeed="11.28" departDelay="0.00" arrival="74.00" arrivalLane="E1_0" arrivalPos="400.00" arrivalSpeed="13.55" duration="66.00" routeLength="792.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.71" rerouteNo="0" devices="tripinfo_t2 fcd_t2" vType="truck" speedFactor="1.02" vaporized=""/>
+    <tripinfo id="t3" depart="12.00" departLane="E0_1" departPos="8.10" departSpeed="11.36" departDelay="0.00" arrival="77.00" arrivalLane="E1_0" arrivalPos="400.00" arrivalSpeed="13.54" duration="65.00" routeLength="792.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.68" rerouteNo="0" devices="tripinfo_t3 fcd_t3" vType="truck" speedFactor="1.02" vaporized=""/>
+    <tripinfo id="c2" depart="10.00" departLane="E0_0" departPos="5.10" departSpeed="11.54" departDelay="0.00" arrival="83.00" arrivalLane="E1_0" arrivalPos="400.00" arrivalSpeed="11.21" duration="73.00" routeLength="795.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.13" rerouteNo="0" devices="tripinfo_c2 fcd_c2" vType="car" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="c3" depart="14.00" departLane="E0_0" departPos="5.10" departSpeed="12.31" departDelay="0.00" arrival="84.00" arrivalLane="E1_1" arrivalPos="400.00" arrivalSpeed="11.95" duration="70.00" routeLength="795.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.51" rerouteNo="0" devices="tripinfo_c3 fcd_c3" vType="car" speedFactor="0.89" vaporized=""/>
+</tripinfos>
