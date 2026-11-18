@@ -337,8 +337,11 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn activate_entry_reminders(&mut self, person: Ptr<MSTransportable>, isDepart: bool) {
-        // C++ default body is empty (parameters unused)
-        let _ = (person, isDepart);
+        // virtual: only MSStageWalking overrides it; the base body is empty
+        match self.myType {
+            MSStageType::WALKING => Ptr::from_mut(self).cast::<MSStageWalking>().m().activate_entry_reminders(person, isDepart),
+            _ => {}
+        }
     }
 
     /// C++: `void MSStageMoving::setRouteIndex(MSTransportable *const, int)` [virtual]

@@ -2251,7 +2251,10 @@ impl MSMeanData_MeanDataValues {
 /// Rust constructors cannot register, so the creator calls this once the values object has its final address.
 pub fn register_values(values: Ptr<MSMeanData_MeanDataValues>, lane: Ptr<MSLane>, doAdd: bool) {
     if doAdd && !lane.is_null() {
-        lane.m().add_move_reminder(reminder_of(values), false);
+        // C++ MSMoveReminder ctor calls lane->addMoveReminder(this) with the default
+        // addToVehicles=true, so reminders are also given to vehicles already on the lane
+        // when init() runs at a non-zero dumpBegin (md_noperiod, md_window, ...).
+        lane.m().add_move_reminder(reminder_of(values), true);
     }
 }
 
