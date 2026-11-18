@@ -1,0 +1,8 @@
+[package]
+name = "od2trips"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sumo_core = { path = "../sumo_core" }
+utils = { path = "../utils" }

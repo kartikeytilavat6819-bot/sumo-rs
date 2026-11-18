@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data>
+  <interval id="od" begin="0" end="3600">
+    <tazRelation from="za" to="zb" count="14"/>
+    <tazRelation from="zb" to="zc" count="9"/>
+    <tazRelation from="zc" to="za" count="6"/>
+  </interval>
+</data>

@@ -1,0 +1,1 @@
+-n tools/oracle/cases/odshared/taz.add.xml -d tools/oracle/cases/odshared/m.o --persontrips --persontrips.modes bus,taxi --different-source-sink --ignore-vehicle-type -o @DIR@/trips.xml --seed 6

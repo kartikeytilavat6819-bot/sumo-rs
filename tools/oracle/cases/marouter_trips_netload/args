@@ -1,0 +1,1 @@
+-n tools/oracle/cases/trips/ref_simple.net.xml --additional-files tools/oracle/cases/odshared/taz.add.xml --route-files tools/oracle/cases/odshared/trips_taz.xml -o @DIR@/routes.xml --netload-output @DIR@/netload.xml --aggregation-interval 50 --seed 1

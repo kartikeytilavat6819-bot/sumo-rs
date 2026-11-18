@@ -1,0 +1,1 @@
+-n tools/oracle/cases/odshared/taz.add.xml -d tools/oracle/cases/odshared/m.v --flow-output @DIR@/flows.xml --flow-output.poisson -o @DIR@/trips.xml --seed 2
