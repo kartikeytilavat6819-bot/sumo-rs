@@ -38,3 +38,11 @@ fi
 
 echo "=== import cases oracle ==="
 bash "$ROOT/tools/oracle/run_importers.sh" "$OURS" "$REF" "$OUT/imports" 2>&1 | tail -40
+
+echo "=== netopts opendriveOutput ==="
+NETOPTS2_OUT="$OUT/netopts" NETOPTS2_JOBS=1 bash "$ROOT/tools/oracle/run_netopts_new.sh" opendriveOutput 2>&1 | tail -3
+cat "$OUT/netopts/summary.tsv" 2>/dev/null
+D="$OUT/netopts/opendriveOutput"
+if [ -f "$D/cpp_out/net.xodr" ] && [ -f "$D/rust_out/net.xodr" ]; then
+  diff <(sed '/generated on/d' "$D/cpp_out/net.xodr") <(sed '/generated on/d' "$D/rust_out/net.xodr") | head -20
+fi
