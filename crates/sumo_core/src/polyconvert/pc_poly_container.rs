@@ -97,7 +97,7 @@ impl PCPolyContainer {
     #[allow(unused_variables)]
     pub fn new(prune: bool, pruningBoundary: &Boundary, removeByNames: &Vec<String>) -> Self {
         PCPolyContainer {
-            base: ShapeContainer::new(),
+            base: { let mut b = ShapeContainer::new(); b.myAddFilter = Some(crate::utils::shapes::shape_container::ShapeAddFilter { doPrune: prune, pruningBoundary: *pruningBoundary, removeByNames: removeByNames.clone() }); b },
             myLanePosPois: BTreeMap::new(),
             myIDEnums: BTreeMap::new(),
             myPruningBoundary: *pruningBoundary,
@@ -156,7 +156,7 @@ impl PCPolyContainer {
             drop(unsafe { Box::from_raw(poly.as_raw()) });
             return false;
         }
-        self.base.add(poly, false)
+        self.base.add(poly, true)
     }
 
     /// C++: `bool PCPolyContainer::add(PointOfInterest *, bool)` [virtual]
@@ -195,7 +195,7 @@ impl PCPolyContainer {
             drop(unsafe { Box::from_raw(poi.as_raw()) });
             return false;
         }
-        self.base.add_2(poi, false)
+        self.base.add_2(poi, true)
     }
 
     /// C++: `void PCPolyContainer::addLanePos(const std::string &, const std::string &, const double, const bool, const double)`

@@ -12,6 +12,13 @@ pub type ShapeContainer_Polygons = BTreeMap<String, Ptr<SUMOPolygon>>; // NamedO
 
 /// Storage for geometrical objects
 /// C++ class `ShapeContainer` (utils/shapes/ShapeContainer.h)
+#[derive(Clone)]
+pub struct ShapeAddFilter {
+    pub doPrune: bool,
+    pub pruningBoundary: Boundary,
+    pub removeByNames: Vec<String>,
+}
+
 pub struct ShapeContainer {
     /// stored Polygons
     pub myPolygons: ShapeContainer_Polygons,
@@ -28,6 +35,8 @@ pub struct ShapeContainer {
     /// Command pointers for scheduled polygon update. Maps PolyID->Command
     pub myPolygonUpdateCommands: BTreeMap<String, Ptr<ParametrisedWrappingCommand<ShapeContainer, Ptr<PolygonDynamics>>>>, // C++: std::map<const std::string, ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> *>
     pub myListeners: Vec<Ptr<ShapeListener>>,
+    /// stands in for the virtual add(...) overrides of PCPolyContainer (pruning, removal by name); None for a plain container
+    pub myAddFilter: Option<ShapeAddFilter>,
 }
 
 impl ShapeContainer {
@@ -36,7 +45,7 @@ impl ShapeContainer {
     // ShapeContainer::ShapeContainer() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        ShapeContainer { myPolygons: BTreeMap::new(), myPolygonDynamics: BTreeMap::new(), myHighlightPolygons: BTreeMap::new(), myHighlightedObjects: BTreeMap::new(), myTrackingPolygons: BTreeMap::new(), myPOIs: BTreeMap::new(), myPolygonUpdateCommands: BTreeMap::new(), myListeners: Vec::new() }
+        ShapeContainer { myPolygons: BTreeMap::new(), myPolygonDynamics: BTreeMap::new(), myHighlightPolygons: BTreeMap::new(), myHighlightedObjects: BTreeMap::new(), myTrackingPolygons: BTreeMap::new(), myPOIs: BTreeMap::new(), myPolygonUpdateCommands: BTreeMap::new(), myListeners: Vec::new(), myAddFilter: None }
     }
 
     /// C++: `void ShapeContainer::~ShapeContainer()` [virtual]
@@ -440,6 +449,15 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, poly: Ptr<SUMOPolygon>, ignorePruning: bool) -> bool {
+        if let Some(f) = &self.myAddFilter {
+            // PCPolyContainer::add(SUMOPolygon*, bool)
+            if (f.doPrune && !ignorePruning && !poly.get_shape().get_box_boundary().partial_within(&f.pruningBoundary, 0.0))
+                || f.removeByNames.iter().any(|n| n.as_str() == poly.get_id())
+            {
+                drop(unsafe { Box::from_raw(poly.as_raw()) });
+                return false;
+            }
+        }
         let id = poly.get_id().to_string();
         if self.myPolygons.contains_key(&id) {
             // C++ deletes poly here; dropping the Ptr is the equivalent
@@ -467,6 +485,15 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_2(&mut self, poi: Ptr<PointOfInterest>, ignorePruning: bool) -> bool {
+        if let Some(f) = &self.myAddFilter {
+            // PCPolyContainer::add(PointOfInterest*, bool)
+            if (f.doPrune && !ignorePruning && !f.pruningBoundary.around(&poi.base2, 0.0))
+                || f.removeByNames.iter().any(|n| n.as_str() == poi.get_id())
+            {
+                drop(unsafe { Box::from_raw(poi.as_raw()) });
+                return false;
+            }
+        }
         let id = poi.get_id().to_string();
         if self.myPOIs.contains_key(&id) {
             // C++ deletes poi here; dropping the Ptr is the equivalent

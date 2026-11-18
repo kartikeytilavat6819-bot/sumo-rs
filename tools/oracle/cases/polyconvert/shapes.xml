@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+    <poly id="p1" type="building" color="red" fill="1" layer="1.5" shape="0,0 100,0 100,100 0,100"/>
+    <poly id="p2" type="forest" color="0,128,0" fill="0" layer="0" shape="200,200 300,200 300,300"/>
+    <poly id="far" type="water" color="blue" fill="1" layer="0" shape="9000,9000 9100,9000 9100,9100"/>
+    <poi id="poi1" type="shop" color="yellow" layer="4" x="50" y="50"/>
+    <poi id="poi2" type="school" color="1,0,1" layer="4" x="150" y="20" width="5" height="5"/>
+    <poi id="poifar" type="bus" color="cyan" layer="4" x="9500" y="9500"/>
+</additional>

@@ -59,6 +59,8 @@ if [ -f tools/oracle/run_jtrrouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/jtrrout
   OUT=/tmp/jtr$slot timeout 600 bash tools/oracle/run_jtrrouter.sh >/dev/null 2>&1
   echo "jtrrouter oracle: PASS=$(grep -c $'	PASS	' /tmp/jtr$slot/results.tsv) of $(($(wc -l < /tmp/jtr$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/jtr$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -12
 fi
+# netgenerate / polyconvert oracles (tools/oracle/run_gen_poly.sh)
+[ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
 cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target

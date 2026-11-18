@@ -149,3 +149,13 @@ fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
     r.unwrap_or_else(|e| panic!("{e}"))
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for PCTypeDefHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        PCTypeDefHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}

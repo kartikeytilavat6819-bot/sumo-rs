@@ -64,7 +64,7 @@ impl PCLoaderXML {
             let before = current_millis();
             utils::common::msg_handler::progress_begin_message(&format!("Parsing XML from '{}'", file));
             if !or_panic(utils::xml::xml_sub_sys::run_parser(&mut handler, file, false, false, false, true)) {
-                panic!("");
+                std::panic::panic_any(ProcessError::default_msg());
             }
             utils::common::msg_handler::progress_time_message(current_millis() - before);
         }
