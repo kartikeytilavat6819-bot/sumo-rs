@@ -22,7 +22,7 @@ gen_case() {  # gen_case <seed> <dir>; writes netgen.args, conv.args; prints a s
   mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1
   r 4; local modes=(grid grid spider rand); mode=${modes[$R]}
   r 3; lanes=$((R + 1))
-  r 5; local jts=(priority traffic_light right_before_left allway_stop priority); jt=${jts[$R]}
+  r 7; local jts=(priority traffic_light right_before_left allway_stop traffic_light_right_on_red priority_stop priority); jt=${jts[$R]}
   ng="--seed $s --default.lanenumber $lanes --default-junction-type $jt"
   case $mode in
     grid)   r 3; ng="--grid --grid.number $((R + 2)) --grid.length $((80 + R * 20)) $ng";;
@@ -30,17 +30,27 @@ gen_case() {  # gen_case <seed> <dir>; writes netgen.args, conv.args; prints a s
     rand)   r 3; ng="--rand --rand.iterations $((10 + R * 5)) --rand.max-distance 300 --rand.grid true $ng";;
   esac
   r 6; local cd=$R   # corner-detail value shared by both stages
-  local pool=("--no-turnarounds true" "--junctions.corner-detail $cd" "--sidewalks.guess true"
+  local pool=("--no-turnarounds true" "--no-turnarounds.tls true" "--junctions.corner-detail $cd"
+    "--sidewalks.guess true" "--sidewalks.guess true --sidewalks.guess.from-permissions true"
     "--crossings.guess true" "--bikelanes.guess true" "--roundabouts.guess true"
-    "--geometry.remove true" "--edges.join true" "--no-internal-links true"
-    "--lefthand true" "--tls.guess true" "--tls.discard-simple true"
-    "--tls.layout alternateOneWay" "--opposites.guess true" "--junctions.join true"
-    "--junctions.limit-turn-speed 5.5" "--speed.factor 0.8" "--default.speed 8.33"
-    "--turn-lanes 1 --turn-lanes.length 30" "--junctions.internal-link-detail 2"
-    "--sidewalks.guess.from-permissions true" "--tls.uncontrolled-within true"
-    "--default.right-of-way edgePriority" "--junctions.left-before-right true")
+    "--roundabouts.guess true --roundabouts.visibility-distance 12"
+    "--geometry.remove true" "--geometry.split true" "--geometry.remove.min-length 5"
+    "--edges.join true" "--no-internal-links true" "--lefthand true"
+    "--tls.guess true" "--tls.guess true --tls.discard-simple true"
+    "--tls.guess true --tls.guess.joining true" "--tls.guess true --tls.uncontrolled-within true"
+    "--tls.layout alternateOneWay" "--tls.layout incoming"
+    "--tls.cycle.time 60" "--tls.green.time 30" "--tls.yellow.time 3" "--tls.allred.time 2"
+    "--tls.left-green.time 4" "--tls.minor-left.max-speed 8" "--tls.min-dur 5 --tls.max-dur 60"
+    "--tls.no-mixed true" "--tls.default-type actuated" "--tls.join true --tls.join-dist 20"
+    "--junctions.join true" "--junctions.join-dist 20" "--junctions.join-same 5"
+    "--junctions.limit-turn-speed 5.5" "--junctions.limit-turn-speed 4"
+    "--junctions.internal-link-detail 2" "--junctions.scurve-stretch 1"
+    "--junctions.left-before-right true" "--default.junctions.radius 8"
+    "--default.speed 8.33" "--default.sidewalk-width 3"
+    "--default.right-of-way edgePriority" "--default.junctions.keep-clear false"
+    "--turn-lanes 1 --turn-lanes.length 30" "--opposites.guess true")
   local picked=""
-  for o in "${pool[@]}"; do r 3; [ $R -eq 0 ] && picked="$picked $o"; done
+  for o in "${pool[@]}"; do r 4; [ $R -eq 0 ] && picked="$picked $o"; done
   ng="$ng$picked"
   case "$ng" in
     *--no-internal-links*--crossings.guess*|*--crossings.guess*--no-internal-links*)
@@ -49,17 +59,31 @@ gen_case() {  # gen_case <seed> <dir>; writes netgen.args, conv.args; prints a s
   printf '%s\n' "$ng" > "$d/netgen.args"
 
   local pool2=("--no-turnarounds true" "--junctions.corner-detail $cd" "--sidewalks.guess true"
+    "--sidewalks.guess true --sidewalks.guess.from-permissions true"
     "--crossings.guess true" "--bikelanes.guess true" "--roundabouts.guess true"
-    "--geometry.remove true" "--edges.join true" "--no-internal-links true"
-    "--lefthand true" "--tls.guess true" "--tls.guess.joining true"
-    "--opposites.guess true" "--opposites.guess.fix-lengths true" "--junctions.join true"
-    "--junctions.join-dist 20" "--junctions.limit-turn-speed 5.5" "--speed.factor 0.8"
-    "--default.speed 8.33" "--keep-edges.components 1" "--tls.discard-simple true"
-    "--tls.layout incoming" "--tls.default-type actuated" "--tls.guess-signals true"
-    "--geometry.max-segment-length 15" "--geometry.min-dist 1" "--remove-edges.isolated true"
-    "--offset.disable-normalization true")
+    "--geometry.remove true" "--geometry.split true" "--geometry.min-dist 1"
+    "--geometry.min-radius.fix true" "--geometry.avoid-overlap true" "--geometry.remove.min-length 5"
+    "--geometry.max-segment-length 15" "--edges.join true" "--edges.join-tram-dist 30"
+    "--no-internal-links true" "--lefthand true"
+    "--ramps.guess true" "--ramps.guess true --ramps.guess-acceleration-lanes true"
+    "--ramps.guess true --ramps.ramp-length 150" "--ramps.guess true --ramps.no-split true"
+    "--tls.guess true" "--tls.guess true --tls.discard-simple true"
+    "--tls.guess true --tls.guess.joining true" "--tls.uncontrolled-within true"
+    "--tls.guess-signals true" "--tls.layout incoming" "--tls.cycle.time 60"
+    "--tls.green.time 30" "--tls.yellow.time 3" "--tls.red.time 3" "--tls.allred.time 2"
+    "--tls.left-green.time 4" "--tls.minor-left.max-speed 8" "--tls.min-dur 5 --tls.max-dur 60"
+    "--tls.no-mixed true" "--tls.default-type actuated" "--tls.join true --tls.join-dist 20"
+    "--opposites.guess true" "--opposites.guess true --opposites.guess.fix-lengths true"
+    "--junctions.join true" "--junctions.join-dist 20" "--junctions.join-same 5"
+    "--junctions.limit-turn-speed 5.5" "--junctions.internal-link-detail 2"
+    "--junctions.scurve-stretch 1" "--junctions.right-before-left.speed-threshold 10"
+    "--speed.factor 0.8" "--speed.offset -2 --speed.minimum 5" "--default.speed 8.33"
+    "--keep-edges.components 1" "--keep-edges.min-speed 10" "--remove-edges.isolated true"
+    "--offset.disable-normalization true" "--offset.x 5" "--proj.scale 0.9"
+    "--simple-projection true" "--default.junctions.radius 8" "--default.sidewalk-width 3"
+    "--default.right-of-way edgePriority" "--default.junctions.keep-clear false")
   cv=""
-  for o in "${pool2[@]}"; do r 3; [ $R -eq 0 ] && cv="$cv $o"; done
+  for o in "${pool2[@]}"; do r 4; [ $R -eq 0 ] && cv="$cv $o"; done
   case "$cv" in
     *--no-internal-links*--crossings.guess*|*--crossings.guess*--no-internal-links*)
       cv=${cv/ --crossings.guess true/};;
