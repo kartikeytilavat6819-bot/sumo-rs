@@ -1328,7 +1328,10 @@ def run_probe(side, port, net, rou, ours, fn, extra=()):
     with open(log, "a") as fh:
         proc = subprocess.Popen(sumo_command(side, port, net, rou, ours, extra), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
         try:
-            traci.init(port=port, numRetries=20, host="localhost")
+            try:
+                traci.init(port=port, numRetries=20, host="localhost")
+            except Exception as e:  # server died while connecting: a result, not a harness crash
+                return {"type": "InitFailed:" + type(e).__name__, "value": str(e)}
             try:
                 traci.simulationStep(0)
                 traci.simulationStep(10)

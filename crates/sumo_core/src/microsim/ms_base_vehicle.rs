@@ -5561,6 +5561,9 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_leader(&self, dist: f64, considerCrossingFoes: bool) -> (Ptr<MSVehicle>, f64) {
+        if !MSGlobals::use_meso_sim() {
+            return self.as_ms_vehicle().get_leader(dist, considerCrossingFoes);
+        }
         // MSVehicle overrides this; the base (mesoscopic) version warns and reports no leader
         utils::common::msg_handler::write_warning("getLeader not yet implemented for mesoscopic vehicles");
         (Ptr::default(), -1.0)
@@ -5575,6 +5578,9 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_follower(&self, dist: f64) -> (Ptr<MSVehicle>, f64) {
+        if !MSGlobals::use_meso_sim() {
+            return self.as_ms_vehicle().get_follower(dist);
+        }
         // MSVehicle overrides this; the base (mesoscopic) version warns and reports no follower
         utils::common::msg_handler::write_warning("getFollower not yet implemented for meso");
         (Ptr::default(), -1.0)

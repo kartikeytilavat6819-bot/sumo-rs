@@ -3276,7 +3276,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(&mut self, val: f64, modified: bool, jamThreshold: f64) {
-        assert!(val >= 0.);
+        // C++ assert(val >= 0) is compiled out in release builds (official binary)
         let laneList = self.myLanes.clone();
         for lane in laneList.iter() {
             lane.m().set_max_speed(val, modified, jamThreshold);

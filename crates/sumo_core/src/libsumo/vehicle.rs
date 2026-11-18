@@ -3002,7 +3002,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         let departProcedure = vehicleParams.departProcedure;
         // shortcut: the parameters are leaked; C++ hands ownership to the vehicle, which would free them with itself
         let params = Ptr::from_raw(Box::leak(Box::new(vehicleParams)));
-        let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true);
+        // C++ try { ... } catch (ProcessError& e) { delete vehicle; throw TraCIException(e.what()); }
+        let mut vehicle: Ptr<SUMOVehicle> = Ptr::null();
+        let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true);
         if fromTaz.is_empty() && !route.get_edges()[0].validate_depart_speed(vehicle.m()) {
             MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
             panic!("{}", format!("Departure speed for vehicle '{}' is too high for the departure edge '{}'.", vehID, route.get_edges()[0].get_id()));
@@ -3015,6 +3018,18 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         MSNet::get_instance().m().get_vehicle_control().add_vehicle(vehID, vehicle);
         if departProcedure != DepartDefinition::TRIGGERED && departProcedure != DepartDefinition::CONTAINER_TRIGGERED {
             MSNet::get_instance().m().get_insertion_control().add(vehicle);
+        }
+        }));
+        if let Err(payload) = built {
+            match payload.downcast::<utils::common::util_exceptions::ProcessError>() {
+                Ok(e) => {
+                    if !vehicle.is_null() {
+                        MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
+                    }
+                    panic!("{}", e)
+                }
+                Err(other) => std::panic::resume_unwind(other),
+            }
         }
     }
 
@@ -3527,18 +3542,26 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         let veh = Helper::get_vehicle(vehID);
         let mut edges: ConstMSEdgeVector = ConstMSEdgeVector::new();
         let onInit = veh.get_lane().is_null();
-        // MSEdge::parseEdgesList(edgeIDs, edges, "<unknown>") throws ProcessError, rethrown as TraCIException below
-        MSEdge::parse_edges_list_2(edgeIDs, &mut edges, "<unknown>");
-        if edges.len() > 0 && edges[0].is_internal() {
-            if edges.len() == 1 {
-                // avoid crashing due to lack of normal edges in route (#5390)
-                let next = edges[edges.len() - 1].get_lanes()[0].get_next_normal();
-                edges.push(next);
-            } else {
-                // avoid internal edge in final route
-                if edges[0] == Ptr::new(veh.get_lane().get_edge()) {
-                    edges.remove(0);
+        // C++ catches ProcessError from parseEdgesList and rethrows TraCIException; the port's ProcessError is a String-payload panic
+        let parsed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            MSEdge::parse_edges_list_2(edgeIDs, &mut edges, "<unknown>");
+            if edges.len() > 0 && edges[0].is_internal() {
+                if edges.len() == 1 {
+                    // avoid crashing due to lack of normal edges in route (#5390)
+                    let next = edges[edges.len() - 1].get_lanes()[0].get_next_normal();
+                    edges.push(next);
+                } else {
+                    // avoid internal edge in final route
+                    if edges[0] == Ptr::new(veh.get_lane().get_edge()) {
+                        edges.remove(0);
+                    }
                 }
+            }
+        }));
+        if let Err(payload) = parsed {
+            match payload.downcast_ref::<String>() {
+                Some(what) => panic!("{}", format!("Invalid edge list for vehicle '{}' ({})", veh.get_id(), what)),
+                None => std::panic::resume_unwind(payload),
             }
         }
         let mut errorMsg = String::new();
