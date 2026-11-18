@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_bugs_ticket2494/input_routes.rou.xml -o @DIR@/routes.rou.xml --ignore-errors

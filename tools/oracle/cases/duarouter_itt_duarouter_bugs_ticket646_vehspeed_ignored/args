@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=input_routes.rou.xml,input_trips.trips.xml -o @DIR@/routes.rou.xml
