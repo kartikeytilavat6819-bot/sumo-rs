@@ -1,1 +1,1 @@
---net-file tools/oracle/cases/dfrouter_data/input_messstrecke.net.xml --detector-files tools/oracle/cases/dfrouter_data/input_messstrecke.det.xml --routes-output @DIR@/routes.rou.xml --emitters-output @DIR@/emitters.add.xml --remove-empty-detectors
+--net-file tools/oracle/cases/dfrouter_data/input_messstrecke.net.xml --detector-files tools/oracle/cases/dfrouter_data/input_messstrecke.det.xml --detector-output @DIR@/detectors_def.det.xml
