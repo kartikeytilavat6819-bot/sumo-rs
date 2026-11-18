@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 20 --lateral-resolution 0.64 --fcd-output.attributes speed,pos,lane,edge,posLat,speedLat -a tools/oracle/cases/tt_lc_model_keep_right_SL2015/input_additional.add.xml

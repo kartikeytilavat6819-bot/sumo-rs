@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 20 --step-length 0.001 --lateral-resolution 0.64 -a tools/oracle/cases/tt_lc_model_keep_right_SL2015_subsecond/input_additional.add.xml
