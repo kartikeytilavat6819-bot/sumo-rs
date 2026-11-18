@@ -1,0 +1,39 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <vType id="slow" length="5.00" maxSpeed="8.00" accel="2.60" decel="4.50"/>
+    <route id="rMain" edges="E0 E1"/>
+    <route id="rRamp" edges="ramp E1"/>
+    <vehicle id="sl0" type="slow" route="rMain" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c0" type="car" route="rMain" depart="2.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c1" type="car" route="rMain" depart="4.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c2" type="car" route="rMain" depart="6.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c3" type="car" route="rMain" depart="8.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c4" type="car" route="rMain" depart="10.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c5" type="car" route="rMain" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c6" type="car" route="rMain" depart="14.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c7" type="car" route="rMain" depart="16.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c8" type="car" route="rMain" depart="18.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c9" type="car" route="rMain" depart="20.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c10" type="car" route="rMain" depart="22.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c11" type="car" route="rMain" depart="24.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c12" type="car" route="rMain" depart="26.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c13" type="car" route="rMain" depart="28.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c14" type="car" route="rMain" depart="30.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c15" type="car" route="rMain" depart="32.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c16" type="car" route="rMain" depart="34.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c17" type="car" route="rMain" depart="36.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c18" type="car" route="rMain" depart="38.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c19" type="car" route="rMain" depart="40.00" departLane="2" departSpeed="max"/>
+    <vehicle id="m0" type="car" route="rRamp" depart="5.00" departSpeed="max"/>
+    <vehicle id="m1" type="car" route="rRamp" depart="10.00" departSpeed="max"/>
+    <vehicle id="m2" type="car" route="rRamp" depart="15.00" departSpeed="max"/>
+    <vehicle id="m3" type="car" route="rRamp" depart="20.00" departSpeed="max"/>
+    <vehicle id="m4" type="car" route="rRamp" depart="25.00" departSpeed="max"/>
+    <vehicle id="m5" type="car" route="rRamp" depart="30.00" departSpeed="max"/>
+    <vehicle id="m6" type="car" route="rRamp" depart="35.00" departSpeed="max"/>
+    <vehicle id="m7" type="car" route="rRamp" depart="40.00" departSpeed="max"/>
+    <vehicle id="m8" type="car" route="rRamp" depart="45.00" departSpeed="max"/>
+    <vehicle id="m9" type="car" route="rRamp" depart="50.00" departSpeed="max"/>
+    <vehicle id="m10" type="car" route="rRamp" depart="55.00" departSpeed="max"/>
+    <vehicle id="m11" type="car" route="rRamp" depart="60.00" departSpeed="max"/>
+</routes>

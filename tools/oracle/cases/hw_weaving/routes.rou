@@ -1,0 +1,28 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="20.00" accel="2.60" decel="4.50"/>
+    <route id="rThrough" edges="E0 E1 E2"/>
+    <route id="rEnter" edges="ramp E1 E2"/>
+    <route id="rExit" edges="E0 E1 off"/>
+    <route id="rWeave" edges="ramp E1 off"/>
+    <vehicle id="t0" type="car" route="rThrough" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t1" type="car" route="rThrough" depart="2.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t2" type="car" route="rThrough" depart="4.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t3" type="car" route="rThrough" depart="6.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t4" type="car" route="rThrough" depart="8.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t5" type="car" route="rThrough" depart="10.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t6" type="car" route="rThrough" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t7" type="car" route="rThrough" depart="14.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t8" type="car" route="rThrough" depart="16.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t9" type="car" route="rThrough" depart="18.00" departLane="1" departSpeed="max"/>
+    <vehicle id="e0" type="car" route="rEnter" depart="1.00" departSpeed="max"/>
+    <vehicle id="e1" type="car" route="rEnter" depart="5.00" departSpeed="max"/>
+    <vehicle id="e2" type="car" route="rEnter" depart="9.00" departSpeed="max"/>
+    <vehicle id="e3" type="car" route="rEnter" depart="13.00" departSpeed="max"/>
+    <vehicle id="e4" type="car" route="rEnter" depart="17.00" departSpeed="max"/>
+    <vehicle id="x0" type="car" route="rExit" depart="3.00" departLane="1" departSpeed="max"/>
+    <vehicle id="x1" type="car" route="rExit" depart="7.00" departLane="0" departSpeed="max"/>
+    <vehicle id="x2" type="car" route="rExit" depart="11.00" departLane="1" departSpeed="max"/>
+    <vehicle id="x3" type="car" route="rExit" depart="15.00" departLane="0" departSpeed="max"/>
+    <vehicle id="w0" type="car" route="rWeave" depart="6.00" departSpeed="max"/>
+    <vehicle id="w1" type="car" route="rWeave" depart="14.00" departSpeed="max"/>
+</routes>

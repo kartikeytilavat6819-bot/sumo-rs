@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_onramp_priority/hw_onramp_priority.nod.xml --edge-files tools/oracle/cases/hw_onramp_priority/hw_onramp_priority.edg.xml

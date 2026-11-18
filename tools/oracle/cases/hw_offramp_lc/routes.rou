@@ -1,0 +1,28 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <route id="rThrough" edges="E0 E1 E2"/>
+    <route id="rExit" edges="E0 E1 off"/>
+    <vehicle id="t0" type="car" route="rThrough" depart="0.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t1" type="car" route="rThrough" depart="2.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t2" type="car" route="rThrough" depart="4.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t3" type="car" route="rThrough" depart="6.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t4" type="car" route="rThrough" depart="8.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t5" type="car" route="rThrough" depart="10.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t6" type="car" route="rThrough" depart="12.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t7" type="car" route="rThrough" depart="14.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t8" type="car" route="rThrough" depart="16.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t9" type="car" route="rThrough" depart="18.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t10" type="car" route="rThrough" depart="20.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t11" type="car" route="rThrough" depart="22.00" departLane="0" departSpeed="max"/>
+    <vehicle id="t12" type="car" route="rThrough" depart="24.00" departLane="2" departSpeed="max"/>
+    <vehicle id="t13" type="car" route="rThrough" depart="26.00" departLane="1" departSpeed="max"/>
+    <vehicle id="t14" type="car" route="rThrough" depart="28.00" departLane="2" departSpeed="max"/>
+    <vehicle id="x0" type="car" route="rExit" depart="1.00" departLane="0" departSpeed="max"/>
+    <vehicle id="x1" type="car" route="rExit" depart="5.00" departLane="1" departSpeed="max"/>
+    <vehicle id="x2" type="car" route="rExit" depart="9.00" departLane="2" departSpeed="max"/>
+    <vehicle id="x3" type="car" route="rExit" depart="13.00" departLane="0" departSpeed="max"/>
+    <vehicle id="x4" type="car" route="rExit" depart="17.00" departLane="1" departSpeed="max"/>
+    <vehicle id="x5" type="car" route="rExit" depart="21.00" departLane="2" departSpeed="max"/>
+    <vehicle id="x6" type="car" route="rExit" depart="25.00" departLane="0" departSpeed="max"/>
+    <vehicle id="x7" type="car" route="rExit" depart="29.00" departLane="1" departSpeed="max"/>
+</routes>
