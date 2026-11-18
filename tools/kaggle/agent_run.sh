@@ -39,7 +39,28 @@ while read -r entry; do
     d2=$(python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" 2>&1 | head -1 | cut -c1-160)
     echo "  fcd:${d2:-MATCH}"
   fi
-  if [ -n "$veh" ]; then
+  if [ "$veh" = "__FCDDIFF__" ]; then
+    python - "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+def steps(path):
+    for _, el in ET.iterparse(path, events=("end",)):
+        if el.tag == "timestep":
+            yield el.get("time"), {v.get("id"): dict(v.attrib) for v in el if v.tag == "vehicle"}
+            el.clear()
+out = []
+for (ta, a), (tb, b) in zip(steps(sys.argv[1]), steps(sys.argv[2])):
+    for vid in set(a) | set(b):
+        for f in ("x", "y", "speed", "lane", "pos", "angle"):
+            va, vb = a.get(vid, {}).get(f), b.get(vid, {}).get(f)
+            if va != vb:
+                out.append((float(ta), vid, f, va, vb))
+out.sort()
+print(f"  FCD diffs: {len(out)}")
+for row in out[:25]:
+    print("   t=%-8s %-12s %-6s ref=%-10s cand=%s" % row)
+PY
+  fi
+  if [ -n "$veh" ] && [ "$veh" != "__FCDDIFF__" ]; then
     python - "$veh" "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" <<'PY'
 import sys, xml.etree.ElementTree as ET
 vid, ref, cand = sys.argv[1], sys.argv[2], sys.argv[3]
