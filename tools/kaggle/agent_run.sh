@@ -26,7 +26,7 @@ for d in tools/oracle/cases/tt_output_*/; do
     res="PANIC: $(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-200)"
     pline=$(grep -m1 -A1 'panicked at' "$OUT/$c.log" | tail -1 | cut -c1-200)
     [ -n "$pline" ] && res="$res || $pline"
-    grep -m8 -E 'at crates|at C:' "$OUT/$c.log" | cut -c1-200 | while read -r bl; do echo "   BT $bl"; done
+    tail -25 "$OUT/$c.log" | cut -c1-220 | while read -r bl; do echo "   BT $bl"; done
   else
     x=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" 2>&1 | head -1)
     case "$x" in ""|MATCH) ;; *) res="TI:$x";; esac
