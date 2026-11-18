@@ -1041,8 +1041,7 @@ impl RONetHandler {
             let stopPos = self.myNet.get_lane(&stop.lane).geometry_position_at_offset(stopCenter, 0.);
             length = accPos.distance_to(&stopPos);
         }
-        // shortcut: SUMOVehicleParameter_Stop::accessPos is still Unmapped in the port, so the access entry (lane, pos, length) is not stored
-        let _ = (lane, pos, length);
+        stop.m().accessPos.push((lane, pos, length));
     }
 }
 

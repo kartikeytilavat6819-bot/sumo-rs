@@ -72,9 +72,8 @@ impl ODDistrict {
     //     return mySources.get();
     // }
     #[allow(unused_variables)]
-    pub fn get_random_source(&self) -> String {
-        // shortcut: C++ get() throws ProcessError on an empty distribution and this signature has no error channel, so it panics, upgrade by returning Result
-        self.mySources.get(None).unwrap()
+    pub fn get_random_source(&self) -> Result<String, ProcessError> {
+        self.mySources.get(None)
     }
 
     /// C++: `std::string ODDistrict::getRandomSink() const` [const]
@@ -84,9 +83,8 @@ impl ODDistrict {
     //     return mySinks.get();
     // }
     #[allow(unused_variables)]
-    pub fn get_random_sink(&self) -> String {
-        // shortcut: C++ get() throws ProcessError on an empty distribution and this signature has no error channel, so it panics, upgrade by returning Result
-        self.mySinks.get(None).unwrap()
+    pub fn get_random_sink(&self) -> Result<String, ProcessError> {
+        self.mySinks.get(None)
     }
 
     /// C++: `int ODDistrict::sinkNumber() const` [const]
