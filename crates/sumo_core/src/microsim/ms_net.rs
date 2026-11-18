@@ -3308,8 +3308,18 @@ impl MSNet {
                 let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, false, Ptr::null(), true, false).with_compute();
                 Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
             } else if routingAlgorithm == "CCH" {
-                // shortcut: needs MSRoutingEngine::ensureCCHGraph / getFreeflowCCHMetric (devices/ms_routing_engine.rs, still panicking stubs), upgrade with them
-                panic!("shortcut: routing algorithm 'CCH' for TraCI and triggers is not ported")
+                // free-flow CCH metrics per vehicle type; every query a shared metric cannot
+                // serve (TraCI edge weights, non-default routing modes, prohibitions beyond
+                // live closures) routes on the exact embedded fallback
+                let fallback = {
+                    let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, true, false).with_compute();
+                    Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
+                };
+                let router = CCHRouter::<MSEdge, SUMOVehicle, MSCCHGraph>::new(
+                    MSRoutingEngine::ensure_cch_graph(),
+                    MSRoutingEngine::get_freeflow_cch_metric,
+                    Some(MSNet::get_travel_time), true, fallback, None, None);
+                Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
             } else {
                 if routingAlgorithm != "astar" {
                     utils::common::msg_handler::write_warning(&format!("TraCI and Triggers cannot use routing algorithm '{}'. using 'astar' instead.", routingAlgorithm));
