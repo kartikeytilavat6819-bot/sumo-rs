@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_export_dlr_navteq_write_numerical_ids/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_export_dlr_navteq_write_numerical_ids/input_plain.nod.xml --numerical-ids

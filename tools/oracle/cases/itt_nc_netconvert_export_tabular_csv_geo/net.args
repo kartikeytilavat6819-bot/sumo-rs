@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_export_tabular_csv_geo/input_net2.net.xml.gz --output.format csv --proj.plain-geo

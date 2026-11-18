@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_export_openDRIVE_osm_divider/osm.xml --osm.all-attributes --osm.extra-attributes divider

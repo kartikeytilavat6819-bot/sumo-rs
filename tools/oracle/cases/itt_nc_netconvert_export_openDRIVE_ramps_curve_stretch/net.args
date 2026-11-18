@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_export_openDRIVE_ramps_curve_stretch/input_net.net.xml --offset.disable-normalization --output.original-names --junctions.scurve-stretch 1.0

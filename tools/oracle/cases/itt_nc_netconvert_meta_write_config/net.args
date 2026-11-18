@@ -1,0 +1,1 @@
+--no-internal-links --edge-files=tools/oracle/cases/itt_nc_netconvert_meta_write_config/input_edges.edg.xml --connection-files tools/oracle/cases/itt_nc_netconvert_meta_write_config/input_connections.con.xml --node-files=tools/oracle/cases/itt_nc_netconvert_meta_write_config/input_nodes.nod.xml --speed-in-kmh

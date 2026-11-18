@@ -80,7 +80,7 @@ DUA_OUT_OPTS = {
 SKIP_TOKENS = (
     "netedit", "sumo-gui", "netgen.py", "polyconvert", "netconvert.py", ".jar",
     "java", "--gui", "--xdot", "--gdal", "xdot.py", "python",
-    "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output",
+    "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output", "--proj ",
 )
 
 

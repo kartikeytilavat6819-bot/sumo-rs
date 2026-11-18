@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_node_building_combinations_50_test1/input_edges.edg.xml -n tools/oracle/cases/itt_nc_netconvert_node_building_combinations_50_test1/input_nodes.nod.xml --speed-in-kmh

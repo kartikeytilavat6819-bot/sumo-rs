@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_join_turns/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_join_turns/input_nodes.nod.xml --no-turnarounds --junctions.join-turns

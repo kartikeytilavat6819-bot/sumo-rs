@@ -1,0 +1,1 @@
+--write-license --no-internal-links --edge-files=tools/oracle/cases/itt_nc_netconvert_meta_with_log/input_edges.edg.xml --connection-files tools/oracle/cases/itt_nc_netconvert_meta_with_log/input_connections.con.xml --node-files=tools/oracle/cases/itt_nc_netconvert_meta_with_log/input_nodes.nod.xml --speed-in-kmh --log-file log.txt -v

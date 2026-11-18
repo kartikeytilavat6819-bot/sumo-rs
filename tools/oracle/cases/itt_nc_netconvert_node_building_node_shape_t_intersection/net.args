@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_node_building_node_shape_t_intersection/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_node_building_node_shape_t_intersection/input_plain.nod.xml --no-turnarounds --no-internal-links --ignore-errors.edge-type

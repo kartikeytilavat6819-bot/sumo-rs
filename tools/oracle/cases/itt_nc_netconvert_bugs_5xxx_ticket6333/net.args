@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_bugs_5xxx_ticket6333/input_net.net.xml -R --geometry.remove.min-length 10
