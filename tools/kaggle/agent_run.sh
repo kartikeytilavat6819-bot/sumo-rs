@@ -3,6 +3,7 @@
 set -u
 OURS=${CARGO_TARGET_DIR:-/tmp/target}/debug/netconvert
 REF=${SUMO_PRISTINE_BIN:-/tmp/sumo_pkg/sumo/bin}/netconvert
+ROOT=$(pwd)
 OUT=/tmp/oc40_out
 rm -rf "$OUT"; mkdir -p "$OUT"
 cd "$OUT"
@@ -24,7 +25,7 @@ EOF
 echo "=== POI-on-lane additional file ==="
 for side in ref ours; do
   if [ "$side" = ref ]; then BIN=$REF; else BIN=$OURS; fi
-  $BIN -n nodes.nod.xml -e edges.edg.xml --additional-files poi.add.xml -o $side.net.xml > $side.log 2>&1
+  $BIN -n nodes.nod.xml -e edges.edg.xml --polygon-files poi.add.xml -o $side.net.xml > $side.log 2>&1
   echo "$side exit=$?"
   grep -iE 'poi|lane|panic|error|warn' $side.log | head -8
 done
@@ -36,4 +37,4 @@ else
 fi
 
 echo "=== import cases oracle ==="
-bash tools/oracle/run_importers.sh "$OURS" "$REF" "$OUT/imports" 2>&1 | tail -40
+bash "$ROOT/tools/oracle/run_importers.sh" "$OURS" "$REF" "$OUT/imports" 2>&1 | tail -40
