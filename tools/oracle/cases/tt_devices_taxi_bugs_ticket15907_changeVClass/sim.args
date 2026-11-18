@@ -1,0 +1,1 @@
+--no-duration-log --device.taxi.dispatch-period 30 --railsignal-vehicle-output railsignal_vehicles.xml --persontrip.transfer.taxi-walk ptStops --persontrip.transfer.walk-taxi ptStops -a tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/input_additional.add.xml

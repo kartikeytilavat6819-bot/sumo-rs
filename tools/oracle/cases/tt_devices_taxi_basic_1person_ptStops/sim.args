@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --tripinfo-output.write-unfinished -a tools/oracle/cases/tt_devices_taxi_basic_1person_ptStops/input_additional.add.xml

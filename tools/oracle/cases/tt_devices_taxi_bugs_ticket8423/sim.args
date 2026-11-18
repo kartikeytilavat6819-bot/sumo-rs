@@ -1,0 +1,1 @@
+--no-duration-log --tripinfo-output.write-unfinished -e 2000 -a tools/oracle/cases/tt_devices_taxi_bugs_ticket8423/input_additional.add.xml

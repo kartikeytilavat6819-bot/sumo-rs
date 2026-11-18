@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:46:28.684089-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_bugs_ticket17168/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_bugs_ticket17168/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_taxi_bugs_ticket17168/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket17168/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket17168/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket17168/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p_0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.06" duration="717.00" waitingTime="426.00" timeLoss="13.72" traveltime="291.00">
+        <ride waitingTime="90.00" vehicle="bike_a.0" depart="90.00" arrival="189.00" arrivalPos="84.79" duration="99.00" routeLength="182.98" timeLoss="5.56"/>
+        <walk depart="189.00" departPos="84.79" arrival="194.00" arrivalPos="91.24" duration="5.00" routeLength="6.45" timeLoss="0.62" maxSpeed="1.47" waitingTime="0.00"/>
+        <access stop="ts_0" depart="194.00" arrival="208.00" duration="14.00" routeLength="21.27"/>
+        <ride waitingTime="152.00" vehicle="train" depart="360.00" arrival="399.00" arrivalPos="87.30" duration="39.00" routeLength="167.30" timeLoss="0.00"/>
+        <access stop="ts_1" depart="399.00" arrival="416.00" duration="17.00" routeLength="25.23"/>
+        <walk depart="416.00" departPos="7.48" arrival="422.00" arrivalPos="0.00" duration="6.00" routeLength="7.48" timeLoss="0.92" maxSpeed="1.47" waitingTime="0.00"/>
+        <ride waitingTime="184.00" vehicle="bike_b.0" depart="606.00" arrival="717.00" arrivalPos="50.00" duration="111.00" routeLength="248.21" timeLoss="6.62"/>
+    </personinfo>
+    <tripinfo id="train" depart="0.00" departLane="C0D0_0" departPos="17.45" departSpeed="0.00" departDelay="0.00" arrival="2917.00" arrivalLane="D0C0_0" arrivalPos="100.00" arrivalSpeed="9.25" duration="2917.00" routeLength="4386.85" waitingTime="20.00" waitingCount="10" stopTime="2029.00" timeLoss="292.60" rerouteNo="0" devices="tripinfo_train fcd_train person_train" vType="train_short" speedFactor="1.00" vaporized=""/>
+</tripinfos>

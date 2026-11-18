@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:46:22.761667-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/ref.tripinfo.xml"/>
+        <railsignal-vehicle-output value="railsignal_vehicles.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket15907_changeVClass/ref.stat.xml"/>
+    </output>
+
+    <routing>
+        <persontrip.transfer.taxi-walk value="ptStops"/>
+        <persontrip.transfer.walk-taxi value="ptStops"/>
+    </routing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <taxi_device>
+        <device.taxi.dispatch-period value="30"/>
+    </taxi_device>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="t_0" x="8.30" y="-1.60" angle="90.00" type="railtaxi" speed="0.00" pos="5.10" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="t_0" x="10.90" y="-1.60" angle="90.00" type="railtaxi" speed="2.60" pos="7.70" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="t_0" x="16.10" y="-1.60" angle="90.00" type="railtaxi" speed="5.20" pos="12.90" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="t_0" x="23.90" y="-1.60" angle="90.00" type="railtaxi" speed="7.80" pos="20.70" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="t_0" x="34.30" y="-1.60" angle="90.00" type="railtaxi" speed="10.40" pos="31.10" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="t_0" x="47.30" y="-1.60" angle="90.00" type="railtaxi" speed="13.00" pos="44.10" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="t_0" x="61.19" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="57.99" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="t_0" x="75.08" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="71.88" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="t_0" x="88.97" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="85.77" lane="E0_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="t_0" x="102.76" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="2.76" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="t_0" x="116.65" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="16.65" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="t_0" x="130.54" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="30.54" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="t_0" x="143.48" y="-1.60" angle="90.00" type="railtaxi" speed="12.94" pos="43.48" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="t_0" x="151.93" y="-1.60" angle="90.00" type="railtaxi" speed="8.44" pos="51.93" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="t_0" x="155.87" y="-1.60" angle="90.00" type="railtaxi" speed="3.94" pos="55.87" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.47" y="-3.20" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="t_0" x="155.87" y="-4.80" angle="90.00" type="railtaxi" speed="0.00" pos="55.87" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="155.87" y="-4.80" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="55.87" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="t_0" x="158.47" y="-1.60" angle="90.00" type="railtaxi" speed="2.60" pos="58.47" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="158.47" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="2.60" pos="58.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="t_0" x="163.67" y="-1.60" angle="90.00" type="railtaxi" speed="5.20" pos="63.67" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="163.67" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="5.20" pos="63.67" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="t_0" x="171.47" y="-1.60" angle="90.00" type="railtaxi" speed="7.80" pos="71.47" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="171.47" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="7.80" pos="71.47" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="t_0" x="181.87" y="-1.60" angle="90.00" type="railtaxi" speed="10.40" pos="81.87" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="181.87" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="10.40" pos="81.87" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="t_0" x="194.87" y="-1.60" angle="90.00" type="railtaxi" speed="13.00" pos="94.87" lane="E1_0" slope="0.00"/>
+        <person id="p_0" x="194.87" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.00" pos="94.87" edge="E1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="t_0" x="208.66" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="8.66" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="208.66" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="8.66" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="t_0" x="222.55" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="22.55" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="222.55" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="22.55" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="t_0" x="236.44" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="36.44" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="236.44" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="36.44" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="t_0" x="250.33" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="50.33" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="250.33" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="50.33" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="t_0" x="264.22" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="64.22" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="264.22" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="64.22" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="t_0" x="278.11" y="-1.60" angle="90.00" type="railtaxi" speed="13.89" pos="78.11" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="278.11" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="78.11" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="t_0" x="289.71" y="-1.60" angle="90.00" type="railtaxi" speed="11.59" pos="89.71" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="289.71" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="11.59" pos="89.71" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="t_0" x="296.80" y="-1.60" angle="90.00" type="railtaxi" speed="7.09" pos="96.80" lane="E2_0" slope="0.00"/>
+        <person id="p_0" x="296.80" y="-1.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="7.09" pos="96.80" edge="E2" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="t_0" x="298.40" y="-5.00" angle="146.86" type="railtaxi" speed="4.38" pos="1.80" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-5.00" angle="146.86" type="DEFAULT_PEDTYPE" speed="4.38" pos="1.80" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="t_0" x="298.40" y="-9.38" angle="180.00" type="railtaxi" speed="4.38" pos="6.18" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-9.38" angle="180.00" type="DEFAULT_PEDTYPE" speed="4.38" pos="6.18" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="t_0" x="298.40" y="-16.36" angle="180.00" type="railtaxi" speed="6.98" pos="13.16" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-16.36" angle="180.00" type="DEFAULT_PEDTYPE" speed="6.98" pos="13.16" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="t_0" x="298.40" y="-25.94" angle="180.00" type="railtaxi" speed="9.58" pos="22.74" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-25.94" angle="180.00" type="DEFAULT_PEDTYPE" speed="9.58" pos="22.74" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="t_0" x="298.40" y="-38.12" angle="180.00" type="railtaxi" speed="12.18" pos="34.92" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-38.12" angle="180.00" type="DEFAULT_PEDTYPE" speed="12.18" pos="34.92" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="t_0" x="298.40" y="-52.01" angle="180.00" type="railtaxi" speed="13.89" pos="48.81" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-52.01" angle="180.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="48.81" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="t_0" x="298.40" y="-65.90" angle="180.00" type="railtaxi" speed="13.89" pos="62.70" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-65.90" angle="180.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="62.70" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="t_0" x="298.40" y="-79.79" angle="180.00" type="railtaxi" speed="13.89" pos="76.59" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-79.79" angle="180.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="76.59" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="t_0" x="298.40" y="-90.55" angle="180.00" type="railtaxi" speed="10.75" pos="87.34" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-90.55" angle="180.00" type="DEFAULT_PEDTYPE" speed="10.75" pos="87.34" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="t_0" x="298.40" y="-96.80" angle="180.00" type="railtaxi" speed="6.25" pos="93.60" lane="E3_0" slope="0.00"/>
+        <person id="p_0" x="298.40" y="-96.80" angle="180.00" type="DEFAULT_PEDTYPE" speed="6.25" pos="93.60" edge="E3" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="t_0" x="295.00" y="-98.40" angle="236.86" type="railtaxi" speed="4.38" pos="1.80" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="295.00" y="-98.40" angle="236.86" type="DEFAULT_PEDTYPE" speed="4.38" pos="1.80" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="t_0" x="290.62" y="-98.40" angle="270.00" type="railtaxi" speed="4.38" pos="6.18" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="290.62" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="4.38" pos="6.18" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="t_0" x="283.64" y="-98.40" angle="270.00" type="railtaxi" speed="6.98" pos="13.16" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="283.64" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="6.98" pos="13.16" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="t_0" x="274.06" y="-98.40" angle="270.00" type="railtaxi" speed="9.58" pos="22.74" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="274.06" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="9.58" pos="22.74" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="t_0" x="261.88" y="-98.40" angle="270.00" type="railtaxi" speed="12.18" pos="34.92" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="261.88" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="12.18" pos="34.92" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="t_0" x="247.99" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="48.81" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="247.99" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="48.81" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="t_0" x="234.10" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="62.70" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="234.10" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="62.70" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="t_0" x="220.21" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="76.59" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="220.21" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="76.59" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="t_0" x="206.32" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="90.48" lane="E4_0" slope="0.00"/>
+        <person id="p_0" x="206.32" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="90.48" edge="E4" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="t_0" x="192.53" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="7.47" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="192.53" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="7.47" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="t_0" x="178.64" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="21.36" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="178.64" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="21.36" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="t_0" x="164.75" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="35.25" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="164.75" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="35.25" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="t_0" x="150.86" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="49.14" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="150.86" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="49.14" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="t_0" x="136.97" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="63.03" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="136.97" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="63.03" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="t_0" x="123.08" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="76.92" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="123.08" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="76.92" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="t_0" x="109.19" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="90.81" lane="E5_0" slope="0.00"/>
+        <person id="p_0" x="109.19" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="90.81" edge="E5" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="t_0" x="95.40" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="4.60" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="95.40" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="4.60" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="t_0" x="81.51" y="-98.40" angle="270.00" type="railtaxi" speed="13.89" pos="18.49" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="81.51" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="13.89" pos="18.49" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="t_0" x="68.61" y="-98.40" angle="270.00" type="railtaxi" speed="12.90" pos="31.39" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="68.61" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="12.90" pos="31.39" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="t_0" x="60.22" y="-98.40" angle="270.00" type="railtaxi" speed="8.40" pos="39.78" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="60.22" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="8.40" pos="39.78" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="t_0" x="56.32" y="-98.40" angle="270.00" type="railtaxi" speed="3.90" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-98.40" angle="270.00" type="DEFAULT_PEDTYPE" speed="3.90" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+        <person id="p_0" x="56.32" y="-95.20" angle="270.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="43.68" edge="E6" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="t_0" x="56.32" y="-95.20" angle="270.00" type="railtaxi" speed="0.00" pos="43.68" lane="E6_0" slope="0.00"/>
+    </timestep>
+</fcd-export>

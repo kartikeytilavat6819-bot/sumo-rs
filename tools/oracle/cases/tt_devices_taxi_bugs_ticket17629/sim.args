@@ -1,0 +1,1 @@
+--no-duration-log --device.taxi.dispatch-period 10 --device.taxi.idle-algorithm randomCircling --tripinfo-output.write-unfinished --vehroute-output.write-unfinished -e 1000
