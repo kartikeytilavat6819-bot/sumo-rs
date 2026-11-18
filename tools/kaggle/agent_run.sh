@@ -13,5 +13,5 @@ grep -E "^  \[|DIFF|TOTAL|h06 new|Traceback|Error" $f | grep -v -E "Retrying|War
 done
 echo "== ours log excerpts"
 L="$(pwd)/traci_ours_junction.log"; ls $(pwd)/*.log | head
-grep -n -E "Z24TRACE" "$L" | head -40
+grep -n -A10 "Z24TRACE getFollower" "$L" | head -60
 grep -n -E "panicked|SIGSEGV|overflow|abort|Error:" -A3 "$L" | head -60

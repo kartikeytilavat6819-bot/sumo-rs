@@ -3003,7 +3003,16 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         // shortcut: the parameters are leaked; C++ hands ownership to the vehicle, which would free them with itself
         let params = Ptr::from_raw(Box::leak(Box::new(vehicleParams)));
         // C++ catch (ProcessError&) around buildVehicle rethrows as TraCIException (same what(); the vehicle was never assigned)
-        let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true);
+        let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true)
+        }));
+        let vehicle = match built {
+            Ok(v) => v,
+            Err(payload) => match payload.downcast::<utils::common::util_exceptions::ProcessError>() {
+                Ok(e) => panic!("{}", e),
+                Err(other) => std::panic::resume_unwind(other),
+            },
+        };
         if fromTaz.is_empty() && !route.get_edges()[0].validate_depart_speed(vehicle.m()) {
             MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
             panic!("{}", format!("Departure speed for vehicle '{}' is too high for the departure edge '{}'.", vehID, route.get_edges()[0].get_id()));
