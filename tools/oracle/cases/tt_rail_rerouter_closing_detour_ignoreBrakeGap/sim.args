@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --railsignal-block-output railsignal_blocks.xml --time-to-teleport.railsignal-deadlock 200 --no-duration-log --device.rerouting.mode 8 -a tools/oracle/cases/tt_rail_rerouter_closing_detour_ignoreBrakeGap/input_additional.add.xml
