@@ -179,3 +179,10 @@ impl Command for Command_SaveTLSProgram {
         Command_SaveTLSProgram::execute(self, currentTime)
     }
 }
+
+// C++ ~Command_SaveTLSProgram writes the last tlLogic; MSEventControl::~MSEventControl deletes the command.
+impl Drop for Command_SaveTLSProgram {
+    fn drop(&mut self) {
+        self.drop_();
+    }
+}

@@ -98,6 +98,12 @@ pub struct MSEventControl {
     pub myEvents: Vec<MSEventControl_Event>,
 }
 
+impl Drop for MSEventControl {
+    fn drop(&mut self) {
+        self.drop_();
+    }
+}
+
 impl MSEventControl {
     /// C++: `void MSEventControl::MSEventControl()`
     /// Default constructor.
