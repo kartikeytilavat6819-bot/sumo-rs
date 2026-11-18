@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --device.stationfinder.probability 1 --device.stationfinder.emptyThreshold 0 -a tools/oracle/cases/tt_devices_stationfinder_charging/input_additional.add.xml

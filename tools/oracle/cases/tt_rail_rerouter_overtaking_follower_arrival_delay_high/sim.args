@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --time-to-teleport.railsignal-deadlock 200 --time-to-teleport 1800 -a tools/oracle/cases/tt_rail_rerouter_overtaking_follower_arrival_delay_high/input_additional2.add.xml
