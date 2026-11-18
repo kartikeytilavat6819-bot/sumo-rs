@@ -1,0 +1,14 @@
+<routes>
+    <vType id="car" vClass="passenger" length="4.50" width="1.80" maxSpeed="13.89" accel="2.00" decel="4.50"/>
+    <vType id="slow" vClass="passenger" length="4.50" width="1.80" maxSpeed="2.00" accel="2.00" decel="4.50"/>
+    <vType id="bike" vClass="bicycle" length="1.80" width="0.60" maxSpeed="6.00" accel="1.20" decel="2.50"/>
+    <vType id="bike_fast" vClass="bicycle" length="1.80" width="0.70" maxSpeed="7.00" accel="1.50" decel="3.00"/>
+    <!-- a fast bike catches a crawling car and must pass it within the same lane via a sublane -->
+    <vehicle id="slow0" type="slow" depart="0.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bike0" type="bike" depart="6.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bike1" type="bike_fast" depart="10.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="slow1" type="slow" depart="12.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bike2" type="bike_fast" depart="18.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="car0" type="car" depart="22.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bike3" type="bike" depart="26.00" departSpeed="max"><route edges="E0"/></vehicle>
+</routes>

@@ -1,0 +1,15 @@
+<routes>
+    <vType id="car" vClass="passenger" length="4.50" maxSpeed="13.89" accel="2.00" decel="4.50" sigma="0.5"/>
+    <vType id="bike" vClass="bicycle" length="1.80" width="0.70" maxSpeed="6.00" accel="1.20" decel="2.50" sigma="0.5"/>
+    <!-- bicycle left turns at a signalized four-arm junction -->
+    <vehicle id="bike0" type="bike" depart="0.00" departSpeed="max"><route edges="E_in S_out"/></vehicle>
+    <vehicle id="car0" type="car" depart="0.00" departSpeed="max"><route edges="N_in S_out"/></vehicle>
+    <vehicle id="bike1" type="bike" depart="6.00" departSpeed="max"><route edges="S_in W_out"/></vehicle>
+    <vehicle id="car1" type="car" depart="6.00" departSpeed="max"><route edges="E_in W_out"/></vehicle>
+    <vehicle id="bike2" type="bike" depart="12.00" departSpeed="max"><route edges="W_in N_out"/></vehicle>
+    <vehicle id="car2" type="car" depart="12.00" departSpeed="max"><route edges="S_in N_out"/></vehicle>
+    <vehicle id="bike3" type="bike" depart="18.00" departSpeed="max"><route edges="N_in E_out"/></vehicle>
+    <vehicle id="car3" type="car" depart="18.00" departSpeed="max"><route edges="W_in E_out"/></vehicle>
+    <vehicle id="bike4" type="bike" depart="24.00" departSpeed="max"><route edges="E_in S_out"/></vehicle>
+    <vehicle id="car4" type="car" depart="24.00" departSpeed="max"><route edges="N_in S_out"/></vehicle>
+</routes>
