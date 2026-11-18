@@ -1137,6 +1137,9 @@ def infra_probes(run_n):
                                                            t.lane.getContextSubscriptionResults(L1))[2])
     add("edge.getAllSubscriptionResults after subscribe", lambda t: (t.edge.subscribe(E1, [tc.LAST_STEP_MEAN_SPEED]), run_n(t, 3),
                                                                   t.edge.getAllSubscriptionResults())[2])
+    # MSLink::ApproachInfos iterates by getNumericalID(); catches pointer-order regressions.
+    add("vehicle.getJunctionFoes(v0) after 3 steps (infra)",
+        lambda t: (run_n(t, 3), t.vehicle.getJunctionFoes("v0"))[1])
     return P
 
 
@@ -1327,6 +1330,9 @@ def h06_probes(lane, edge, tl, run_n, summary):
     add("tl.subscribe(tl, redYellowGreenState) + step",
         lambda t: (t.trafficlight.subscribe(tl, [tc.TL_RED_YELLOW_GREEN_STATE]), run_n(t, 1),
                    t.trafficlight.getSubscriptionResults(tl))[2])
+    # fuzz-found: intermodal routing needs the unported intermodal router (kept as shortcut).
+    add("sim.findIntermodalRoute(E1,E3) [shortcut]",
+        lambda t: t.simulation.findIntermodalRoute(E1, E3))
     return P
 
 
