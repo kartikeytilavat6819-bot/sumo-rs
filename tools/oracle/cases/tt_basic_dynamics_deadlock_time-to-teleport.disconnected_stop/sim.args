@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --tls.all-off --ignore-route-errors --time-to-teleport.disconnected 1 --device.rerouting.probability 1 --device.rerouting.pre-period 0 --device.rerouting.period 32

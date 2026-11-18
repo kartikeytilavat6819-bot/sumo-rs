@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model nonInteracting --no-duration-log -a tools/oracle/cases/tt_basic_personFlow_three_trainStops_at_one_edge/input_additional.add.xml

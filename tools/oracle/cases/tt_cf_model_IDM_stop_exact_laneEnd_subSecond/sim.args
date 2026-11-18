@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --carfollow.model IDM --step-length 0.1 -a tools/oracle/cases/tt_cf_model_IDM_stop_exact_laneEnd_subSecond/input_additional.add.xml

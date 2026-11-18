@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T08:36:34.740486-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+        <additional-files value="input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="ref.fcd.xml"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="leader" x="3305.10" y="0.00" angle="90.00" type="leader" speed="36.00" pos="5.10" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="follower" x="3305.10" y="0.00" angle="90.00" type="follower" speed="35.06" pos="5.10" lane="end3_0" slope="0.00"/>
+        <vehicle id="leader" x="3341.10" y="0.00" angle="90.00" type="leader" speed="36.00" pos="41.10" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="follower" x="3335.53" y="0.00" angle="90.00" type="follower" speed="30.43" pos="35.53" lane="end3_0" slope="0.00"/>
+        <vehicle id="leader" x="3377.10" y="0.00" angle="90.00" type="leader" speed="36.00" pos="77.10" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="follower" x="3366.75" y="0.00" angle="90.00" type="follower" speed="31.22" pos="66.75" lane="end3_0" slope="0.00"/>
+        <vehicle id="leader" x="3413.10" y="0.00" angle="90.00" type="leader" speed="36.00" pos="113.10" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="follower" x="3398.61" y="0.00" angle="90.00" type="follower" speed="31.86" pos="98.61" lane="end3_0" slope="0.00"/>
+        <vehicle id="leader" x="3449.10" y="0.00" angle="90.00" type="leader" speed="36.00" pos="149.10" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="follower" x="3430.98" y="0.00" angle="90.00" type="follower" speed="32.37" pos="130.98" lane="end3_0" slope="0.00"/>
+        <vehicle id="leader" x="3485.10" y="0.00" angle="90.00" type="leader" speed="36.00" pos="185.10" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="follower" x="3463.81" y="0.00" angle="90.00" type="follower" speed="32.83" pos="163.81" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="follower" x="3499.24" y="0.00" angle="90.00" type="follower" speed="35.43" pos="199.24" lane="end3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00"/>
+</fcd-export>

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model nonInteracting --no-duration-log -e 150 -a tools/oracle/cases/tt_basic_person_riding_two_busstops_at_one_edge2/input_additional.add.xml

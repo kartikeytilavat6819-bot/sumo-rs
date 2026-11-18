@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 3600 --extrapolate-departpos --max-depart-delay 3 --collision.mingap-factor 0 -t -a tools/oracle/cases/tt_cf_model_fundamental_krauss_t0.9_s1/input_additional.add.xml

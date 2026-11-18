@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --carfollow.model Rail -a tools/oracle/cases/tt_cf_model_stop_driveOff_Rail/input_additional2.add.xml

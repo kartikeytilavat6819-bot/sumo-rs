@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T08:40:35.302413-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="ref.fcd.xml"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <container id="c1" x="167.65" y="65.20" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <container id="c1" x="167.48" y="63.21" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <container id="c1" x="167.30" y="61.21" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <container id="c1" x="167.12" y="59.22" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <container id="c1" x="166.95" y="57.23" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <container id="c1" x="166.77" y="55.24" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <container id="c1" x="166.59" y="53.25" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <container id="c1" x="166.42" y="51.25" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <container id="c1" x="166.24" y="49.26" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <container id="c1" x="166.06" y="47.27" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <container id="c1" x="165.88" y="45.28" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <container id="c1" x="165.71" y="43.29" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <container id="c1" x="165.53" y="41.29" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <container id="c1" x="165.35" y="39.30" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <container id="c1" x="165.18" y="37.31" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <container id="c1" x="165.00" y="35.32" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <container id="c1" x="164.82" y="33.32" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <container id="c1" x="164.65" y="31.33" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <container id="c1" x="164.47" y="29.34" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <container id="c1" x="164.29" y="27.35" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <container id="c1" x="164.12" y="25.36" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <container id="c1" x="163.94" y="23.36" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <container id="c1" x="163.76" y="21.37" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <container id="c1" x="163.59" y="19.38" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <container id="c1" x="163.41" y="17.39" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <container id="c1" x="163.23" y="15.39" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <container id="c1" x="163.05" y="13.40" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <container id="c1" x="162.88" y="11.41" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <container id="c1" x="162.70" y="9.42" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <container id="c1" x="162.52" y="7.43" angle="0.67" type="DEFAULT_CONTAINERTYPE" speed="2.00" pos="50.00" edge="end2" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00"/>
+</fcd-export>

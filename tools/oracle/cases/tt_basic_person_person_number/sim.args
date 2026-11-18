@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model nonInteracting --verbose -e 140 --fcd-output.attributes angle,speed,pos,lane,edge,vehicle,stage,personNumber -a tools/oracle/cases/tt_basic_person_person_number/input_additional.add.xml

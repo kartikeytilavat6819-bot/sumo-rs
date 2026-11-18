@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T08:56:36.321108-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="ref.fcd.xml"/>
+        <fcd-output.attributes value="acceleration"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="BKerner"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <fcd_device>
+        <device.fcd.explicit value="flow.9"/>
+    </fcd_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="first" depart="0.00" departLane="0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="104.90" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="13.89" duration="104.90" routeLength="494.90" waitingTime="0.00" waitingCount="0" stopTime="60.00" timeLoss="0.12" rerouteNo="0" devices="tripinfo_first" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.0" depart="1.00" departLane="0_0" departPos="5.10" departSpeed="11.44" departDelay="0.00" arrival="106.30" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="14.72" duration="105.30" routeLength="494.90" waitingTime="57.90" waitingCount="1" stopTime="0.00" timeLoss="71.66" rerouteNo="0" devices="tripinfo_flow.0" vType="flow" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="flow.1" depart="2.00" departLane="0_0" departPos="5.10" departSpeed="8.86" departDelay="0.00" arrival="108.30" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="13.03" duration="106.30" routeLength="494.90" waitingTime="56.20" waitingCount="1" stopTime="0.00" timeLoss="68.28" rerouteNo="0" devices="tripinfo_flow.1" vType="flow" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="flow.2" depart="3.00" departLane="0_0" departPos="5.10" departSpeed="6.38" departDelay="0.00" arrival="109.80" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="14.03" duration="106.80" routeLength="494.90" waitingTime="54.70" waitingCount="1" stopTime="0.00" timeLoss="71.45" rerouteNo="0" devices="tripinfo_flow.2" vType="flow" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="flow.3" depart="4.10" departLane="0_0" departPos="5.10" departSpeed="4.63" departDelay="0.10" arrival="111.20" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="15.04" duration="107.10" routeLength="494.90" waitingTime="53.30" waitingCount="1" stopTime="0.00" timeLoss="74.10" rerouteNo="0" devices="tripinfo_flow.3" vType="flow" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="flow.4" depart="5.40" departLane="0_0" departPos="5.10" departSpeed="4.39" departDelay="0.40" arrival="112.60" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="14.31" duration="107.20" routeLength="494.90" waitingTime="52.00" waitingCount="1" stopTime="0.00" timeLoss="72.62" rerouteNo="0" devices="tripinfo_flow.4" vType="flow" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="flow.5" depart="6.70" departLane="0_0" departPos="5.10" departSpeed="4.19" departDelay="0.70" arrival="115.70" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="11.54" duration="109.00" routeLength="494.90" waitingTime="50.80" waitingCount="1" stopTime="0.00" timeLoss="66.10" rerouteNo="0" devices="tripinfo_flow.5" vType="flow" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="flow.6" depart="8.10" departLane="0_0" departPos="5.10" departSpeed="3.95" departDelay="1.10" arrival="117.10" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="14.53" duration="109.00" routeLength="494.90" waitingTime="49.80" waitingCount="1" stopTime="0.00" timeLoss="74.93" rerouteNo="0" devices="tripinfo_flow.6" vType="flow" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="flow.7" depart="9.50" departLane="0_0" departPos="5.10" departSpeed="3.39" departDelay="1.50" arrival="118.80" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="12.31" duration="109.30" routeLength="494.90" waitingTime="48.80" waitingCount="1" stopTime="0.00" timeLoss="69.06" rerouteNo="0" devices="tripinfo_flow.7" vType="flow" speedFactor="0.89" vaporized=""/>
+    <tripinfo id="flow.8" depart="11.00" departLane="0_0" departPos="5.10" departSpeed="3.44" departDelay="2.00" arrival="120.30" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="13.03" duration="109.30" routeLength="494.90" waitingTime="47.80" waitingCount="1" stopTime="0.00" timeLoss="71.29" rerouteNo="0" devices="tripinfo_flow.8" vType="flow" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="flow.9" depart="12.50" departLane="0_0" departPos="5.10" departSpeed="3.65" departDelay="2.50" arrival="122.10" arrivalLane="0_0" arrivalPos="500.00" arrivalSpeed="11.90" duration="109.60" routeLength="494.90" waitingTime="46.90" waitingCount="1" stopTime="0.00" timeLoss="67.97" rerouteNo="0" devices="tripinfo_flow.9 fcd_flow.9" vType="flow" speedFactor="0.86" vaporized=""/>
+</tripinfos>

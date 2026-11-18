@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics -a tools/oracle/cases/tt_cf_model_jam_resolution_bottleneck_zipper/input_additional.add.xml

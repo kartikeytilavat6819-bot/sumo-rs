@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T08:36:39.441063-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="ref.fcd.xml"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.stoptime value="10"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="leader" depart="0.00" departLane="beg_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="51.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="51.00" routeLength="1494.90" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="3.36" rerouteNo="0" devices="tripinfo_leader fcd_leader" vType="leader" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="follower.0" depart="2.00" departLane="beg_0" departPos="7.80" departSpeed="0.00" departDelay="0.00" arrival="51.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="49.00" routeLength="1492.20" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="13.28" rerouteNo="0" devices="tripinfo_follower.0 fcd_follower.0" vType="follower" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="follower.1" depart="3.00" departLane="beg_0" departPos="4.30" departSpeed="0.00" departDelay="0.00" arrival="51.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="48.00" routeLength="1495.70" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="12.24" rerouteNo="0" devices="tripinfo_follower.1 fcd_follower.1" vType="follower" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="follower.2" depart="5.00" departLane="beg_0" departPos="2.19" departSpeed="0.00" departDelay="1.00" arrival="52.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="47.00" routeLength="1497.81" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="10.77" rerouteNo="0" devices="tripinfo_follower.2 fcd_follower.2" vType="follower" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="follower.3" depart="7.00" departLane="beg_0" departPos="0.09" departSpeed="0.00" departDelay="2.00" arrival="53.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="46.00" routeLength="1499.91" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="9.91" rerouteNo="0" devices="tripinfo_follower.3 fcd_follower.3" vType="follower" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="follower.4" depart="10.00" departLane="beg_0" departPos="3.38" departSpeed="0.00" departDelay="4.00" arrival="54.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="44.00" routeLength="1496.62" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="8.04" rerouteNo="0" devices="tripinfo_follower.4 fcd_follower.4" vType="follower" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="follower.5" depart="11.00" departLane="beg_0" departPos="0.28" departSpeed="0.00" departDelay="4.00" arrival="54.00" arrivalLane="middle_0" arrivalPos="1000.00" arrivalSpeed="0.00" duration="43.00" routeLength="1499.72" waitingTime="0.00" waitingCount="0" stopTime="11.00" timeLoss="6.99" rerouteNo="0" devices="tripinfo_follower.5 fcd_follower.5" vType="follower" speedFactor="1.00" vaporized="teleport"/>
+</tripinfos>

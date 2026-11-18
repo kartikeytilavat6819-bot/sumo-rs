@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -a tools/oracle/cases/tt_cf_model_apparentDecel_emergencyDecel_apparentDecel_higher/input_additional.add.xml

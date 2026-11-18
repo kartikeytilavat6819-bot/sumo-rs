@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T14:23:07.767813+00:00 by Eclipse SUMO sumo v1.28.0-0000000000
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/input_additional.add.xml,tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:/Users/karti/AppData/Local/Temp/opencode/oc49diag/fcd.xml"/>
+        <tripinfo-output value="C:/Users/karti/AppData/Local/Temp/opencode/oc49diag/ti.xml"/>
+        <statistic-output value="C:/Users/karti/AppData/Local/Temp/opencode/oc49diag/stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="EIDM"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<instantE1 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/instant_e1_file.xsd">
+    <instantOut id="e1i_0" time="4.07562" state="enter" vehID="flow.0" speed="1.19023" length="5" type="t"/>
+    <instantOut id="e1i_0" time="5" state="stay" vehID="flow.0" speed="1.19023" length="5" type="t"/>
+    <instantOut id="e1i_0" time="6" state="stay" vehID="flow.0" speed="3.77425" length="5" type="t"/>
+    <instantOut id="e1i_0" time="6.01982" state="leave" vehID="flow.0" speed="6.33403" length="5" type="t" occupancy="1.9442"/>
+    <instantOut id="e1i_0" time="8.06137" state="enter" vehID="flow.1" speed="6.7586" length="5" type="t" gap="2.04156"/>
+    <instantOut id="e1i_0" time="8.80117" state="leave" vehID="flow.1" speed="6.7586" length="5" type="t" occupancy="0.739798"/>
+    <instantOut id="e1i_0" time="10.8874" state="enter" vehID="flow.2" speed="7.32117" length="5" type="t" gap="2.08622"/>
+    <instantOut id="e1i_0" time="11" state="stay" vehID="flow.2" speed="7.32117" length="5" type="t"/>
+    <instantOut id="e1i_0" time="11.4468" state="leave" vehID="flow.2" speed="9.34637" length="5" type="t" occupancy="0.559366"/>
+    <instantOut id="e1i_0" time="13.2821" state="enter" vehID="flow.3" speed="9.86299" length="5" type="t" gap="1.83535"/>
+    <instantOut id="e1i_0" time="13.7891" state="leave" vehID="flow.3" speed="9.86299" length="5" type="t" occupancy="0.506946"/>
+    <instantOut id="e1i_0" time="15.6384" state="enter" vehID="flow.4" speed="10.5337" length="5" type="t" gap="1.84932"/>
+    <instantOut id="e1i_0" time="16" state="stay" vehID="flow.4" speed="10.5337" length="5" type="t"/>
+    <instantOut id="e1i_0" time="16.1" state="leave" vehID="flow.4" speed="11.9078" length="5" type="t" occupancy="0.461622"/>
+    <instantOut id="e1i_0" time="18.0726" state="enter" vehID="flow.5" speed="12.3471" length="5" type="t" gap="1.97257"/>
+    <instantOut id="e1i_0" time="18.4775" state="leave" vehID="flow.5" speed="12.3471" length="5" type="t" occupancy="0.404953"/>
+    <instantOut id="e1i_0" time="20.2923" state="enter" vehID="flow.6" speed="12.5864" length="5" type="t" gap="1.8148"/>
+    <instantOut id="e1i_0" time="20.6896" state="leave" vehID="flow.6" speed="12.5864" length="5" type="t" occupancy="0.397254"/>
+    <instantOut id="e1i_0" time="22.5135" state="enter" vehID="flow.7" speed="12.8962" length="5" type="t" gap="1.82392"/>
+    <instantOut id="e1i_0" time="22.9012" state="leave" vehID="flow.7" speed="12.8962" length="5" type="t" occupancy="0.38771"/>
+    <instantOut id="e1i_0" time="24.845" state="enter" vehID="flow.8" speed="13.1562" length="5" type="t" gap="1.94377"/>
+    <instantOut id="e1i_0" time="25" state="stay" vehID="flow.8" speed="13.1562" length="5" type="t"/>
+    <instantOut id="e1i_0" time="25.2185" state="leave" vehID="flow.8" speed="13.5516" length="5" type="t" occupancy="0.373484"/>
+    <instantOut id="e1i_0" time="27.0343" state="enter" vehID="flow.9" speed="13.6087" length="5" type="t" gap="1.81582"/>
+    <instantOut id="e1i_0" time="27.4017" state="leave" vehID="flow.9" speed="13.6087" length="5" type="t" occupancy="0.367413"/>
+</instantE1>

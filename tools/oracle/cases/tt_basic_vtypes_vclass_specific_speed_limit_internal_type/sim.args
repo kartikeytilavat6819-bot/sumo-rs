@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -a tools/oracle/cases/tt_basic_vtypes_vclass_specific_speed_limit_internal_type/input_additional.add.xml

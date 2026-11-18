@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --time-to-teleport 30 --fcd-output.acceleration --device.fcd.explicit ego --step-length 0.2
