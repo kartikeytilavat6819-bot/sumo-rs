@@ -20,6 +20,11 @@ echo "ref-vs-pristine:"; python3 tools/oracle/compare_xml.py "$D/ref_sim_out/sta
 strip() { sed -e '/^<\?xml/d' -e '/^[[:space:]]*<!--/,/^[[:space:]]*-->/d' -e '/<sumoConfiguration/,/<\/configuration>/d' "$1" | grep -v '^[[:space:]]*$'; }
 strip "$D/ref_sim_out/state_200.xml" > "$OUT/pris.body"
 strip "$OUT/ours/state_200.xml" > "$OUT/ours.body"
+echo "--- counts: rem/device ---"
+echo "pristine rem=$(grep -c '<rem ' "$OUT/pris/state_200.xml") device=$(grep -c '<device ' "$OUT/pris/state_200.xml")"
+echo "ours     rem=$(grep -c '<rem ' "$OUT/ours/state_200.xml") device=$(grep -c '<device ' "$OUT/ours/state_200.xml")"
+echo "--- first vehicle (ours) ---"
+grep -A3 '<vehicle id=' "$OUT/ours/state_200.xml" | head -8
 echo "--- diff (pristine -> ours), first 60 lines ---"
 diff -u "$OUT/pris.body" "$OUT/ours.body" | head -60
 echo "AGENT_RUN DONE"
