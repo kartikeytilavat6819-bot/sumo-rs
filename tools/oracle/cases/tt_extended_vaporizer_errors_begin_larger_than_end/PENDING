@@ -1,0 +1,1 @@
+parked: official sumo exit 1 (intentional error-exit test): Error: A vaporization ends before it starts (edge id='middle').

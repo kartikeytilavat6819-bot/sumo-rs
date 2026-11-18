@@ -29,15 +29,14 @@ for d in tools/oracle/cases/tt_extended*/; do
     bad=$((bad+1)); continue
   fi
   r="PASS"; dd=""
-  x=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1 | head -1)
-  [ -n "$x" ] && { r="FAIL"; dd="ti:$x"; }
-  if [ -f "$d/ref.fcd.xml" ]; then
-    x=$(python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/fcd.xml" 2>&1 | head -1)
-    [ -n "$x" ] && { r="FAIL"; dd="$dd fcd:$x"; }
+  if ! python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" >"$OUT/ti.cmp" 2>&1; then
+    r="FAIL"; dd="ti:$(grep -m1 -E 'DIFF|UNREADABLE|SUMMARY: [1-9]' "$OUT/ti.cmp" | cut -c1-160)"
   fi
-  if [ -f "$d/ref.stat.xml" ]; then
-    x=$(python tools/oracle/compare_stat.py "$d/ref.stat.xml" "$OUT/stat.xml" 2>&1 | head -1)
-    [ -n "$x" ] && { r="FAIL"; dd="$dd stat:$x"; }
+  if [ -f "$d/ref.fcd.xml" ] && ! python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/fcd.xml" >"$OUT/fcd.cmp" 2>&1; then
+    r="FAIL"; dd="$dd fcd:$(grep -m1 -E 'DIFF|UNREADABLE|SUMMARY: [1-9]' "$OUT/fcd.cmp" | cut -c1-160)"
+  fi
+  if [ -f "$d/ref.stat.xml" ] && ! python tools/oracle/compare_stat.py "$d/ref.stat.xml" "$OUT/stat.xml" >"$OUT/stat.cmp" 2>&1; then
+    r="FAIL"; dd="$dd stat:$(grep -m1 -E 'DIFF|UNREADABLE|SUMMARY: [1-9]' "$OUT/stat.cmp" | cut -c1-160)"
   fi
   if [ "$r" = PASS ]; then ok=$((ok+1)); else printf 'DIFF %-60s %s\n' "$c" "$(echo "$dd" | cut -c1-200)"; bad=$((bad+1)); fi
 done

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 3600 -a tools/oracle/cases/tt_extended_waypoints_until_busStop_parking/input_additional.add.xml

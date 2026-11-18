@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --default.emergencydecel decel -v --end 200 --collision.action warn --collision.stoptime 10 --precision 3 -a tools/oracle/cases/tt_extended_collisions_stoptime_warn/input_additional.add.xml

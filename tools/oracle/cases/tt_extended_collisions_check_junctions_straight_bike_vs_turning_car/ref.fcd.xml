@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:28:21.248717-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_collisions_check_junctions_straight_bike_vs_turning_car/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_collisions_check_junctions_straight_bike_vs_turning_car/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_collisions_check_junctions_straight_bike_vs_turning_car/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_collisions_check_junctions_straight_bike_vs_turning_car/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_collisions_check_junctions_straight_bike_vs_turning_car/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+        <default.emergencydecel value="decel"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00"/>
+    <timestep time="1.00"/>
+    <timestep time="2.00"/>
+    <timestep time="3.00"/>
+    <timestep time="4.00"/>
+    <timestep time="5.00"/>
+    <timestep time="6.00"/>
+    <timestep time="7.00"/>
+    <timestep time="8.00"/>
+    <timestep time="9.00"/>
+    <timestep time="10.00"/>
+    <timestep time="11.00"/>
+    <timestep time="12.00"/>
+    <timestep time="13.00"/>
+    <timestep time="14.00"/>
+    <timestep time="15.00"/>
+    <timestep time="16.00"/>
+    <timestep time="17.00"/>
+    <timestep time="18.00"/>
+    <timestep time="19.00"/>
+    <timestep time="20.00"/>
+    <timestep time="21.00"/>
+    <timestep time="22.00"/>
+    <timestep time="23.00"/>
+    <timestep time="24.00"/>
+    <timestep time="25.00"/>
+    <timestep time="26.00"/>
+    <timestep time="27.00"/>
+    <timestep time="28.00"/>
+    <timestep time="29.00"/>
+    <timestep time="30.00"/>
+    <timestep time="31.00"/>
+    <timestep time="32.00"/>
+    <timestep time="33.00"/>
+    <timestep time="34.00"/>
+    <timestep time="35.00"/>
+    <timestep time="36.00">
+        <vehicle id="bike" x="107.15" y="1.70" angle="0.00" type="ignorantBike" speed="5.56" pos="1.70" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="bike" x="107.15" y="6.82" angle="0.00" type="ignorantBike" speed="5.12" pos="6.82" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="bike" x="107.15" y="12.27" angle="0.00" type="ignorantBike" speed="5.45" pos="12.27" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="bike" x="107.15" y="17.82" angle="0.00" type="ignorantBike" speed="5.55" pos="17.82" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="bike" x="107.15" y="23.29" angle="0.00" type="ignorantBike" speed="5.48" pos="23.29" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="bike" x="107.15" y="28.79" angle="0.00" type="ignorantBike" speed="5.49" pos="28.79" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="bike" x="107.15" y="33.78" angle="0.00" type="ignorantBike" speed="5.00" pos="33.78" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="bike" x="107.15" y="39.22" angle="0.00" type="ignorantBike" speed="5.44" pos="39.22" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="bike" x="107.15" y="44.74" angle="0.00" type="ignorantBike" speed="5.52" pos="44.74" lane="SC_2" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="bike" x="107.15" y="50.04" angle="0.00" type="ignorantBike" speed="5.30" pos="50.04" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="5.10" angle="0.00" type="ignorant" speed="13.89" pos="5.10" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="bike" x="107.15" y="55.47" angle="0.00" type="ignorantBike" speed="5.42" pos="55.47" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="17.73" angle="0.00" type="ignorant" speed="12.63" pos="17.73" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="bike" x="107.15" y="60.96" angle="0.00" type="ignorantBike" speed="5.50" pos="60.96" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="31.12" angle="0.00" type="ignorant" speed="13.40" pos="31.12" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="bike" x="107.15" y="66.38" angle="0.00" type="ignorantBike" speed="5.41" pos="66.38" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="44.17" angle="0.00" type="ignorant" speed="13.04" pos="44.17" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="bike" x="107.15" y="71.48" angle="0.00" type="ignorantBike" speed="5.11" pos="71.48" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="57.01" angle="0.00" type="ignorant" speed="12.84" pos="57.01" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="bike" x="107.15" y="76.98" angle="0.00" type="ignorantBike" speed="5.50" pos="76.98" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="70.28" angle="0.00" type="ignorant" speed="13.27" pos="70.28" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="bike" x="107.15" y="82.39" angle="0.00" type="ignorantBike" speed="5.41" pos="82.39" lane="SC_2" slope="0.00"/>
+        <vehicle id="car" x="104.95" y="81.23" angle="0.00" type="ignorant" speed="10.95" pos="81.23" lane="SC_3" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="bike" x="107.15" y="87.82" angle="0.00" type="ignorantBike" speed="5.42" pos="2.42" lane=":C_13_0" slope="0.00"/>
+        <vehicle id="car" x="105.25" y="87.66" angle="3.44" type="ignorant" speed="6.45" pos="2.28" lane=":C_14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="bike" x="107.15" y="92.80" angle="0.00" type="ignorantBike" speed="4.98" pos="7.40" lane=":C_13_0" slope="0.00"/>
+        <vehicle id="car" x="109.48" y="94.14" angle="44.44" type="ignorant" speed="8.19" pos="4.87" lane=":C_31_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="bike" x="107.15" y="97.85" angle="0.00" type="ignorantBike" speed="5.05" pos="12.45" lane=":C_13_0" slope="0.00"/>
+        <vehicle id="car" x="119.32" y="95.05" angle="90.00" type="ignorant" speed="9.98" pos="5.47" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="bike" x="107.15" y="102.88" angle="0.00" type="ignorantBike" speed="5.03" pos="17.48" lane=":C_13_0" slope="0.00"/>
+        <vehicle id="car" x="131.19" y="95.05" angle="90.00" type="ignorant" speed="11.87" pos="17.34" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="bike" x="107.15" y="108.41" angle="0.00" type="ignorantBike" speed="5.53" pos="23.01" lane=":C_13_0" slope="0.00"/>
+        <vehicle id="car" x="144.82" y="95.05" angle="90.00" type="ignorant" speed="13.63" pos="30.97" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="bike" x="107.15" y="113.71" angle="0.00" type="ignorantBike" speed="5.31" pos="0.61" lane="CN_2" slope="0.00"/>
+        <vehicle id="car" x="157.43" y="95.05" angle="90.00" type="ignorant" speed="12.62" pos="43.58" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="bike" x="107.15" y="118.98" angle="0.00" type="ignorantBike" speed="5.27" pos="5.88" lane="CN_2" slope="0.00"/>
+        <vehicle id="car" x="170.12" y="95.05" angle="90.00" type="ignorant" speed="12.68" pos="56.27" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="bike" x="107.15" y="124.12" angle="0.00" type="ignorantBike" speed="5.14" pos="11.02" lane="CN_2" slope="0.00"/>
+        <vehicle id="car" x="183.89" y="95.05" angle="90.00" type="ignorant" speed="13.78" pos="70.04" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="bike" x="107.15" y="129.09" angle="0.00" type="ignorantBike" speed="4.97" pos="15.99" lane="CN_2" slope="0.00"/>
+        <vehicle id="car" x="197.73" y="95.05" angle="90.00" type="ignorant" speed="13.83" pos="83.88" lane="CE_3" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="bike" x="107.15" y="134.60" angle="0.00" type="ignorantBike" speed="5.52" pos="21.50" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="bike" x="107.15" y="139.91" angle="0.00" type="ignorantBike" speed="5.31" pos="26.81" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="bike" x="107.15" y="144.97" angle="0.00" type="ignorantBike" speed="5.05" pos="31.87" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="bike" x="107.15" y="150.18" angle="0.00" type="ignorantBike" speed="5.21" pos="37.08" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="bike" x="107.15" y="155.34" angle="0.00" type="ignorantBike" speed="5.16" pos="42.24" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="bike" x="107.15" y="160.64" angle="0.00" type="ignorantBike" speed="5.30" pos="47.54" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="bike" x="107.15" y="165.87" angle="0.00" type="ignorantBike" speed="5.22" pos="52.77" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="bike" x="107.15" y="171.08" angle="0.00" type="ignorantBike" speed="5.21" pos="57.98" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="bike" x="107.15" y="176.05" angle="0.00" type="ignorantBike" speed="4.97" pos="62.95" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="bike" x="107.15" y="181.29" angle="0.00" type="ignorantBike" speed="5.23" pos="68.19" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="bike" x="107.15" y="186.73" angle="0.00" type="ignorantBike" speed="5.44" pos="73.63" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="bike" x="107.15" y="191.76" angle="0.00" type="ignorantBike" speed="5.03" pos="78.66" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="bike" x="107.15" y="196.77" angle="0.00" type="ignorantBike" speed="5.00" pos="83.67" lane="CN_2" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00"/>
+</fcd-export>

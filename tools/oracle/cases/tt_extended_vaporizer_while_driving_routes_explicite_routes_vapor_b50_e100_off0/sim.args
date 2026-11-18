@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 --no-duration-log -a tools/oracle/cases/tt_extended_vaporizer_while_driving_routes_explicite_routes_vapor_b50_e100_off0/input_additional2.add.xml
