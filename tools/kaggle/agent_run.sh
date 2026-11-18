@@ -3,8 +3,7 @@
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN="$CARGO_TARGET_DIR/debug"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc42
-mkdir -p "$OUT"
+OUT=$(mktemp -d /tmp/oc42.XXXXXX) || exit 1
 CASES="out_bt out_meandata elechybrid_overhead md_midinterval md_noperiod md_persons md_public md_stop md_vtypes md_window"
 for c in $CASES; do
   d="tools/oracle/cases/$c"
