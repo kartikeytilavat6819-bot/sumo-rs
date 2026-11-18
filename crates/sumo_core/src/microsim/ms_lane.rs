@@ -470,7 +470,7 @@ fn default_stop() -> SUMOVehicleParameter_Stop {
         endPos: 0.,
         arrival: -1,
         duration: -1,
-        durationDist: (),
+        durationDist: DistributionParameterized::default(),
         until: -1,
         extension: -1,
         waitUntil: -1,

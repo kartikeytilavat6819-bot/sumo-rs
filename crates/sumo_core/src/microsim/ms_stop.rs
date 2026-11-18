@@ -334,8 +334,13 @@ impl MSStop {
         self.parkingarea = net.m().get_stopping_place(&stopPar.parkingarea, SUMO_TAG_PARKING_AREA).cast();
         self.chargingStation = net.m().get_stopping_place(&stopPar.chargingStation, SUMO_TAG_CHARGING_STATION);
         self.overheadWireSegment = net.m().get_stopping_place(&stopPar.overheadWireSegment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
-        // shortcut: stopPar.durationDist (Distribution_Parameterized) is not ported, the fixed duration is always used
-        self.duration = stopPar.duration;
+        // C++: duration = stopPar.durationDist.isVariable()
+        //     ? TIME2STEPS(stopPar.durationDist.sample(MSRouteHandler::getParsingRNG())) : stopPar.duration;
+        self.duration = if stopPar.durationDist.is_variable() {
+            time2steps(stopPar.durationDist.sample(Some(SUMORouteHandler::get_parsing_rng().m())).unwrap_or_else(|e| panic!("{}", e)))
+        } else {
+            stopPar.duration
+        };
         self.triggered = stopPar.triggered;
         self.containerTriggered = stopPar.containerTriggered;
         self.joinTriggered = stopPar.joinTriggered || stopPar.join != "";
