@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:44:01.279297-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_wrattr_emis/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_wrattr_emis/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_wrattr_emis/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="60.00" id="ed_wan">
+        <edge id="--103226#0" noise="0.00"/>
+        <edge id="--103226#1" noise="0.00"/>
+        <edge id="--103227#0" noise="74.52"/>
+        <edge id="--103227#1" noise="80.49"/>
+        <edge id="--103227#2" noise="78.90"/>
+        <edge id="-103224#0" noise="68.17"/>
+        <edge id="-103224#1" noise="67.49"/>
+        <edge id="-103224#2" noise="71.69"/>
+        <edge id="-103224#3" noise="67.11"/>
+        <edge id="-103226#0" noise="59.37"/>
+        <edge id="-103226#1" noise="63.49"/>
+        <edge id="-103227#0" noise="61.61"/>
+        <edge id="-103227#1" noise="77.54"/>
+        <edge id="-103227#2" noise="79.59"/>
+        <edge id="-103228" noise="69.17"/>
+        <edge id="-103230" noise="56.63"/>
+    </interval>
+    <interval begin="60.00" end="120.00" id="ed_wan">
+        <edge id="--103226#0" noise="0.00"/>
+        <edge id="--103226#1" noise="0.00"/>
+        <edge id="--103227#0" noise="75.24"/>
+        <edge id="--103227#1" noise="80.73"/>
+        <edge id="--103227#2" noise="79.24"/>
+        <edge id="-103224#0" noise="66.93"/>
+        <edge id="-103224#1" noise="68.61"/>
+        <edge id="-103224#2" noise="72.47"/>
+        <edge id="-103224#3" noise="68.69"/>
+        <edge id="-103226#0" noise="59.24"/>
+        <edge id="-103226#1" noise="63.71"/>
+        <edge id="-103227#0" noise="62.64"/>
+        <edge id="-103227#1" noise="76.49"/>
+        <edge id="-103227#2" noise="80.22"/>
+        <edge id="-103228" noise="69.33"/>
+        <edge id="-103230" noise="57.21"/>
+    </interval>
+    <interval begin="120.00" end="180.00" id="ed_wan">
+        <edge id="--103226#0" noise="0.00"/>
+        <edge id="--103226#1" noise="0.00"/>
+        <edge id="--103227#0" noise="74.77"/>
+        <edge id="--103227#1" noise="80.08"/>
+        <edge id="--103227#2" noise="79.43"/>
+        <edge id="-103224#0" noise="65.91"/>
+        <edge id="-103224#1" noise="68.94"/>
+        <edge id="-103224#2" noise="71.32"/>
+        <edge id="-103224#3" noise="67.56"/>
+        <edge id="-103226#0" noise="59.59"/>
+        <edge id="-103226#1" noise="63.74"/>
+        <edge id="-103227#0" noise="62.99"/>
+        <edge id="-103227#1" noise="77.21"/>
+        <edge id="-103227#2" noise="80.74"/>
+        <edge id="-103228" noise="68.94"/>
+        <edge id="-103230" noise="58.27"/>
+    </interval>
+    <interval begin="180.00" end="200.00" id="ed_wan">
+        <edge id="--103226#0" noise="0.00"/>
+        <edge id="--103226#1" noise="0.00"/>
+        <edge id="--103227#0" noise="77.62"/>
+        <edge id="--103227#1" noise="80.34"/>
+        <edge id="--103227#2" noise="79.87"/>
+        <edge id="-103224#0" noise="67.23"/>
+        <edge id="-103224#1" noise="69.97"/>
+        <edge id="-103224#2" noise="71.61"/>
+        <edge id="-103224#3" noise="70.27"/>
+        <edge id="-103226#0" noise="59.87"/>
+        <edge id="-103226#1" noise="64.43"/>
+        <edge id="-103227#0" noise="61.43"/>
+        <edge id="-103227#1" noise="79.09"/>
+        <edge id="-103227#2" noise="80.02"/>
+        <edge id="-103228" noise="70.26"/>
+        <edge id="-103230" noise="56.06"/>
+    </interval>
+</meandata>

@@ -1,0 +1,2 @@
+out_ed_halt.xml ed_halt
+out_ed_haltrel.xml ed_haltrel

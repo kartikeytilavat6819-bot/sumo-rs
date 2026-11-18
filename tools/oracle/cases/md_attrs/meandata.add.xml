@@ -1,0 +1,5 @@
+<additional>
+    <edgeData id="ed_wa_tl" period="50" writeAttributes="timeLoss flow distance" file="out_ed_wa_tl.xml"/>
+    <edgeData id="ed_wa_cnt" period="50" writeAttributes="departed arrived entered left laneChangedFrom laneChangedTo vaporized teleported" file="out_ed_wa_cnt.xml"/>
+    <laneData id="ld_wa" period="50" writeAttributes="sampledSeconds speed density occupancy" file="out_ld_wa.xml"/>
+</additional>

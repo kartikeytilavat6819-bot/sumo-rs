@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" sigma="0.5"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+    <route id="rA" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <route id="rB" edges="-103227#0 -103227#1 -103227#2"/>
+    <flow id="fA" type="car" route="rA" begin="0" end="150" period="10" departSpeed="max"/>
+    <flow id="fB" type="car" route="rB" begin="0" end="150" period="12" departSpeed="max"/>
+    <person id="p0" type="ped" depart="0"><walk edges="-103224#0 -103224#1 -103224#2 -103224#3"/></person>
+    <person id="p1" type="ped" depart="10"><walk edges="-103227#0 -103227#1 -103227#2"/></person>
+    <person id="p2" type="ped" depart="20"><walk edges="-103224#1 -103224#2"/></person>
+    <person id="p3" type="ped" depart="30"><walk edges="-103227#2 -103227#1 -103227#0"/></person>
+</routes>

@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_ef" period="50" edgesFile="tools/oracle/cases/md_edgesfile/edges.txt" aggregate="true" file="out_ed_ef.xml"/>
+    <laneData id="ld_ef" period="50" edgesFile="tools/oracle/cases/md_edgesfile/edges.txt" file="out_ld_ef.xml"/>
+</additional>

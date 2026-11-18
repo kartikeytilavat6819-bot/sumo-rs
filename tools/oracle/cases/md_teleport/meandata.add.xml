@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_tp" period="50" writeAttributes="sampledSeconds waitingTime teleported vaporized entered left speed" file="out_ed_tp.xml"/>
+    <edgeData id="ed_tp_tr" period="50" trackVehicles="true" writeAttributes="sampledSeconds teleported" file="out_ed_tp_tr.xml"/>
+</additional>

@@ -1,0 +1,2 @@
+out_ed_stop.xml ed_stop
+out_ed_stop_tr.xml ed_stop_tr

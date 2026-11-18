@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed300" period="300" file="out_ed300.xml"/>
+    <laneData id="ld300" period="300" file="out_ld300.xml"/>
+</additional>

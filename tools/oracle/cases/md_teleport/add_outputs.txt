@@ -1,0 +1,2 @@
+out_ed_tp.xml ed_tp
+out_ed_tp_tr.xml ed_tp_tr

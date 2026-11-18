@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:19:56.780927-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_vtypes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_vtypes/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_vtypes/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_vtypes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_vtypes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_vtypes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="50.00" id="ed_vt_both">
+        <edge id="--103226#0" sampledSeconds="0.00"/>
+        <edge id="--103226#1" sampledSeconds="0.00"/>
+        <edge id="--103227#0" sampledSeconds="4.30" speed="24.63"/>
+        <edge id="--103227#1" sampledSeconds="19.33" speed="21.25"/>
+        <edge id="--103227#2" sampledSeconds="43.00" speed="21.01"/>
+        <edge id="-103224#0" sampledSeconds="26.00" speed="21.27"/>
+        <edge id="-103224#1" sampledSeconds="404.79" speed="1.61"/>
+        <edge id="-103224#2" sampledSeconds="36.56" speed="13.97"/>
+        <edge id="-103224#3" sampledSeconds="18.54" speed="13.08"/>
+        <edge id="-103226#0" sampledSeconds="21.00" speed="8.50"/>
+        <edge id="-103226#1" sampledSeconds="15.68" speed="11.83"/>
+        <edge id="-103227#0" sampledSeconds="1.00" speed="15.17"/>
+        <edge id="-103227#1" sampledSeconds="57.63" speed="16.22"/>
+        <edge id="-103227#2" sampledSeconds="51.38" speed="23.10"/>
+        <edge id="-103228" sampledSeconds="13.00" speed="12.52"/>
+        <edge id="-103230" sampledSeconds="15.00" speed="10.84"/>
+    </interval>
+</meandata>

@@ -1,0 +1,2 @@
+out_ed_np.xml ed_np
+out_ld_np.xml ld_np

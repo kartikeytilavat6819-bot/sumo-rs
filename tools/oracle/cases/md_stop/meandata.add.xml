@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_stop" period="50" writeAttributes="sampledSeconds waitingTime timeLoss speed density occupancy entered left" file="out_ed_stop.xml"/>
+    <edgeData id="ed_stop_tr" period="50" trackVehicles="true" writeAttributes="sampledSeconds waitingTime speed" file="out_ed_stop_tr.xml"/>
+</additional>

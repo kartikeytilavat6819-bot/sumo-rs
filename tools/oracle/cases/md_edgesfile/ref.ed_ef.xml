@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:19:31.638279-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_edgesfile/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_edgesfile/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_edgesfile/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_edgesfile/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_edgesfile/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_edgesfile/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="50.00" id="ed_ef">
+        <edge id="AGGREGATED" sampledSeconds="330.44" numEdges="3" traveltime="43.77" overlapTraveltime="44.12" density="27.02" overlapDensity="27.91" laneDensity="5.40" occupancy="2.97" waitingTime="161.00" timeLoss="249.88" speed="5.49" speedRelative="0.26" departed="0" arrived="3" entered="24" left="12" laneChangedFrom="2" laneChangedTo="2" flow="526.30" distance="1731.01"/>
+    </interval>
+    <interval begin="50.00" end="100.00" id="ed_ef">
+        <edge id="AGGREGATED" sampledSeconds="564.93" numEdges="3" traveltime="72.64" overlapTraveltime="72.06" density="46.37" overlapDensity="47.71" laneDensity="9.27" occupancy="4.96" waitingTime="270.00" timeLoss="476.11" speed="3.36" speedRelative="0.16" departed="0" arrived="3" entered="24" left="16" laneChangedFrom="4" laneChangedTo="4" flow="544.15" distance="1789.73"/>
+    </interval>
+    <interval begin="100.00" end="150.00" id="ed_ef">
+        <edge id="AGGREGATED" sampledSeconds="802.23" numEdges="3" traveltime="126.68" overlapTraveltime="122.67" density="66.89" overlapDensity="67.75" laneDensity="13.38" occupancy="6.97" waitingTime="563.00" timeLoss="733.40" speed="1.97" speedRelative="0.09" departed="0" arrived="4" entered="18" left="13" laneChangedFrom="1" laneChangedTo="1" flow="450.10" distance="1480.39"/>
+    </interval>
+    <interval begin="150.00" end="200.00" id="ed_ef">
+        <edge id="AGGREGATED" sampledSeconds="857.24" numEdges="3" traveltime="131.15" overlapTraveltime="127.71" density="71.48" overlapDensity="72.40" laneDensity="14.30" occupancy="7.48" waitingTime="588.00" timeLoss="787.75" speed="1.90" speedRelative="0.09" departed="0" arrived="3" entered="15" left="13" laneChangedFrom="1" laneChangedTo="1" flow="464.64" distance="1528.20"/>
+    </interval>
+</meandata>

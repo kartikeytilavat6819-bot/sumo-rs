@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:56:57.946751-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_attrs/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_attrs/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_attrs/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_attrs/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_attrs/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_attrs/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="50.00" id="ed_wa_tl">
+        <edge id="--103226#0" distance="0.00"/>
+        <edge id="--103226#1" distance="0.00"/>
+        <edge id="--103227#0" timeLoss="0.06" flow="216.00" distance="70.02"/>
+        <edge id="--103227#1" timeLoss="2.75" flow="268.16" distance="440.08"/>
+        <edge id="--103227#2" timeLoss="9.13" flow="484.15" distance="956.94"/>
+        <edge id="-103224#0" timeLoss="2.12" flow="815.78" distance="662.36"/>
+        <edge id="-103224#1" timeLoss="227.86" flow="698.17" distance="582.97"/>
+        <edge id="-103224#2" timeLoss="11.97" flow="357.46" distance="546.07"/>
+        <edge id="-103224#3" timeLoss="6.23" flow="477.02" distance="236.79"/>
+        <edge id="-103226#0" timeLoss="8.50" flow="254.95" distance="179.14"/>
+        <edge id="-103226#1" timeLoss="2.18" flow="216.00" distance="175.59"/>
+        <edge id="-103227#0" timeLoss="1.38" flow="385.72" distance="125.04"/>
+        <edge id="-103227#1" timeLoss="19.84" flow="592.56" distance="972.45"/>
+        <edge id="-103227#2" timeLoss="4.96" flow="535.20" distance="1057.83"/>
+        <edge id="-103228" timeLoss="7.21" flow="178.20" distance="171.12"/>
+        <edge id="-103230" timeLoss="3.70" flow="198.33" distance="171.75"/>
+    </interval>
+    <interval begin="50.00" end="100.00" id="ed_wa_tl">
+        <edge id="--103226#0" distance="0.00"/>
+        <edge id="--103226#1" distance="0.00"/>
+        <edge id="--103227#0" timeLoss="0.52" flow="360.00" distance="116.70"/>
+        <edge id="--103227#1" timeLoss="2.46" flow="307.84" distance="505.20"/>
+        <edge id="--103227#2" timeLoss="8.75" flow="519.72" distance="1027.24"/>
+        <edge id="-103224#0" timeLoss="4.11" flow="788.69" distance="640.37"/>
+        <edge id="-103224#1" timeLoss="448.03" flow="707.91" distance="591.10"/>
+        <edge id="-103224#2" timeLoss="19.77" flow="496.58" distance="758.59"/>
+        <edge id="-103224#3" timeLoss="6.39" flow="674.98" distance="335.05"/>
+        <edge id="-103226#0" timeLoss="10.08" flow="198.24" distance="139.29"/>
+        <edge id="-103226#1" timeLoss="2.26" flow="262.69" distance="213.55"/>
+        <edge id="-103227#0" timeLoss="3.03" flow="345.75" distance="112.08"/>
+        <edge id="-103227#1" timeLoss="25.82" flow="600.26" distance="985.09"/>
+        <edge id="-103227#2" timeLoss="26.78" flow="844.06" distance="1668.31"/>
+        <edge id="-103228" timeLoss="8.68" flow="118.80" distance="114.08"/>
+        <edge id="-103230" timeLoss="4.75" flow="132.22" distance="114.50"/>
+    </interval>
+    <interval begin="100.00" end="150.00" id="ed_wa_tl">
+        <edge id="--103226#0" distance="0.00"/>
+        <edge id="--103226#1" distance="0.00"/>
+        <edge id="--103227#0" timeLoss="0.07" flow="288.00" distance="93.36"/>
+        <edge id="--103227#1" timeLoss="0.28" flow="288.00" distance="472.64"/>
+        <edge id="--103227#2" timeLoss="6.77" flow="519.03" distance="1025.87"/>
+        <edge id="-103224#0" timeLoss="94.08" flow="698.03" distance="566.76"/>
+        <edge id="-103224#1" timeLoss="705.69" flow="315.08" distance="263.09"/>
+        <edge id="-103224#2" timeLoss="16.16" flow="489.70" distance="748.09"/>
+        <edge id="-103224#3" timeLoss="6.09" flow="664.96" distance="330.08"/>
+        <edge id="-103226#0" timeLoss="6.86" flow="194.22" distance="136.47"/>
+        <edge id="-103226#1" timeLoss="1.79" flow="241.31" distance="196.16"/>
+        <edge id="-103227#0" timeLoss="3.06" flow="337.60" distance="109.44"/>
+        <edge id="-103227#1" timeLoss="25.92" flow="622.22" distance="1021.14"/>
+        <edge id="-103227#2" timeLoss="13.81" flow="780.74" distance="1543.16"/>
+        <edge id="-103228" timeLoss="11.38" flow="178.20" distance="171.12"/>
+        <edge id="-103230" timeLoss="5.36" flow="198.33" distance="171.75"/>
+    </interval>
+    <interval begin="150.00" end="200.00" id="ed_wa_tl">
+        <edge id="--103226#0" distance="0.00"/>
+        <edge id="--103226#1" distance="0.00"/>
+        <edge id="--103227#0" timeLoss="0.14" flow="288.00" distance="93.36"/>
+        <edge id="--103227#1" timeLoss="2.20" flow="295.23" distance="484.50"/>
+        <edge id="--103227#2" timeLoss="11.00" flow="491.90" distance="972.25"/>
+        <edge id="-103224#0" timeLoss="486.95" flow="381.01" distance="309.36"/>
+        <edge id="-103224#1" timeLoss="753.11" flow="255.27" distance="213.15"/>
+        <edge id="-103224#2" timeLoss="16.68" flow="455.04" distance="695.13"/>
+        <edge id="-103224#3" timeLoss="6.66" flow="631.04" distance="313.24"/>
+        <edge id="-103226#0" timeLoss="5.21" flow="254.50" distance="178.82"/>
+        <edge id="-103226#1" timeLoss="1.40" flow="216.00" distance="175.59"/>
+        <edge id="-103227#0" timeLoss="7.62" flow="337.60" distance="109.44"/>
+        <edge id="-103227#1" timeLoss="33.25" flow="694.32" distance="1139.46"/>
+        <edge id="-103227#2" timeLoss="12.90" flow="588.86" distance="1163.90"/>
+        <edge id="-103228" timeLoss="11.47" flow="118.80" distance="114.08"/>
+        <edge id="-103230" timeLoss="2.50" flow="132.22" distance="114.50"/>
+    </interval>
+</meandata>

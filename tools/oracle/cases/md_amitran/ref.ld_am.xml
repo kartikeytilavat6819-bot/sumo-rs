@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:32:18.222893-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_amitran/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_amitran/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_amitran/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_amitran/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_amitran/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_amitran/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<linkData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/amitran/linkdata.xsd">
+    <timeSlice startTime="0" duration="60000">
+        <edge id="--103226#0">
+            <link id="--103226#0_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103226#1">
+            <link id="--103226#1_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#0">
+            <link id="--103227#0_0" amount="4" averageSpeed="2379"/>
+            <link id="--103227#0_1" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#1">
+            <link id="--103227#1_0" amount="5" averageSpeed="2219"/>
+            <link id="--103227#1_1" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#2">
+            <link id="--103227#2_0" amount="9" averageSpeed="1968"/>
+            <link id="--103227#2_1" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="-103224#0">
+            <link id="-103224#0_0" amount="8" averageSpeed="2109"/>
+            <link id="-103224#0_1" amount="7" averageSpeed="2041"/>
+        </edge>
+        <edge id="-103224#1">
+            <link id="-103224#1_0" amount="7" averageSpeed="216"/>
+            <link id="-103224#1_1" amount="7" averageSpeed="243"/>
+        </edge>
+        <edge id="-103224#2">
+            <link id="-103224#2_0" amount="5" averageSpeed="1396"/>
+            <link id="-103224#2_1" amount="3" averageSpeed="1578"/>
+        </edge>
+        <edge id="-103224#3">
+            <link id="-103224#3_0" amount="7" averageSpeed="1367"/>
+            <link id="-103224#3_1" amount="3" averageSpeed="2122"/>
+        </edge>
+        <edge id="-103226#0">
+            <link id="-103226#0_0" amount="4" averageSpeed="758"/>
+        </edge>
+        <edge id="-103226#1">
+            <link id="-103226#1_0" amount="4" averageSpeed="1176"/>
+        </edge>
+        <edge id="-103227#0">
+            <link id="-103227#0_0" amount="1" averageSpeed="2625"/>
+            <link id="-103227#0_1" amount="7" averageSpeed="2091"/>
+        </edge>
+        <edge id="-103227#1">
+            <link id="-103227#1_0" amount="1" averageSpeed="2669"/>
+            <link id="-103227#1_1" amount="10" averageSpeed="1640"/>
+        </edge>
+        <edge id="-103227#2">
+            <link id="-103227#2_0" amount="3" averageSpeed="1691"/>
+            <link id="-103227#2_1" amount="9" averageSpeed="2247"/>
+        </edge>
+        <edge id="-103228">
+            <link id="-103228_0" amount="0" averageSpeed="-1"/>
+            <link id="-103228_1" amount="3" averageSpeed="1069"/>
+        </edge>
+        <edge id="-103230">
+            <link id="-103230_0" amount="3" averageSpeed="959"/>
+        </edge>
+    </timeSlice>
+    <timeSlice startTime="60000" duration="60000">
+        <edge id="--103226#0">
+            <link id="--103226#0_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103226#1">
+            <link id="--103226#1_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#0">
+            <link id="--103227#0_0" amount="5" averageSpeed="2382"/>
+            <link id="--103227#0_1" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#1">
+            <link id="--103227#1_0" amount="5" averageSpeed="2266"/>
+            <link id="--103227#1_1" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#2">
+            <link id="--103227#2_0" amount="9" averageSpeed="2029"/>
+            <link id="--103227#2_1" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="-103224#0">
+            <link id="-103224#0_0" amount="10" averageSpeed="1927"/>
+            <link id="-103224#0_1" amount="4" averageSpeed="1983"/>
+        </edge>
+        <edge id="-103224#1">
+            <link id="-103224#1_0" amount="11" averageSpeed="146"/>
+            <link id="-103224#1_1" amount="4" averageSpeed="131"/>
+        </edge>
+        <edge id="-103224#2">
+            <link id="-103224#2_0" amount="4" averageSpeed="1440"/>
+            <link id="-103224#2_1" amount="3" averageSpeed="1551"/>
+        </edge>
+        <edge id="-103224#3">
+            <link id="-103224#3_0" amount="9" averageSpeed="1430"/>
+            <link id="-103224#3_1" amount="2" averageSpeed="2142"/>
+        </edge>
+        <edge id="-103226#0">
+            <link id="-103226#0_0" amount="4" averageSpeed="775"/>
+        </edge>
+        <edge id="-103226#1">
+            <link id="-103226#1_0" amount="4" averageSpeed="1187"/>
+        </edge>
+        <edge id="-103227#0">
+            <link id="-103227#0_0" amount="4" averageSpeed="2197"/>
+            <link id="-103227#0_1" amount="3" averageSpeed="1760"/>
+        </edge>
+        <edge id="-103227#1">
+            <link id="-103227#1_0" amount="4" averageSpeed="2114"/>
+            <link id="-103227#1_1" amount="6" averageSpeed="1531"/>
+        </edge>
+        <edge id="-103227#2">
+            <link id="-103227#2_0" amount="6" averageSpeed="1807"/>
+            <link id="-103227#2_1" amount="6" averageSpeed="2240"/>
+        </edge>
+        <edge id="-103228">
+            <link id="-103228_0" amount="0" averageSpeed="-1"/>
+            <link id="-103228_1" amount="3" averageSpeed="869"/>
+        </edge>
+        <edge id="-103230">
+            <link id="-103230_0" amount="3" averageSpeed="910"/>
+        </edge>
+    </timeSlice>
+    <timeSlice startTime="120000" duration="60000">
+        <edge id="--103226#0">
+            <link id="--103226#0_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103226#1">
+            <link id="--103226#1_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#0">
+            <link id="--103227#0_0" amount="4" averageSpeed="2412"/>
+            <link id="--103227#0_1" amount="1" averageSpeed="2442"/>
+        </edge>
+        <edge id="--103227#1">
+            <link id="--103227#1_0" amount="4" averageSpeed="2298"/>
+            <link id="--103227#1_1" amount="1" averageSpeed="2454"/>
+        </edge>
+        <edge id="--103227#2">
+            <link id="--103227#2_0" amount="8" averageSpeed="2035"/>
+            <link id="--103227#2_1" amount="1" averageSpeed="2462"/>
+        </edge>
+        <edge id="-103224#0">
+            <link id="-103224#0_0" amount="8" averageSpeed="564"/>
+            <link id="-103224#0_1" amount="6" averageSpeed="465"/>
+        </edge>
+        <edge id="-103224#1">
+            <link id="-103224#1_0" amount="1" averageSpeed="83"/>
+            <link id="-103224#1_1" amount="2" averageSpeed="87"/>
+        </edge>
+        <edge id="-103224#2">
+            <link id="-103224#2_0" amount="5" averageSpeed="1412"/>
+            <link id="-103224#2_1" amount="3" averageSpeed="1562"/>
+        </edge>
+        <edge id="-103224#3">
+            <link id="-103224#3_0" amount="8" averageSpeed="1435"/>
+            <link id="-103224#3_1" amount="2" averageSpeed="2095"/>
+        </edge>
+        <edge id="-103226#0">
+            <link id="-103226#0_0" amount="4" averageSpeed="841"/>
+        </edge>
+        <edge id="-103226#1">
+            <link id="-103226#1_0" amount="4" averageSpeed="1219"/>
+        </edge>
+        <edge id="-103227#0">
+            <link id="-103227#0_0" amount="4" averageSpeed="2376"/>
+            <link id="-103227#0_1" amount="4" averageSpeed="1244"/>
+        </edge>
+        <edge id="-103227#1">
+            <link id="-103227#1_0" amount="4" averageSpeed="2043"/>
+            <link id="-103227#1_1" amount="7" averageSpeed="1483"/>
+        </edge>
+        <edge id="-103227#2">
+            <link id="-103227#2_0" amount="5" averageSpeed="1955"/>
+            <link id="-103227#2_1" amount="5" averageSpeed="2225"/>
+        </edge>
+        <edge id="-103228">
+            <link id="-103228_0" amount="0" averageSpeed="-1"/>
+            <link id="-103228_1" amount="3" averageSpeed="867"/>
+        </edge>
+        <edge id="-103230">
+            <link id="-103230_0" amount="3" averageSpeed="926"/>
+        </edge>
+    </timeSlice>
+    <timeSlice startTime="180000" duration="20000">
+        <edge id="--103226#0">
+            <link id="--103226#0_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103226#1">
+            <link id="--103226#1_0" amount="0" averageSpeed="-1"/>
+        </edge>
+        <edge id="--103227#0">
+            <link id="--103227#0_0" amount="2" averageSpeed="2410"/>
+            <link id="--103227#0_1" amount="0" averageSpeed="2442"/>
+        </edge>
+        <edge id="--103227#1">
+            <link id="--103227#1_0" amount="2" averageSpeed="2279"/>
+            <link id="--103227#1_1" amount="0" averageSpeed="2454"/>
+        </edge>
+        <edge id="--103227#2">
+            <link id="--103227#2_0" amount="3" averageSpeed="2021"/>
+            <link id="--103227#2_1" amount="0" averageSpeed="2462"/>
+        </edge>
+        <edge id="-103224#0">
+            <link id="-103224#0_0" amount="2" averageSpeed="359"/>
+            <link id="-103224#0_1" amount="2" averageSpeed="312"/>
+        </edge>
+        <edge id="-103224#1">
+            <link id="-103224#1_0" amount="0" averageSpeed="77"/>
+            <link id="-103224#1_1" amount="1" averageSpeed="80"/>
+        </edge>
+        <edge id="-103224#2">
+            <link id="-103224#2_0" amount="2" averageSpeed="1406"/>
+            <link id="-103224#2_1" amount="1" averageSpeed="1556"/>
+        </edge>
+        <edge id="-103224#3">
+            <link id="-103224#3_0" amount="2" averageSpeed="1423"/>
+            <link id="-103224#3_1" amount="1" averageSpeed="2138"/>
+        </edge>
+        <edge id="-103226#0">
+            <link id="-103226#0_0" amount="2" averageSpeed="865"/>
+        </edge>
+        <edge id="-103226#1">
+            <link id="-103226#1_0" amount="1" averageSpeed="1231"/>
+        </edge>
+        <edge id="-103227#0">
+            <link id="-103227#0_0" amount="1" averageSpeed="2395"/>
+            <link id="-103227#0_1" amount="1" averageSpeed="1291"/>
+        </edge>
+        <edge id="-103227#1">
+            <link id="-103227#1_0" amount="1" averageSpeed="1973"/>
+            <link id="-103227#1_1" amount="2" averageSpeed="1492"/>
+        </edge>
+        <edge id="-103227#2">
+            <link id="-103227#2_0" amount="2" averageSpeed="1923"/>
+            <link id="-103227#2_1" amount="4" averageSpeed="2209"/>
+        </edge>
+        <edge id="-103228">
+            <link id="-103228_0" amount="0" averageSpeed="-1"/>
+            <link id="-103228_1" amount="1" averageSpeed="875"/>
+        </edge>
+        <edge id="-103230">
+            <link id="-103230_0" amount="1" averageSpeed="918"/>
+        </edge>
+    </timeSlice>
+</linkData>

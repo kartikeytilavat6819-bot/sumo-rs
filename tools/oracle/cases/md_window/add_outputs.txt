@@ -1,0 +1,2 @@
+out_ed_win.xml ed_win
+out_ld_win.xml ld_win

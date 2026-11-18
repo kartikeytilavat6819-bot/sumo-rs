@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_perf" type="performance" period="60" file="out_ed_perf.xml"/>
+    <edgeData id="ed_hbefa" type="hbefa" period="60" file="out_ed_hbefa.xml"/>
+</additional>

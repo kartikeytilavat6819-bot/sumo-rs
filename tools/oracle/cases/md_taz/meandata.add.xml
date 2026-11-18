@@ -1,0 +1,6 @@
+<additional>
+    <taz id="za" edges="-103224#0 -103224#1 -103227#0"/>
+    <taz id="zb" edges="-103224#3 -103227#2"/>
+    <edgeData id="ed_taz" period="60" aggregate="taz" file="out_ed_taz.xml"/>
+    <laneData id="ld_taz" period="60" aggregate="taz" file="out_ld_taz.xml"/>
+</additional>

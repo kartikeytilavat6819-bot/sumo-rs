@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:57:04.715587-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_stop/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_stop/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_stop/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_stop/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_stop/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_stop/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="50.00" id="ed_stop">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="20.81" density="6.51" occupancy="1.70" waitingTime="0.00" timeLoss="0.91" speed="20.72" entered="0" left="7"/>
+        <edge id="-103224#1" sampledSeconds="82.18" density="25.08" occupancy="6.50" waitingTime="2.00" timeLoss="26.56" speed="5.12" entered="7" left="6"/>
+        <edge id="-103224#2" sampledSeconds="30.51" density="5.37" occupancy="1.31" waitingTime="0.00" timeLoss="7.18" speed="16.32" entered="5" left="4"/>
+        <edge id="-103224#3" sampledSeconds="7.76" density="3.80" occupancy="0.95" waitingTime="0.00" timeLoss="0.20" speed="21.00" entered="4" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="6.01" density="4.11" occupancy="1.17" waitingTime="0.00" timeLoss="1.09" speed="22.72" entered="0" left="6"/>
+        <edge id="-103227#1" sampledSeconds="48.65" density="8.10" occupancy="2.02" waitingTime="0.00" timeLoss="5.80" speed="10.95" entered="5" left="4"/>
+        <edge id="-103227#2" sampledSeconds="22.68" density="3.08" occupancy="0.77" waitingTime="0.00" timeLoss="0.54" speed="25.98" entered="4" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+    <interval begin="50.00" end="100.00" id="ed_stop">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="18.10" density="5.63" occupancy="1.48" waitingTime="0.00" timeLoss="0.57" speed="21.32" entered="0" left="7"/>
+        <edge id="-103224#1" sampledSeconds="72.97" density="21.64" occupancy="5.72" waitingTime="5.00" timeLoss="29.84" speed="5.84" entered="6" left="7"/>
+        <edge id="-103224#2" sampledSeconds="50.09" density="8.80" occupancy="2.15" waitingTime="0.00" timeLoss="12.46" speed="16.39" entered="8" left="7"/>
+        <edge id="-103224#3" sampledSeconds="13.62" density="6.69" occupancy="1.67" waitingTime="0.00" timeLoss="0.33" speed="20.93" entered="7" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="3.84" density="2.68" occupancy="0.76" waitingTime="0.00" timeLoss="0.41" speed="23.37" entered="0" left="4"/>
+        <edge id="-103227#1" sampledSeconds="56.57" density="9.40" occupancy="2.35" waitingTime="0.00" timeLoss="7.41" speed="10.87" entered="5" left="5"/>
+        <edge id="-103227#2" sampledSeconds="27.87" density="3.79" occupancy="0.95" waitingTime="0.00" timeLoss="1.65" speed="26.43" entered="5" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+    <interval begin="100.00" end="150.00" id="ed_stop">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="16.95" density="5.30" occupancy="1.39" waitingTime="0.00" timeLoss="0.43" speed="20.65" entered="0" left="6"/>
+        <edge id="-103224#1" sampledSeconds="41.43" density="11.56" occupancy="3.14" waitingTime="1.00" timeLoss="21.32" speed="10.28" entered="7" left="6"/>
+        <edge id="-103224#2" sampledSeconds="48.48" density="8.50" occupancy="2.10" waitingTime="0.00" timeLoss="10.46" speed="16.71" entered="6" left="7"/>
+        <edge id="-103224#3" sampledSeconds="11.89" density="5.84" occupancy="1.45" waitingTime="0.00" timeLoss="0.40" speed="20.66" entered="7" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="3.20" density="2.15" occupancy="0.61" waitingTime="0.00" timeLoss="0.08" speed="29.01" entered="0" left="4"/>
+        <edge id="-103227#1" sampledSeconds="20.68" density="3.35" occupancy="0.84" waitingTime="0.00" timeLoss="0.73" speed="27.90" entered="4" left="5"/>
+        <edge id="-103227#2" sampledSeconds="21.70" density="2.95" occupancy="0.74" waitingTime="0.00" timeLoss="0.51" speed="27.12" entered="4" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+    <interval begin="150.00" end="200.00" id="ed_stop">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#1" sampledSeconds="2.93" density="0.81" occupancy="0.22" waitingTime="0.00" timeLoss="1.60" speed="10.16" entered="0" left="1"/>
+        <edge id="-103224#2" sampledSeconds="8.58" density="1.48" occupancy="0.37" waitingTime="0.00" timeLoss="1.25" speed="19.92" entered="1" left="2"/>
+        <edge id="-103224#3" sampledSeconds="5.45" density="2.67" occupancy="0.67" waitingTime="0.00" timeLoss="0.12" speed="22.23" entered="2" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#2" sampledSeconds="4.60" density="0.62" occupancy="0.16" waitingTime="0.00" timeLoss="0.08" speed="32.02" entered="1" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+</meandata>

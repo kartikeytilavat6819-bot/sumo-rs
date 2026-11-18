@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" sigma="0.5"/>
+    <route id="rA" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <route id="rB" edges="-103227#0 -103227#1 -103227#2"/>
+    <flow id="fA" type="car" route="rA" begin="0" end="150" period="8" departSpeed="max"/>
+    <flow id="fB" type="car" route="rB" begin="0" end="150" period="12" departSpeed="max"/>
+    <vehicle id="s0" type="car" depart="5">
+        <route edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+        <stop lane="-103224#1_0" endPos="30" duration="60"/>
+    </vehicle>
+    <vehicle id="s1" type="car" depart="20">
+        <route edges="-103227#0 -103227#1 -103227#2"/>
+        <stop lane="-103227#1_0" endPos="40" duration="50"/>
+    </vehicle>
+</routes>

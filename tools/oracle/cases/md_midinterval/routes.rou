@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" sigma="0.5"/>
+    <route id="rA" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <flow id="fA" type="car" route="rA" begin="0" end="150" period="8" departSpeed="max"/>
+    <flow id="fMid" type="car" route="rA" begin="27" end="120" period="11" departSpeed="max"/>
+    <vehicle id="late" type="car" depart="63">
+        <route edges="-103224#1 -103224#2 -103224#3"/>
+    </vehicle>
+</routes>

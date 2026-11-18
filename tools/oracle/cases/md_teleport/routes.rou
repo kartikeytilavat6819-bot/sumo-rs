@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" sigma="0"/>
+    <route id="rB" edges="-103226#0 -103226#1"/>
+    <vehicle id="block" type="car" depart="0" departSpeed="max">
+        <route edges="-103226#0 -103226#1"/>
+        <stop lane="-103226#1_0" endPos="10" duration="1000"/>
+    </vehicle>
+    <flow id="fB" type="car" route="rB" begin="2" end="120" period="3" departSpeed="max"/>
+</routes>

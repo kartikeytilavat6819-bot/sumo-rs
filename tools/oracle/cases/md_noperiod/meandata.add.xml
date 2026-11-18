@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_np" begin="20" end="170" file="out_ed_np.xml"/>
+    <laneData id="ld_np" begin="20" end="170" file="out_ld_np.xml"/>
+</additional>

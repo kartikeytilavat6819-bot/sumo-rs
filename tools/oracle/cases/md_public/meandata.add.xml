@@ -1,0 +1,7 @@
+<additional>
+    <busStop id="bs0" lane="E1_1" startPos="40.00" endPos="60.00" lines="L1"/>
+    <busStop id="bs1" lane="E2_1" startPos="60.00" endPos="80.00" lines="L1"/>
+    <edgeData id="ed_pub" period="60" detectPersons="public" file="out_ed_pub.xml"/>
+    <edgeData id="ed_pubwalk" period="60" detectPersons="walk public" file="out_ed_pubwalk.xml"/>
+    <laneData id="ld_pub" period="60" detectPersons="public" file="out_ld_pub.xml"/>
+</additional>

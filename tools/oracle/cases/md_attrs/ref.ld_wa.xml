@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T23:56:57.954729-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_attrs/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_attrs/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_attrs/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_attrs/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_attrs/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_attrs/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="50.00" id="ld_wa">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" sampledSeconds="4.30" density="2.44" occupancy="2.92" speed="24.63"/>
+            <lane id="--103227#0_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" sampledSeconds="21.80" density="3.44" occupancy="4.03" speed="21.84"/>
+            <lane id="--103227#1_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" sampledSeconds="52.19" density="6.59" occupancy="6.04" speed="19.54"/>
+            <lane id="--103227#2_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" sampledSeconds="19.22" density="6.00" occupancy="3.14" speed="21.25"/>
+            <lane id="-103224#0_1" sampledSeconds="15.14" density="4.76" occupancy="2.48" speed="20.73"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" sampledSeconds="148.19" density="48.74" occupancy="24.38" speed="2.03"/>
+            <lane id="-103224#1_1" sampledSeconds="106.66" density="33.76" occupancy="17.27" speed="2.84"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" sampledSeconds="24.84" density="4.42" occupancy="2.13" speed="13.53"/>
+            <lane id="-103224#2_1" sampledSeconds="14.42" density="2.54" occupancy="1.24" speed="15.95"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" sampledSeconds="15.17" density="7.83" occupancy="3.67" speed="12.09"/>
+            <lane id="-103224#3_1" sampledSeconds="3.69" density="1.81" occupancy="0.91" speed="22.08"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" sampledSeconds="22.59" density="7.73" occupancy="4.19" speed="8.59"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" sampledSeconds="15.68" density="5.09" occupancy="2.48" speed="11.83"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" sampledSeconds="0.89" density="0.60" occupancy="0.34" speed="26.25"/>
+            <lane id="-103227#0_1" sampledSeconds="6.47" density="4.51" occupancy="2.51" speed="20.39"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" sampledSeconds="4.61" density="0.75" occupancy="0.37" speed="26.70"/>
+            <lane id="-103227#1_1" sampledSeconds="55.29" density="8.91" occupancy="6.92" speed="16.34"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" sampledSeconds="5.61" density="0.76" occupancy="0.38" speed="26.24"/>
+            <lane id="-103227#2_1" sampledSeconds="42.33" density="5.72" occupancy="4.20" speed="22.54"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" sampledSeconds="0.00"/>
+            <lane id="-103228_1" sampledSeconds="19.36" density="4.07" occupancy="5.83" speed="10.70"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" sampledSeconds="19.47" density="5.38" occupancy="2.91" speed="9.59"/>
+        </edge>
+    </interval>
+    <interval begin="50.00" end="100.00" id="ld_wa">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" sampledSeconds="7.18" density="4.32" occupancy="4.97" speed="23.17"/>
+            <lane id="--103227#0_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" sampledSeconds="25.07" density="3.79" occupancy="4.61" speed="22.54"/>
+            <lane id="--103227#1_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" sampledSeconds="52.22" density="6.68" occupancy="6.05" speed="20.88"/>
+            <lane id="--103227#2_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" sampledSeconds="25.26" density="7.85" occupancy="4.12" speed="19.22"/>
+            <lane id="-103224#0_1" sampledSeconds="11.08" density="3.39" occupancy="1.79" speed="19.08"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" sampledSeconds="228.26" density="73.51" occupancy="37.16" speed="1.65"/>
+            <lane id="-103224#1_1" sampledSeconds="252.43" density="82.35" occupancy="41.54" speed="1.03"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" sampledSeconds="35.87" density="6.29" occupancy="3.05" speed="14.38"/>
+            <lane id="-103224#2_1" sampledSeconds="19.16" density="3.40" occupancy="1.62" speed="14.50"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" sampledSeconds="19.42" density="9.81" occupancy="4.77" speed="15.22"/>
+            <lane id="-103224#3_1" sampledSeconds="3.81" density="1.87" occupancy="0.94" speed="21.38"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" sampledSeconds="21.87" density="6.62" occupancy="3.90" speed="7.28"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" sampledSeconds="18.87" density="6.07" occupancy="2.95" speed="12.09"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" sampledSeconds="2.73" density="1.83" occupancy="1.04" speed="25.57"/>
+            <lane id="-103227#0_1" sampledSeconds="5.84" density="3.61" occupancy="2.16" speed="13.24"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" sampledSeconds="17.66" density="2.86" occupancy="1.44" speed="20.92"/>
+            <lane id="-103227#1_1" sampledSeconds="47.72" density="7.76" occupancy="6.77" speed="13.93"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" sampledSeconds="60.78" density="8.35" occupancy="4.06" speed="17.29"/>
+            <lane id="-103227#2_1" sampledSeconds="29.51" density="4.02" occupancy="3.31" speed="22.77"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" sampledSeconds="0.00"/>
+            <lane id="-103228_1" sampledSeconds="16.39" density="2.99" occupancy="4.80" speed="8.42"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" sampledSeconds="14.97" density="4.05" occupancy="2.23" speed="8.31"/>
+        </edge>
+    </interval>
+    <interval begin="100.00" end="150.00" id="ld_wa">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" sampledSeconds="4.27" density="2.42" occupancy="2.90" speed="24.81"/>
+            <lane id="--103227#0_1" sampledSeconds="1.45" density="0.82" occupancy="0.98" speed="24.43"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" sampledSeconds="15.80" density="2.43" occupancy="2.91" speed="24.71"/>
+            <lane id="--103227#1_1" sampledSeconds="5.30" density="0.81" occupancy="0.98" speed="24.55"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" sampledSeconds="45.22" density="5.79" occupancy="4.86" speed="20.94"/>
+            <lane id="--103227#2_1" sampledSeconds="5.78" density="0.74" occupancy="0.93" speed="24.62"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" sampledSeconds="66.01" density="22.05" occupancy="11.15" speed="4.76"/>
+            <lane id="-103224#0_1" sampledSeconds="55.04" density="18.11" occupancy="9.25" speed="5.19"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" sampledSeconds="373.14" density="123.49" occupancy="61.70" speed="0.29"/>
+            <lane id="-103224#1_1" sampledSeconds="345.08" density="113.76" occupancy="57.00" speed="0.49"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" sampledSeconds="33.34" density="5.82" occupancy="2.84" speed="14.26"/>
+            <lane id="-103224#2_1" sampledSeconds="19.21" density="3.41" occupancy="1.68" speed="16.02"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" sampledSeconds="19.30" density="9.85" occupancy="4.66" speed="14.98"/>
+            <lane id="-103224#3_1" sampledSeconds="3.67" density="1.91" occupancy="0.93" speed="20.89"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" sampledSeconds="17.60" density="5.85" occupancy="3.23" speed="8.60"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" sampledSeconds="17.12" density="5.43" occupancy="2.70" speed="12.43"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" sampledSeconds="3.39" density="2.31" occupancy="1.30" speed="20.57"/>
+            <lane id="-103227#0_1" sampledSeconds="4.74" density="3.12" occupancy="1.80" speed="14.72"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" sampledSeconds="20.14" density="3.28" occupancy="1.64" speed="18.35"/>
+            <lane id="-103227#1_1" sampledSeconds="46.75" density="7.37" occupancy="6.51" speed="15.46"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" sampledSeconds="26.53" density="3.64" occupancy="1.82" speed="21.25"/>
+            <lane id="-103227#2_1" sampledSeconds="47.64" density="6.43" occupancy="5.29" speed="21.85"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" sampledSeconds="0.00"/>
+            <lane id="-103228_1" sampledSeconds="23.93" density="4.67" occupancy="7.17" speed="8.65"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" sampledSeconds="19.88" density="5.41" occupancy="2.95" speed="9.39"/>
+        </edge>
+    </interval>
+    <interval begin="150.00" end="200.00" id="ld_wa">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" sampledSeconds="5.48" density="3.30" occupancy="3.83" speed="24.37"/>
+            <lane id="--103227#0_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" sampledSeconds="23.50" density="3.64" occupancy="4.28" speed="22.66"/>
+            <lane id="--103227#1_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" sampledSeconds="53.39" density="6.74" occupancy="6.07" speed="19.61"/>
+            <lane id="--103227#2_1" sampledSeconds="0.00"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" sampledSeconds="264.01" density="89.84" occupancy="45.06" speed="0.52"/>
+            <lane id="-103224#0_1" sampledSeconds="237.32" density="80.13" occupancy="40.37" speed="0.78"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" sampledSeconds="385.51" density="127.36" occupancy="63.84" speed="0.25"/>
+            <lane id="-103224#1_1" sampledSeconds="379.16" density="124.89" occupancy="62.64" speed="0.36"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" sampledSeconds="34.42" density="6.07" occupancy="2.94" speed="13.92"/>
+            <lane id="-103224#2_1" sampledSeconds="15.40" density="2.71" occupancy="1.33" speed="15.98"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" sampledSeconds="19.27" density="9.69" occupancy="4.74" speed="14.19"/>
+            <lane id="-103224#3_1" sampledSeconds="3.84" density="1.89" occupancy="0.94" speed="21.21"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" sampledSeconds="18.71" density="6.62" occupancy="3.50" speed="10.36"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" sampledSeconds="14.31" density="4.62" occupancy="2.27" speed="13.01"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" sampledSeconds="2.70" density="1.82" occupancy="1.03" speed="25.83"/>
+            <lane id="-103227#0_1" sampledSeconds="9.94" density="6.31" occupancy="3.78" speed="7.01"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" sampledSeconds="24.37" density="4.00" occupancy="2.00" speed="18.70"/>
+            <lane id="-103227#1_1" sampledSeconds="53.90" density="8.62" occupancy="7.50" speed="13.91"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" sampledSeconds="22.80" density="3.12" occupancy="1.52" speed="20.32"/>
+            <lane id="-103227#2_1" sampledSeconds="35.13" density="4.74" occupancy="3.72" speed="21.32"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" sampledSeconds="0.00"/>
+            <lane id="-103228_1" sampledSeconds="19.19" density="3.52" occupancy="5.69" speed="7.19"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" sampledSeconds="13.46" density="3.71" occupancy="2.00" speed="9.25"/>
+        </edge>
+    </interval>
+</meandata>

@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_mid" period="50" trackVehicles="true" writeAttributes="sampledSeconds entered left speed waitingTime" file="out_ed_mid.xml"/>
+    <laneData id="ld_mid" period="50" trackVehicles="true" writeAttributes="sampledSeconds entered left" file="out_ld_mid.xml"/>
+</additional>

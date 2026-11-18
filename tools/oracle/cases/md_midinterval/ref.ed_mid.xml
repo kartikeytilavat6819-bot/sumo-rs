@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:19:43.971019-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_midinterval/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_midinterval/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_midinterval/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_midinterval/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_midinterval/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_midinterval/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="50.00" id="ed_mid">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="10.00" waitingTime="0.00" speed="20.71" entered="0" left="5"/>
+        <edge id="-103224#1" sampledSeconds="21.58" waitingTime="0.00" speed="13.28" entered="5" left="5"/>
+        <edge id="-103224#2" sampledSeconds="22.94" waitingTime="0.00" speed="17.50" entered="4" left="4"/>
+        <edge id="-103224#3" sampledSeconds="7.86" waitingTime="0.00" speed="20.74" entered="4" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+    <interval begin="50.00" end="100.00" id="ed_mid">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="2.00" waitingTime="0.00" speed="20.59" entered="0" left="1"/>
+        <edge id="-103224#1" sampledSeconds="4.00" waitingTime="0.00" speed="13.04" entered="0" left="1"/>
+        <edge id="-103224#2" sampledSeconds="11.90" waitingTime="0.00" speed="17.04" entered="2" left="2"/>
+        <edge id="-103224#3" sampledSeconds="3.82" waitingTime="0.00" speed="21.33" entered="2" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+    <interval begin="100.00" end="150.00" id="ed_mid">
+        <edge id="--103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="--103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103224#3" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103226#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#0" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#1" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103227#2" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103228" sampledSeconds="0.00" entered="0" left="0"/>
+        <edge id="-103230" sampledSeconds="0.00" entered="0" left="0"/>
+    </interval>
+</meandata>

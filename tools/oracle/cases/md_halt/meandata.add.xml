@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_halt" period="50" haltingSpeedThreshold="5" writeAttributes="waitingTime sampledSeconds speed timeLoss" file="out_ed_halt.xml"/>
+    <edgeData id="ed_haltrel" period="50" haltingSpeedThresholdRel="0.8" writeAttributes="waitingTime sampledSeconds speed" file="out_ed_haltrel.xml"/>
+</additional>

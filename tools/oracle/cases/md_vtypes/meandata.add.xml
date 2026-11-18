@@ -1,0 +1,5 @@
+<additional>
+    <edgeData id="ed_vt_car" period="50" vTypes="car" writeAttributes="sampledSeconds speed density entered left" file="out_ed_vt_car.xml"/>
+    <edgeData id="ed_vt_truck" period="50" vTypes="truck" writeAttributes="sampledSeconds speed entered left" file="out_ed_vt_truck.xml"/>
+    <edgeData id="ed_vt_both" period="50" vTypes="car truck" trackVehicles="true" writeAttributes="sampledSeconds speed" file="out_ed_vt_both.xml"/>
+</additional>
