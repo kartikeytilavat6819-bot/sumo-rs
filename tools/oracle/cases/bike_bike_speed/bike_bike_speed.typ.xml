@@ -1,0 +1,4 @@
+<types>
+    <type id="carroad" allow="passenger" speed="13.89" numLanes="1"/>
+    <type id="bikeway" allow="bicycle" speed="5.00" numLanes="1"/>
+</types>

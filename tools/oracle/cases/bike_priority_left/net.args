@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/bike_priority_left/bike_priority_left.nod.xml --edge-files tools/oracle/cases/bike_priority_left/bike_priority_left.edg.xml --connection-files tools/oracle/cases/bike_priority_left/bike_priority_left.con.xml

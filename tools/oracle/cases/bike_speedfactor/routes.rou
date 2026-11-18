@@ -1,0 +1,14 @@
+<routes>
+    <vType id="bike_fast" vClass="bicycle" length="1.80" width="0.60" maxSpeed="8.00" accel="1.50" decel="3.00" speedFactor="1.30" speedDev="0.05"/>
+    <vType id="bike_slow" vClass="bicycle" length="1.80" width="0.60" maxSpeed="8.00" accel="1.50" decel="3.00" speedFactor="0.70" speedDev="0.15"/>
+    <vType id="bike_dev" vClass="bicycle" length="1.80" width="0.60" maxSpeed="8.00" accel="1.50" decel="3.00" speedFactor="1.00" speedDev="0.30"/>
+    <vType id="bike_def" vClass="bicycle" length="1.80" width="0.60" maxSpeed="8.00" accel="1.50" decel="3.00"/>
+    <vehicle id="bf0" type="bike_fast" depart="0.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bs0" type="bike_slow" depart="0.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bd0" type="bike_dev" depart="2.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bz0" type="bike_def" depart="2.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bf1" type="bike_fast" depart="4.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bs1" type="bike_slow" depart="4.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bd1" type="bike_dev" depart="6.00" departSpeed="max"><route edges="E0"/></vehicle>
+    <vehicle id="bz1" type="bike_def" depart="6.00" departSpeed="max"><route edges="E0"/></vehicle>
+</routes>
