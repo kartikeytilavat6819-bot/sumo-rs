@@ -625,7 +625,6 @@ impl MSDevice_Vehroutes {
         }
         internals.push(to_string(&self.myDepartSpeed));
         internals.push(to_string(&self.myDepartPos));
-        internals.push(to_string(&self.myInitialCost));
         internals.push(to_string(&self.myReplacedRoutes.len()));
         for r in &self.myReplacedRoutes {
             let replacedOnEdge = if r.edge.is_null() { "!NULL".to_string() } else { r.edge.get_id().to_string() };
@@ -704,7 +703,6 @@ impl MSDevice_Vehroutes {
         }
         self.myDepartSpeed = next_as(&mut bis);
         self.myDepartPos = next_as(&mut bis);
-        self.myInitialCost = next_as(&mut bis);
         let size: i32 = next_as(&mut bis);
         for _ in 0..size {
             let edgeID = next_str(&mut bis);
