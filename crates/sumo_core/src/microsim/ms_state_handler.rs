@@ -214,9 +214,7 @@ impl MSStateHandler {
         attrs.insert(SUMO_ATTR_VERSION, STATE_VERSION_STRING.to_string());
         attrs.insert(SUMO_ATTR_TIME, time2string(step));
         attrs.insert(SUMO_ATTR_TYPE, if use_meso_sim() { "meso".to_string() } else { "micro".to_string() });
-        if use_meso_sim() {
-            attrs.insert(SUMO_ATTR_COUNT, MELoop::get_event_counter().to_string());
-        }
+        // 1.28.0 C++ does not write SUMO_ATTR_COUNT (the pasted comment block above is from another version).
         if utils::options::options_cont::get_bool("save-state.constraints") {
             attrs.insert(SUMO_ATTR_CONSTRAINTS, "1".to_string());
         }
