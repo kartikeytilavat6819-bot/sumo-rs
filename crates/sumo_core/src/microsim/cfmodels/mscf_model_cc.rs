@@ -7,6 +7,16 @@ use super::cc_vehicle_variables::*;
 use super::mscf_model_krauss::MSCFModel_Krauss;
 use utils::common::time::{accel2speed, speed2accel, ts};
 
+/// C++ assigns an arbitrary int to enum Plexe::ACTIVE_CONTROLLER, so the raw value is stored.
+/// These are the only values that match a switch case in C++; any other value hits `default`.
+const AC_DRIVER: i32 = ACTIVE_CONTROLLER::DRIVER as i32;
+const AC_ACC: i32 = ACTIVE_CONTROLLER::ACC as i32;
+const AC_CACC: i32 = ACTIVE_CONTROLLER::CACC as i32;
+const AC_FAKED_CACC: i32 = ACTIVE_CONTROLLER::FAKED_CACC as i32;
+const AC_PLOEG: i32 = ACTIVE_CONTROLLER::PLOEG as i32;
+const AC_CONSENSUS: i32 = ACTIVE_CONTROLLER::CONSENSUS as i32;
+const AC_FLATBED: i32 = ACTIVE_CONTROLLER::FLATBED as i32;
+
 /// A set of automatic Cruise Controllers, including classic Cruise Control (CC), Adaptive Cruise Control (ACC) and Cooperative Adaptive Cruise Control (CACC). Take as references the chapters 5, 6 and 7 of the Rajamani's book "Vehicle dynamics and control" (2011). This model is meant to be used for simulation of platooning systems in mixed scenarios, so with automatic and driver controlled vehicles. The platooning manager is a distributed application implemented for veins (so for omnet++) supported by a 802.11p based communication protocol, which will determine the actions to be performed (such as switching on the automatic controller, or the lane to move to) and communicate them to this car following models via TraCI
 /// C++ class `MSCFModel_CC` (microsim/cfmodels/MSCFModel_CC.h)
 #[repr(C)]
@@ -249,12 +259,14 @@ impl MSCFModel_CC {
 
         let tolerance = 0.8;
         match vars.activeController {
-            ACTIVE_CONTROLLER::CACC | ACTIVE_CONTROLLER::FAKED_CACC => vars.caccSpacing * tolerance,
-            ACTIVE_CONTROLLER::ACC => (vars.accHeadwayTime * speed + 2.) * tolerance,
-            ACTIVE_CONTROLLER::PLOEG => (vars.ploegH * speed + 2.) * tolerance,
-            ACTIVE_CONTROLLER::CONSENSUS => self.d_i_j(Ptr::from_raw(vars.vehicles.as_ptr() as *mut VEHICLE_DATA), vars.h, 1, 0) * tolerance,
-            ACTIVE_CONTROLLER::FLATBED => (vars.flatbedD - vars.flatbedH * (speed - leaderSpeed)) * tolerance,
-            ACTIVE_CONTROLLER::DRIVER => self.myHumanDriver.get_secure_gap(veh, arg1, speed, leaderSpeed, leaderMaxDecel),
+            AC_CACC | AC_FAKED_CACC => vars.caccSpacing * tolerance,
+            AC_ACC => (vars.accHeadwayTime * speed + 2.) * tolerance,
+            AC_PLOEG => (vars.ploegH * speed + 2.) * tolerance,
+            AC_CONSENSUS => self.d_i_j(Ptr::from_raw(vars.vehicles.as_ptr() as *mut VEHICLE_DATA), vars.h, 1, 0) * tolerance,
+            AC_FLATBED => (vars.flatbedD - vars.flatbedH * (speed - leaderSpeed)) * tolerance,
+            AC_DRIVER => self.myHumanDriver.get_secure_gap(veh, arg1, speed, leaderSpeed, leaderMaxDecel),
+            // default: throw InvalidArgument("Unsupported activeController" + toString(vars->activeController))
+            _ => panic!("Unsupported activeController{}", vars.activeController),
         }
     }
 
@@ -329,7 +341,7 @@ impl MSCFModel_CC {
             }
         }
 
-        if vars.activeController != ACTIVE_CONTROLLER::DRIVER && vars.useFixedAcceleration == 0 {
+        if vars.activeController != AC_DRIVER && vars.useFixedAcceleration == 0 {
             veh.m().set_chosen_speed_factor(vars.ccDesiredSpeed / veh.get_lane().get_speed_limit());
         }
 
@@ -341,7 +353,7 @@ impl MSCFModel_CC {
             self.perform_auto_lane_change(veh);
         }
 
-        if vars.activeController != ACTIVE_CONTROLLER::DRIVER {
+        if vars.activeController != AC_DRIVER {
             controllerAcceleration = speed2accel(vPos - veh.get_speed());
             // std::min(a, b) == (b < a ? b : a); std::max(a, b) == (a < b ? b : a)
             let lower = if vars.uMin < controllerAcceleration { controllerAcceleration } else { vars.uMin };
@@ -375,7 +387,7 @@ impl MSCFModel_CC {
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
 
-        if vars.activeController != ACTIVE_CONTROLLER::DRIVER {
+        if vars.activeController != AC_DRIVER {
             self.v(veh, gap2pred, speed, predSpeed)
         } else {
             self.myHumanDriver.follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
@@ -405,7 +417,7 @@ impl MSCFModel_CC {
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
-        if vars.activeController != ACTIVE_CONTROLLER::DRIVER {
+        if vars.activeController != AC_DRIVER {
             let mut gap2pred = gap2pred;
             let mut relSpeed = 0.;
             self.get_radar_measurements(veh, &mut gap2pred, &mut relSpeed);
@@ -436,7 +448,7 @@ impl MSCFModel_CC {
     #[allow(unused_variables)]
     pub fn free_speed(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
-        if vars.activeController != ACTIVE_CONTROLLER::DRIVER {
+        if vars.activeController != AC_DRIVER {
             let mut gap2pred = 0.;
             let mut relSpeed = 0.;
             self.get_radar_measurements(veh, &mut gap2pred, &mut relSpeed);
@@ -506,7 +518,7 @@ impl MSCFModel_CC {
     #[allow(unused_variables)]
     pub fn interaction_gap(&self, arg0: Ptr<MSVehicle>, vL: f64) -> f64 {
         let vars = Ptr::from_raw(arg0.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
-        if vars.activeController != ACTIVE_CONTROLLER::DRIVER {
+        if vars.activeController != AC_DRIVER {
             //maximum radar range is CC is enabled
             250.
         } else {
@@ -736,7 +748,7 @@ impl MSCFModel_CC {
             return buf.str();
         }
         if key == PAR_ACTIVE_CONTROLLER {
-            buf.shl_op(vars.activeController as i32);
+            buf.shl_op(vars.activeController);
             return buf.str();
         }
         if key == PAR_ACC_HEADWAY_TIME {
@@ -1324,20 +1336,8 @@ impl MSCFModel_CC {
             return Ok(());
         }
         if key == PAR_ACTIVE_CONTROLLER {
-            // shortcut: C++ casts any int to the enum; only the seven known controllers exist here, other values keep the current one
-            let controller = match to_i(value)? {
-                0 => Some(ACTIVE_CONTROLLER::DRIVER),
-                1 => Some(ACTIVE_CONTROLLER::ACC),
-                2 => Some(ACTIVE_CONTROLLER::CACC),
-                3 => Some(ACTIVE_CONTROLLER::FAKED_CACC),
-                4 => Some(ACTIVE_CONTROLLER::PLOEG),
-                5 => Some(ACTIVE_CONTROLLER::CONSENSUS),
-                6 => Some(ACTIVE_CONTROLLER::FLATBED),
-                _ => None,
-            };
-            if let Some(controller) = controller {
-                vars.m().activeController = controller;
-            }
+            // C++: vars->activeController = (enum Plexe::ACTIVE_CONTROLLER) StringUtils::toInt(value.c_str());
+            vars.m().activeController = to_i(value)?;
             return Ok(());
         }
         if key == PAR_ACC_HEADWAY_TIME {
@@ -1419,7 +1419,7 @@ impl MSCFModel_CC {
     pub fn switch_on_acc(&self, veh: Ptr<MSVehicle>, ccDesiredSpeed: f64) {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
         vars.m().ccDesiredSpeed = ccDesiredSpeed;
-        vars.m().activeController = ACTIVE_CONTROLLER::ACC;
+        vars.m().activeController = AC_ACC;
     }
 
     /// C++: `enum Plexe::ACTIVE_CONTROLLER MSCFModel_CC::getActiveController(const MSVehicle *) const` [const]
@@ -1429,7 +1429,7 @@ impl MSCFModel_CC {
     //     return vars->activeController;
     // }
     #[allow(unused_variables)]
-    pub fn get_active_controller(&self, veh: Ptr<MSVehicle>) -> ACTIVE_CONTROLLER {
+    pub fn get_active_controller(&self, veh: Ptr<MSVehicle>) -> i32 {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
         vars.activeController
     }
@@ -2059,9 +2059,9 @@ impl MSCFModel_CC {
                 vars.m().frontVehicle = Ptr::null();
             }
         }
-        if vars.activeController == ACTIVE_CONTROLLER::DRIVER || vars.useFixedAcceleration == 0 {
+        if vars.activeController == AC_DRIVER || vars.useFixedAcceleration == 0 {
             match vars.activeController {
-                ACTIVE_CONTROLLER::ACC => {
+                AC_ACC => {
                     ccAcceleration = self.cc(veh, egoSpeed, vars.ccDesiredSpeed);
                     accAcceleration = self.acc(veh, egoSpeed, predSpeed, gap2pred, vars.accHeadwayTime);
                     if gap2pred > 250. || ccAcceleration < accAcceleration {
@@ -2070,7 +2070,7 @@ impl MSCFModel_CC {
                         controllerAcceleration = accAcceleration;
                     }
                 }
-                ACTIVE_CONTROLLER::CACC => {
+                AC_CACC => {
                     if vars.autoFeed {
                         self.get_vehicle_information(vars.leaderVehicle, &mut vars.m().leaderSpeed, &mut vars.m().leaderAcceleration, &mut vars.m().leaderControllerAcceleration, &mut pos, &mut time);
                         self.get_vehicle_information(vars.frontVehicle, &mut vars.m().frontSpeed, &mut vars.m().frontAcceleration, &mut vars.m().frontControllerAcceleration, &mut pos, &mut time);
@@ -2096,7 +2096,7 @@ impl MSCFModel_CC {
                         controllerAcceleration = 0.;
                     }
                 }
-                ACTIVE_CONTROLLER::FAKED_CACC => {
+                AC_FAKED_CACC => {
                     if vars.autoFeed {
                         self.get_vehicle_information(vars.leaderVehicle, &mut vars.m().fakeData.leaderSpeed, &mut vars.m().fakeData.leaderAcceleration, &mut vars.m().fakeData.leaderControllerAcceleration, &mut pos, &mut time);
                         self.get_vehicle_information(vars.frontVehicle, &mut vars.m().fakeData.frontSpeed, &mut vars.m().fakeData.frontAcceleration, &mut vars.m().fakeData.frontControllerAcceleration, &mut pos, &mut time);
@@ -2117,7 +2117,7 @@ impl MSCFModel_CC {
                     // std::min(a, b) is (b < a) ? b : a
                     controllerAcceleration = if caccAcceleration < ccAcceleration { caccAcceleration } else { ccAcceleration };
                 }
-                ACTIVE_CONTROLLER::PLOEG => {
+                AC_PLOEG => {
                     if vars.autoFeed {
                         self.get_vehicle_information(vars.frontVehicle, &mut vars.m().frontSpeed, &mut vars.m().frontAcceleration, &mut vars.m().frontControllerAcceleration, &mut pos, &mut time);
                     }
@@ -2134,10 +2134,10 @@ impl MSCFModel_CC {
                         controllerAcceleration = 0.;
                     }
                 }
-                ACTIVE_CONTROLLER::CONSENSUS => {
+                AC_CONSENSUS => {
                     controllerAcceleration = self.consensus(veh, egoSpeed, veh.get_position(0.), currentTime);
                 }
-                ACTIVE_CONTROLLER::FLATBED => {
+                AC_FLATBED => {
                     if vars.autoFeed {
                         self.get_vehicle_information(vars.leaderVehicle, &mut vars.m().leaderSpeed, &mut vars.m().leaderAcceleration, &mut vars.m().leaderControllerAcceleration, &mut pos, &mut time);
                         self.get_vehicle_information(vars.frontVehicle, &mut vars.m().frontSpeed, &mut vars.m().frontAcceleration, &mut vars.m().frontControllerAcceleration, &mut pos, &mut time);
@@ -2156,8 +2156,13 @@ impl MSCFModel_CC {
                         controllerAcceleration = 0.;
                     }
                 }
-                ACTIVE_CONTROLLER::DRIVER => {
+                AC_DRIVER => {
                     eprint!("Switching to normal driver behavior still not implemented in MSCFModel_CC\n");
+                    debug_assert!(false);
+                }
+                // default: std::cerr << "Invalid controller selected in MSCFModel_CC\n"; assert(false); break;
+                _ => {
+                    eprint!("Invalid controller selected in MSCFModel_CC\n");
                     debug_assert!(false);
                 }
             }
