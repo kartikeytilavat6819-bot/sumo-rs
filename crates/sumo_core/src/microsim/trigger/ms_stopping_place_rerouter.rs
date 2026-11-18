@@ -95,6 +95,12 @@ pub struct MSStoppingPlaceRerouterVt {
     pub saw_blocked_stopping_place: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, Ptr<MSStoppingPlace>, bool) -> SUMOTime,
     pub get_number_stopping_place_reroutes: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle) -> i32,
     pub set_number_stopping_place_reroutes: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, i32),
+    pub evaluate_custom_components: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, f64, bool, Ptr<MSStoppingPlace>, f64, f64, &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, &mut ConstMSEdgeVector, &mut ConstMSEdgeVector, &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool,
+    pub valid_component_values: fn(&mut MSStoppingPlaceRerouter, &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool,
+    pub use_stopping_place: fn(&mut MSStoppingPlaceRerouter, Ptr<MSStoppingPlace>) -> bool,
+    pub collect_weights: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle) -> MSStoppingPlaceRerouter_StoppingPlaceParamMap_t,
+    /// C++ virtual `getRouter`; returns a raw pointer because the router is owned by MSNet/MSRoutingEngine.
+    pub get_router: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, &SUMOAbstractRouter_Prohibitions) -> Ptr<SUMOAbstractRouter<MSEdge, SUMOVehicle>>,
 }
 
 fn base_get_stopping_place_occupancy(_this: &mut MSStoppingPlaceRerouter, _stoppingPlace: Ptr<MSStoppingPlace>, _veh: Ptr<SUMOVehicle>) -> f64 {
@@ -136,6 +142,11 @@ static MS_STOPPING_PLACE_REROUTER_BASE_VT: MSStoppingPlaceRerouterVt = MSStoppin
     saw_blocked_stopping_place: base_saw_blocked_stopping_place,
     get_number_stopping_place_reroutes: base_get_number_stopping_place_reroutes,
     set_number_stopping_place_reroutes: base_set_number_stopping_place_reroutes,
+    evaluate_custom_components: MSStoppingPlaceRerouter::evaluate_custom_components_base,
+    valid_component_values: MSStoppingPlaceRerouter::valid_component_values_base,
+    use_stopping_place: MSStoppingPlaceRerouter::use_stopping_place_base,
+    collect_weights: MSStoppingPlaceRerouter::collect_weights_base,
+    get_router: MSStoppingPlaceRerouter::get_router_base,
 };
 
 /// C++ class `MSStoppingPlaceRerouter` (microsim/trigger/MSStoppingPlaceRerouter.h)
@@ -621,7 +632,7 @@ impl MSStoppingPlaceRerouter {
 
             // a map stores elegible stopping places
             let mut stoppingPlaces: MSStoppingPlaceRerouter_StoppingPlaceMap_t = BTreeMap::new();
-            let router = Ptr::from_mut(self.get_router(vp.m(), closedEdges));
+            let router = self.get_router(vp.m(), closedEdges);
             let brakeGap = vp.get_brake_gap(false);
 
             if !onTheWay.is_null() {
@@ -1077,8 +1088,13 @@ impl MSStoppingPlaceRerouter {
     //         StoppingPlaceParamMap_t& /*maxValues*/, StoppingPlaceParamMap_t& /*addInput*/) {
     //     return true;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `evaluateCustomComponents`: dispatches to the derived table
     pub fn evaluate_custom_components(&mut self, veh: &mut SUMOVehicle, brakeGap: f64, newDestination: bool, alternative: Ptr<MSStoppingPlace>, occupancy: f64, prob: f64, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, newRoute: &mut ConstMSEdgeVector, stoppingPlaceApproach: &mut ConstMSEdgeVector, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, addInput: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
+        (self.vt.evaluate_custom_components)(self, veh, brakeGap, newDestination, alternative, occupancy, prob, router, stoppingPlaceValues, newRoute, stoppingPlaceApproach, maxValues, addInput)
+    }
+
+    #[allow(unused_variables)]
+    pub fn evaluate_custom_components_base(&mut self, veh: &mut SUMOVehicle, brakeGap: f64, newDestination: bool, alternative: Ptr<MSStoppingPlace>, occupancy: f64, prob: f64, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, newRoute: &mut ConstMSEdgeVector, stoppingPlaceApproach: &mut ConstMSEdgeVector, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, addInput: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
         true
     }
 
@@ -1088,8 +1104,13 @@ impl MSStoppingPlaceRerouter {
     // MSStoppingPlaceRerouter::validComponentValues(StoppingPlaceParamMap_t& /* stoppingPlaceValues */) {
     //     return true;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `validComponentValues`: dispatches to the derived table
     pub fn valid_component_values(&mut self, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
+        (self.vt.valid_component_values)(self, stoppingPlaceValues)
+    }
+
+    #[allow(unused_variables)]
+    pub fn valid_component_values_base(&mut self, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
         true
     }
 
@@ -1099,8 +1120,13 @@ impl MSStoppingPlaceRerouter {
     // MSStoppingPlaceRerouter::useStoppingPlace(MSStoppingPlace* /* stoppingPlace */) {
     //     return true;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `useStoppingPlace`: dispatches to the derived table
     pub fn use_stopping_place(&mut self, stoppingPlace: Ptr<MSStoppingPlace>) -> bool {
+        (self.vt.use_stopping_place)(self, stoppingPlace)
+    }
+
+    #[allow(unused_variables)]
+    pub fn use_stopping_place_base(&mut self, stoppingPlace: Ptr<MSStoppingPlace>) -> bool {
         true
     }
 
@@ -1110,9 +1136,14 @@ impl MSStoppingPlaceRerouter {
     // MSStoppingPlaceRerouter::getRouter(SUMOVehicle& veh, const Prohibitions& prohibited) {
     //     return MSNet::getInstance()->getRouterTT(veh.getRNGIndex(), prohibited);
     // }
+    /// C++ virtual `getRouter`: dispatches to the derived table (MSDevice_StationFinder uses MSRoutingEngine).
+    pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> Ptr<SUMOAbstractRouter<MSEdge, SUMOVehicle>> {
+        (self.vt.get_router)(self, veh, prohibited)
+    }
+
     #[allow(unused_variables)]
-    pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        MSNet::get_instance().get().unwrap().get_router_tt(veh.get_rng_index(), prohibited)
+    pub fn get_router_base(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> Ptr<SUMOAbstractRouter<MSEdge, SUMOVehicle>> {
+        Ptr::from_mut(MSNet::get_instance().get().unwrap().get_router_tt(veh.get_rng_index(), prohibited))
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]
@@ -1190,8 +1221,13 @@ impl MSStoppingPlaceRerouter {
     /// C++: `StoppingPlaceParamMap_t MSStoppingPlaceRerouter::collectWeights(SUMOVehicle &)` [virtual]
     /// read target function weights for this vehicle
     // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
+    /// C++ virtual `collectWeights`: dispatches to the derived table
     pub fn collect_weights(&mut self, veh: &mut SUMOVehicle) -> MSStoppingPlaceRerouter_StoppingPlaceParamMap_t {
+        (self.vt.collect_weights)(self, veh)
+    }
+
+    #[allow(unused_variables)]
+    pub fn collect_weights_base(&mut self, veh: &mut SUMOVehicle) -> MSStoppingPlaceRerouter_StoppingPlaceParamMap_t {
         let mut result: ParamMap = BTreeMap::new();
         let d = *param_mut(&mut self.myEvalParams, "distanceto");
         let w = self.get_weight(veh, "distance.weight".to_string(), d, false);

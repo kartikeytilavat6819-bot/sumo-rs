@@ -201,4 +201,12 @@ impl METypeHandler {
 
 impl utils::xml::generic_sax_handler::SaxHandler for METypeHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        METypeHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        METypeHandler::my_end_element(self, element);
+        Ok(())
+    }
 }

@@ -118,6 +118,10 @@ pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTr
     decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
     can_release: super::ms_traffic_light_logic::default_can_release,
     compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
+    get_min_dur: MSTrafficLightLogic::get_min_dur_base,
+    get_max_dur: MSTrafficLightLogic::get_max_dur_base,
+    get_earliest_end: MSTrafficLightLogic::get_earliest_end_base,
+    get_latest_end: MSTrafficLightLogic::get_latest_end_base,
 };
 
 impl MSSimpleTrafficLightLogic {
@@ -692,9 +696,9 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_earliest(&self, prevStart: SUMOTime) -> SUMOTime {
-        // phase end times are read from this subclass (the C++ getEarliestEnd/getMinDur/... calls are virtual-free here)
+        // C++ getEarliestEnd/getMinDur/etc. are virtual: actuated TLS evaluates conditions here
         let now = MSNet::get_instance().get_current_time_step();
-        let mut earliest = self.get_current_phase_def().earliestEnd;
+        let mut earliest = self.get_earliest_end(-1);
         if earliest == UNSPECIFIED_DURATION {
             return 0;
         } else {
@@ -704,9 +708,9 @@ impl MSSimpleTrafficLightLogic {
                 // it should not end a second time in the same cycle
                 earliest += self.base.myDefaultCycleTime;
             } else {
-                let latest = self.get_current_phase_def().latestEnd;
+                let latest = self.get_latest_end(-1);
                 if latest != UNSPECIFIED_DURATION {
-                    let minRemaining = self.get_current_phase_def().minDuration - (now - self.get_current_phase_def().myLastSwitch);
+                    let minRemaining = self.get_min_dur(-1) - (now - self.get_current_phase_def().myLastSwitch);
                     let minEnd = timeInCycle + minRemaining;
                     if latest > earliest && latest < minEnd {
                         // cannot terminate phase between earliest and latest -> move end into next cycle
@@ -717,7 +721,7 @@ impl MSSimpleTrafficLightLogic {
                     }
                 }
             }
-            let maxRemaining = self.get_current_phase_def().maxDuration - (now - self.get_current_phase_def().myLastSwitch);
+            let maxRemaining = self.get_max_dur(-1) - (now - self.get_current_phase_def().myLastSwitch);
             std::cmp::min(earliest - timeInCycle, maxRemaining)
         }
     }
@@ -753,12 +757,12 @@ impl MSSimpleTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn get_latest(&self) -> SUMOTime {
         let now = MSNet::get_instance().get_current_time_step();
-        let latest = self.get_current_phase_def().latestEnd;
+        let latest = self.get_latest_end(-1);
         if latest == UNSPECIFIED_DURATION {
             return SUMOTIME_MAX; // no restriction
         } else {
             let timeInCycle = self.map_time_in_cycle(now);
-            if latest < self.get_current_phase_def().earliestEnd {
+            if latest < self.get_earliest_end(-1) {
                 let running = now - self.get_current_phase_def().myLastSwitch;
                 if running < timeInCycle {
                     // phase was started in the current cycle so the restriction does not apply yet

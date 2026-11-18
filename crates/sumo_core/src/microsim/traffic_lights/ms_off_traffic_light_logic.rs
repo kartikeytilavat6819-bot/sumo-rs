@@ -89,6 +89,7 @@ static MS_OFF_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogi
     decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
     can_release: super::ms_traffic_light_logic::default_can_release,
     compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
+    ..super::ms_traffic_light_logic::DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT
 };
 
 impl MSOffTrafficLightLogic {

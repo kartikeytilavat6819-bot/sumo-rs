@@ -17,6 +17,20 @@ fn rail_crossing_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value
     Ptr::from_mut(l).cast::<MSRailCrossing>().m().set_parameter(key, value)
 }
 
+// C++ MSRailCrossing overrides these four MSTrafficLightLogic virtuals to return 0 / do nothing.
+fn rail_crossing_get_phase_index_at_time(l: &MSTrafficLightLogic, simStep: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSRailCrossing>().get().unwrap().get_phase_index_at_time(simStep)
+}
+fn rail_crossing_get_offset_from_index(l: &MSTrafficLightLogic, index: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSRailCrossing>().get().unwrap().get_offset_from_index(index)
+}
+fn rail_crossing_get_index_from_offset(l: &MSTrafficLightLogic, offset: SUMOTime) -> i32 {
+    Ptr::new(l).cast::<MSRailCrossing>().get().unwrap().get_index_from_offset(offset)
+}
+fn rail_crossing_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+
 static MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
     get_parameter: super::ms_simple_traffic_light_logic::simple_ext_get_parameter,
     set_parameter: rail_crossing_ext_set_parameter,
@@ -27,6 +41,10 @@ static MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTraffi
     try_switch: rail_crossing_try_switch,
     init: rail_crossing_init,
     add_link: rail_crossing_add_link,
+    get_phase_index_at_time: rail_crossing_get_phase_index_at_time,
+    get_offset_from_index: rail_crossing_get_offset_from_index,
+    get_index_from_offset: rail_crossing_get_index_from_offset,
+    change_step_and_duration: rail_crossing_change_step_and_duration,
     ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
 };
 

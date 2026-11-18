@@ -26,6 +26,33 @@ impl std::ops::DerefMut for MELSegment {
     }
 }
 
+/// C++ MELSegment overrides of the MESegment virtuals; the base is the first field, so a plain
+/// pointer cast recovers the derived object from the `&MESegment` the vtable receives.
+fn mel_of(s: &mut MESegment) -> &mut MELSegment {
+    unsafe { &mut *(s as *mut MESegment as *mut MELSegment) }
+}
+fn mel_of_ref(s: &MESegment) -> &MELSegment {
+    unsafe { &*(s as *const MESegment as *const MELSegment) }
+}
+fn mel_send(s: &mut MESegment, veh: Ptr<MEVehicle>, next: Ptr<MESegment>, nextQIdx: i32, time: SUMOTime, reason: MSMoveReminder_Notification) {
+    mel_of(s).send(veh, next, nextQIdx, time, reason)
+}
+fn mel_update_entry_block_time(s: &mut MESegment, time: SUMOTime) {
+    mel_of(s).update_entry_block_time(time)
+}
+fn mel_compute_headway(s: &MESegment, q: &mut MESegment_Queue, qNext: &MESegment_Queue, next: Ptr<MESegment>, veh: Ptr<MEVehicle>) -> SUMOTime {
+    mel_of_ref(s).compute_headway(q, qNext, next, veh)
+}
+fn mel_has_space_for_insertion(s: &MESegment, q: &MESegment_Queue, qIdx: i32, newOccupancy: f64, entryTime: SUMOTime) -> bool {
+    mel_of_ref(s).has_space_for_insertion(q, qIdx, newOccupancy, entryTime)
+}
+static MEL_SEGMENT_VT: MESegmentVt = MESegmentVt {
+    send: mel_send,
+    update_entry_block_time: mel_update_entry_block_time,
+    compute_headway: mel_compute_headway,
+    has_space_for_insertion: mel_has_space_for_insertion,
+};
+
 /// C++ macro `DEFAULT_VEH_LENGTH_WITH_GAP` (mesosim/MELSegment.cpp)
 fn default_veh_length_with_gap() -> f64 {
     let d = SUMOVTypeParameter::get_default();
@@ -46,7 +73,8 @@ impl MELSegment {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, parent: &MSEdge, next: Ptr<MESegment>, length: f64, speed: f64, idx: i32, multiQueue: bool, edgeType: &MESegment_MesoEdgeType) -> Self {
-        let base = MESegment::new(id, parent, next, length, speed, idx, multiQueue, edgeType);
+        let mut base = MESegment::new(id, parent, next, length, speed, idx, multiQueue, edgeType);
+        base.vt = &MEL_SEGMENT_VT;
         let myGapTimes = vec![Vec::new(); base.myQueues.len()];
         MELSegment { base, myGapTimes }
     }
@@ -68,7 +96,8 @@ impl MELSegment {
         let tau = if veh.get_queuing_time_loss() > 0 { self.myTau_jj } else { self.myTau_ff };
         let gapTime = time + (self.myLength * (tau as f64) / default_veh_length_with_gap()) as SUMOTime;
         self.myGapTimes[qIdx].insert(0, gapTime);
-        self.base.send(veh, next, nextQIdx, time, reason);
+        // C++ calls MESegment::send non-virtually here; its internal computeHeadway still dispatches
+        self.base.send_base(veh, next, nextQIdx, time, reason);
     }
 
     /// C++: `void MELSegment::updateEntryBlockTime(SUMOTime)` [virtual]
