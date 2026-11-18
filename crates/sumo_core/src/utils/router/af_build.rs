@@ -1,7 +1,15 @@
 //! Port of utils/router/AFBuild.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
+use crate::utils::router::sumo_abstract_router::{SUMOAbstractRouter, SUMOAbstractRouter_TypedOperation};
+
+/// C++ `UNREACHABLE` (as used by AFRouter / AFBuild)
+const UNREACHABLE: f64 = f64::MAX / 1000.0;
+
+/// C++ `SUMOAbstractRouter<FlippedEdge<E, N, V>, V>::Operation`: the travel-time operation on the
+/// backward graph (a plain function pointer, not the untyped logging placeholder).
+pub type AFBuild_FlippedOperation<E, N, V> = SUMOAbstractRouter_TypedOperation<FlippedEdge<E, N, V>, V>;
 
 /// C++ typedef `typename AFInfo<FlippedEdge<E, N, V>>::ArcInfo AFBuild::ArcInfo`
 pub type AFBuild_ArcInfo = AFInfo_ArcInfo;
@@ -21,7 +29,7 @@ pub struct AFBuild<E, N, V, M> {
     /// Maximum difference of two path lengths considered to be equal
     pub EPS: f64,
     /// The flipped edges
-    pub myFlippedEdges: Ptr<i32>,
+    pub myFlippedEdges: Vec<Ptr<FlippedEdge<E, N, V>>>,
     /// The partition for the backward graph with flipped edges
     pub myFlippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>,
     /// The number of levels
@@ -29,7 +37,7 @@ pub struct AFBuild<E, N, V, M> {
     /// The handler for routing errors
     pub myErrorMsgHandler: Ptr<MsgHandler>,
     /// The object's operation to perform on a backward graph with flipped edges
-    pub myFlippedOperation: SUMOAbstractRouter_Operation,
+    pub myFlippedOperation: AFBuild_FlippedOperation<E, N, V>,
     /// The lookup table for travel time heuristics
     pub myFlippedLookupTable: Rc<AFBuild_FlippedLookupTable>,
     /// The boolean flag indicating whether edge permissions need to be considered or not
@@ -42,7 +50,7 @@ pub struct AFBuild<E, N, V, M> {
     pub myNode2EdgeRouter: Ptr<Node2EdgeRouter<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V, M>>,
     pub myCentralizedSPTree: Ptr<AFCentralizedSPTree<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>,
     /// The container of arc informations (for the centralized shortest path tree)
-    pub myArcInfos: Vec<Ptr<AFBuild_ArcInfo>>,
+    pub myArcInfos: Ptr<Vec<Ptr<AFBuild_ArcInfo>>>,
     _p: std::marker::PhantomData<(E, N, V, M,)>,
 }
 
@@ -82,9 +90,37 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn new(flippedEdges: &Vec<Ptr<FlippedEdge<E, N, V>>>,
- flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>, numberOfLevels: i32, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self {
-        // shortcut: Node2EdgeRouter/AFCentralizedSPTree constructors take i32 placeholder containers, and FlippedEdge has no RouterEdge impl, upgrade when those are typed
-        panic!("shortcut: AFBuild::new needs typed Node2EdgeRouter/AFCentralizedSPTree constructors")
+ flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>, numberOfLevels: i32, unbuildIsWarning: bool, flippedOperation: AFBuild_FlippedOperation<E, N, V>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self
+    where E: RouterEdge<V, Node = N>, V: RouterVehicle
+    {
+        let msgInstance = if unbuildIsWarning {
+            utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| Ptr::from_mut(h))
+        } else {
+            utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| Ptr::from_mut(h))
+        };
+        let node2EdgeRouter: Ptr<Node2EdgeRouter<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V, M>> =
+            Ptr::from_raw(Box::into_raw(Box::new(Node2EdgeRouter::new(flippedEdges, unbuildIsWarning, Some(flippedOperation), None, havePermissions, haveRestrictions))));
+        // C++ passes myArcInfos by reference into the tree; share one heap Vec between both.
+        let arcInfos: &'static mut Vec<Ptr<AFBuild_ArcInfo>> = Box::leak(Box::new(Vec::new()));
+        let arcInfosPtr = Ptr::from_mut(arcInfos);
+        let centralizedSPTree: Ptr<AFCentralizedSPTree<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>> =
+            Ptr::from_raw(Box::into_raw(Box::new(AFCentralizedSPTree::new(flippedEdges, arcInfosPtr.m(), unbuildIsWarning, node2EdgeRouter.cast::<SUMOAbstractRouter<FlippedEdge<E, N, V>, V>>(), havePermissions, haveRestrictions))));
+        Self {
+            EPS: 0.009,
+            myFlippedEdges: flippedEdges.clone(),
+            myFlippedPartition: flippedPartition,
+            myNumberOfLevels: numberOfLevels,
+            myErrorMsgHandler: msgInstance,
+            myFlippedOperation: flippedOperation,
+            myFlippedLookupTable: flippedLookup,
+            myHavePermissions: havePermissions,
+            myHaveRestrictions: haveRestrictions,
+            myProhibited: toProhibit,
+            myNode2EdgeRouter: node2EdgeRouter,
+            myCentralizedSPTree: centralizedSPTree,
+            myArcInfos: arcInfosPtr,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void AFBuild::~AFBuild<E, N, V, M>()`
@@ -113,7 +149,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //         return myFlippedOperation;
     //     }
     #[allow(unused_variables)]
-    pub fn get_flipped_operation(&mut self) -> SUMOAbstractRouter_Operation {
+    pub fn get_flipped_operation(&mut self) -> AFBuild_FlippedOperation<E, N, V> {
         self.myFlippedOperation
     }
 
@@ -163,9 +199,23 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     myArcInfos.clear();
     // }
     #[allow(unused_variables)]
-    pub fn init(&mut self, time: SUMOTime, vehicle: Ptr<V>, flagInfos: &mut Vec<Ptr<AFInfo_FlagInfo>>) {
-        // shortcut: ArcInfo::new takes an Unmapped edge placeholder, and FlippedEdge has no RouterEdge impl for numerical_id, upgrade when AFInfo and FlippedEdge are typed
-        panic!("shortcut: AFBuild::init needs typed AFInfo::ArcInfo::new and FlippedEdge accessors")
+    pub fn init(&mut self, time: SUMOTime, vehicle: Ptr<V>, flagInfos: &mut Vec<Ptr<AFInfo_FlagInfo>>)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
+        if self.myArcInfos.is_empty() {
+            for &flippedEdge in self.myFlippedEdges.iter() {
+                self.myArcInfos.push(Ptr::from_raw(Box::into_raw(Box::new(AFInfo_ArcInfo::new(flippedEdge.cast::<Unmapped>())))));
+            }
+        }
+        for sHARCLevel in 0..self.myNumberOfLevels - 1 {
+            self.compute_arc_flags(time, sHARCLevel, vehicle);
+        }
+        let mut index = 0;
+        for arcInfo in self.myArcInfos.iter() {
+            flagInfos[index].m().arcFlags = arcInfo.arcFlags.clone();
+            index += 1;
+        }
+        self.myArcInfos.clear();
     }
 
     /// C++: `void AFBuild::setFlippedPartition(const KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V> *)`
@@ -202,7 +252,9 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     /// Computes the arc flags for all cells at a given level
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn compute_arc_flags(&mut self, msTime: SUMOTime, sHARCLevel: i32, vehicle: Ptr<V>) {
+    pub fn compute_arc_flags(&mut self, msTime: SUMOTime, sHARCLevel: i32, vehicle: Ptr<V>)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
         let partitionLevel = self.s_harc_level2_partition_level(sHARCLevel);
         let levelCells = self.myFlippedPartition.m().get_cells_at_level(partitionLevel).clone();
         for cell in levelCells {
@@ -286,9 +338,46 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn compute_arc_flags_2(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>) {
-        // shortcut: needs typed boundary edge sets and FlippedEdge RouterEdge accessors, upgrade when Cell edge sets and FlippedEdge are typed
-        panic!("shortcut: AFBuild::computeArcFlags(cell) needs typed boundary edge sets and FlippedEdge accessors")
+    pub fn compute_arc_flags_2(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
+        let supercell = cell.get_supercell();
+        // Cell stores type-erased edge/node pointers; cast them back to the flipped graph types.
+        let boundaryEdges: Vec<Ptr<FlippedEdge<E, N, V>>> = cell.get_outgoing_boundary_edges().iter()
+            .map(|&e| e.cast::<FlippedEdge<E, N, V>>()).collect();
+        let boundaryNodes: Vec<Ptr<FlippedNode<E, N, V>>> = cell.get_boundary_from_nodes().iter()
+            .map(|&n| n.cast::<FlippedNode<E, N, V>>()).collect();
+        self.init_boundary_edges(&boundaryEdges);
+        let mut incomingEdgesOfOutgoingBoundaryEdges: BTreeMap<Ptr<FlippedEdge<E, N, V>>, Vec<Ptr<FlippedEdge<E, N, V>>>> = BTreeMap::new();
+        let numberOfBoundaryNodes = boundaryNodes.len();
+        for &boundaryEdge in boundaryEdges.iter() {
+            incomingEdgesOfOutgoingBoundaryEdges.insert(boundaryEdge, vec![Ptr::null(); numberOfBoundaryNodes]);
+        }
+        let boundaryEdgesSet: HashSet<Ptr<FlippedEdge<E, N, V>>> = boundaryEdges.iter().copied().collect();
+        let mut index = 0;
+        for &boundaryNode in boundaryNodes.iter() {
+            self.myNode2EdgeRouter.m().reset(vehicle);
+            self.myNode2EdgeRouter.m().compute_node2_edges(boundaryNode, &boundaryEdgesSet, vehicle, msTime, false);
+            for &boundaryEdge in boundaryEdges.iter() {
+                debug_assert!(!boundaryEdge.is_internal());
+                let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*boundaryEdge) as usize];
+                if boundaryNode == boundaryEdge.get_from_junction() {
+                    arcInfo.m().effortsToBoundaryNodes.push(0.);
+                    incomingEdgesOfOutgoingBoundaryEdges.get_mut(&boundaryEdge).unwrap()[index] = Ptr::null();
+                    continue;
+                }
+                let edgeInfo = self.myNode2EdgeRouter.m().edge_info(boundaryEdge);
+                let effort = edgeInfo.effort;
+                let incomingEdge = if edgeInfo.prev.is_null() { Ptr::null() } else { edgeInfo.prev.edge.cast::<FlippedEdge<E, N, V>>() };
+                incomingEdgesOfOutgoingBoundaryEdges.get_mut(&boundaryEdge).unwrap()[index] = incomingEdge;
+                arcInfo.m().effortsToBoundaryNodes.push(if effort == f64::MAX { UNREACHABLE } else { effort });
+            }
+            index += 1;
+        }
+        self.init_supercell_edges(supercell, &boundaryEdges, boundaryNodes.len());
+        if self.myCentralizedSPTree.m().compute_centralized_sp_tree(msTime, cell, vehicle, &incomingEdgesOfOutgoingBoundaryEdges, false) {
+            self.compute_arc_flags_aux(msTime, sHARCLevel, cell, vehicle);
+        }
     }
 
     /// C++: `void AFBuild::computeArcFlagsNaive(SUMOTime, const int, const Cell *, const V *const)` [protected]
@@ -361,9 +450,39 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn compute_arc_flags_naive(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>) {
-        // shortcut: needs typed boundary edge sets and FlippedEdge RouterEdge accessors, upgrade when Cell edge sets and FlippedEdge are typed
-        panic!("shortcut: AFBuild::computeArcFlagsNaive needs typed boundary edge sets and FlippedEdge accessors")
+    pub fn compute_arc_flags_naive(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
+        let supercell = cell.get_supercell();
+        let boundaryEdges: Vec<Ptr<FlippedEdge<E, N, V>>> = cell.get_outgoing_boundary_edges().iter()
+            .map(|&e| e.cast::<FlippedEdge<E, N, V>>()).collect();
+        let boundaryNodes: Vec<Ptr<FlippedNode<E, N, V>>> = cell.get_boundary_from_nodes().iter()
+            .map(|&n| n.cast::<FlippedNode<E, N, V>>()).collect();
+        self.init_boundary_edges(&boundaryEdges);
+        for &boundaryNode in boundaryNodes.iter() {
+            for &boundaryEdge in boundaryEdges.iter() {
+                debug_assert!(!boundaryEdge.is_internal());
+                let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*boundaryEdge) as usize];
+                if boundaryNode == boundaryEdge.get_from_junction() {
+                    arcInfo.m().effortsToBoundaryNodes.push(0.);
+                    continue;
+                }
+                let mut into: Vec<Ptr<FlippedEdge<E, N, V>>> = Vec::new();
+                if self.myNode2EdgeRouter.m().compute_node2_edge(boundaryNode, boundaryEdge, vehicle, msTime, &mut into, false) {
+                    let recomputedEffort = self.myNode2EdgeRouter.m().recompute_costs_no_last_edge(&into, vehicle, msTime, Ptr::null());
+                    arcInfo.m().effortsToBoundaryNodes.push(recomputedEffort);
+                } else {
+                    arcInfo.m().effortsToBoundaryNodes.push(UNREACHABLE);
+                }
+            }
+        }
+        self.init_supercell_edges(supercell, &boundaryEdges, boundaryNodes.len());
+        // C++ keeps this naive variant for comparisons only (never instantiated); its 3-arg
+        // computeCentralizedSPTree overload is absent. Use an empty map so the port compiles.
+        let empty = BTreeMap::new();
+        if self.myCentralizedSPTree.m().compute_centralized_sp_tree(msTime, cell, vehicle, &empty, false) {
+            self.compute_arc_flags_aux(msTime, sHARCLevel, cell, vehicle);
+        }
     }
 
     /// C++: `void AFBuild::putArcFlag(ArcInfo *, const int, const bool)` [protected]
@@ -396,9 +515,19 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_boundary_edges(&mut self, boundaryEdges: &i32) {
-        // shortcut: boundaryEdges is an i32 placeholder and numerical_id is not on FlippedEdge, upgrade when Cell boundary edge sets are typed
-        panic!("shortcut: AFBuild::initBoundaryEdges needs typed boundary edge sets")
+    pub fn init_boundary_edges(&mut self, boundaryEdges: &Vec<Ptr<FlippedEdge<E, N, V>>>)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
+        for &boundaryEdge in boundaryEdges.iter() {
+            debug_assert!(!boundaryEdge.is_internal());
+            let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*boundaryEdge) as usize];
+            if arcInfo.arcFlags.is_empty() {
+                for _ in 0..self.myFlippedPartition.number_of_arc_flags() {
+                    arcInfo.m().arcFlags.push(false);
+                }
+            }
+            arcInfo.m().effortsToBoundaryNodes.clear();
+        }
     }
 
     /// C++: `void AFBuild::initSupercellEdges(const Cell *, const int &, size_t)` [private]
@@ -435,9 +564,30 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_supercell_edges(&mut self, supercell: Ptr<KDTreePartition_Cell>, boundaryEdges: &i32, numberOfBoundaryNodes: usize) {
-        // shortcut: needs FlippedNode::getIncoming and typed boundary edge sets, upgrade when those are typed
-        panic!("shortcut: AFBuild::initSupercellEdges needs typed boundary edge sets and FlippedNode::getIncoming")
+    pub fn init_supercell_edges(&mut self, supercell: Ptr<KDTreePartition_Cell>, boundaryEdges: &Vec<Ptr<FlippedEdge<E, N, V>>>, numberOfBoundaryNodes: usize)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
+        let boundaryEdgesSet: HashSet<Ptr<FlippedEdge<E, N, V>>> = boundaryEdges.iter().copied().collect();
+        for node in supercell.nodes::<FlippedNode<E, N, V>>() {
+            for &supercellEdge in node.get_incoming().iter() {
+                if supercellEdge.is_internal() {
+                    continue;
+                }
+                if boundaryEdgesSet.contains(&supercellEdge) {
+                    continue;
+                }
+                let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*supercellEdge) as usize];
+                if arcInfo.arcFlags.is_empty() {
+                    for _ in 0..self.myFlippedPartition.number_of_arc_flags() {
+                        arcInfo.m().arcFlags.push(false);
+                    }
+                }
+                arcInfo.m().effortsToBoundaryNodes.clear();
+                for _ in 0..numberOfBoundaryNodes {
+                    arcInfo.m().effortsToBoundaryNodes.push(f64::MAX);
+                }
+            }
+        }
     }
 
     /// C++: `void AFBuild::computeArcFlagsAux(SUMOTime, const int, const Cell *, const V *const)` [private]
@@ -633,9 +783,84 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn compute_arc_flags_aux(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>) {
-        // shortcut: needs typed arc info sets, FlippedEdge RouterEdge accessors and Node2EdgeRouter edge efforts, upgrade when those are typed
-        panic!("shortcut: AFBuild::computeArcFlagsAux needs typed arc info sets and FlippedEdge accessors")
+    pub fn compute_arc_flags_aux(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>)
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
+        let supercell = cell.get_supercell();
+        // determinism: C++ uses std::unordered_set<ArcInfo*>; iteration order changes with pointer
+        // addresses but only flag bits are written, so the resulting flags are order-independent.
+        let mut arcInfosOnAShortestPath: HashSet<Ptr<AFInfo_ArcInfo>> = HashSet::new();
+        for node in supercell.nodes::<FlippedNode<E, N, V>>() {
+            for &supercellEdge in node.get_incoming().iter() {
+                if supercellEdge.is_internal() {
+                    continue;
+                }
+                if self.myNode2EdgeRouter.is_prohibited(supercellEdge, vehicle, utils::common::time::steps2time(msTime)) {
+                    continue;
+                }
+                arcInfosOnAShortestPath.insert(self.myArcInfos[FlippedEdge::get_numerical_id(&*supercellEdge) as usize]);
+            }
+        }
+        let vClass = if vehicle.is_null() { SVC_IGNORING } else { vehicle.v_class() };
+        let mut survivors: Vec<Ptr<AFInfo_ArcInfo>> = Vec::new();
+        'outer: for arcInfo in arcInfosOnAShortestPath.iter().copied() {
+            let edge = arcInfo.edge.cast::<FlippedEdge<E, N, V>>();
+            debug_assert!(!edge.is_internal());
+            let numberOfBoundaryNodes = arcInfo.effortsToBoundaryNodes.len();
+            let mut onShortestPath = false;
+            'indices: for index in 0..numberOfBoundaryNodes {
+                let effort1 = arcInfo.effortsToBoundaryNodes[index];
+                if effort1 == UNREACHABLE || effort1 == f64::MAX {
+                    continue 'indices;
+                }
+                let mut sTime = utils::common::time::steps2time(msTime);
+                let mut edgeEffort = self.myNode2EdgeRouter.get_effort(edge, vehicle, sTime);
+                sTime += self.myNode2EdgeRouter.get_travel_time(edge, vehicle, sTime, edgeEffort);
+                let oldEdgeEffort = edgeEffort;
+                let oldSTime = sTime;
+                for follower in edge.get_via_successors(vClass, false) {
+                    debug_assert!(!follower.0.is_internal());
+                    let followerInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*follower.0) as usize];
+                    if self.myNode2EdgeRouter.is_prohibited(follower.0, vehicle, sTime) {
+                        let vehicleId = if vehicle.is_null() { "NULL".to_string() } else { vehicle.get_id() };
+                        let msg = format!("Vehicle '{}' is not allowed on source edge '{}'.", vehicleId, followerInfo.edge.cast::<FlippedEdge<E, N, V>>().id());
+                        self.myErrorMsgHandler.m().inform(&msg, true);
+                        continue;
+                    }
+                    if followerInfo.effortsToBoundaryNodes.is_empty() {
+                        continue;
+                    }
+                    let effort2 = followerInfo.effortsToBoundaryNodes[index];
+                    if effort2 == UNREACHABLE || effort2 == f64::MAX {
+                        continue;
+                    }
+                    let mut length = 0.;
+                    self.myNode2EdgeRouter.update_via_edge_cost(follower.1, vehicle, &mut sTime, &mut edgeEffort, &mut length);
+                    if effort1 + edgeEffort <= effort2 + self.EPS && effort1 + edgeEffort >= effort2 - self.EPS {
+                        onShortestPath = true;
+                        break 'indices;
+                    }
+                    edgeEffort = oldEdgeEffort;
+                    sTime = oldSTime;
+                }
+            }
+            if !onShortestPath {
+                continue 'outer; // not on a shortest path, erase it
+            }
+            survivors.push(arcInfo);
+        }
+        arcInfosOnAShortestPath = survivors.into_iter().collect();
+        let edgesInsideCell = cell.edge_set::<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>(vehicle);
+        for edgeInsideCell in edgesInsideCell.iter().copied() {
+            let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*edgeInsideCell) as usize];
+            if self.myNode2EdgeRouter.is_prohibited(edgeInsideCell, vehicle, utils::common::time::steps2time(msTime)) {
+                continue;
+            }
+            arcInfosOnAShortestPath.insert(arcInfo);
+        }
+        for arcInfo in arcInfosOnAShortestPath.iter().copied() {
+            self.put_arc_flag(arcInfo, sHARCLevel, cell.is_left_or_lower_cell());
+        }
     }
 
 }

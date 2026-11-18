@@ -1,6 +1,7 @@
 //! Port of utils/router/AFRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::af_build::AFBuild_FlippedOperation;
 use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 use utils::common::msg_handler::{with_instance, write_message, MsgType};
 use utils::common::to_string::to_string;
@@ -130,6 +131,22 @@ impl<E, N, V, M> std::ops::DerefMut for AFRouter<E, N, V, M> {
     }
 }
 
+/// The `AFRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn afr_compute<E, N, V, M>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool
+where E: RouterEdge<V, Node = N>, V: RouterVehicle, N: RouterNode<Edge = E>
+{
+    Ptr::from_mut(base).cast::<AFRouter<E, N, V, M>>().m().compute(from, to, vehicle, msTime, into, silent)
+}
+
+impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: RouterVehicle, N: RouterNode<Edge = E> {
+    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(afr_compute::<E, N, V, M>);
+        self.base.myClone = Some(|base| Ptr::from_mut(base).cast::<AFRouter<E, N, V, M>>().m().clone());
+        self
+    }
+}
+
 impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
     /// C++: `typename SUMOAbstractRouter<E, V>::EdgeInfo * AFRouter::edgeInfo(const E *const)`
     /// Returns the edge information for the passed edge
@@ -186,7 +203,7 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flippedOperation: SUMOAbstractRouter_Operation, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flippedOperation: AFBuild_FlippedOperation<E, N, V>, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut router = Self {
             base: SUMOAbstractRouter::new("arcFlagRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myFlagInfos: Ptr::null(),
@@ -251,7 +268,7 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flippedOperation: SUMOAbstractRouter_Operation, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flippedOperation: AFBuild_FlippedOperation<E, N, V>, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut router = Self {
             base: SUMOAbstractRouter::new("arcFlagRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myFlagInfos: Ptr::null(),
@@ -508,7 +525,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn reset(&mut self, vehicle: Ptr<V>) {
+    pub fn reset(&mut self, vehicle: Ptr<V>)
+    where N: RouterNode<Edge = E>
+    {
         if self.myValidUntil == 0 {
             self.myValidUntil = self.myWeightPeriod;
         }
@@ -628,7 +647,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //     return flagContext;
     // }
     #[allow(unused_variables)]
-    pub fn flag_context(&mut self, settledEdge: Ptr<E>, targetEdge: Ptr<E>) -> (i32, i32, bool) {
+    pub fn flag_context(&mut self, settledEdge: Ptr<E>, targetEdge: Ptr<E>) -> (i32, i32, bool)
+    where N: RouterNode
+    {
         assert!(!settledEdge.is_null() && !targetEdge.is_null());
         let mut sHARCLevel: i32 = 0; // lowest level with smallest cells
         let mut settledEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
@@ -643,7 +664,7 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         if numberOfPartitionLevels <= 4 { // small number of bottom cells -> go through them, no use of k-d tree
             let partitionLevel = Self::s_harc_level2_partition_level(sHARCLevel, self.myPartition.get_number_of_levels());
             // go through the cells of the level
-            for iter in Self::cells_at_level(partitionLevel) {
+            for iter in self.cells_at_level(partitionLevel) {
                 // myPartition is assumed to partition a non-reversed (forward) graph
                 if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge)) {
                     settledEdgeCell = iter;
@@ -718,11 +739,13 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //     throw std::runtime_error("flagContext: relevant level could not be determined.");
     // }
     #[allow(unused_variables)]
-    pub fn flag_context_naive(&mut self, settledEdge: Ptr<E>, targetEdge: Ptr<E>) -> (i32, i32, bool) {
+    pub fn flag_context_naive(&mut self, settledEdge: Ptr<E>, targetEdge: Ptr<E>) -> (i32, i32, bool)
+    where N: RouterNode
+    {
         assert!(!settledEdge.is_null() && !targetEdge.is_null());
         for sHARCLevel in 0..self.myPartition.get_number_of_levels() - 1 {
             let partitionLevel = Self::s_harc_level2_partition_level(sHARCLevel, self.myPartition.get_number_of_levels());
-            let levelCells = Self::cells_at_level(partitionLevel);
+            let levelCells = self.cells_at_level(partitionLevel);
             let mut settledEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
             let mut targetEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
             // go through the cells of the level
@@ -911,7 +934,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool
+    where N: RouterNode<Edge = E>
+    {
         // check whether from and to can be used
         if self.is_prohibited(from, vehicle, steps2time(msTime)) {
             if !silent {
@@ -1133,9 +1158,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         vehicle.id()
     }
 
-    // shortcut: KDTreePartition::get_cells_at_level returns a &i32 placeholder, upgrade kd_tree_partition.rs to return Vec<Ptr<KDTreePartition_Cell>>
-    fn cells_at_level(level: i32) -> Vec<Ptr<KDTreePartition_Cell>> {
-        panic!("shortcut: KDTreePartition::get_cells_at_level is a &i32 placeholder, cannot iterate the cells of a level")
+    /// C++ `myPartition->getCellsAtLevel(level)`: the cells of the given partition level.
+    fn cells_at_level(&self, level: i32) -> Vec<Ptr<KDTreePartition_Cell>> {
+        self.myPartition.get_cells_at_level(level).clone()
     }
 
 }
