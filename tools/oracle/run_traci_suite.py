@@ -271,7 +271,8 @@ def main():
     with open(os.path.join(OUT, "diffs.txt"), "w", encoding="utf-8") as f:
         for rel, diffs in results:
             if diffs:
-                f.write("FAIL %s\n%s\n" % (rel, "\n".join(diffs)))
+                body = "\n".join("  " + ln for d in diffs for ln in d.splitlines())
+                f.write("FAIL %s\n%s\n" % (rel, body))
     cats = {}
     for rel, diffs in results:
         if diffs:
