@@ -1704,7 +1704,10 @@ impl MSAbstractLaneChangeModel {
         debug_assert!(remainingManeuverDist >= 0.);
         debug_assert!(decel > 0.);
         debug_assert!(self.myVehicle.get_vehicle_type().get_max_speed_lat() > 0.);
-        debug_assert!(self.myMaxSpeedLatStanding <= self.myVehicle.get_vehicle_type().get_max_speed_lat());
+        // C++ assert() is compiled out in the release build that produced the references. A vType may set
+        // lcMaxSpeedLatStanding above maxSpeedLat (e.g. 1.2 > 1.0 default), so this check would spuriously
+        // panic here even though the reference computation continues with wmin > wmax.
+        // debug_assert!(self.myMaxSpeedLatStanding <= self.myVehicle.get_vehicle_type().get_max_speed_lat());
         debug_assert!(self.myMaxSpeedLatStanding >= 0.);
 
         // for brevity
