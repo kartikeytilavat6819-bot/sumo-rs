@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gate diagnostic for oc56: run imported rail cases and print the full first panic/diff line.
+# Gate diagnostic for oc56: run imported rail cases and print the first panic/diff line.
 # CASE=<name> narrows to one case. Uses the same flags as run_all.sh.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
@@ -29,15 +29,15 @@ for c in $cases; do
     r="PANIC"
     diffline=$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-200)
   else
-    d1=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1 | head -1)
-    [ -n "$d1" ] && { r="FAIL"; diffline="$d1"; }
+    d1=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1); c1=$?
+    [ $c1 -ne 0 ] && { r="FAIL"; diffline="ti: $d1"; }
     if [ -f "$d/ref.fcd.xml" ]; then
-      d2=$(python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/fcd.xml" 2>&1 | head -1)
-      [ -n "$d2" ] && { r="FAIL"; diffline="$diffline | fcd: $d2"; }
+      d2=$(python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/fcd.xml" 2>&1); c2=$?
+      [ $c2 -ne 0 ] && { r="FAIL"; diffline="$diffline | fcd: $d2"; }
     fi
     if [ -f "$d/ref.stat.xml" ]; then
-      d3=$(python tools/oracle/compare_stat.py "$d/ref.stat.xml" "$OUT/stat.xml" 2>&1 | head -1)
-      [ -n "$d3" ] && { r="FAIL"; diffline="$diffline | stat: $d3"; }
+      d3=$(python tools/oracle/compare_stat.py "$d/ref.stat.xml" "$OUT/stat.xml" 2>&1); c3=$?
+      [ $c3 -ne 0 ] && { r="FAIL"; diffline="$diffline | stat: $d3"; }
     fi
   fi
   printf '%-64s %s %s\n' "$c" "$r" "$diffline"
