@@ -9,7 +9,6 @@ if [ -z "$SUMO_PRISTINE_BIN" ] || [ ! -x "$SUMO_PRISTINE_BIN/sumo" ]; then
   exit 2
 fi
 if ! python3 -c 'import traci' >/dev/null 2>&1; then
-  # the pristine SUMO package often ships the matching traci module locally
   for d in "$SUMO_PRISTINE_BIN/../tools" "$SUMO_PRISTINE_BIN/../lib" "$SUMO_PRISTINE_BIN/../../tools"; do
     if [ -d "$d" ] && ls "$d"/*/traci "$d"/traci >/dev/null 2>&1; then
       export PYTHONPATH="$d:$PYTHONPATH"
@@ -97,6 +96,22 @@ KEYS = ["laneChangeModel.tau", "carFollowModel.tau", "device.tripinfo.waitingTim
 VALS = ["0.5", "1", "-1", "x", "", "2.5"]
 COLORS = [(255, 0, 0, 255), (0, 255, 0, 255), (1, 2, 3, 255)]
 STATES = ["G", "r", "g", "y", "GGrgry", "Z", ""]
+
+
+def set_case(name):
+    """Switch the net/route/IDs so the signal case exercises a real traffic light."""
+    global CASE, NET, ROU, IDS
+    CASE = CASES / name
+    NET = CASE / "ref_simple.net.xml"
+    ROU = CASE / "routes.rou"
+    IDS = dict(IDS)
+    if name == "signal":
+        IDS.update({
+            "tlid": ["1802245009", "1802245009", "nope", ""],
+            "lid": ["-324752522_0", "-324752522_0", "nope", ""],
+            "eid": ["-324752522", "-324752522", "nope", ""],
+            "jid": ["nope", ""],
+        })
 
 
 # --- random argument generators: (rng, IDS) -> tuple of positional args ------
@@ -440,7 +455,9 @@ def main():
     ap.add_argument("--n", type=int, default=45, help="calls per session")
     ap.add_argument("--step-every", type=int, default=5)
     ap.add_argument("--no-infra", action="store_true", help="do not load infra.add.xml")
+    ap.add_argument("--case", default="junction", choices=["junction", "signal"])
     a = ap.parse_args()
+    set_case(a.case)
 
     seeds = [int(s) for s in a.seeds.split(",") if s]
     diffs = 0
@@ -455,7 +472,7 @@ def main():
 
         dead_label = calls[ours_dead][0] if ours_dead is not None and ours_dead < len(calls) else "-"
         dead_res = ours_res[ours_dead] if ours_dead is not None and ours_dead < len(ours_res) else "-"
-        print(f"FUZZ seed={seed} infra={not a.no_infra}: ours={len(ours_res)} calls (dead={ours_dead}@{dead_label}, init={ours_init}) "
+        print(f"FUZZ case={a.case} seed={seed} infra={not a.no_infra}: ours={len(ours_res)} calls (dead={ours_dead}@{dead_label}, init={ours_init}) "
               f"official={len(cpp_res)} calls (dead={cpp_dead}, init={cpp_init}) our_dead_result={dead_res}")
         if ours_init or cpp_init:
             # an init failure on either side is itself a finding (unless official just died)
@@ -490,8 +507,10 @@ if __name__ == "__main__":
     sys.exit(main())
 PYEOF
 fi
-echo "=== NO-INFRA (core domains) ==="
+echo "=== JUNCTION / NO-INFRA ==="
 python3 -W ignore "$FUZZ" --ours "$OURS" --port 19500 --seeds 1,2,3,4,5,6,7,8,9,10 --n 70 --step-every 7 --no-infra 2>&1 | head -200
-echo "=== WITH-INFRA (detectors, POI, etc.) ==="
+echo "=== JUNCTION / INFRA ==="
 python3 -W ignore "$FUZZ" --ours "$OURS" --port 19600 --seeds 1,2,3,4,5,6 --n 70 --step-every 7 2>&1 | head -150
+echo "=== SIGNAL (traffic light) ==="
+python3 -W ignore "$FUZZ" --ours "$OURS" --port 19700 --case signal --seeds 1,2,3,4,5,6 --n 70 --step-every 7 --no-infra 2>&1 | head -150
 echo "AGENT RUN DONE"
