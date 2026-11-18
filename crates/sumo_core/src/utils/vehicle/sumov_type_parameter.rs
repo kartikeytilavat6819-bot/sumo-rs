@@ -96,7 +96,8 @@ pub enum LatAlignmentDefinition {
 pub type SUMOVTypeParameter_SubParams = BTreeMap<SumoXMLAttr, String>;
 
 /// Structure representing possible vehicle parameter
-/// C++ class `SUMOVTypeParameter` (utils/vehicle/SUMOVTypeParameter.h)
+/// C++ class `SUMOVTypeParameter` (utils/vehicle/SUMOVTypeParameter.h); Clone is the C++ copy constructor
+#[derive(Clone)]
 #[repr(C)]
 pub struct SUMOVTypeParameter {
     /// C++ base class `Parameterised`

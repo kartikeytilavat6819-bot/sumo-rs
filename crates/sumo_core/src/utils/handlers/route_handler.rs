@@ -2514,10 +2514,12 @@ impl RouteHandler {
         // write warning info
         write_warningf!("Defining car-following parameters in a nested element is deprecated in vType '%', use attributes instead!", str_attr(vTypeObject, SUMO_ATTR_ID));
         // get vType to modify it
-        // shortcut: C++ edits a copy of the vType and stores it back on success; SUMOVTypeParameter is not Clone, so the stored vType is edited in place (a failed parse leaves partial values)
-        let vType = Ptr::new(vehicle_type_parameter_of(vTypeObject));
+        // C++ `auto vType = ...getVehicleTypeParameter()` copies: the copy is edited and stored back only on success
+        let mut vType = vehicle_type_parameter_of(vTypeObject).clone();
         // parse nested CFM attributes
-        if SUMOVehicleParserHelper::parse_cfm_params(vType, tag, attrs, true) {
+        if SUMOVehicleParserHelper::parse_cfm_params(Ptr::from_mut(&mut vType), tag, attrs, true) {
+            let id = vType.id.clone();
+            vTypeObject.m().set_vehicle_type_parameter(Box::new(vType), &id);
             return true;
         } else if self.myHardFail {
             throw_error(ProcessError::new("Invalid parsing embedded VType"));

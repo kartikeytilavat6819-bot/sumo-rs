@@ -10,7 +10,7 @@ use super::plain_xml_formatter::PlainXMLFormatter;
 use crate::common::std_defs::g_precision;
 use crate::common::time::SUMOTime;
 use crate::common::to_string::f64_to_string_prec;
-use crate::xml::stand_ins::{append_before_extension, escape_xml, is_socket, iso_time_string, prepend_to_last_path_component, write_error, write_warning, ProcessError};
+use crate::xml::stand_ins::{append_before_extension, escape_xml, is_socket, prepend_to_last_path_component, write_error, write_warning, ProcessError};
 use crate::xml::sumo_xml_definitions::{self as defs, Attrs, SumoXMLAttr, SumoXMLAttrMask, SumoXMLTag, Tags};
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -179,9 +179,9 @@ fn strerror(e: &io::Error) -> String {
 }
 
 /// prefix/suffix "TIME" replacement: strftime("%Y-%m-%d-%H-%M-%S") of the load time
-// shortcut: uses the current UTC time instead of OptionsIO::getLoadTime() in local time
+// shortcut: the load time is formatted in UTC (no timezone database in utils), upgrade when a local-time helper exists
 fn time_stamp() -> String {
-    iso_time_string()[..19].replace(['T', ':'], "-")
+    crate::common::string_utils::iso_time_string(Some(crate::options::options_io::get_load_time()))[..19].replace(['T', ':'], "-")
 }
 
 impl OutputDevice {
