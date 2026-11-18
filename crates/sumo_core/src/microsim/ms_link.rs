@@ -4042,7 +4042,7 @@ impl MSLink {
             return false;
         }
         if self.myState == LINKSTATE_ALLWAY_STOP {
-            // EXPERIMENT (revert): debug_assert!(waitingTime > 0);
+            // C++ assert(waitingTime > 0) is compiled out in the release oracle and waitingTime == 0 does occur (cases/fuzz_1): not a debug_assert here
             let actionDelta = MSNet::get_instance().get_current_time_step() - veh.get_last_action_time();
             if waitingTime > avi.waitingTime + actionDelta {
                 return false;
