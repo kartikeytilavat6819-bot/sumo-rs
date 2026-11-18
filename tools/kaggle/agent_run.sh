@@ -1,16 +1,17 @@
 #!/bin/bash
-# Gate diagnostic for oc56: run imported rail cases and print the first diff line of each failure.
+# Gate diagnostic for oc56: run imported rail cases and print the full first panic/diff line.
 # CASE=<name> narrows to one case. Uses the same flags as run_all.sh.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
 SUMO="$BIN/sumo.exe"
 [ -x "$SUMO" ] || SUMO="$BIN/sumo"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc56-rail
+OUT="${TMPDIR:-/tmp}/oc56-rail"
 rm -rf "$OUT"; mkdir -p "$OUT"
+CASE="${CASE:-}"
 
 cases="$CASE"
-if [ -z "${CASE:-}" ]; then
+if [ -z "$CASE" ]; then
   cases=$(ls -d tools/oracle/cases/tt_rail_* 2>/dev/null | xargs -n1 basename | tr '\n' ' ')
 fi
 pass=0; fail=0
@@ -26,7 +27,7 @@ for c in $cases; do
   diffline=""
   if [ $rc -ne 0 ]; then
     r="PANIC"
-    diffline=$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-120)
+    diffline=$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-200)
   else
     d1=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1 | head -1)
     [ -n "$d1" ] && { r="FAIL"; diffline="$d1"; }
