@@ -25,6 +25,13 @@ impl std::ops::DerefMut for MSDispatch_RouteExtension {
     }
 }
 
+/// C++ virtual `dispatch()` override — installs the route-extension body for the base `computeDispatch`.
+fn route_extension_dispatch(g: &mut MSDispatch_Greedy, taxi: Ptr<MSDevice_Taxi>, resIt: &mut usize, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
+    // SAFETY: installed only by MSDispatch_RouteExtension::new; g is the MSDispatch_Greedy base of an MSDispatch_RouteExtension (repr(C), base first)
+    let ext = unsafe { &mut *(g as *mut MSDispatch_Greedy as *mut MSDispatch_RouteExtension) };
+    ext.dispatch(taxi, resIt, router, reservations)
+}
+
 impl MSDispatch_RouteExtension {
     /// C++: `void MSDispatch_RouteExtension::MSDispatch_RouteExtension(const Parameterised::Map &)`
     // MSDispatch_RouteExtension(const Parameterised::Map& params) :
@@ -32,8 +39,10 @@ impl MSDispatch_RouteExtension {
     //     {}
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
+        let mut base = MSDispatch_Greedy::new(params);
+        base.dispatch_vt = route_extension_dispatch;
         MSDispatch_RouteExtension {
-            base: MSDispatch_Greedy::new(params),
+            base,
         }
     }
 

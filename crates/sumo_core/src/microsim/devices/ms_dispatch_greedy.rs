@@ -3,6 +3,9 @@
 use crate::prelude::*;
 use utils::common::time::SUMOTIME_MAX;
 
+/// Signature of the C++ virtual `MSDispatch_Greedy::dispatch()`; the base `computeDispatch` must reach the derived body (ride sharing).
+pub type MSDispatch_Greedy_DispatchFn = fn(&mut MSDispatch_Greedy, Ptr<MSDevice_Taxi>, &mut usize, &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, &mut Vec<Ptr<Reservation>>) -> i32;
+
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
 /// C++ class `MSDispatch_Greedy` (microsim/devices/MSDispatch_Greedy.h)
 #[repr(C)]
@@ -14,6 +17,8 @@ pub struct MSDispatch_Greedy {
     /// recheck interval for early reservations
     pub myRecheckTime: SUMOTime,
     pub myRecheckSafety: SUMOTime,
+    /// virtual `dispatch()` override (installed by the concrete algorithm's constructor)
+    pub dispatch_vt: MSDispatch_Greedy_DispatchFn,
 }
 
 impl std::ops::Deref for MSDispatch_Greedy {
@@ -32,6 +37,11 @@ fn greedy_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MS
     // SAFETY: installed only by MSDispatch_Greedy::new, so d is the base of an MSDispatch_Greedy (repr(C), base first)
     let g = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_Greedy) };
     g.compute_dispatch(now, fleet);
+}
+
+/// C++ `MSDispatch_Greedy::dispatch()` — the base virtual implementation.
+fn greedy_dispatch(g: &mut MSDispatch_Greedy, taxi: Ptr<MSDevice_Taxi>, resIt: &mut usize, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
+    g.dispatch(taxi, resIt, router, reservations)
 }
 
 pub(crate) const MS_DISPATCH_GREEDY_VT: MSDispatchVt = MSDispatchVt {
@@ -68,6 +78,7 @@ impl MSDispatch_Greedy {
             myMaximumWaitingTime,
             myRecheckTime,
             myRecheckSafety,
+            dispatch_vt: greedy_dispatch,
         }
     }
 
@@ -254,7 +265,8 @@ impl MSDispatch_Greedy {
                     numPostponed += 1;
                 }
             } else {
-                numDispatched += self.dispatch(closest, &mut it, router.m(), &mut reservations);
+                // virtual C++ dispatch(): reach the derived (greedyShared / routeExtension) body
+                numDispatched += (self.dispatch_vt)(self, closest, &mut it, router.m(), &mut reservations);
                 available.remove(&closest.myHolder.get_numerical_id());
             }
         }
@@ -459,7 +471,8 @@ impl MSDispatch_GreedyClosest {
             }
             if !closestTaxi.is_null() {
                 let mut closeIt: usize = activeReservations.iter().position(|r| *r == closest).expect("closest reservation is in activeReservations");
-                numDispatched += self.dispatch(closestTaxi, &mut closeIt, router.m(), &mut activeReservations);
+                // virtual C++ dispatch() (GreedyClosest inherits the base Greedy body)
+                numDispatched += (self.base.dispatch_vt)(&mut self.base, closestTaxi, &mut closeIt, router.m(), &mut activeReservations);
                 available.remove(&closestTaxi.myHolder.get_numerical_id());
             } else {
                 // all current reservations are too early or too big
