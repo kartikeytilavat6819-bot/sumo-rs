@@ -11,5 +11,7 @@ RUST_BACKTRACE=1 "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
     --statistic-output "$OUT/stat.xml" --no-step-log true \
     --end 150 --lanechange.duration 2 >"$OUT/sumo.log" 2>&1
 echo "exit=$?"
+echo "== panic header (with following frames)"
+grep -n -A12 "panicked at" "$OUT/sumo.log" | head -40
 echo "== last 40 lines of sumo.log"
 tail -40 "$OUT/sumo.log"
