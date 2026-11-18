@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/tls_actuated_conditions/tls.nod.xml --edge-files tools/oracle/cases/tls_actuated_conditions/tls.edg.xml --tllogic-files tools/oracle/cases/tls_actuated_conditions/tls.tll.xml

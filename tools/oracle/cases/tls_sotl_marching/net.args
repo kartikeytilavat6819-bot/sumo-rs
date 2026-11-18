@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/tls_sotl_marching/tls.nod.xml --edge-files tools/oracle/cases/tls_sotl_marching/tls.edg.xml --tllogic-files tools/oracle/cases/tls_sotl_marching/tls.tll.xml
