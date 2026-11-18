@@ -875,8 +875,10 @@ impl MSTriggeredRerouter {
                     net.get_router_tt(v.get_rng_index(), &routerProhibited)
                 };
                 let mut ok = false;
-                // C++ try { ... } catch (ProcessError&) {}: reroute() reports failure through its return value here
-                ok = v.reroute(now, self.base.get_id(), router, false, false, canChangeDest, newEdge);
+                // C++ wraps this in try { ... } catch (ProcessError&) {}: a failed reroute leaves the route unchanged
+                ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    v.reroute(now, self.base.get_id(), router, false, false, canChangeDest, newEdge)
+                })).unwrap_or(false);
                 if !ok && !keepDestination && canChangeDest {
                     // destination unreachable due to closed intermediate edges. pick among alternative targets
                     let mut edgeProbs2 = rerouteDef.edgeProbs.clone();
@@ -895,7 +897,9 @@ impl MSTriggeredRerouter {
                             newEdge = lastEdge;
                             break;
                         }
-                        ok = v.reroute(now, self.base.get_id(), router, false, false, true, newEdge);
+                        ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            v.reroute(now, self.base.get_id(), router, false, false, true, newEdge)
+                        })).unwrap_or(false);
                     }
                 }
                 self.reset_closed_edges(hasReroutingDevice, tObject);
