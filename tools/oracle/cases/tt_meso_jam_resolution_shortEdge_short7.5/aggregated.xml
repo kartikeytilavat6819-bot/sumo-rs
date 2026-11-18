@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:22:01.224228-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_jam_resolution_shortEdge_short7.5\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_jam_resolution_shortEdge_short7.5\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_meso_jam_resolution_shortEdge_short7.5/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_jam_resolution_shortEdge_short7.5\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_jam_resolution_shortEdge_short7.5\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_jam_resolution_shortEdge_short7.5\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="600.00" id="ed">
+        <edge id="B0C0" sampledSeconds="3323.49" traveltime="16.99" overlapTraveltime="17.39" density="28.12" overlapDensity="28.77" laneDensity="28.12" occupancy="14.07" waitingTime="235.00" timeLoss="605.62" speed="11.36" speedRelative="0.82" departed="0" arrived="0" entered="193" left="189" laneChangedFrom="0" laneChangedTo="0" flow="1147.21" distance="36806.19"/>
+    </interval>
+    <interval begin="600.00" end="1200.00" id="ed">
+        <edge id="B0C0" sampledSeconds="2966.59" traveltime="14.53" overlapTraveltime="14.91" density="25.03" overlapDensity="25.68" laneDensity="25.03" occupancy="12.52" waitingTime="0.00" timeLoss="137.16" speed="13.25" speedRelative="0.95" departed="0" arrived="0" entered="200" left="199" laneChangedFrom="0" laneChangedTo="0" flow="1193.95" distance="38305.80"/>
+    </interval>
+    <interval begin="1200.00" end="1428.00" id="ed">
+        <edge id="B0C0" sampledSeconds="981.87" traveltime="14.53" overlapTraveltime="14.91" density="21.79" overlapDensity="22.37" laneDensity="21.79" occupancy="10.90" waitingTime="0.00" timeLoss="45.37" speed="13.25" speedRelative="0.95" departed="0" arrived="0" entered="63" left="68" laneChangedFrom="0" laneChangedTo="0" flow="1039.07" distance="12668.02"/>
+    </interval>
+</meandata>

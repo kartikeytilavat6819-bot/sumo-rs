@@ -46,6 +46,9 @@ DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
 NET_OPTS = ("--net-file", "-n")
 ROUTE_OPTS = ("-r", "--route-files", "--routes")
 ADD_OPTS = ("-a", "--additional-files", "--a")
+# File-valued behaviour options: their files must be copied into the case, but
+# the option itself stays in sim.args (it is not an -a/--additional-files list).
+EXTRA_INPUT_OPTS = ("--weight-files",)
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
 OUTPUT_OPTS = (
@@ -165,6 +168,13 @@ def parse_file_options(tokens):
                 matched = (hit, group, val)
                 break
         if matched is None:
+            # An empty string value (e.g. '--opt ""' in options.sumo) cannot
+            # survive the shell expansion of sim.args.  Fold it into '--opt='
+            # so both the ref run and run_all pass an explicit empty value.
+            if t == "" and sim and sim[-1].startswith("-") and "=" not in sim[-1]:
+                sim[-1] += "="
+                i += 1
+                continue
             if t in HARNESS_FLAGS or any(t.startswith(f + "=") for f in HARNESS_FLAGS):
                 i += 1
                 if i < len(tokens) and tokens[i] in ("true", "false", "1", "0"):
@@ -247,6 +257,7 @@ def import_one(source, tests_sumo, force=False):
     source = realpath(source)
     rel = os.path.relpath(source, realpath(tests_sumo))
     name = "tt_" + rel.replace(os.sep, "_")
+    case_dir = join(CASES, name)  # needed by additionals resolution below
 
     option_files, config_files, potentials = collect_files_and_config(source, tests_sumo)
     tokens = collate_options(option_files, "sumo")
@@ -257,6 +268,15 @@ def import_one(source, tests_sumo, force=False):
     for marker in SKIP_MARKERS:
         if marker in joined:
             return None, "needs external tool/GUI/TraCI: " + marker
+
+    # Error-exit tests cannot become sim-output oracle rows: the C++ itself
+    # quits with a nonzero exit code (run_all marks any nonzero exit as FAIL).
+    for d in ancestors(source, tests_sumo):
+        ef = join(d, "errors.sumo")
+        if os.path.isfile(ef):
+            with open(ef, encoding="utf-8", errors="replace") as fh:
+                if "Quitting (on error)" in fh.read():
+                    return None, "error-exit test (errors.sumo Quitting on error)"
 
     sim, net, routes, additions, outputs = parse_file_options(tokens)
 
@@ -286,12 +306,36 @@ def import_one(source, tests_sumo, force=False):
     if not route_path:
         return None, "no route input"
 
-    case_dir = join(CASES, name)
+    # File-valued behaviour options (e.g. --weight-files): copy their inputs
+    # and rewrite the option value to a repo-relative path, since run_all and
+    # make_sim_refs.sh both run from the repo root.
+    extra_inputs = []
+    def _extra_value(val):
+        kept = []
+        for v in val.split(","):
+            if not v:
+                continue
+            src = resolve(v, potentials)
+            if src:
+                extra_inputs.append(os.path.basename(src))
+                kept.append(os.path.relpath(
+                    join(case_dir, os.path.basename(src)), REPO).replace(os.sep, "/"))
+            else:
+                kept.append(v)
+        return ",".join(kept)
+    for i, t in enumerate(list(sim)):
+        for o in EXTRA_INPUT_OPTS:
+            if t == o and i + 1 < len(sim):
+                sim[i + 1] = _extra_value(sim[i + 1])
+            elif t.startswith(o + "="):
+                sim[i] = o + "=" + _extra_value(t[len(o) + 1:])
+
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
     chosen = [net, os.path.basename(route_path)]
     chosen += [os.path.basename(resolve(a, potentials)) for a in additions if resolve(a, potentials)]
+    chosen += extra_inputs
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
 

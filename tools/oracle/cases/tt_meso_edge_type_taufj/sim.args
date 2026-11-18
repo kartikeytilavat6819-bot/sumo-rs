@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -t -a tools/oracle/cases/tt_meso_edge_type_taufj/input_additional.add.xml
