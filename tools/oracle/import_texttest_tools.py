@@ -318,6 +318,10 @@ def skip_test(leaf: Path, app: str, root: Path, tokens: list[str]) -> bool:
         if cur == root:
             break
         cur = cur.parent
+    # duarouter with no options exits 1 ("No output specified."); the runner labels any
+    # candidate error as ERROR and never compares stderr, so such error-cases are unverifiable.
+    if app == "duarouter" and not tokens:
+        return True
     joined = " ".join(tokens)
     return any(s in joined for s in SKIP_TOKENS)
 

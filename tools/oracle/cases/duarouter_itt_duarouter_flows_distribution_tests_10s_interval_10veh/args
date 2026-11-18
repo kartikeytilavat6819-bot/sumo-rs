@@ -1,0 +1,1 @@
+--write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_flows_distribution_tests_10s_interval_10veh/input_flows.flows.xml -o @DIR@/routes.rou.xml
