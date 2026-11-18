@@ -114,6 +114,7 @@ def norm_log(text):
         if "TraCIAPI is deprecated" in ln:
             continue
         ln = re.sub(r"\d+\.\d+ms", "(TIME)", ln)
+        ln = re.sub(r"\d+ms", "(TIME)", ln)
         ln = re.sub(r"\d+\.\d+s", "(TIME)", ln)
         ln = re.sub(r'<remote-port value="\d+"/>', '<remote-port value="<PORT>"/>', ln)
         ln = re.sub(r"Starting server on port \d+", "Starting server on port <PORT>", ln)
@@ -215,7 +216,7 @@ def compare(test_dir, root, work):
             continue
         if k == "client":
             a, b = norm_client(ours.get(k, "")), norm_client(off.get(k, ""))
-        elif k in ("stdout", "stderr"):
+        elif k in ("stdout", "stderr", "log.txt"):
             a, b = norm_log(ours.get(k, "")), norm_log(off.get(k, ""))
         else:
             a, b = norm_xml(ours.get(k, "")), norm_xml(off.get(k, ""))
