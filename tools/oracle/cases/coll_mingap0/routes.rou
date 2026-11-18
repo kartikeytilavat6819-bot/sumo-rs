@@ -1,0 +1,12 @@
+<routes>
+    <vehicle id="lead" depart="0.00" departPos="100.00" departSpeed="0">
+        <route edges="E0 E1"/>
+        <stop lane="E0_0" endPos="100.00" duration="20.00"/>
+    </vehicle>
+    <vehicle id="ram" depart="5.00" departPos="97.00" departSpeed="5.00">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="chase" depart="20.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+</routes>

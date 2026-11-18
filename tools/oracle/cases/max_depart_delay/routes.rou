@@ -1,0 +1,12 @@
+<routes>
+    <vehicle id="blocker" depart="0.00" departPos="100.00" departSpeed="0">
+        <route edges="E0 E1"/>
+        <stop lane="E0_0" endPos="100.00" duration="500.00"/>
+    </vehicle>
+    <vehicle id="wait1" depart="0.00" departPos="100.00" departSpeed="0">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="wait2" depart="1.00" departPos="100.00" departSpeed="0">
+        <route edges="E0 E1"/>
+    </vehicle>
+</routes>

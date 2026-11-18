@@ -1,0 +1,8 @@
+<routes>
+    <vehicle id="d0" depart="0.00" departSpeed="max">
+        <route edges="E1 E0"/>
+    </vehicle>
+    <vehicle id="d1" depart="2.00" departSpeed="max">
+        <route edges="E1 E0"/>
+    </vehicle>
+</routes>
