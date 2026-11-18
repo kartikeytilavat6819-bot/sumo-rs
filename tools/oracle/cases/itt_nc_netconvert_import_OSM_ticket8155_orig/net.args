@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_ticket8155_orig/osm.xml --keep-edges.components 1 --remove-edges.by-type highway.service --junctions.join -R --no-internal-links --geometry.remove.keep-ptstops

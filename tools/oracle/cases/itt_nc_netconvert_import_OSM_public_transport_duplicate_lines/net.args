@@ -1,0 +1,1 @@
+--write-license --osm-files osm.xml,osm.xml --osm.stop-output.length 200 --type-files tools/oracle/cases/itt_nc_netconvert_import_OSM_public_transport_duplicate_lines/input_types.typ.xml

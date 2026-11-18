@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_vehicle_lanes/osm.xml --remove-edges.by-vclass pedestrian --osm.lane-access

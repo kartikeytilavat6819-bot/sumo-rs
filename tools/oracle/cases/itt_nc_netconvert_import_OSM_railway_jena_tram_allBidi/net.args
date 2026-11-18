@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_railway_jena_tram_allBidi/osm.xml.gz --railway.topology.all-bidi --railway.topology.ptline-priority tram --no-internal-links

@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_max_segment_length/osm.xml --geometry.max-segment-length 5 --no-internal-links

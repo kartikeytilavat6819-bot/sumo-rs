@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_public_transport_highway_service_speed/osm.xml --no-internal-links

@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_join_tram2/osm.xml --edges.join-tram-dist 1.6 --no-internal-links --keep-edges.by-vclass passenger,tram,bus --output.original-names

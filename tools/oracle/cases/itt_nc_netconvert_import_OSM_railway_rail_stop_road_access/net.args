@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_railway_rail_stop_road_access/osm.xml --osm.stop-output.length 200 --type-files osmNetconvert.typ.xml,osmNetconvertUrbanDe.typ.xml,osmNetconvertPedestrians.typ.xml --railway.access-distance 100 --railway.max-accesses 4

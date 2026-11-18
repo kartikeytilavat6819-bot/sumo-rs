@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_junction_circular/osm.xml --junctions.join --keep-edges.by-vclass passenger --lefthand -R

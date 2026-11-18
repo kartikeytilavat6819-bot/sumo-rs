@@ -1,0 +1,1 @@
+--write-license --tls.guess-signals --tls.discard-simple --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_bugs_ticket8635/osm.xml -R --keep-edges.by-vclass passenger --lefthand
