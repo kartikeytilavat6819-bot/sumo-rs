@@ -32,6 +32,8 @@ regressions() {
       done
       continue
     fi
+    # TraCI suite lines are "FAIL <test>" / "FAIL categories: ...": judge the test, not the word FAIL
+    if [ "$row" = "FAIL" ]; then read -r _ row _ <<<"$_line"; [ "$row" = "categories:" ] && continue; fi
     [[ "$KNOWN" == *" $row "* ]] || r="$r $row;"
   done < <(grep -E 'FAIL|PANIC|TIMEOUT|panicked|STALE|MISSING' <<<"$1" | grep -vE '(^| )PASS=[0-9]+ FAIL=0|^PASS=')
   # the run_all summary "PASS=n FAIL=m" is judged by the rows above, not by its count

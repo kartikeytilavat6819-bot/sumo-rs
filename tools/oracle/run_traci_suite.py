@@ -279,7 +279,8 @@ def main():
         if diffs:
             key = "/".join(rel.split("/")[:2])
             cats[key] = cats.get(key, 0) + 1
-    print("FAIL categories: " + ", ".join("%s=%d" % kv for kv in sorted(cats.items())))
+    if cats:  # only when something failed: the gate treats any FAIL line as a regression
+        print("FAIL categories: " + ", ".join("%s=%d" % kv for kv in sorted(cats.items())))
     show = int(os.environ.get("TRACI_SHOW", "80"))
     nshown = 0
     for rel, diffs in results:
