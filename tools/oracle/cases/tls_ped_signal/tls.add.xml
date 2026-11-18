@@ -1,0 +1,17 @@
+<additional>
+    <!-- Alternate program at the signalized crossing: a pedestrian scramble (all vehicle links red,
+         both pedestrian links green) followed by an all-red and the normal vehicle phases. -->
+    <tlLogic id="C" type="static" programID="pedScramble" offset="0">
+        <phase duration="15" state="rrrrrrrrrrrrrrrrrrrrrGrG"/>
+        <phase duration="3" state="rrrrrrrrrrrrrrrrrrrrrrrr"/>
+        <phase duration="37" state="gGGggrrrrrgGGggrrrrrrrrr"/>
+        <phase duration="3" state="yyyyyrrrrryyyyyrrrrrrrrr"/>
+        <phase duration="37" state="rrrrrgGGggrrrrrgGGggrrrr"/>
+        <phase duration="3" state="rrrrryyyyyrrrrryyyyyrrrr"/>
+    </tlLogic>
+    <WAUT id="wPed" refTime="0" startProg="pedScramble">
+        <wautSwitch time="130" to="0"/>
+        <wautSwitch time="220" to="pedScramble"/>
+    </WAUT>
+    <wautJunction junctionID="C" wautID="wPed"/>
+</additional>

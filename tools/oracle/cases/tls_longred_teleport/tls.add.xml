@@ -1,0 +1,13 @@
+<additional>
+    <!-- A 120 s red for the EW approach makes queues exceed the teleport threshold and vehicles teleport. -->
+    <tlLogic id="nC" type="static" programID="progLR" offset="0">
+        <phase duration="90" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="120" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="wLR" refTime="0" startProg="progLR">
+        <wautSwitch time="290" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nC" wautID="wLR"/>
+</additional>
