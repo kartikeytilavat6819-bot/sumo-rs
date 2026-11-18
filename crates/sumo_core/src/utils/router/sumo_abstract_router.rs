@@ -527,6 +527,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             *effort += viaEffortDelta;
             *length += viaEdge.length();
             let vs = viaEdge.via_successors(SVC_IGNORING, false);
+            // shortcut: C++ front() on an empty list is UB and the official build never reaches it (tt_bugs ticket13108);
+            // our internal edge lacks a via successor that C++ has. Stop instead of panicking; upgrade when that state is found.
             if vs.is_empty() {
                 break;
             }
