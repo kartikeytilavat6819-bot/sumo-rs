@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-choice-method logit --route-files=tools/oracle/cases/duarouter_itt_duarouter_logit_logit_routes/input_routes.rou.xml -o @DIR@/routes.rou.xml

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_function_remove_loops_route_end_keep/input_routes.rou.xml -o @DIR@/routes.rou.xml --remove-loops

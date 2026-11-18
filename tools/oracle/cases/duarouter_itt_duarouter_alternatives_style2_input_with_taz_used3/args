@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_alternatives_style2_input_with_taz_used3/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml --junction-taz --weight-files tools/oracle/cases/duarouter_itt_duarouter_alternatives_style2_input_with_taz_used3/input_weights.dump.xml -v

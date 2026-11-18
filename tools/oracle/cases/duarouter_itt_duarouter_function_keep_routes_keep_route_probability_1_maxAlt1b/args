@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_function_keep_routes_keep_route_probability_1_maxAlt1b/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml --keep-route-probability 1 --max-alternatives 1

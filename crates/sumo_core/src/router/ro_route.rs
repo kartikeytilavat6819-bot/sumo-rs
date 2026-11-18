@@ -384,26 +384,19 @@ impl RORoute {
     }
 
     /// C++: `void RORoute::addStopOffset(const SUMOTime)`
-    /// Adapts the until and arrival time of all stops by the given offset
-    // void
-    // RORoute::addStopOffset(const SUMOTime offset) {
+    /// Adapts the until time of all stops by the given offset
+    // RORoute.h:
+    // void addStopOffset(const SUMOTime offset) {
     //     for (StopParVector::iterator stop = myStops.begin(); stop != myStops.end(); ++stop) {
     //         if (stop->until >= 0) {
     //             stop->until += offset;
     //         }
-    //         if (stop->arrival >= 0) {
-    //             stop->arrival += offset;
-    //         }
     //     }
     // }
-    #[allow(unused_variables)]
     pub fn add_stop_offset(&mut self, offset: SUMOTime) {
         for stop in self.myStops.iter_mut() {
             if stop.until >= 0 {
                 stop.until += offset;
-            }
-            if stop.arrival >= 0 {
-                stop.arrival += offset;
             }
         }
     }

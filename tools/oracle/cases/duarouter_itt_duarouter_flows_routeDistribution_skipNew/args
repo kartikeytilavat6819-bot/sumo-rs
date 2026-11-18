@@ -1,0 +1,1 @@
+--xml-validation never --write-license -r tools/oracle/cases/duarouter_itt_duarouter_flows_routeDistribution_skipNew/input_routes.rou.xml -o @DIR@/routes.rou.xml --skip-new-routes
