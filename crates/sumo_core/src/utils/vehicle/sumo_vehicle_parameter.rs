@@ -2251,7 +2251,7 @@ pub struct SUMOVehicleParameter_Stop {
     /// the time at which this stop was ended
     pub ended: SUMOTime,
     /// lanes and positions connected to this stop (only used by duarouter where Stop is used to store stopping places)
-    pub accessPos: Vec<Unmapped /* std::tuple<std::string, double, double> */>,
+    pub accessPos: Vec<(String, f64, f64)>,
     /// at which position in the stops list
     pub index: i32,
     /// at which position within the route (only used for state saving)
