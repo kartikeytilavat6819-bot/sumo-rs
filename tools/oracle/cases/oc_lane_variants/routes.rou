@@ -1,0 +1,16 @@
+<routes>
+    <!-- untested lane-selection values: departLane best_prob, arrivalLane first / random -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="del" vClass="delivery" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A"/>
+    <vehicle id="d0" type="car" route="r" depart="0" departLane="best_prob" departSpeed="max"/>
+    <vehicle id="d1" type="car" route="r" depart="2" departLane="best_prob" departSpeed="max"/>
+    <vehicle id="d2" type="car" route="r" depart="4" departLane="best" departSpeed="max"/>
+    <vehicle id="d3" type="car" route="r" depart="6" departLane="first" departSpeed="max"/>
+    <vehicle id="d4" type="car" route="r" depart="8" departLane="allowed" departSpeed="max"/>
+    <vehicle id="d5" type="car" route="r" depart="10" departLane="random" departSpeed="max"/>
+    <vehicle id="a0" type="car" route="r" depart="20" arrivalLane="first" arrivalSpeed="5"/>
+    <vehicle id="a1" type="car" route="r" depart="22" arrivalLane="random" arrivalSpeed="5"/>
+    <vehicle id="a2" type="car" route="r" depart="24" arrivalLane="0" arrivalPos="center"/>
+    <vehicle id="a3" type="del" route="r" depart="26" departLane="first" arrivalLane="2"/>
+</routes>

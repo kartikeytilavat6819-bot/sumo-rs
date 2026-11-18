@@ -2153,6 +2153,29 @@ impl MSPModel_Striping {
                     }
                 }
             }
+            if hasCrossingVehObs {
+                // check whether the crossing is fully blocked
+                let reserved = Self::get_reserved(crossingVehs.len() as i32, reserve_for_oncoming_factor_junctions());
+                let mut allBlocked = true;
+                for i in 0..crossingVehs.len() as i32 {
+                    let o = &crossingVehs[i as usize];
+                    if o.type_ != MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE
+                        && ((dir == MSPMODEL_FORWARD && i >= reserved) || (dir == MSPMODEL_BACKWARD && i < crossingVehs.len() as i32 - reserved))
+                    {
+                        allBlocked = false;
+                        break;
+                    }
+                }
+                if allBlocked {
+                    for o in crossingVehs.iter_mut() {
+                        if dir == MSPMODEL_FORWARD {
+                            o.xBack = utils::geom::NUMERICAL_EPS;
+                        } else {
+                            o.xFwd = crossing.get_length() - utils::geom::NUMERICAL_EPS;
+                        }
+                    }
+                }
+            }
         }
         hasCrossingVehObs
     }

@@ -1,0 +1,1 @@
+--end 120 --seed 9 --eager-insert --max-depart-delay 5 --random-depart-offset 2 --insertion-checks collision

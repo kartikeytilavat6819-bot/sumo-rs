@@ -1,0 +1,14 @@
+<routes>
+    <!-- trips/flows built from from / via / to edge lists (no explicit "edges" route) -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <trip id="t0" type="car" depart="0" from="A" via="B C" to="D" departSpeed="max"/>
+    <trip id="t1" type="car" depart="2" from="A" to="D" departSpeed="max"/>
+    <trip id="v0" type="car" depart="4" from="A" via="B C" to="D" departSpeed="max">
+        <stop lane="B_0" endPos="150" duration="4"/>
+    </trip>
+    <trip id="v1" type="car" depart="6" from="A" via="B C" to="D" departSpeed="max" departLane="1" arrivalPos="200"/>
+    <flow id="f0" type="car" begin="10" end="40" period="10" from="A" via="B C" to="D" departSpeed="max"/>
+    <trip id="v2" type="car" depart="45" from="A" via="B C" to="D" departSpeed="max">
+        <stop lane="C_0" endPos="100" duration="5"/>
+    </trip>
+</routes>

@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="car" length="5" maxSpeed="13.89"/>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <route id="r_we" edges="WC CE"/>
+  <flow id="fwe" type="car" route="r_we" begin="0" end="150" period="10"/>
+  <person id="p0" type="ped" depart="10.00">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p1" type="ped" depart="10.15">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p2" type="ped" depart="10.30">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p3" type="ped" depart="10.45">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p4" type="ped" depart="10.60">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p5" type="ped" depart="10.75">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p6" type="ped" depart="10.90">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p7" type="ped" depart="11.05">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p8" type="ped" depart="11.20">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p9" type="ped" depart="11.35">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p10" type="ped" depart="11.50">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p11" type="ped" depart="11.65">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p12" type="ped" depart="11.80">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p13" type="ped" depart="11.95">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p14" type="ped" depart="12.10">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p15" type="ped" depart="12.25">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p16" type="ped" depart="12.40">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p17" type="ped" depart="12.55">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p18" type="ped" depart="12.70">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p19" type="ped" depart="12.85">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p20" type="ped" depart="13.00">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p21" type="ped" depart="13.15">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p22" type="ped" depart="13.30">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p23" type="ped" depart="13.45">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p24" type="ped" depart="13.60">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p25" type="ped" depart="13.75">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p26" type="ped" depart="13.90">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p27" type="ped" depart="14.05">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p28" type="ped" depart="14.20">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p29" type="ped" depart="14.35">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p30" type="ped" depart="14.50">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p31" type="ped" depart="14.65">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p32" type="ped" depart="14.80">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p33" type="ped" depart="14.95">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p34" type="ped" depart="15.10">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p35" type="ped" depart="15.25">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p36" type="ped" depart="15.40">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p37" type="ped" depart="15.55">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p38" type="ped" depart="15.70">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p39" type="ped" depart="15.85">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p40" type="ped" depart="16.00">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p41" type="ped" depart="16.15">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p42" type="ped" depart="16.30">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p43" type="ped" depart="16.45">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p44" type="ped" depart="16.60">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p45" type="ped" depart="16.75">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p46" type="ped" depart="16.90">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p47" type="ped" depart="17.05">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p48" type="ped" depart="17.20">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p49" type="ped" depart="17.35">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p50" type="ped" depart="17.50">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p51" type="ped" depart="17.65">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p52" type="ped" depart="17.80">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p53" type="ped" depart="17.95">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p54" type="ped" depart="18.10">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p55" type="ped" depart="18.25">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p56" type="ped" depart="18.40">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p57" type="ped" depart="18.55">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p58" type="ped" depart="18.70">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p59" type="ped" depart="18.85">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p60" type="ped" depart="19.00">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p61" type="ped" depart="19.15">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p62" type="ped" depart="19.30">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p63" type="ped" depart="19.45">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p64" type="ped" depart="19.60">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p65" type="ped" depart="19.75">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p66" type="ped" depart="19.90">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p67" type="ped" depart="20.05">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p68" type="ped" depart="20.20">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p69" type="ped" depart="20.35">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p70" type="ped" depart="20.50">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p71" type="ped" depart="20.65">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p72" type="ped" depart="20.80">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p73" type="ped" depart="20.95">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p74" type="ped" depart="21.10">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p75" type="ped" depart="21.25">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p76" type="ped" depart="21.40">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p77" type="ped" depart="21.55">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p78" type="ped" depart="21.70">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p79" type="ped" depart="21.85">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p80" type="ped" depart="22.00">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p81" type="ped" depart="22.15">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p82" type="ped" depart="22.30">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p83" type="ped" depart="22.45">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p84" type="ped" depart="22.60">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p85" type="ped" depart="22.75">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p86" type="ped" depart="22.90">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p87" type="ped" depart="23.05">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p88" type="ped" depart="23.20">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p89" type="ped" depart="23.35">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p90" type="ped" depart="23.50">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p91" type="ped" depart="23.65">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p92" type="ped" depart="23.80">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p93" type="ped" depart="23.95">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p94" type="ped" depart="24.10">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p95" type="ped" depart="24.25">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p96" type="ped" depart="24.40">
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p97" type="ped" depart="24.55">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p98" type="ped" depart="24.70">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p99" type="ped" depart="24.85">
+    <walk edges="SC CN"/>
+  </person>
+</routes>

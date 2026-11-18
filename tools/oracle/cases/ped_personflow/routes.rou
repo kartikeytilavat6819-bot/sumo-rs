@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <personFlow id="pf0" type="ped" begin="0" end="150" number="30"><walk edges="AB BC"/></personFlow>
+  <personFlow id="pf1" type="ped" begin="10" end="120" period="6"><walk edges="CB BA"/></personFlow>
+  <personFlow id="pf2" type="ped" begin="20" end="100" probability="0.2"><walk edges="BC CB"/></personFlow>
+</routes>

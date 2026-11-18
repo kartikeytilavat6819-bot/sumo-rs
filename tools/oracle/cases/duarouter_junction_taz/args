@@ -1,0 +1,1 @@
+--trip-files @CASE@/trips.xml --junction-taz true --seed 1 --output-file @DIR@/routes.rou.xml

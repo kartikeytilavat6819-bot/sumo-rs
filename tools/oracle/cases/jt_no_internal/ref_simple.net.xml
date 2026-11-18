@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:41:45.192889-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="junction.nod.xml"/>
+        <edge-files value="junction.edg.xml"/>
+        <connection-files value="junction.con.xml"/>
+    </input>
+
+    <output>
+        <output-file value="ref_simple.net.xml"/>
+    </output>
+
+    <junctions>
+        <no-internal-links value="true"/>
+    </junctions>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="200.00,200.00" convBoundary="0.00,0.00,400.00,400.00" origBoundary="-200.00,-200.00,200.00,200.00" projParameter="!"/>
+
+    <edge id="E_in" from="nE" to="C" priority="-1">
+        <lane id="E_in_0" index="0" speed="13.89" length="200.00" shape="400.00,201.60 207.20,201.60"/>
+    </edge>
+    <edge id="E_out" from="C" to="nE" priority="-1">
+        <lane id="E_out_0" index="0" speed="13.89" length="200.00" shape="207.20,198.40 400.00,198.40"/>
+    </edge>
+    <edge id="N_in" from="nN" to="C" priority="-1">
+        <lane id="N_in_0" index="0" speed="13.89" length="200.00" shape="198.40,400.00 198.40,207.20"/>
+    </edge>
+    <edge id="N_out" from="C" to="nN" priority="-1">
+        <lane id="N_out_0" index="0" speed="13.89" length="200.00" shape="201.60,207.20 201.60,400.00"/>
+    </edge>
+    <edge id="S_in" from="nS" to="C" priority="-1">
+        <lane id="S_in_0" index="0" speed="13.89" length="200.00" shape="201.60,0.00 201.60,192.80"/>
+    </edge>
+    <edge id="S_out" from="C" to="nS" priority="-1">
+        <lane id="S_out_0" index="0" speed="13.89" length="200.00" shape="198.40,192.80 198.40,0.00"/>
+    </edge>
+    <edge id="W_in" from="nW" to="C" priority="-1">
+        <lane id="W_in_0" index="0" speed="13.89" length="200.00" shape="0.00,198.40 192.80,198.40"/>
+    </edge>
+    <edge id="W_out" from="C" to="nW" priority="-1">
+        <lane id="W_out_0" index="0" speed="13.89" length="200.00" shape="192.80,201.60 0.00,201.60"/>
+    </edge>
+
+    <junction id="C" type="right_before_left" x="200.00" y="200.00" incLanes="N_in_0 E_in_0 S_in_0 W_in_0" intLanes="" shape="196.80,207.20 203.20,207.20 203.64,204.98 204.20,204.20 204.98,203.64 205.98,203.31 207.20,203.20 207.20,196.80 204.98,196.36 204.20,195.80 203.64,195.02 203.31,194.02 203.20,192.80 196.80,192.80 196.36,195.02 195.80,195.80 195.02,196.36 194.02,196.69 192.80,196.80 192.80,203.20 195.02,203.64 195.80,204.20 196.36,204.98 196.69,205.98">
+        <request index="0"  response="000000000000" foes="000100010000"/>
+        <request index="1"  response="111000000000" foes="111100110000"/>
+        <request index="2"  response="110011000000" foes="110011110000"/>
+        <request index="3"  response="000000000000" foes="100010000000"/>
+        <request index="4"  response="000000000111" foes="100110000111"/>
+        <request index="5"  response="011000000110" foes="011110000110"/>
+        <request index="6"  response="000000000000" foes="010000000100"/>
+        <request index="7"  response="000000111000" foes="110000111100"/>
+        <request index="8"  response="000000110011" foes="110000110011"/>
+        <request index="9"  response="000000000000" foes="000000100010"/>
+        <request index="10" response="000111000000" foes="000111100110"/>
+        <request index="11" response="000110011000" foes="000110011110"/>
+    </junction>
+    <junction id="nE" type="unregulated" x="400.00" y="200.00" incLanes="E_out_0" intLanes="" shape="400.00,200.00 400.00,196.80 400.00,200.00"/>
+    <junction id="nN" type="unregulated" x="200.00" y="400.00" incLanes="N_out_0" intLanes="" shape="200.00,400.00 203.20,400.00 200.00,400.00"/>
+    <junction id="nS" type="unregulated" x="200.00" y="0.00" incLanes="S_out_0" intLanes="" shape="200.00,0.00 196.80,0.00 200.00,0.00"/>
+    <junction id="nW" type="unregulated" x="0.00" y="200.00" incLanes="W_out_0" intLanes="" shape="0.00,200.00 0.00,203.20 0.00,200.00"/>
+
+    <connection from="E_in" to="N_out" fromLane="0" toLane="0" dir="r" state="M"/>
+    <connection from="E_in" to="W_out" fromLane="0" toLane="0" dir="s" state="="/>
+    <connection from="E_in" to="S_out" fromLane="0" toLane="0" dir="l" state="="/>
+    <connection from="E_out" to="E_in" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from="N_in" to="W_out" fromLane="0" toLane="0" dir="r" state="M"/>
+    <connection from="N_in" to="S_out" fromLane="0" toLane="0" dir="s" state="="/>
+    <connection from="N_in" to="E_out" fromLane="0" toLane="0" dir="l" state="="/>
+    <connection from="N_out" to="N_in" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from="S_in" to="E_out" fromLane="0" toLane="0" dir="r" state="M"/>
+    <connection from="S_in" to="N_out" fromLane="0" toLane="0" dir="s" state="="/>
+    <connection from="S_in" to="W_out" fromLane="0" toLane="0" dir="l" state="="/>
+    <connection from="S_out" to="S_in" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from="W_in" to="S_out" fromLane="0" toLane="0" dir="r" state="M"/>
+    <connection from="W_in" to="E_out" fromLane="0" toLane="0" dir="s" state="="/>
+    <connection from="W_in" to="N_out" fromLane="0" toLane="0" dir="l" state="="/>
+    <connection from="W_out" to="W_in" fromLane="0" toLane="0" dir="t" state="M"/>
+
+</net>

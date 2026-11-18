@@ -1,0 +1,1 @@
+-n tools/oracle/cases/ped_walk_duration/ped_walk_duration.nod.xml -e tools/oracle/cases/ped_walk_duration/ped_walk_duration.edg.xml --sidewalks.guess

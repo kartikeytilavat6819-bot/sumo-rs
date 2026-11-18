@@ -1,0 +1,8 @@
+<additional>
+    <route id="calRoute" edges="-103227#0 -103227#1 -103227#2"/>
+    <vTypeProbe id="vtp" type="truck" period="20" file="out_vtp.xml"/>
+    <routeProbe id="rp" edge="-103224#1" period="60" file="out_rp.xml"/>
+    <calibrator id="cal" edge="-103227#0" pos="10" period="30" output="out_probes_cal.xml">
+        <flow begin="0" end="200" route="calRoute" vehsPerHour="900" speed="15"/>
+    </calibrator>
+</additional>

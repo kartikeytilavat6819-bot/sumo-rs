@@ -1,0 +1,18 @@
+<additional>
+    <inductionLoop id="e1_0" lane="-103224#1_0" pos="30" period="30" file="out_e1.xml"/>
+    <inductionLoop id="e1_1" lane="-103224#1_1" pos="30" period="30" file="out_e1.xml"/>
+    <inductionLoop id="e1_truck" lane="--103227#1_0" pos="50" period="45" vTypes="truck" file="out_e1.xml"/>
+    <instantInductionLoop id="ie1_0" lane="-103227#1_0" pos="60" file="out_ie1.xml"/>
+    <instantInductionLoop id="ie1_1" lane="-103224#2_1" pos="20" file="out_ie1.xml"/>
+    <laneAreaDetector id="e2_a" lane="-103224#1_0" pos="0" endPos="60" period="30" file="out_e2.xml"/>
+    <laneAreaDetector id="e2_b" lane="-103224#1_1" pos="10" length="40" period="30" timeThreshold="2" speedThreshold="3" jamThreshold="8" file="out_e2.xml"/>
+    <laneAreaDetector id="e2_multi" lanes="-103224#0_0 -103224#1_0" pos="10" endPos="40" period="60" file="out_e2.xml"/>
+    <entryExitDetector id="e3_0" period="30" file="out_e3.xml">
+        <detEntry lane="-103224#0_0" pos="10"/>
+        <detEntry lane="-103224#0_1" pos="10"/>
+        <detExit lane="-103224#3_0" pos="20"/>
+        <detExit lane="-103224#3_1" pos="20"/>
+        <detExit lane="-103227#2_0" pos="50"/>
+        <detExit lane="-103227#2_1" pos="50"/>
+    </entryExitDetector>
+</additional>

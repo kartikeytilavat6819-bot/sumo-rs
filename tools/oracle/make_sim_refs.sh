@@ -18,6 +18,7 @@
 #   device_toc, device_ssm, device_stationfinder, device_driverstate, device_glosa, device_friction   (--end per sim.args)
 # Only outputs the case already compares are written (fcd/stat appear only if the committed ref has them).
 # A case with extra_outputs.txt (lines "<option> <suffix>") writes fcd+stat and each <suffix> as ref.<suffix>.xml.
+# A case with add_outputs.txt (lines "<file> <suffix>"; <file> is written by its additional file) keeps it as ref.<suffix>.xml.
 # Usage: bash tools/oracle/make_sim_refs.sh [case ...]     (default: all cases above). Overwrites references!
 # DEST=/c/... writes <DEST>/<case>/ instead, to check committed references without touching them.
 set -u
@@ -39,6 +40,11 @@ run_ref() {  # run_ref <log> <wsl-cmd> <end or empty> <outdir> <tag>
     echo "  $tag: signal/interrupt (exit $rc), retry $try" >&2
   done
   [ $rc -eq 0 ] || { echo "FAILED $tag: C++ exit $rc (see $log)" >&2; exit 1; }
+  # add_outputs.txt: files the case's additional file writes next to itself become <tag>.<suffix>.xml
+  [ -f "$src/add_outputs.txt" ] && while read -r af suf; do
+    af=${af%$'\r'}; suf=${suf%$'\r'}
+    mv "$src/$af" "$od/$tag.$suf.xml" || { echo "FAILED $tag: no $src/$af" >&2; exit 1; }
+  done < "$src/add_outputs.txt"
   local chk=(--tripinfo "$od/$tag.tripinfo.xml")
   [ -f "$od/$tag.fcd.xml" ] && chk+=(--fcd "$od/$tag.fcd.xml")
   [ -f "$od/$tag.stat.xml" ] && chk+=(--stat "$od/$tag.stat.xml")
@@ -64,7 +70,7 @@ for c in $CASES; do
   outs="--tripinfo-output $(wp "$o")/ref.tripinfo.xml"
   want "$src/ref.fcd.xml" && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
   want "$src/ref.stat.xml" && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
-  [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do outs="$outs $opt $(wp "$o")/ref.$suf.xml"; done < "$src/extra_outputs.txt"
+  [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; outs="$outs $opt $(wp "$o")/ref.$suf.xml"; done < "$src/extra_outputs.txt"
   flags=$(cat "$src/sim.args" 2>/dev/null)
   run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"
@@ -81,7 +87,7 @@ for c in $CASES; do
     # run_all always passes --fcd-output, which adds fcd_<id> to every device list: write a scratch fcd when none is wanted
     if want "$src/ref_$v.fcd.xml"; then vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"; else vouts="$vouts --fcd-output /tmp/fcd_$v.xml"; fi
     want "$src/ref_$v.stat.xml" && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
-    [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do vouts="$vouts $opt $(wp "$o")/ref_$v.$suf.xml"; done < "$src/extra_outputs.txt"
+    [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; vouts="$vouts $opt $(wp "$o")/ref_$v.$suf.xml"; done < "$src/extra_outputs.txt"
     run_ref "$LOG/ref_${c}_$v.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" "$(echo "$vflags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" "ref_$v"
     echo "  $c/$v: exit $?  flags: ${vflags:-none}"
   done

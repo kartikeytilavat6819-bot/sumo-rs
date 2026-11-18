@@ -778,16 +778,29 @@ impl MSStateHandler {
                 let veh = vc.get_vehicle(&vehID);
                 self.myCurrentLink.m().set_approaching(veh, arrivalTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, latOffset);
                 if !use_meso_sim() {
-                    // shortcut: dynamic_cast<MSVehicle*> is unchecked, approaching state is only loaded for micro vehicles
+                    // dynamic_cast<MSVehicle*> is dereferenced unchecked in C++ too; outside meso every vehicle is an MSVehicle
                     veh.cast::<MSVehicle>().m().load_previous_approaching(self.myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed);
                 }
             }
             SUMO_TAG_RAILSIGNAL_CONSTRAINT_TRACKER => {
                 MSRailSignalConstraint_Predecessor::load_state(attrs);
             }
-            SUMO_TAG_RAILSIGNAL_CONSTRAINTS | SUMO_TAG_PREDECESSOR | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
-                // shortcut: the constraint-definition tags need the myStartElement parameterised pass (MSStateHandler.cpp:441-459, NLHandler::addPredecessorConstraint), only tracker state is ported; upgrade when save-state with signal constraints is in scope
-                panic!("shortcut: railSignal constraint definitions in saved state are not ported");
+            SUMO_TAG_RAILSIGNAL_CONSTRAINTS => {
+                let signalID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                let net = MSNet::get_instance();
+                let tls = net.m().get_tls_control();
+                if !tls.knows(&signalID) {
+                    std::panic::panic_any(ProcessError::InvalidArgument(format!("Rail signal '{}' in railSignalConstraints loaded from state is not known", signalID)));
+                }
+                // dynamic_cast<MSRailSignal*>: the logic type tells the class
+                let tll = tls.get(&signalID).get_default();
+                self.myConstrainedSignal = if !tll.is_null() && tll.get_logic_type() == TrafficLightType::RAIL_SIGNAL { tll.cast::<MSRailSignal>() } else { Ptr::null() };
+                if self.myConstrainedSignal.is_null() {
+                    std::panic::panic_any(ProcessError::InvalidArgument(format!("Traffic light '{}' is not a rail signal", signalID)));
+                }
+            }
+            SUMO_TAG_PREDECESSOR | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
+                self.myLastParameterised = NLHandler::add_predecessor_constraint(element, attrs, self.myConstrainedSignal);
             }
             SUMO_TAG_TLLOGIC => {
                 let tlID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
@@ -949,7 +962,7 @@ impl MSStateHandler {
                     vc.delete_kept_vehicle(*v);
                 }
                 if !use_meso_sim() {
-                    // shortcut: loaded vehicles are read from myVehicleDict directly (C++ loadedVehBegin..End), dynamic_cast is unchecked
+                    // C++ loadedVehBegin..loadedVehEnd is myVehicleDict in id order; outside meso every vehicle is an MSVehicle
                     for veh in vc.myVehicleDict.values() {
                         let microVeh = veh.cast::<MSVehicle>();
                         if microVeh.m().has_departed() && !microVeh.m().get_lane().is_null() {
@@ -1102,9 +1115,16 @@ impl MSStateHandler {
             base.m().set_chosen_speed_factor(attrs.get_float(SUMO_ATTR_SPEEDFACTOR).unwrap_or_else(|e| panic!("{e}")));
             v.m().load_state(attrs, self.myOffset);
             if base.has_departed() {
-                // shortcut: the MSDevice_Routing notifyEnter call is skipped, device lookup by type_info is not ported
+                // vehicle already departed: disable pre-insertion rerouting and enable regular routing behavior
+                let routingDevice = base.get_device("rerouting").cast::<MSDevice_Routing>();
+                if !routingDevice.is_null() {
+                    routingDevice.m().notify_enter(v.cast::<SUMOTrafficObject>().m(), MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
+                }
                 MSNet::get_instance().m().get_insertion_control().already_departed(v);
-                // shortcut: the rail-signal vehicleStateChanged registration is skipped, its signature is not verified
+                if MSRailSignalControl::has_instance() {
+                    // register route for deadlock prevention (vehicleStateChanged would not be called otherwise)
+                    MSRailSignalControl::get_instance().vehicle_state_changed(v, MSNet_VehicleState::NEWROUTE, "loadState");
+                }
                 vc.handle_triggered_depart(v, false);
                 if base.has_arrived() && !self.myArrived.contains(&v) {
                     self.myArrived.push(v);

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:09:55.040631-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ped_striping_dawdle/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ped_striping_dawdle/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="fab.0" depart="0.00" departLane="AB_1" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="32.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="12.05" duration="32.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.54" rerouteNo="0" devices="tripinfo_fab.0 fcd_fab.0" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="fab.1" depart="15.00" departLane="AB_1" departPos="5.10" departSpeed="12.11" departDelay="0.00" arrival="45.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="12.78" duration="30.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.40" rerouteNo="0" devices="tripinfo_fab.1 fcd_fab.1" vType="car" speedFactor="1.12" vaporized=""/>
+    <tripinfo id="fab.2" depart="30.00" departLane="AB_1" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="60.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="13.82" duration="30.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.30" rerouteNo="0" devices="tripinfo_fab.2 fcd_fab.2" vType="car" speedFactor="1.02" vaporized=""/>
+    <tripinfo id="fab.3" depart="45.00" departLane="AB_1" departPos="5.10" departSpeed="13.71" departDelay="0.00" arrival="76.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="12.65" duration="31.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.56" rerouteNo="0" devices="tripinfo_fab.3 fcd_fab.3" vType="car" speedFactor="0.99" vaporized=""/>
+    <tripinfo id="fab.4" depart="60.00" departLane="AB_1" departPos="5.10" departSpeed="13.02" departDelay="0.00" arrival="93.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="12.72" duration="33.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.76" rerouteNo="0" devices="tripinfo_fab.4 fcd_fab.4" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="fab.5" depart="75.00" departLane="AB_1" departPos="5.10" departSpeed="12.06" departDelay="0.00" arrival="110.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="12.03" duration="35.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.92" rerouteNo="0" devices="tripinfo_fab.5 fcd_fab.5" vType="car" speedFactor="0.88" vaporized=""/>
+    <tripinfo id="fab.6" depart="90.00" departLane="AB_1" departPos="5.10" departSpeed="12.24" departDelay="0.00" arrival="124.00" arrivalLane="BC_1" arrivalPos="200.00" arrivalSpeed="12.57" duration="34.00" routeLength="395.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.90" rerouteNo="0" devices="tripinfo_fab.6 fcd_fab.6" vType="car" speedFactor="0.91" vaporized=""/>
+</tripinfos>

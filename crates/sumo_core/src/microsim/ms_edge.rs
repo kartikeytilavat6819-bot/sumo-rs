@@ -272,7 +272,7 @@ fn sort_by_sorter(less: impl Fn(Ptr<MSTransportable>, Ptr<MSTransportable>) -> i
 // C++ static members of MSEdge, ported as module-level statics (zero-initialised like C++ statics).
 // Accessed only through the helper fns below, which keep the C++ `T&` return shape.
 static mut MY_DICT: MSEdge_DictType = BTreeMap::new();
-// shortcut: C++ myHashDict is an unordered_map; a BTreeMap is used since it is only queried by key
+// C++ myHashDict is an unordered_map, only queried by key here, so a BTreeMap gives the same lookups
 static mut MY_HASH_DICT: BTreeMap<String, Ptr<MSEdge>> = BTreeMap::new();
 static mut MY_EDGES: MSEdgeVector = Vec::new();
 static mut MY_MESO_IGNORED_V_CLASSES: SVCPermissions = 0;
@@ -388,9 +388,13 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // shortcut: myLaneChanger may be a MSLaneChangerSublane base pointer (only when lateral-resolution > 0, which MSGlobals shim never enables), freeing it here would be the wrong type
         if !self.myLaneChanger.is_null() {
-            drop(unsafe { Box::from_raw(self.myLaneChanger.as_raw()) });
+            // MSLaneChangerSublane is repr(C) with its MSLaneChanger base first, so the base pointer frees the right allocation
+            if self.myLaneChangerIsSublane {
+                drop(unsafe { Box::from_raw(self.myLaneChanger.cast::<MSLaneChangerSublane>().as_raw()) });
+            } else {
+                drop(unsafe { Box::from_raw(self.myLaneChanger.as_raw()) });
+            }
         }
         if !self.myReversedRoutingEdge.get().is_null() {
             drop(unsafe { Box::from_raw(self.myReversedRoutingEdge.get().as_raw()) });
@@ -692,7 +696,6 @@ impl MSEdge {
             if MSGlobals::lateral_resolution() > 0. {
                 // may always initiate sublane-change
                 if !self.is_internal() || crate::microsim::ms_globals::using_internal_lanes() {
-                    // shortcut: sublane changer is stored through its MSLaneChanger base pointer, only reachable when lateral-resolution > 0
                     let sub = Box::into_raw(Box::new(MSLaneChangerSublane::new(lanes, allowChanging)));
                     self.myLaneChanger = Ptr::from_raw(unsafe { &mut (*sub).base } as *mut MSLaneChanger);
                     self.myLaneChangerIsSublane = true;
@@ -3964,7 +3967,7 @@ impl MSEdge {
         for id in desc.split_whitespace() {
             let edge = MSEdge::dictionary_2(id);
             if edge.is_null() {
-                // shortcut: C++ throws ProcessError here; the Rust signature has no Result, so this panics with the same text
+                // C++ throws ProcessError; this port panics with the same text (house convention, see utils::common::util_exceptions)
                 panic!("{}", ProcessError::Process(format!("The edge '{}' within the route {} is not known.\n The route can not be build.", id, rid)));
             }
             into.push(edge);
@@ -3992,7 +3995,7 @@ impl MSEdge {
             let edge = MSEdge::dictionary_2(id);
             // check whether the edge exists
             if edge.is_null() {
-                // shortcut: C++ throws ProcessError here; the Rust signature has no Result, so this panics with the same text
+                // C++ throws ProcessError; this port panics with the same text (house convention, see utils::common::util_exceptions)
                 panic!("{}", ProcessError::Process(format!("The edge '{}' within the route {} is not known.\n The route can not be build.", id, rid)));
             }
             into.push(edge);

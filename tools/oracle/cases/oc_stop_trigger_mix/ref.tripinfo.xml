@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T14:26:07.768304-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/oc_stop_trigger_mix/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/oc_stop_trigger_mix/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_stop_trigger_mix/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_stop_trigger_mix/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_stop_trigger_mix/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="100"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="5"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="v2" depart="2.00" departLane="E0_1" departPos="5.10" departSpeed="12.23" departDelay="0.00" arrival="85.00" arrivalLane="E2_1" arrivalPos="300.00" arrivalSpeed="11.94" duration="83.00" routeLength="895.10" waitingTime="0.00" waitingCount="0" stopTime="1.00" timeLoss="4.93" rerouteNo="0" devices="tripinfo_v2 fcd_v2" vType="car" speedFactor="0.88" vaporized=""/>
+    <tripinfo id="v3" depart="4.00" departLane="E0_1" departPos="5.10" departSpeed="12.25" departDelay="0.00" arrival="89.00" arrivalLane="E2_1" arrivalPos="300.00" arrivalSpeed="13.24" duration="85.00" routeLength="895.10" waitingTime="0.00" waitingCount="0" stopTime="9.00" timeLoss="8.51" rerouteNo="0" devices="tripinfo_v3 fcd_v3" vType="car" speedFactor="1.00" vaporized=""/>
+</tripinfos>

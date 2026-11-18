@@ -1,0 +1,9 @@
+<routes>
+    <!-- flows using probability, number + period, probability + number and fractional begin-end -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A B C D"/>
+    <flow id="f2" type="car" route="r" begin="0" end="30" probability="0.5" departSpeed="desired"/>
+    <flow id="f1" type="car" route="r" begin="0.5" end="30.5" period="2.5" departLane="best_prob" departPos="free" departSpeed="avg" arrivalPos="center" arrivalLane="first"/>
+    <flow id="f3" type="car" route="r" begin="5" number="8" period="3" departSpeed="max"/>
+    <flow id="f4" type="car" route="r" begin="10" number="5" probability="0.8" departSpeed="0"/>
+</routes>

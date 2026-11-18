@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T14:49:46.707979-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="zipper.nod.xml"/>
+        <edge-files value="zipper.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="200.00,200.00" convBoundary="0.00,0.00,500.00,200.00" origBoundary="-200.00,-200.00,300.00,0.00" projParameter="!"/>
+
+    <edge id=":nZ_0" function="internal">
+        <lane id=":nZ_0_0" index="0" speed="6.51" length="9.03" shape="201.60,192.80 201.95,195.25 203.00,197.00 204.75,198.05 207.20,198.40"/>
+    </edge>
+    <edge id=":nZ_1" function="internal">
+        <lane id=":nZ_1_0" index="0" speed="13.89" length="11.20" shape="196.00,198.40 207.20,198.40"/>
+    </edge>
+
+    <edge id="A_in" from="nA" to="nZ" priority="-1">
+        <lane id="A_in_0" index="0" speed="13.89" length="196.00" shape="0.00,198.40 196.00,198.40"/>
+    </edge>
+    <edge id="B_in" from="nB" to="nZ" priority="-1">
+        <lane id="B_in_0" index="0" speed="13.89" length="192.80" shape="201.60,0.00 201.60,192.80"/>
+    </edge>
+    <edge id="OUT" from="nZ" to="nE" priority="-1">
+        <lane id="OUT_0" index="0" speed="13.89" length="292.80" shape="207.20,198.40 500.00,198.40"/>
+    </edge>
+
+    <junction id="nA" type="dead_end" x="0.00" y="200.00" incLanes="" intLanes="" shape="0.00,200.00 0.00,196.80"/>
+    <junction id="nB" type="dead_end" x="200.00" y="0.00" incLanes="" intLanes="" shape="200.00,0.00 203.20,0.00"/>
+    <junction id="nE" type="dead_end" x="500.00" y="200.00" incLanes="OUT_0" intLanes="" shape="500.00,196.80 500.00,200.00"/>
+    <junction id="nZ" type="zipper" x="200.00" y="200.00" incLanes="B_in_0 A_in_0" intLanes=":nZ_0_0 :nZ_1_0" shape="207.20,200.00 207.20,196.80 204.98,196.36 204.20,195.80 203.64,195.02 203.31,194.02 203.20,192.80 200.00,192.80 199.56,195.02 199.00,195.80 198.22,196.36 197.22,196.69 196.00,196.80 196.00,200.00">
+        <request index="0" response="10" foes="10" cont="0"/>
+        <request index="1" response="01" foes="01" cont="0"/>
+    </junction>
+
+    <connection from="A_in" to="OUT" fromLane="0" toLane="0" via=":nZ_1_0" dir="s" state="Z"/>
+    <connection from="B_in" to="OUT" fromLane="0" toLane="0" via=":nZ_0_0" dir="r" state="Z"/>
+
+    <connection from=":nZ_0" to="OUT" fromLane="0" toLane="0" dir="r" state="M"/>
+    <connection from=":nZ_1" to="OUT" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

@@ -1,0 +1,12 @@
+<routes>
+    <!-- routeDistribution with three explicit probabilities, drawn by two flows and a vehicle -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <routeDistribution id="rd">
+        <route id="r1" edges="A" probability="0.20"/>
+        <route id="r2" edges="A B" probability="0.30"/>
+        <route id="r3" edges="A B C" probability="0.50"/>
+    </routeDistribution>
+    <flow id="f1" type="car" route="rd" begin="0" end="80" period="1.5" departSpeed="max"/>
+    <flow id="f2" type="car" route="rd" begin="5" end="60" number="20" departSpeed="max"/>
+    <vehicle id="v1" type="car" route="rd" depart="2" departSpeed="max"/>
+</routes>

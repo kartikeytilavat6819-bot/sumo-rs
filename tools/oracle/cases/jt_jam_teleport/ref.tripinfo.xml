@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T14:32:26.521840-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/jt_jam_teleport/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/jt_jam_teleport/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc03/tools/oracle/cases/jt_jam_teleport/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc03/tools/oracle/cases/jt_jam_teleport/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc03/tools/oracle/cases/jt_jam_teleport/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="20"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="m00" depart="2.00" departLane="N_in_0" departPos="5.10" departSpeed="13.03" departDelay="1.00" arrival="43.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="41.00" routeLength="394.90" waitingTime="21.00" waitingCount="1" stopTime="0.00" timeLoss="23.00" rerouteNo="0" devices="tripinfo_m00 fcd_m00" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized="teleport"/>
+    <tripinfo id="i07" depart="16.00" departLane="E_in_0" departPos="5.10" departSpeed="13.08" departDelay="0.00" arrival="50.00" arrivalLane="W_out_0" arrivalPos="192.80" arrivalSpeed="12.45" duration="34.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.31" rerouteNo="0" devices="tripinfo_i07 fcd_i07" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="m01" depart="4.00" departLane="N_in_0" departPos="5.10" departSpeed="13.21" departDelay="2.00" arrival="68.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="64.00" routeLength="394.90" waitingTime="40.00" waitingCount="2" stopTime="0.00" timeLoss="47.28" rerouteNo="0" devices="tripinfo_m01 fcd_m01" vType="DEFAULT_VEHTYPE" speedFactor="1.01" vaporized="teleport"/>
+    <tripinfo id="m02" depart="6.00" departLane="N_in_0" departPos="5.10" departSpeed="13.69" departDelay="3.00" arrival="92.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="86.00" routeLength="394.90" waitingTime="59.00" waitingCount="3" stopTime="0.00" timeLoss="70.40" rerouteNo="0" devices="tripinfo_m02 fcd_m02" vType="DEFAULT_VEHTYPE" speedFactor="1.08" vaporized="teleport"/>
+    <tripinfo id="m03" depart="8.00" departLane="N_in_0" departPos="5.10" departSpeed="13.40" departDelay="4.00" arrival="118.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="110.00" routeLength="394.90" waitingTime="75.00" waitingCount="4" stopTime="0.00" timeLoss="93.61" rerouteNo="0" devices="tripinfo_m03 fcd_m03" vType="DEFAULT_VEHTYPE" speedFactor="1.03" vaporized="teleport"/>
+    <tripinfo id="m07" depart="17.00" departLane="N_in_0" departPos="5.10" departSpeed="12.19" departDelay="9.00" arrival="133.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="11.87" duration="116.00" routeLength="380.50" waitingTime="72.00" waitingCount="4" stopTime="0.00" timeLoss="90.34" rerouteNo="0" devices="tripinfo_m07 fcd_m07" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="m04" depart="10.00" departLane="N_in_0" departPos="5.10" departSpeed="11.54" departDelay="5.00" arrival="142.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="132.00" routeLength="394.90" waitingTime="91.00" waitingCount="5" stopTime="0.00" timeLoss="111.68" rerouteNo="0" devices="tripinfo_m04 fcd_m04" vType="DEFAULT_VEHTYPE" speedFactor="0.83" vaporized="teleport"/>
+    <tripinfo id="m05" depart="13.00" departLane="N_in_0" departPos="5.10" departSpeed="12.42" departDelay="7.00" arrival="168.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="155.00" routeLength="394.90" waitingTime="112.00" waitingCount="6" stopTime="0.00" timeLoss="138.85" rerouteNo="0" devices="tripinfo_m05 fcd_m05" vType="DEFAULT_VEHTYPE" speedFactor="1.05" vaporized="teleport"/>
+    <tripinfo id="m10" depart="23.00" departLane="N_in_0" departPos="5.10" departSpeed="11.64" departDelay="12.00" arrival="182.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="13.75" duration="159.00" routeLength="380.50" waitingTime="98.00" waitingCount="6" stopTime="0.00" timeLoss="135.40" rerouteNo="0" devices="tripinfo_m10 fcd_m10" vType="DEFAULT_VEHTYPE" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="m06" depart="15.00" departLane="N_in_0" departPos="5.10" departSpeed="12.31" departDelay="8.00" arrival="193.00" arrivalLane="S_out_0" arrivalPos="192.80" arrivalSpeed="0.00" duration="178.00" routeLength="394.90" waitingTime="129.00" waitingCount="7" stopTime="0.00" timeLoss="158.94" rerouteNo="0" devices="tripinfo_m06 fcd_m06" vType="DEFAULT_VEHTYPE" speedFactor="0.89" vaporized="teleport"/>
+</tripinfos>
