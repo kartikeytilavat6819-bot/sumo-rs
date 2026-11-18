@@ -1,1 +1,0 @@
---write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_dua_newstyle_dua3s_step1/input_trips.trips.xml -o @DIR@/routes.rou.xml

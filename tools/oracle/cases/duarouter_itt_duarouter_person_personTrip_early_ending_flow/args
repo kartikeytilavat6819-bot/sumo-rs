@@ -1,0 +1,1 @@
+--write-license --additional tools/oracle/cases/duarouter_itt_duarouter_person_personTrip_early_ending_flow/input_additional.add.xml --route-files=tools/oracle/cases/duarouter_itt_duarouter_person_personTrip_early_ending_flow/input_routes.rou.xml -o @DIR@/routes.rou.xml

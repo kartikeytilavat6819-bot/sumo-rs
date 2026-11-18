@@ -1,0 +1,1 @@
+--write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_trips_geo_geoTrips_junctions_internalLanes/input_trips.trips.xml --additional-files tools/oracle/cases/duarouter_itt_duarouter_trips_geo_geoTrips_junctions_internalLanes/input_additional.add.xml -o @DIR@/routes.rou.xml --write-trips @DIR@/output --mapmatch.junctions --junction-taz
