@@ -155,7 +155,7 @@ run_cmp() {  # run_cmp <dir>; sets DIFF; 0 PASS, 1 FAIL, 2 PANIC/TIMEOUT, 3 REFF
     bin=$OFF; [ $w = cand ] && bin=$OURS
     rm -rf "$d/$w"; mkdir -p "$d/$w"
     local wa=${args//@DIR@/$d/$w}
-    timeout 90 "$bin/duarouter" $wa >"$d/$w.log" 2>&1
+    timeout ${FUZZ_TMO:-60} "$bin/duarouter" $wa >"$d/$w.log" 2>&1
     rc=$?
     if [ $rc -ne 0 ]; then
       if [ $w = ref ]; then DIFF="REFFAIL rc=$rc $(grep -m1 -iE 'error' "$d/ref.log" | tr -d '\r' | cut -c1-90)"; return 3; fi
