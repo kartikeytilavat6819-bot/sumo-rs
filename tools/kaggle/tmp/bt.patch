@@ -1,6 +1,6 @@
 --- a/src/microsim/devices/MSDevice_BTreceiver.cpp
 +++ b/src/microsim/devices/MSDevice_BTreceiver.cpp
-@@ -194,6 +194,8 @@
+@@ -194,6 +194,7 @@
                  // seeing oneself? skip
                  continue;
              }
