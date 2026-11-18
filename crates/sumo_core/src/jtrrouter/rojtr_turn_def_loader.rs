@@ -61,7 +61,7 @@ impl ROJTRTurnDefLoader {
     #[allow(unused_variables)]
     pub fn new(net: &mut RONet) -> Self {
         Self {
-            base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, "turn-ratio-file", ""),
+            base: GenericSAXHandler::new(&TAGS, SUMO_TAG_NOTHING, &ATTRS, SUMO_ATTR_NOTHING, "turn-ratio-file", ""),
             myNet: Ptr::from_mut(net),
             myIntervalBegin: 0.0,
             myIntervalEnd: steps2time(SUMOTIME_MAX),
@@ -176,7 +176,7 @@ impl ROJTRTurnDefLoader {
                 if !self.myHaveWarnedAboutDeprecatedFormat {
                     self.myHaveWarnedAboutDeprecatedFormat = true;
                     // tag names as toString(SUMO_TAG_FROMEDGE/TOEDGE/EDGEREL) prints them
-                    utils::common::msg_handler::write_warning("The turn-file format with elements fromEdge, toEdge is deprecated, please use edgeRel instead.");
+                    utils::common::msg_handler::write_warning("The turn-file format with elements fromEdge, toEdge is deprecated, please use edgeRelation instead.");
                 }
                 self.begin_from_edge(attrs);
             }
