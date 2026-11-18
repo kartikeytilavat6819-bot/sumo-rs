@@ -20,7 +20,7 @@ R="$OUT/dua/results.tsv"
 echo "--- duarouter totals ---"
 awk -F'\t' 'NR>1 {c[$2]++} END {for (k in c) print k, c[k]}' "$R" 2>/dev/null
 echo "--- duarouter non-PASS ---"
-grep -v $'\tPASS\t' "$R" 2>/dev/null | tail -n +2 | head -80
+grep -v $'\tPASS\t' "$R" 2>/dev/null | tail -n +2 | head -160
 echo "--- first failing-case diffs (<=3) ---"
 n=0
 while IFS=$'\t' read -r case verdict rrc crc detail; do
@@ -40,14 +40,6 @@ while IFS=$'\t' read -r case verdict rrc crc detail; do
   fi
   n=$((n+1))
 done < "$R"
-echo "--- full outputs for car_public_walk ---"
-D=/tmp/oc70_out/dua/duarouter_itt_duarouter_person_personTrip_car_public_walk
-for side in ref cand; do
-  echo "=== $side routes.rou.alt.xml ==="
-  cat "$D/$side/routes.rou.alt.xml" 2>/dev/null | grep -v 'generated on'
-  echo "=== $side routes.rou.xml ==="
-  cat "$D/$side/routes.rou.xml" 2>/dev/null | grep -v 'generated on'
-done
 echo "--- all PANIC backtraces ---"
 grep -l 'panicked at' "$OUT/dua"/*/cand.log 2>/dev/null | while read -r f; do
   echo "=== $f ==="

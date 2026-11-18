@@ -1,0 +1,1 @@
+--write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_person_personTrip_max_traveltime/input_routes.rou.xml -o @DIR@/routes.rou.xml --max-traveltime 2000 --ignore-errors
