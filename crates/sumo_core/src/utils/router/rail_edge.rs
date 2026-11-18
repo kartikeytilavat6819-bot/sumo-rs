@@ -514,6 +514,62 @@ impl<E: crate::utils::router::router_edge::RouterEdgeInfo, V> crate::utils::rout
     }
 }
 
+// C++ RailEdge is the edge type of the RailwayRouter's internal DijkstraRouter, so it must satisfy
+// the generic router's edge accessors. Only the methods the C++ RailEdge defines are delegated;
+// the rest are unreachable for this edge type (same convention as the trait's other defaults).
+impl<E: RouterEdge<V>, V: RouterVehicle> RouterEdge<V> for RailEdge<E, V> {
+    type Node = <E as RouterEdge<V>>::Node;
+    type Lane = <E as RouterEdge<V>>::Lane;
+
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("C++ RailEdge has no getLengthGeometryFactor")
+    }
+    fn distance_to(&self, _other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 {
+        panic!("C++ RailEdge has no getDistanceTo")
+    }
+    fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("C++ RailEdge has no getSuccessors")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        self.get_via_successors(vclass, ignore_transient)
+    }
+    fn speed_limit(&self) -> f64 {
+        panic!("C++ RailEdge has no getSpeedLimit")
+    }
+    fn minimum_travel_time(&self, _veh: Ptr<V>) -> f64 {
+        panic!("C++ RailEdge has no getMinimumTravelTime")
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        panic!("C++ RailEdge has no getBidiEdge")
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        let orig = edge.m().get_original();
+        if orig.is_null() { 0. } else { E::travel_time_static(orig, veh, time) }
+    }
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        let orig = edge.m().get_original();
+        if orig.is_null() { 0. } else { E::travel_time_aggregated(orig, veh, time) }
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<V>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<V>) -> bool {
+        self.restricts(veh)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
