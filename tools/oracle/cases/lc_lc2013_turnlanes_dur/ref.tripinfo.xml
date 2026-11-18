@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:18:34.885417-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/lc_lc2013_turnlanes_dur/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/lc_lc2013_turnlanes_dur/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z21/tools/oracle/cases/lc_lc2013_turnlanes_dur/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z21/tools/oracle/cases/lc_lc2013_turnlanes_dur/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z21/tools/oracle/cases/lc_lc2013_turnlanes_dur/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <processing>
+        <lanechange.duration value="2"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="a0" depart="5.00" departLane="E0_1" departPos="5.10" departSpeed="6.85" departDelay="0.00" arrival="100.00" arrivalLane="E1_0" arrivalPos="310.46" arrivalSpeed="13.14" duration="95.00" routeLength="613.23" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="50.07" rerouteNo="0" devices="tripinfo_a0 fcd_a0" vType="lcA" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="a2" depart="15.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="102.00" arrivalLane="E1_0" arrivalPos="310.46" arrivalSpeed="13.43" duration="87.00" routeLength="613.23" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="42.06" rerouteNo="0" devices="tripinfo_a2 fcd_a2" vType="lcC" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="a4" depart="30.00" departLane="E0_1" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="104.00" arrivalLane="E1_0" arrivalPos="310.46" arrivalSpeed="13.41" duration="74.00" routeLength="613.23" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="29.56" rerouteNo="0" devices="tripinfo_a4 fcd_a4" vType="lcB" speedFactor="1.05" vaporized=""/>
+</tripinfos>

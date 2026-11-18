@@ -1,0 +1,17 @@
+<routes>
+    <vType id="slow" vClass="passenger" maxSpeed="3.00" width="1.80" length="4.50" laneChangeModel="SL2015"/>
+    <vType id="car" vClass="passenger" laneChangeModel="SL2015" maxSpeed="13.89" width="1.80" length="4.50" lcStrategic="1" lcCooperative="1" lcSpeedGain="1" lcKeepRight="1" lcSublane="1" lcPushy="0.5" lcPushyGap="0.5"/>
+    <vType id="bike" vClass="bicycle" laneChangeModel="SL2015" maxSpeed="5.00" width="0.60" length="1.80" lcSublane="1" lcPushy="0.8" lcPushyGap="0.2"/>
+    <vType id="bike_fast" vClass="bicycle" laneChangeModel="SL2015" maxSpeed="6.50" width="0.80" length="1.80" lcSublane="0.5" lcPushy="0.2" lcPushyGap="0.5"/>
+    <route id="r0" edges="A B"/>
+    <vehicle id="slow0" type="slow" route="r0" depart="0.00" departLane="1" departSpeed="max"/>
+    <vehicle id="bike0" type="bike" route="r0" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="car0" type="car" route="r0" depart="5.00" departLane="0" departSpeed="max"/>
+    <vehicle id="bike1" type="bike_fast" route="r0" depart="10.00" departLane="0" departSpeed="max"/>
+    <vehicle id="car1" type="car" route="r0" depart="15.00" departLane="2" departSpeed="max"/>
+    <vehicle id="bike2" type="bike" route="r0" depart="20.00" departLane="1" departSpeed="max"/>
+    <vehicle id="car2" type="car" route="r0" depart="25.00" departLane="1" departSpeed="max"/>
+    <vehicle id="bike3" type="bike_fast" route="r0" depart="35.00" departLane="2" departSpeed="max"/>
+    <vehicle id="car3" type="car" route="r0" depart="40.00" departLane="0" departSpeed="max"/>
+    <vehicle id="bike4" type="bike" route="r0" depart="50.00" departLane="2" departSpeed="max"/>
+</routes>
