@@ -4,5 +4,5 @@ $CARGO_TARGET_DIR/debug/sumo -n $d/ref_simple.net.xml -r $d/routes.rou --end 150
 grep -c "<bt " /tmp/z01.bt.xml $d/ref.bt.xml
 grep -c "<seen " /tmp/z01.bt.xml $d/ref.bt.xml
 grep -c "<recognitionPoint" /tmp/z01.bt.xml $d/ref.bt.xml
-grep -v "^<!--\|^ *<[a-z-]* value" /tmp/z01.bt.xml > /tmp/a.xml; grep -v "^<!--\|^ *<[a-z-]* value" $d/ref.bt.xml > /tmp/b.xml
-diff /tmp/a.xml /tmp/b.xml | cut -c1-700 | head -30
+sed -n '/<bt-output>/,$p' /tmp/z01.bt.xml > /tmp/a.xml; sed -n '/<bt-output>/,$p' $d/ref.bt.xml > /tmp/b.xml
+diff /tmp/a.xml /tmp/b.xml | cut -c1-900 | head -16

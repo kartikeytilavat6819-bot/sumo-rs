@@ -430,6 +430,12 @@ pub struct MSDevice_BTsender_VehicleInformation {
     pub haveArrived: bool,
     /// List of edges travelled
     pub route: ConstMSEdgeVector,
+    /// determinism: creation order, stands in for the heap-address order of C++ std::set<const Named*>
+    pub seq: u64,
+}
+
+thread_local! {
+    static S_SEQ: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
 impl std::ops::Deref for MSDevice_BTsender_VehicleInformation {
@@ -456,6 +462,7 @@ impl MSDevice_BTsender_VehicleInformation {
             amOnNet: true,
             haveArrived: false,
             route: Vec::new(),
+            seq: S_SEQ.with(|c| { c.set(c.get() + 1); c.get() }),
         }
     }
 
