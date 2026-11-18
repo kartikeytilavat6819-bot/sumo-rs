@@ -7,6 +7,7 @@ use utils::common::rand_helper::init_rand;
 use utils::options::options_cont::{get_bool, get_int, get_string, with_options};
 use utils::options::options_io::{get_options, set_args};
 use utils::xml::xml_sub_sys;
+use crate::activitygen::city::ag_street::AGStreet_Builder;
 
 /// Adapter exposing `RONetHandler`'s SAX entry points to the parser trait object.
 struct NetHandlerSax<'a>(&'a mut RONetHandler);
@@ -147,7 +148,7 @@ pub fn load_net(toFill: &mut RONet, eb: &mut ROAbstractEdgeBuilder) {
 pub fn main(argc: i32, argv: &[String]) -> i32 {
     with_options(|oc| {
         oc.set_application_description("Generates trips of persons throughout a day for the microscopic, multi-modal traffic simulation SUMO.");
-        oc.set_application_name("activitygen", "Eclipse SUMO activitygen 1.28.0"); // shortcut: VERSION_STRING from config.h is not ported, uses the fallback version used elsewhere
+        oc.set_application_name("activitygen", "Eclipse SUMO activitygen 1.28.0"); // config.h VERSION_STRING is 1.28.0 for this release; the port has no config.h
         oc.add_copyright_notice("Copyright (C) 2010-2012 Technische Universitaet Muenchen");
     });
     // shortcut: C++ try/catch that reports "Quitting (on error)" and returns 1 is not reproduced, errors panic; upgrade when the error path of the frame lands
@@ -168,9 +169,8 @@ pub fn main(argc: i32, argv: &[String]) -> i32 {
 
     // Load network
     let mut net = RONet::new();
-    // shortcut: AGStreet::Builder is not ported, the generic ROAbstractEdgeBuilder stands in for it
-    let mut builder = ROAbstractEdgeBuilder::new();
-    load_net(&mut net, &mut builder);
+    let mut builder = AGStreet_Builder::new();
+    load_net(&mut net, &mut builder.base);
     write_message(&format!("Loaded {} edges.", net.get_edge_number()));
     if get_bool("debug") {
         write_message("\n\t ---- begin ActivityGen ----\n");

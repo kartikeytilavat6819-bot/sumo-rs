@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/cv_triggered/cv_triggered.nod.xml --edge-files tools/oracle/cases/cv_triggered/cv_triggered.edg.xml

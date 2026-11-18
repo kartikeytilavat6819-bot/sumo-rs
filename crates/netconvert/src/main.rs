@@ -93,7 +93,11 @@ fn run(argv: &[String]) -> Result<bool, ProcessError> {
     if !check_options() {
         return Err(ProcessError::default_msg());
     }
-    // shortcut: RandHelper::initRandGlobal() is skipped because the random and seed options are not registered, the global RNG keeps its default seed, upgrade with insertRandOptions
+    // C++ RandHelper::initRandGlobal()
+    with_options(|oc| -> Result<(), ProcessError> {
+        utils::common::rand_helper::init_rand(None, oc.get_bool("random")?, oc.get_int("seed")?);
+        Ok(())
+    })?;
     // build the projection
     if !with_options(|oc| GeoConvHelper::init_from_options(oc))? {
         return Err(ProcessError::new("Could not build projection!"));

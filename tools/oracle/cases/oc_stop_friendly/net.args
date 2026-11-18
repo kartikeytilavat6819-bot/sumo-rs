@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/oc_stop_friendly/ocnet.nod.xml --edge-files tools/oracle/cases/oc_stop_friendly/ocnet.edg.xml

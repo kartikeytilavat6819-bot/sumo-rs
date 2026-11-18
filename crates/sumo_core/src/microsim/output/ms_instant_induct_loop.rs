@@ -1,6 +1,6 @@
 //! Port of microsim/output/MSInstantInductLoop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
-use utils::common::to_string::f64_to_string_default;
+use utils::common::to_string::to_string;
 use crate::prelude::*;
 use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
@@ -340,14 +340,14 @@ impl MSInstantInductLoop {
             let dev = self.myOutputDevice.m();
             dev.open_tag("instantOut")
                 .write_attr("id", self.base2.base.get_id())
-                .write_attr("time", &f64_to_string_default(t))
+                .write_attr("time", &to_string(&t))
                 .write_attr("state", state)
                 .write_attr("vehID", veh.get_id())
-                .write_attr("speed", &f64_to_string_default(speed))
-                .write_attr("length", &f64_to_string_default(veh.get_vehicle_type().get_length()))
+                .write_attr("speed", &to_string(&speed))
+                .write_attr("length", &to_string(&veh.get_vehicle_type().get_length()))
                 .write_attr("type", veh.get_vehicle_type().get_id());
             if !add.is_empty() {
-                dev.write_attr(add, &f64_to_string_default(addValue));
+                dev.write_attr(add, &to_string(&addValue));
             }
             dev.close_tag("");
         }

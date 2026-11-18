@@ -2,7 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_warning;
-use utils::options::options_cont;
 
 /// Writes the state of the tls to a file (in each second)
 /// C++ class `Command_RouteReplacement` (microsim/Command_RouteReplacement.h)
@@ -91,8 +90,7 @@ impl Command_RouteReplacement {
             let mut msg = String::new();
             if !veh.has_valid_route(&mut msg, self.myRoute.clone()) {
                 write_warning(&format!("Invalid route replacement for vehicle '{}'. {}", veh.get_id(), msg));
-                // shortcut: MSGlobals::gCheckRoutes is not ported (ms_globals.rs has no statics); read its source option (set as !ignore-route-errors in MSFrame) directly, upgrade when MSGlobals statics land
-                if !options_cont::get_bool("ignore-route-errors") {
+                if crate::microsim::ms_globals::check_routes() {
                     panic!("{}", ProcessError::Process(format!("{}.", errorPrefix)));
                 }
             }

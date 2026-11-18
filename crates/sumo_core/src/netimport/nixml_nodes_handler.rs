@@ -671,7 +671,12 @@ impl NIXMLNodesHandler {
                 if def.get_type() != type_ && attrs.has_attribute(SUMO_ATTR_TLTYPE) {
                     write_warning(&tlf!("Changing traffic light type '%' to '%' for tl '%'.", TrafficLightTypes.get_string(def.get_type()), typeS, tlID));
                     def.m().set_type(type_);
-                    // shortcut: C++ dynamic_cast<NBLoadedSUMOTLDef*> (guessMinMaxDuration) and dynamic_cast<NBOwnTLDef*> (setLayout) need a runtime type tag NBTrafficLightDefinition lacks, so these two steps are skipped, upgrade when the TL definition carries its kind
+                    if type_ != TrafficLightType::STATIC && def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                        def.cast::<NBLoadedSUMOTLDef>().m().guess_min_max_duration();
+                    }
+                }
+                if layout != TrafficLightLayout::DEFAULT && def.m().myKind == NBTrafficLightDefinitionKind::OwnTL {
+                    def.cast::<NBOwnTLDef>().m().set_layout(layout);
                 }
             }
         } else {

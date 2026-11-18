@@ -42,17 +42,20 @@ impl Command_SaveTLSProgram {
     //     myOutputDevice.writeXMLHeader("additional", "additional_file.xsd");
     // }
     #[allow(unused_variables)]
-    pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Self {
+    pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Box<Self> {
         // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
         od.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
-        Self {
+        let mut b = Box::new(Self {
             base: (),
             myOutputDevice: Ptr::from_mut(od),
             myLogics: Ptr::new(logics),
             myPreviousStates: Vec::new(),
             myPreviousProgramID: String::new(),
             myTLSID: String::new(),
-        }
+        });
+        // C++ constructor: MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(this)
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(&mut *b as &mut dyn Command), -1);
+        b
     }
 
     /// C++: `void Command_SaveTLSProgram::~Command_SaveTLSProgram() noexcept` [virtual]
@@ -171,3 +174,8 @@ impl Command_SaveTLSProgram {
 
 }
 
+impl Command for Command_SaveTLSProgram {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        Command_SaveTLSProgram::execute(self, currentTime)
+    }
+}

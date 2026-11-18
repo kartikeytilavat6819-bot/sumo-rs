@@ -1,6 +1,14 @@
 //! Port of marouter/marouter_main.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::duarouter::duarouter_main::{effort_co, effort_co2, effort_elec, effort_fuel, effort_hc, effort_no_x, effort_pm_x, leak_router};
+use crate::router::ro_net::ROMapMatcher;
+use crate::utils::router::a_star_router::AStarRouter;
+use crate::utils::router::ch_router::CHRouter;
+use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
+use crate::utils::router::dijkstra_router::DijkstraRouter;
+use crate::utils::router::sumo_abstract_router::{SUMOAbstractRouter, SUMOAbstractRouter_TypedOperation};
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 /// C++: `void (RONet &, OptionsCont &) computeAllPairs`
 // void
@@ -277,30 +285,49 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
         end = if matrix.get_end() >= 0 { matrix.get_end() } else { utils::common::time::SUMOTIME_MAX };
     }
     let ignoreErrors = oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}"));
-    let mut dijkstra: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle>;
-    if measure == "traveltime" && priorityFactor == 0.0 {
+    let ttOp: SUMOAbstractRouter_TypedOperation<ROEdge, ROVehicle> = if oc.get_int("paths").unwrap_or_else(|e| panic!("{e}")) > 1 { ROMAAssignments::get_penalized_tt } else { ROEdge::get_travel_time_static };
+    let weightPeriod = if oc.is_set("weight-files", true).unwrap_or_else(|e| panic!("{e}")) { utils::common::time::string2time(&oc.get_string("weight-period").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}")) } else { utils::common::time::SUMOTIME_MAX };
+    // C++ `new` of the router, held as its SUMOAbstractRouter base (the routers live until the process exits)
+    let routerPtr: Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> = if measure == "traveltime" && priorityFactor == 0.0 {
         match routingAlgorithm.as_str() {
-            "dijkstra" => {
-                // shortcut: C++ selects the effort operation from the paths option (penalised TT or ROEdge::getTravelTimeStatic) and that selection is not ported, so no effort operation is set yet; upgrade with the option port
-                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false).with_compute();
-            }
-            "astar" | "CH" | "CHWrapper" | "CCH" => {
-                // shortcut: astar, CH, CHWrapper and CCH routers need the SUMOAbstractRouter trait object, not ported
-                panic!("shortcut: routing algorithm '{}' is not ported", routingAlgorithm);
-            }
+            "dijkstra" => leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(ttOp), None, false, Ptr::null(), net.has_permissions(), false).with_compute()),
+            "astar" => leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ttOp), None, net.has_permissions(), false).with_compute()),
+            "CH" if !net.has_permissions() => leak_router(CHRouter::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ROEdge::get_travel_time_static), SVC_IGNORING, weightPeriod, net.has_permissions(), false).with_compute()),
+            "CHWrapper" | "CH" => leak_router(CHRouterWrapper::new(&ROEdge::get_all_edges(), ignoreErrors, Some(ROEdge::get_travel_time_static), begin, end, weightPeriod, net.has_permissions(), oc.get_int("routing-threads").unwrap_or_else(|e| panic!("{e}"))).with_compute()),
+            // shortcut: CCH needs ROCCHGraph and ROCCHMetrics wired to the CCHRouter operation, and SUMOAbstractRouter_Operation is still Unmapped, upgrade when that type is mapped
+            "CCH" => panic!("shortcut: routing algorithm 'CCH' is not wired in marouter yet"),
             _ => {
                 panic!("{}", ProcessError::new(format!("Unknown routing Algorithm '{}'!", routingAlgorithm)));
             }
         }
     } else {
+        let op: SUMOAbstractRouter_TypedOperation<ROEdge, ROVehicle> = if measure == "traveltime" {
+            if ROEdge::init_priority_factor(priorityFactor) { ROEdge::get_travel_time_static_priority_factor } else { ROEdge::get_travel_time_static }
+        } else if measure == "CO" {
+            effort_co
+        } else if measure == "CO2" {
+            effort_co2
+        } else if measure == "PMx" {
+            effort_pm_x
+        } else if measure == "HC" {
+            effort_hc
+        } else if measure == "NOx" {
+            effort_no_x
+        } else if measure == "fuel" {
+            effort_fuel
+        } else if measure == "electricity" {
+            effort_elec
+        } else if measure == "noise" {
+            ROEdge::get_noise_effort
+        } else {
+            ROEdge::get_stored_effort
+        };
         if measure != "traveltime" && !net.has_loaded_effort() {
             utils::common::msg_handler::write_warning(&format!("No weight data was loaded for attribute '{}'.", measure));
         }
-        // shortcut: C++ selects the effort operation from the measure and the priority-factor option, which is not ported, so the weighted router has no effort operation and cannot route yet
-        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false).with_compute();
-    }
-    let router: &mut crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle> = &mut dijkstra.base;
-    // shortcut: RORouterProvider and the HAVE_FOX worker threads are not ported, routing runs on this thread only
+        leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), Some(ttOp), false, Ptr::null(), net.has_permissions(), false).with_compute())
+    };
+    let router: &mut SUMOAbstractRouter<ROEdge, ROVehicle> = routerPtr.m();
     // prepare the output
     net.open_output(oc);
     // process route definitions
@@ -332,8 +359,9 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
         netloadOutput,
     );
     a.reset_flows();
-    // shortcut: router->reset(&defaultVehicle) (CH router initialisation) and the worker thread pool are not ported
-    let _ = &defaultVehicle;
+    // C++ (HAVE_FOX): this is just to init the CHRouter with the default vehicle
+    router.reset(Ptr::from_mut(&mut defaultVehicle));
+    // shortcut: the worker thread pool (RONet::WorkerThread, routing-threads) is not ported, routing runs on this thread only
     let mut assignMethod = oc.get_string("assignment-method").unwrap_or_else(|e| panic!("{e}"));
     if assignMethod == "UE" {
         utils::common::msg_handler::write_warning("Deterministic user equilibrium ('UE') is not implemented yet, using stochastic method ('SUE').");

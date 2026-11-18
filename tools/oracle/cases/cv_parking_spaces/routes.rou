@@ -1,0 +1,10 @@
+<routes>
+    <vehicle id="s0" depart="0"><route edges="E0 E1 E2"/><stop parkingArea="paS" duration="25" parking="true"/></vehicle>
+    <flow id="thru" begin="2" end="90" period="7"><route edges="E0 E1 E2"/></flow>
+    <vehicle id="s1" depart="6"><route edges="E0 E1 E2"/><stop parkingArea="paS" duration="30" parking="true"/></vehicle>
+    <vehicle id="s2" depart="12"><route edges="E0 E1 E2"/><stop parkingArea="paS" duration="35" parking="true"/></vehicle>
+    <vehicle id="s3" depart="18"><route edges="E0 E1 E2"/><stop parkingArea="paS" duration="40" parking="true"/></vehicle>
+    <vehicle id="r0" depart="30"><route edges="E0 E1 E2"/><stop parkingArea="paR" duration="20"/></vehicle>
+    <vehicle id="r1" depart="35"><route edges="E0 E1 E2"/><stop parkingArea="paR" duration="20"/></vehicle>
+    <vehicle id="r2" depart="40"><route edges="E0 E1 E2"/><stop parkingArea="paR" duration="20"/></vehicle>
+</routes>

@@ -4369,16 +4369,7 @@ impl MSLaneChanger {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(arg0: &MSLaneChanger) -> Self {
-        // shortcut: private C++ copy constructor is never called; ChangeElem is not Clone in this port, so the copy starts with an empty changer
-        let _ = arg0;
-        MSLaneChanger {
-            vt: &DEFAULT_MS_LANE_CHANGER_VT,
-            myChanger: Vec::new(),
-            myCandi: 0,
-            myAllowsChanging: arg0.myAllowsChanging,
-            myChangeToOpposite: arg0.myChangeToOpposite,
-            checkOpened: arg0.checkOpened,
-        }
+        panic!("MSLaneChanger copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSLaneChanger & MSLaneChanger::operator=(const MSLaneChanger &)` [private]
@@ -4386,9 +4377,7 @@ impl MSLaneChanger {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSLaneChanger) -> &mut MSLaneChanger {
-        // shortcut: private C++ assignment operator is never called; returns self unchanged, upgrade when ChangeElem is Clone
-        let _ = arg0;
-        self
+        panic!("MSLaneChanger assignment operator is private and undefined in C++")
     }
 
 }

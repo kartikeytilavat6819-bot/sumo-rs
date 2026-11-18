@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_jam_teleport/junction.nod.xml --edge-files tools/oracle/cases/jt_jam_teleport/junction.edg.xml --connection-files tools/oracle/cases/jt_jam_teleport/junction.con.xml

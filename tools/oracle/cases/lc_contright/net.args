@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/lc_contright/road.nod.xml --edge-files tools/oracle/cases/lc_contright/road.edg.xml

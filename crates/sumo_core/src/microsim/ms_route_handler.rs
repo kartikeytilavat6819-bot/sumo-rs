@@ -16,21 +16,21 @@ pub enum MSRouteHandler_ObjectTypeEnum {
     UNDEFINED = 2,
 }
 
-// shortcut: VEHPARS_* belong to SUMOVehicleParameter.h, not ported yet, move them there
+// local copies of SUMOVehicleParameter.h / SUMOVTypeParameter.h constants (same values; sumo_vehicle_parameter.rs keeps its copies private)
 const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
 const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
 const VEHPARS_ROUTE_SET: i64 = 2 << 10;
 const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
 const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
 const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
-// shortcut: STOP_INDEX_* belong to SUMOVehicleParameter.h, not ported yet, move them there
+// SUMOVehicleParameter.h STOP_INDEX_* (same values)
 const STOP_INDEX_REPEAT: i32 = -3;
 const STOP_INDEX_END: i32 = -1;
-// shortcut: MSPModel constants belong to MSPModel.h, not ported yet, move them there
+// MSPModel::UNSPECIFIED_POS_LAT / RANDOM_POS_LAT (MSPModel.cpp, same values)
 const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
 const RANDOM_POS_LAT: f64 = -f64::MAX;
 
-// shortcut: these constants belong to SUMOVehicleParameter.h / MSStage.h / SUMOVehicleParameter.h, not ported yet, move them there
+// SUMOVehicleParameter.h constants (same values)
 const STOP_END_SET: i32 = 2;
 const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
 const ARRIVALPOS_UNSPECIFIED: f64 = f64::INFINITY;
@@ -85,9 +85,8 @@ fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
 }
 
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
-// shortcut: scans the TAGS table instead of the SumoXMLTags bijection, upgrade when sumo_xml_definitions exposes toString
 fn tag_to_string(tag: SumoXMLTag) -> String {
-    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
+    utils::xml::sumo_xml_definitions::Tags.get_string(tag).to_string()
 }
 
 // C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
@@ -2401,8 +2400,8 @@ impl MSRouteHandler {
                 format!(" in route '{}'", self.myActiveRouteID)
             };
             let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
-            let ok = self.parse_stop(&mut stop, attrs, errorSuffix.clone(), Ptr::null());
-            // shortcut: MsgHandler::getErrorInstance() has no accessor yet, parseStop reports to a null handler until it does
+            let errorInstance: Ptr<MsgHandler> = utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| Ptr::from_mut(h));
+            let ok = self.parse_stop(&mut stop, attrs, errorSuffix.clone(), errorInstance);
             if !ok {
                 if check_routes() {
                     throw_process_error_default();

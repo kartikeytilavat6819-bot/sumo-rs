@@ -27,7 +27,7 @@ impl MSEdgeControl_LaneUsage {
 }
 
 /// C++ `StopWatch<std::chrono::nanoseconds>` (utils/common/StopWatch.h), history container only
-// shortcut: timing calibration and statistics output are only used under PARALLEL_STOPWATCH (compiled out in the default build), upgrade if profiling output is needed
+// C++ timing calibration and statistics output exist only under PARALLEL_STOPWATCH (compiled out of the default build), not ported
 #[derive(Default)]
 pub struct MSEdgeControl_StopWatch {
     pub history: Vec<i64>,
@@ -100,7 +100,7 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn new(edges: &Vec<Ptr<MSEdge>>) -> Self {
-        // shortcut: worker thread pool (THREAD_POOL / HAVE_FOX) is not ported, all lane work runs serially, upgrade when ThreadPool lands
+        // Unreachable here: --threads > 1 is rejected at startup (ms_frame.rs, no-Fox build), so lane work runs on the serial path
         let mut myLanes: MSEdgeControl_LaneUsageVector = (0..MSLane::dict_size())
             .map(|_| MSEdgeControl_LaneUsage { lane: Ptr::null(), amActive: false, haveNeighbors: false })
             .collect();
@@ -144,7 +144,7 @@ impl MSEdgeControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // shortcut: thread pool is not ported (work runs serially), so there are no workers to clear; PARALLEL_STOPWATCH output is compiled out in the default build
+        // Unreachable here: no thread pool exists because --threads > 1 is rejected at startup; PARALLEL_STOPWATCH output is compiled out
     }
 
     /// C++: `void MSEdgeControl::patchActiveLanes()`
@@ -239,7 +239,7 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn plan_movements(&mut self, t: SUMOTime) {
-        // shortcut: multi-threaded planning (gNumSimThreads > 1) is not ported, lanes are planned serially, upgrade when ThreadPool lands
+        // Unreachable here: the gNumSimThreads > 1 planning branch needs --threads > 1, which is rejected at startup; the serial branch is ported
         let mut i = 0;
         while i < self.myActiveLanes.len() {
             let lane = self.myActiveLanes[i];
@@ -348,7 +348,7 @@ impl MSEdgeControl {
     pub fn execute_movements(&mut self, t: SUMOTime) {
         let wasActive: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();
         self.myWithVehicles2Integrate.clear();
-        // shortcut: multi-threaded execution (gNumSimThreads > 1) is not ported, lanes execute serially, upgrade when ThreadPool lands
+        // Unreachable here: the gNumSimThreads > 1 execution branch needs --threads > 1, which is rejected at startup; the serial branch is ported
         let mut i = 0;
         while i < self.myActiveLanes.len() {
             let lane = self.myActiveLanes[i];
@@ -467,7 +467,7 @@ impl MSEdgeControl {
     #[allow(unused_variables)]
     pub fn change_lanes(&mut self, t: SUMOTime) {
         let mut toAdd: Vec<Ptr<MSLane>> = Vec::new();
-        // shortcut: multi-threaded lane changing (gNumSimThreads > 1) is not ported, edges change lanes serially, upgrade when ThreadPool lands
+        // Unreachable here: the gNumSimThreads > 1 lane-changing branch needs --threads > 1, which is rejected at startup; the serial branch is ported
         let lateralResolution = MSGlobals::lateral_resolution();
         MSGlobals::set_compute_lc(true);
         let active: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/oc_repeat_cycle/ring.nod.xml --edge-files tools/oracle/cases/oc_repeat_cycle/ring.edg.xml

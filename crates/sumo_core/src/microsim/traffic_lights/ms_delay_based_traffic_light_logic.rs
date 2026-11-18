@@ -5,7 +5,7 @@ use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
 /// C++ `dynamic_cast<MSE2Collector*>(MSDetectorFileOutput*)`: MSDetectorFileOutput is the MSE2Collector base2 field,
 /// not its first base, so step back by the field offset.
-// shortcut: no runtime type check; relies on the lane-area detector map holding only MSE2Collector, upgrade with a type flag check
+// the SUMO_TAG_LANE_AREA_DETECTOR map only ever holds MSE2Collectors (NLDetectorBuilder), so the cast is exact without a runtime check
 fn e2_from_detector_file_output(det: Ptr<MSDetectorFileOutput>) -> Ptr<MSE2Collector> {
     if det.is_null() {
         return Ptr::null();

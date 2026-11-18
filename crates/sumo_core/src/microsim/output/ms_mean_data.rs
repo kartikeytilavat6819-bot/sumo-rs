@@ -50,8 +50,8 @@ fn max2(a: f64, b: f64) -> f64 {
 fn min4(a: f64, b: f64, c: f64, d: f64) -> f64 {
     min2(min2(a, b), min2(c, d))
 }
-// shortcut: C++ `delete` of value collectors and sub-data is not done (leaked). A base-typed Ptr cannot free
-// the subclass allocation it points into. Upgrade with owned storage per collector.
+// shortcut: C++ `delete` of value collectors and sub-data is not done (leaked; ~MeanDataValues and ~MSMoveReminder
+// are empty, so only memory differs). A base-typed Ptr cannot free the subclass allocation it points into; upgrade with owned storage per collector.
 /// C++ `new T(...)`: heap allocation owned by the simulation, referenced through Ptr.
 fn heap<T>(value: T) -> Ptr<T> {
     Ptr::from_raw(Box::into_raw(Box::new(value)))
@@ -236,12 +236,12 @@ impl MSMeanData {
                     this.myPrintDefaults = true;
                     this.myPrintModified = true;
                 } else {
-                    // shortcut: C++ rethrows here; a constructor cannot return Err, so this panics with the same message
-                    panic!("{}", e);
+                    // C++ rethrows: the exception travels as a ProcessError panic payload
+                    std::panic::panic_any(e);
                 }
             }
-            // shortcut: C++ propagates non-bool exceptions out of the constructor; panics here instead
-            Err(e) => panic!("{}", e),
+            // C++ propagates other exceptions out of the constructor
+            Err(e) => std::panic::panic_any(e),
         }
         this.base.vt = &MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT;
         this
@@ -606,7 +606,7 @@ impl MSMeanData {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_attribute_names_base(&self) -> Vec<String> {
-        // shortcut: pure virtual in C++; the subclass table supplies it, so this panics like a pure-virtual call.
+        // pure virtual in C++: the subclass table supplies it; reaching the base is a pure-virtual call
         panic!("MSMeanData::getAttributeNames is pure virtual; the subclass must implement it")
     }
 
@@ -704,7 +704,7 @@ impl MSMeanData {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn create_values_base(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        // shortcut: pure virtual in C++ (each output type creates its own MeanDataValues subclass); the subclass table supplies it, so this panics like a pure-virtual call.
+        // pure virtual in C++ (each output type creates its own MeanDataValues subclass): the subclass table supplies it
         panic!("MSMeanData::createValues is pure virtual; the subclass must implement it")
     }
 
@@ -1038,8 +1038,7 @@ impl MSMeanData {
     #[allow(unused_variables)]
     pub fn write_aggregated(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
         if self.myTrackVehicles {
-            // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
-            panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
+            std::panic::panic_any(ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
         }
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
 
@@ -1162,8 +1161,7 @@ impl MSMeanData {
     #[allow(unused_variables)]
     pub fn write_aggregated_taz(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
         if self.myTrackVehicles {
-            // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
-            panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
+            std::panic::panic_any(ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
         }
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
 
@@ -1617,13 +1615,7 @@ impl MSMeanData_MeanDataValueTracker {
         result
     }
 
-    /// C++: `void MeanDataValueTracker::clearFirst()`
-    // (declared in MSMeanData.h, never defined in C++: calling it fails to link)
-    #[allow(unused_variables)]
-    pub fn clear_first(&mut self) {
-        // shortcut: declared but never defined in C++, so no behaviour to port; panics if reached
-        panic!("MeanDataValueTracker::clearFirst is declared but not defined in SUMO")
-    }
+    // C++ `MeanDataValueTracker::clearFirst` is declared in MSMeanData.h but never defined (nor called): nothing to port
 
     /// C++: `double MeanDataValueTracker::getSamples() const` [const, virtual]
     // double
@@ -1715,7 +1707,7 @@ impl MSMeanData_MeanDataValues {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset_base(&mut self, afterWrite: bool) {
-        // shortcut: pure virtual in C++; the subclass table supplies it, so this panics like a pure-virtual call
+        // pure virtual in C++: the subclass table supplies it; reaching the base is a pure-virtual call
         panic!("MeanDataValues::reset is pure virtual; the subclass must implement it")
     }
 
@@ -1724,7 +1716,7 @@ impl MSMeanData_MeanDataValues {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_to_base(&self, val: &mut MSMeanData_MeanDataValues) {
-        // shortcut: pure virtual in C++; see reset_base
+        // pure virtual in C++; see reset_base
         panic!("MeanDataValues::addTo is pure virtual; the subclass must implement it")
     }
 
@@ -2058,7 +2050,7 @@ impl MSMeanData_MeanDataValues {
             min2(newPos, self.myLaneLength) - max2(oldPos, 0.) + min2(max2(0., newPos - self.myLaneLength), veh.get_vehicle_type().get_length())
         };
 
-        // shortcut: the HAVE_FOX ScopedLocker around notifyMoveInternal is not needed (single-threaded port)
+        // the HAVE_FOX ScopedLocker only guards parallel lane updates; the simulation loop here is single-threaded
         let veh_ref: &SUMOTrafficObject = veh;
         self.notify_move_internal(veh_ref, frontOnLane, timeOnLane, (enterSpeed + leaveSpeedFront) / 2., (enterSpeed + leaveSpeed) / 2., travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane);
         ret
@@ -2105,7 +2097,7 @@ impl MSMeanData_MeanDataValues {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write_base(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        // shortcut: pure virtual in C++; see reset_base
+        // pure virtual in C++; see reset_base
         panic!("MeanDataValues::write is pure virtual; the subclass must implement it")
     }
 

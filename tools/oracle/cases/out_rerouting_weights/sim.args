@@ -1,0 +1,1 @@
+--end 300 --device.rerouting.probability 1 --device.rerouting.period 15 --device.rerouting.adaptation-steps 6 --device.rerouting.adaptation-interval 5 --vehroute-output.exit-times true --vehroute-output.route-length true --vehroute-output.cost true

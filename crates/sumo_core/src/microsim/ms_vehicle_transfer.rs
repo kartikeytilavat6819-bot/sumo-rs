@@ -14,7 +14,7 @@ thread_local! {
 /// C++ class `MSVehicleTransfer` (microsim/MSVehicleTransfer.h)
 pub struct MSVehicleTransfer {
     /// The information about stored vehicles to move virtually
-    // shortcut: MFXSynchQue not ported (plain Vec, single-threaded), upgrade when MFXSynchQue is ported
+    // Unreachable here: MFXSynchQue is only used when gNumSimThreads > 1, and --threads > 1 is rejected at startup (ms_frame.rs); a plain Vec is the serial behaviour
     pub myVehicles: Vec<MSVehicleTransfer_VehicleInformation>,
 }
 
@@ -487,7 +487,7 @@ impl MSVehicleTransfer {
     #[allow(unused_variables)]
     pub fn new() -> Self {
         Self {
-            // shortcut: MFXSynchQue (thread-safe queue, used when gNumSimThreads > 1) not ported, plain Vec is used, upgrade when MFXSynchQue is ported
+            // Unreachable here: MFXSynchQue (used only when gNumSimThreads > 1) is not needed while --threads > 1 is rejected at startup
             myVehicles: Vec::new(),
         }
     }

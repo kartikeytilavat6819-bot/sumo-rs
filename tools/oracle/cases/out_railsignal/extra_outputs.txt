@@ -1,0 +1,2 @@
+--railsignal-block-output railblock
+--railsignal-vehicle-output railveh

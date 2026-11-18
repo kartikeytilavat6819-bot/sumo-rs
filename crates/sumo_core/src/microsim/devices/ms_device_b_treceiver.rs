@@ -86,7 +86,7 @@ fn boxes_overlap(amin: [f32; 2], amax: [f32; 2], bmin: [f32; 2], bmax: [f32; 2])
 /// Initialises the bt-system from the options the first time a device is built
 fn init_once_from_options() {
     if !MY_WAS_INITIALISED.with(|c| c.get()) {
-        // shortcut: C++ event control owns the update and its destructor (final cleanup and bt-output) runs at teardown; leaked here until MSEventControl owns commands as Box, so that final pass is not run
+        // shortcut: C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate (drop_: final pass + bt-output for vehicles still running); MSNet teardown here frees MSEventControl without deleting its commands, so that pass is not run; upgrade when MSEventControl deletes its commands on drop
         let _update = Box::leak(MSDevice_BTreceiver_BTreceiverUpdate::new());
         MY_WAS_INITIALISED.with(|c| c.set(true));
         MY_RANGE.with(|c| c.set(utils::options::options_cont::get_float("device.btreceiver.range")));
@@ -237,9 +237,9 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        // shortcut: the person loop (MSTransportableControl::loadedBegin/loadedEnd) cannot be iterated yet, but
-        // MSTransportable::get_device always returns null in this port, so snd and rec stay unset and that loop body never runs
-        // shortcut: NamedRTree is not ported, so the sender boxes are searched by a linear scan with the same float boxes and inclusive overlap; upgrade when NamedRTree lands
+        // the person loop has no effect in C++: a person carries MSTransportableDevice_BT* devices, and
+        // dynamic_cast<MSDevice_BTsender*> / <MSDevice_BTreceiver*> of those (sibling classes) is always nullptr
+        // NamedRTree::Search over float boxes = a linear scan with the same float boxes and inclusive overlap test
         let mut rt: Vec<(String, Ptr<MSDevice_BTsender_VehicleInformation>, [f32; 2], [f32; 2])> = Vec::new();
         for (id, vi) in sender_snapshot() {
             let mut b = vi.m().get_box_boundary();

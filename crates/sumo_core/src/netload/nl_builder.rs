@@ -936,7 +936,6 @@ impl NLBuilder {
         }
 
         // if anthing goes wrong after this point, the net is responsible for cleaning up
-        // shortcut: MSNet::closeBuilding takes the Unmapped MMVersion, so the network version is passed as unit until that type is ported
         self.myNet.m().close_building(
             &self.myOptions,
             edges,

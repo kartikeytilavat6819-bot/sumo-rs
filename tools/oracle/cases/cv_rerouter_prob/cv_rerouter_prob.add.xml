@@ -1,0 +1,14 @@
+<additional>
+    <route id="viaT" edges="E0 T1 T2 E3"/>
+    <rerouter id="rrProb" edges="E0" probability="0.5" vTypes="car">
+        <interval begin="0" end="400">
+            <routeProbReroute id="viaT" probability="1"/>
+        </interval>
+    </rerouter>
+    <rerouter id="rrWait" edges="S" timeThreshold="10">
+        <interval begin="0" end="400">
+            <destProbReroute id="E4" probability="0.7"/>
+            <destProbReroute id="E3" probability="0.3"/>
+        </interval>
+    </rerouter>
+</additional>

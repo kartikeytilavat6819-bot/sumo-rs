@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/cv_vclass_speed/cv_vclass_speed.nod.xml --edge-files tools/oracle/cases/cv_vclass_speed/cv_vclass_speed.edg.xml --type-files tools/oracle/cases/cv_vclass_speed/cv_vclass_speed.typ.xml

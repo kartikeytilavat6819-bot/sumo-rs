@@ -1,0 +1,9 @@
+<routes>
+    <!-- absolute stop timing attributes on a repeated route; started/ended repeat per lap -->
+    <route id="loop" edges="a b c d" repeat="2" cycleTime="80">
+        <stop lane="b_0" endPos="100" arrival="30" duration="5"/>
+        <stop lane="c_0" endPos="100" started="50" ended="55" duration="4"/>
+    </route>
+    <vehicle id="v0" route="loop" depart="0" departSpeed="max"/>
+    <vehicle id="v1" route="loop" depart="5" departSpeed="max"/>
+</routes>

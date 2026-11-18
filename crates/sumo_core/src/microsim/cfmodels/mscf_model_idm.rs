@@ -122,7 +122,7 @@ impl MSCFModel_IDM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(vtype: Ptr<MSVehicleType>, accel: f64, decel: f64, emergencyDecel: f64, apparentDecel: f64, headwayTime: f64, adaptationFactor: f64, adaptationTime: f64, internalStepping: f64) -> Self {
-        // shortcut: declared in MSCFModel_IDM.h but never defined in the C++ sources, so C++ cannot call it (link error); panic mirrors that
+        // declared in MSCFModel_IDM.h but never defined in the C++ sources, so C++ cannot call it (link error); panic mirrors that
         panic!("MSCFModel_IDM(vtype, accel, decel, ...) is declared but not defined in C++")
     }
 
@@ -529,7 +529,7 @@ impl MSCFModel_IDM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSCFModel_IDM) -> &mut MSCFModel_IDM {
-        // shortcut: C++ operator= is private and never defined (C++ cannot call it); panic mirrors that
+        // C++ operator= is private and never defined (C++ cannot call it); panic mirrors that
         panic!("MSCFModel_IDM::operator= is private and not defined in C++")
     }
 

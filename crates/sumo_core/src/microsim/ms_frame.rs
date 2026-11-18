@@ -1597,7 +1597,7 @@ impl MSFrame {
         create("collision-output", "collisions", "collision_file.xsd", 2);
         create("statistic-output", "statistics", "statistic_file.xsd", 2);
         create("deadlock-output", "additional", "additional_file.xsd", 2);
-        // shortcut: C++ creates the "movereminder-output" device only under _DEBUG; not created in this release-style port
+        // C++ _DEBUG-only: compiled out of the release reference build, not ported (movereminder-output device)
 
         crate::microsim::devices::ms_device_vehroutes::MSDevice_Vehroutes::init();
         crate::microsim::output::ms_stop_out::MSStopOut::init();
@@ -1924,7 +1924,7 @@ impl MSFrame {
                     }
                 }
             }
-            // shortcut: C++ movereminder-output check is only compiled under _DEBUG; not checked in this port
+            // C++ _DEBUG-only: compiled out of the release reference build, not ported (movereminder-output check)
             if opt_bool(oc, "sloppy-insert") {
                 utils::common::msg_handler::write_warning("The option 'sloppy-insert' is deprecated, because it is now activated by default, see the new option 'eager-insert'.");
             }
@@ -2266,7 +2266,7 @@ impl MSFrame {
         ) {
             utils::common::msg_handler::write_error(&error);
         }
-        // shortcut: the C++ _DEBUG-only movereminder-output initialisation (MSBaseVehicle::initMoveReminderOutput) is not ported
+        // C++ _DEBUG-only: compiled out of the release reference build, not ported (MSBaseVehicle::initMoveReminderOutput)
     }
 
 }

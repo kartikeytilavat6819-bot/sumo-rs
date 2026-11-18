@@ -127,17 +127,17 @@ impl MSVTypeProbe {
         let vc = net.m().get_vehicle_control();
         for v in vc.myVehicleDict.values() {
             let veh: Ptr<SUMOVehicle> = *v;
-            // shortcut: dynamic_cast<const MSVehicle*> has no runtime check; every entry of myVehicleDict is an MSVehicle, upgrade when other SUMOVehicle kinds are stored there
-            let microVeh: Ptr<MSVehicle> = veh.cast::<MSVehicle>();
-            if self.myVType.is_empty() || self.myVType == microVeh.get_vehicle_type().get_id() {
-                if microVeh.is_on_road() {
-                    let mut pos: Position = microVeh.get_position(0.0);
+            // dynamic_cast<const MSVehicle*>: meso vehicles are MEVehicle, micro ones MSVehicle
+            let microVeh: Ptr<MSVehicle> = if MSGlobals::use_meso_sim() { Ptr::null() } else { veh.cast::<MSVehicle>() };
+            if self.myVType.is_empty() || self.myVType == veh.get_vehicle_type().get_id() {
+                if veh.is_on_road() {
+                    let mut pos: Position = veh.get_position(0.0);
                     self.myOutputDevice.m().open_tag_id(SUMO_TAG_VEHICLE);
-                    self.myOutputDevice.m().write_attr(SUMO_ATTR_ID, microVeh.get_id());
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_ID, veh.get_id());
                     if !microVeh.is_null() {
                         self.myOutputDevice.m().write_attr(SUMO_ATTR_LANE, microVeh.get_lane().get_id());
                     }
-                    self.myOutputDevice.m().write_attr(SUMO_ATTR_POSITION, &microVeh.get_position_on_lane());
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_POSITION, &veh.get_position_on_lane());
                     self.myOutputDevice.m().write_attr(SUMO_ATTR_X, &pos.x());
                     self.myOutputDevice.m().write_attr(SUMO_ATTR_Y, &pos.y());
                     if net.m().has_elevation() {
@@ -150,7 +150,7 @@ impl MSVTypeProbe {
                         self.myOutputDevice.m().write_attr(SUMO_ATTR_LON, &pos.x());
                         self.myOutputDevice.m().set_precision(g_precision());
                     }
-                    self.myOutputDevice.m().write_attr(SUMO_ATTR_SPEED, &microVeh.get_speed());
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_SPEED, &veh.get_speed());
                     self.myOutputDevice.m().close_tag("");
                 }
             }

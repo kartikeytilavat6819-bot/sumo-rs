@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<trips>
+  <!-- junction-based origins and destinations, mapped to TAZs by the junction-taz option -->
+  <trip id="j1" depart="0" fromJunction="-137709" toJunction="-137711"/>
+  <trip id="j2" depart="2" fromJunction="-137718" toJunction="-137711"/>
+</trips>

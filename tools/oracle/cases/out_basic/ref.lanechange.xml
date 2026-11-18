@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:05:49.917349-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_basic/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_basic/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_basic/ref.fcd.xml"/>
+        <queue-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_basic/ref.queue.xml"/>
+        <queue-output.period value="5"/>
+        <summary-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_basic/ref.summary.xml"/>
+        <summary-output.period value="10"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_basic/ref.tripinfo.xml"/>
+        <tripinfo-output.write-unfinished value="true"/>
+        <tripinfo-output.write-undeparted value="true"/>
+        <lanechange-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_basic/ref.lanechange.xml"/>
+        <lanechange-output.started value="true"/>
+        <lanechange-output.ended value="true"/>
+        <lanechange-output.xy value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_basic/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <processing>
+        <max-depart-delay value="30"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<lanechanges>
+    <change id="fA.3" type="car" time="24.00" from="-103224#1_0" to="-103224#1_1" dir="1" speed="9.83" pos="30.81" reason="speedGain" leaderGap="16.70" leaderSecureGap="6.16" leaderSpeed="0.00" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="9.20" origLeaderSecureGap="6.16" origLeaderSpeed="0.01" x="103.68" y="148.15"/>
+    <change id="fA.4" type="car" time="30.00" from="-103224#1_0" to="-103224#1_1" dir="1" speed="8.09" pos="33.71" reason="speedGain" leaderGap="13.57" leaderSecureGap="3.59" leaderSpeed="1.29" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="6.31" origLeaderSecureGap="3.59" origLeaderSpeed="0.00" x="106.58" y="148.13"/>
+    <change id="fA.8" type="car" time="57.00" from="-103224#1_1" to="-103224#1_0" dir="-1" speed="0.48" pos="29.39" reason="speedGain" leaderGap="17.27" leaderSecureGap="0.00" leaderSpeed="1.31" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="3.06" origLeaderSecureGap="0.00" origLeaderSpeed="0.11" x="102.28" y="151.36"/>
+    <change id="fA.9" type="car" time="72.00" from="-103224#1_1" to="-103224#1_0" dir="-1" speed="0.00" pos="30.01" reason="speedGain" leaderGap="9.37" leaderSecureGap="0.00" leaderSpeed="1.30" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="2.50" origLeaderSecureGap="0.00" origLeaderSpeed="0.00" x="102.90" y="151.36"/>
+    <change id="fA.12" type="car" time="77.00" from="-103224#1_0" to="-103224#1_1" dir="1" speed="9.68" pos="11.02" reason="speedGain" leaderGap="14.46" leaderSecureGap="9.04" leaderSpeed="0.51" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="11.41" origLeaderSecureGap="9.04" origLeaderSpeed="4.32" x="83.89" y="148.27"/>
+    <change id="fA.15" type="car" time="95.00" from="-103224#1_0" to="-103224#1_1" dir="1" speed="6.54" pos="5.28" reason="speedGain" leaderGap="12.23" leaderSecureGap="2.04" leaderSpeed="0.00" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="4.73" origLeaderSecureGap="2.04" origLeaderSpeed="0.00" x="78.15" y="148.31"/>
+    <change id="fA.5" type="car" time="102.00" from="-103224#2_1" to="-103224#2_0" dir="-1" speed="18.45" pos="85.79" reason="keepRight" leaderGap="12.98" leaderSecureGap="8.04" leaderSpeed="21.05" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="None" origLeaderSecureGap="None" origLeaderSpeed="None" x="239.60" y="150.53"/>
+    <change id="fA.18" type="car" time="113.00" from="-103224#1_0" to="-103224#1_1" dir="1" speed="6.37" pos="5.49" reason="speedGain" leaderGap="12.02" leaderSecureGap="1.87" leaderSpeed="0.00" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="4.52" origLeaderSecureGap="1.87" origLeaderSpeed="0.01" x="78.36" y="148.31"/>
+    <change id="fA.24" type="car" time="146.00" from="-103224#0_0" to="-103224#0_1" dir="1" speed="9.53" pos="28.66" reason="speedGain" leaderGap="16.30" leaderSecureGap="5.56" leaderSpeed="0.06" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="8.80" origLeaderSecureGap="5.56" origLeaderSpeed="0.02" x="28.65" y="148.60"/>
+</lanechanges>
