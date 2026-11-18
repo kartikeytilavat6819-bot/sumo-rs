@@ -38,10 +38,14 @@ fn panic_text(payload: &(dyn Any + Send)) -> Option<String> {
 
 /// C++ `main`: returns the process exit code
 fn sumo_main(args: Vec<String>) -> i32 {
-    // ProcessError is control flow here (like C++ exceptions), so its panic message is not printed
+    // Panics stand in for C++ exceptions and are caught/converted to error
+    // status or written by the handlers below. The default hook would print
+    // "thread panicked at ..." for every caught one, which C++ never does.
+    // Keep a backtrace available for debugging when explicitly requested.
     let default_hook = std::panic::take_hook();
+    let show_panics = std::env::var_os("RUST_BACKTRACE").is_some();
     std::panic::set_hook(Box::new(move |info| {
-        if !info.payload().is::<ProcessError>() {
+        if show_panics {
             default_hook(info);
         }
     }));
