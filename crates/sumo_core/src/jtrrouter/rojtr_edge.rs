@@ -153,7 +153,7 @@ impl ROJTREdge {
         for (_, (follower, tl)) in self.myFollowingDefs.iter() {
             if !avoid.contains(&follower.cast::<ROEdge>()) {
                 if (veh.is_null() || !follower.prohibits(veh, true)) && tl.describes_time(time) {
-                    dist.add(*follower, tl.get_value(time), false);
+                    dist.add(*follower, tl.get_value(time), true);
                 }
             }
         }
@@ -162,7 +162,7 @@ impl ROJTREdge {
             for i in 0..self.myParsedTurnings.len() {
                 if !avoid.contains(&self.myFollowingEdges[i]) {
                     if veh.is_null() || !self.myFollowingEdges[i].prohibits(veh, true) {
-                        dist.add(self.myFollowingEdges[i].cast::<ROJTREdge>(), self.myParsedTurnings[i], false);
+                        dist.add(self.myFollowingEdges[i].cast::<ROJTREdge>(), self.myParsedTurnings[i], true);
                     }
                 }
             }
