@@ -3002,17 +3002,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         let departProcedure = vehicleParams.departProcedure;
         // shortcut: the parameters are leaked; C++ hands ownership to the vehicle, which would free them with itself
         let params = Ptr::from_raw(Box::leak(Box::new(vehicleParams)));
-        // C++ catch (ProcessError&) around buildVehicle rethrows as TraCIException (same what(); the vehicle was never assigned)
+        // C++ try { ... } catch (ProcessError& e) { delete vehicle; throw TraCIException(e.what()); }
+        let mut vehicle: Ptr<SUMOVehicle> = Ptr::null();
         let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true)
-        }));
-        let vehicle = match built {
-            Ok(v) => v,
-            Err(payload) => match payload.downcast::<utils::common::util_exceptions::ProcessError>() {
-                Ok(e) => panic!("{}", e),
-                Err(other) => std::panic::resume_unwind(other),
-            },
-        };
+        vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true);
         if fromTaz.is_empty() && !route.get_edges()[0].validate_depart_speed(vehicle.m()) {
             MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
             panic!("{}", format!("Departure speed for vehicle '{}' is too high for the departure edge '{}'.", vehID, route.get_edges()[0].get_id()));
@@ -3025,6 +3018,18 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         MSNet::get_instance().m().get_vehicle_control().add_vehicle(vehID, vehicle);
         if departProcedure != DepartDefinition::TRIGGERED && departProcedure != DepartDefinition::CONTAINER_TRIGGERED {
             MSNet::get_instance().m().get_insertion_control().add(vehicle);
+        }
+        }));
+        if let Err(payload) = built {
+            match payload.downcast::<utils::common::util_exceptions::ProcessError>() {
+                Ok(e) => {
+                    if !vehicle.is_null() {
+                        MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
+                    }
+                    panic!("{}", e)
+                }
+                Err(other) => std::panic::resume_unwind(other),
+            }
         }
     }
 

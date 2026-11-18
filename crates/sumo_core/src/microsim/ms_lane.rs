@@ -5320,7 +5320,6 @@ impl MSLane {
                         if searchDist < b { searchDist } else { b }
                     };
                     let first = next.get_first_vehicle_information(Ptr::null(), 0., false, f64::MAX, false);
-                    eprintln!("Z24TRACE next={} len={} searchDist={} nsub={} v0null={}", next.get_id(), it.length, searchDist, first.num_sublanes(), first.index_op(0).is_null());
                     let firstFront = next.get_first_vehicle_information(Ptr::null(), 0., true, f64::MAX, true);
 
                     if backOffset + it.length - next.get_length() < 0. && egoFurther.contains(&next.myEdge) {
@@ -7384,7 +7383,6 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_follower(&self, ego: Ptr<MSVehicle>, egoPos: f64, dist: f64, mLinkMode: MSLane_MinorLinkMode, maxSearchDist: bool) -> (Ptr<MSVehicle>, f64) {
-        eprintln!("Z24TRACE getFollower lane={} egoPos={} dist={} ego={}", self.get_id(), egoPos, dist, ego.get_id());
         let end = self.any_vehicles_upstream_end();
         let mut first = self.any_vehicles_upstream_begin();
         while first.ne_op(&end) {
@@ -7398,7 +7396,6 @@ impl MSLane {
         if dist > 0. && backOffset > dist {
             return (Ptr::null(), -1.);
         }
-        eprintln!("Z24TRACE consecutive backOffset={} nIncoming={}", backOffset, self.myIncomingLanes.len());
         let followers = self.get_followers_on_consecutive(ego, backOffset, true, dist, mLinkMode, maxSearchDist);
         let result = followers.get_closest();
         (result.0, result.1)

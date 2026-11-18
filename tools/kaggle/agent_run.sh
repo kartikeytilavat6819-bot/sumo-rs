@@ -4,7 +4,7 @@ export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 cd tools/oracle/cases/traci_basic
 S="$CARGO_TARGET_DIR/debug/sumo"
 for k in 0; do
-  timeout 1300 python3 client.py --case junction --filter "departLane=9,getFollower" --skip "h06 tl" --shard $k/1 --port $((9300+k*30)) --ours "$S" > /tmp/z24_j$k.txt 2>&1 &
+  timeout 1300 python3 client.py --case junction --filter "departLane=9,getFollower,setMaxSpeed(E1,-1),setRoute(v0,[nope])" --skip "h06 tl" --shard $k/1 --port $((9300+k*30)) --ours "$S" > /tmp/z24_j$k.txt 2>&1 &
 done
 wait
 for f in /tmp/z24_j?.txt /tmp/z24_s.txt; do
