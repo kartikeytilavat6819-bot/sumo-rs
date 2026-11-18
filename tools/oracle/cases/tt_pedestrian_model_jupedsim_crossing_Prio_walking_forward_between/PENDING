@@ -1,0 +1,1 @@
+Rust port has no JuPedSim C API bindings: MSPModel_JuPedSim new/add/execute panic in msp_model_ju_ped_sim.rs (shortcut comments); cannot produce a sim oracle

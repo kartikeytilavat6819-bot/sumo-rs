@@ -3,7 +3,8 @@
 //! UTM and DHDN use an in-crate port of PROJ's default `etmerc` (see `Etmerc`), matching PROJ to
 //! well below 1 mm. The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
 //! shortcut: DHDN_UTM needs the potsdam datum shift to WGS84 (7-parameter Helmert), not ported; other
-//! explicit proj strings are projected only when they are +proj=utm or +proj=tmerc with lat_0=0.
+//! explicit proj strings are projected only for +proj=utm, +proj=tmerc with lat_0=0, and spherical
+//! +proj=merc (a=b, the Web Mercator of OSM-derived nets).
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
@@ -491,11 +492,13 @@ struct Etmerc {
     lon0: f64,
     x0: f64,
     y0: f64,
-    /// k0 times the rectifying radius
+    /// k0 times the rectifying radius (sphere radius for `+proj=merc`)
     qn: f64,
     e: f64,
     alpha: [f64; 6],
     beta: [f64; 6],
+    /// `+proj=merc` (spherical Web Mercator) uses the cylindrical formulas, not the Kruger series
+    mercator: bool,
 }
 
 /// PROJ `adjlon`: wraps a longitude difference into [-pi, pi]
@@ -530,16 +533,23 @@ impl Etmerc {
             4583. * n5 / 161280. - 108847. * n6 / 3991680.,
             20648693. * n6 / 638668800.,
         ];
-        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta, mercator: false }
     }
 
-    /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
+    /// PROJ `+proj=merc` with a=b (spherical Web Mercator, the projection of OSM-derived nets).
+    fn mercator(a: f64, k0: f64, lon0: f64, x0: f64, y0: f64) -> Etmerc {
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * a, e: 0., alpha: [0.; 6], beta: [0.; 6], mercator: true }
+    }
+
+    /// Parses the `+proj=utm`, `+proj=tmerc` (lat_0=0) and `+proj=merc` strings this port projects; None for anything else
     fn from_proj(proj: &str) -> Option<Etmerc> {
         let mut kind = None;
         let mut zone = None;
         let mut south = false;
         let mut ellps = None;
         let mut datum = None;
+        let mut a_param = None;
+        let mut b_param = None;
         let mut lon0 = 0.;
         let mut lat0 = 0.;
         let mut k0 = 1.;
@@ -554,6 +564,9 @@ impl Etmerc {
                 "south" => south = true,
                 "ellps" => ellps = Some(val),
                 "datum" => datum = Some(val),
+                "a" => a_param = val.parse::<f64>().ok(),
+                "b" => b_param = val.parse::<f64>().ok(),
+                "lat_ts" => { /* spherical mercator with lat_ts=0 has k0=1 */ }
                 "lon_0" => lon0 = val.parse::<f64>().ok()?,
                 "lat_0" => lat0 = val.parse::<f64>().ok()?,
                 "k" | "k_0" => k0 = val.parse::<f64>().ok()?,
@@ -562,27 +575,44 @@ impl Etmerc {
                 _ => {}
             }
         }
-        let (a, rf) = match (ellps, datum) {
-            (Some("WGS84"), _) | (None, Some("WGS84")) => (6378137., 298.257223563),
-            (Some("GRS80"), _) => (6378137., 298.257222101),
-            (Some("bessel"), _) | (None, Some("potsdam")) => (6377397.155, 299.1528128),
-            _ => return None,
+        let ellipsoid = match (ellps, datum) {
+            (Some("WGS84"), _) | (None, Some("WGS84")) => Some((6378137., 298.257223563)),
+            (Some("GRS80"), _) => Some((6378137., 298.257222101)),
+            (Some("bessel"), _) | (None, Some("potsdam")) => Some((6377397.155, 299.1528128)),
+            _ => None,
         };
         match kind? {
             "utm" => {
+                let (a, rf) = ellipsoid?;
                 let zone: i32 = zone?;
                 if !(1..=60).contains(&zone) {
                     return None;
                 }
                 Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }))
             }
-            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0, x0, y0)),
+            "tmerc" if lat0 == 0. => {
+                let (a, rf) = ellipsoid?;
+                Some(Etmerc::new(a, rf, k0, lon0, x0, y0))
+            }
+            "merc" => {
+                // PROJ uses the spherical formulas when a == b (Web Mercator).
+                let a_sphere = match (a_param, b_param) {
+                    (Some(a), Some(b)) if (a - b).abs() < 1e-9 => a,
+                    (Some(a), None) | (None, Some(a)) => a,
+                    _ => return None,
+                };
+                Some(Etmerc::mercator(a_sphere, k0, lon0, x0, y0))
+            }
             _ => None,
         }
     }
 
     /// forward: lon/lat in radians to easting/northing
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        if self.mercator {
+            let lam = adjlon(lon - self.lon0);
+            return (self.x0 + self.qn * lam, self.y0 + self.qn * (PI / 4. + lat / 2.).tan().ln());
+        }
         let lam = adjlon(lon - self.lon0);
         let s = lat.sin();
         let psi = s.atanh() - self.e * (self.e * s).atanh();
@@ -600,6 +630,12 @@ impl Etmerc {
 
     /// inverse: easting/northing to lon/lat in radians
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        if self.mercator {
+            return (
+                adjlon(self.lon0 + (x - self.x0) / self.qn),
+                2. * ((y - self.y0) / self.qn).exp().atan() - PI / 2.,
+            );
+        }
         let xi = (y - self.y0) / self.qn;
         let eta = (x - self.x0) / self.qn;
         let (mut xi0, mut eta0) = (xi, eta);
@@ -732,6 +768,18 @@ mod tests {
         assert!(h.x2cartesian(&mut p, false));
         assert_eq!(h.get_proj_string(), utm_proj(32));
         assert!((p.x() - 507358.079288402).abs() < 1e-6 && (p.y() - 5394111.900843232).abs() < 1e-6);
+    }
+
+    #[test]
+    fn merc_web_mercator_roundtrip() {
+        // cs2cs +proj=longlat +ellps=WGS84 +to +proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +units=m
+        let proj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs";
+        let h = GeoConvHelper::new(proj, Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(15.5835, 58.39568);
+        assert!(h.x2cartesian_const(&mut p));
+        assert!((p.x() - 1734747.284776979).abs() < 1e-4 && (p.y() - 8050900.942431918).abs() < 1e-4);
+        let (lon, lat) = h.projection.unwrap().inv(p.x(), p.y());
+        assert!((rad2deg(lon) - 15.5835).abs() < 1e-9 && (rad2deg(lat) - 58.39568).abs() < 1e-9);
     }
 
     #[test]
