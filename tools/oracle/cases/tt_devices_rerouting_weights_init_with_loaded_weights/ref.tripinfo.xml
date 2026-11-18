@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T12:36:33.725015-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-18T13:23:22.859299-05:00 by Eclipse SUMO sumo 1.28.0
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -16,7 +16,8 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
     <input>
         <net-file value="tools/oracle/cases/tt_devices_rerouting_weights_init_with_loaded_weights/ref_simple.net.xml"/>
         <route-files value="tools/oracle/cases/tt_devices_rerouting_weights_init_with_loaded_weights/routes.rou"/>
-        <weight-files value="input_additional.add.xml"/>
+        <additional-files value="tools/oracle/cases/tt_devices_rerouting_weights_init_with_loaded_weights/input_routes.rou.xml"/>
+        <weight-files value="tools/oracle/cases/tt_devices_rerouting_weights_init_with_loaded_weights/input_additional.add.xml"/>
     </input>
 
     <output>
@@ -50,4 +51,5 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 -->
 
 <tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="0" depart="101.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="308.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="207.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.90" rerouteNo="1" devices="tripinfo_0 routing_0 fcd_0" vType="KRAUSS_DEFAULT" speedFactor="1.00" vaporized=""/>
 </tripinfos>

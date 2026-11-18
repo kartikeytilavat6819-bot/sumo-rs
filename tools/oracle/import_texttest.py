@@ -48,7 +48,7 @@ ROUTE_OPTS = ("-r", "--route-files", "--routes")
 ADD_OPTS = ("-a", "--additional-files", "--additional", "--a")
 # Input files named by a behaviour option rather than -n/-r/-a.  These stay in
 # sim.args but their value must be rewritten to the copied case-relative path.
-STATE_OPTS = ("--device.fcd-replay.file",)
+STATE_OPTS = ("--device.fcd-replay.file", "--weight-files")
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
 OUTPUT_OPTS = (
