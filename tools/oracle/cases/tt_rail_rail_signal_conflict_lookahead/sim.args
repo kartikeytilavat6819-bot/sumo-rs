@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --railsignal-block-output railsignal_blocks.xml --time-to-teleport.railsignal-deadlock 200 --no-duration-log -a tools/oracle/cases/tt_rail_rail_signal_conflict_lookahead/input_additional.add.xml
