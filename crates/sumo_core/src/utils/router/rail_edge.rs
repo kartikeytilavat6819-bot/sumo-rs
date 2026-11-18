@@ -514,6 +514,45 @@ impl<E: crate::utils::router::router_edge::RouterEdgeInfo, V> crate::utils::rout
     }
 }
 
+impl<E, V> crate::utils::router::router_edge::RouterEdge<V> for RailEdge<E, V>
+where
+    E: crate::utils::router::router_edge::RouterEdge<V>,
+    V: crate::utils::router::router_edge::RouterVehicle,
+{
+    type Node = ();
+    type Lane = ();
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        1.0
+    }
+    fn distance_to(&self, _other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 {
+        0.0
+    }
+    fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        &[]
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        self.get_via_successors(vclass, ignore_transient)
+    }
+    fn speed_limit(&self) -> f64 {
+        10.0
+    }
+    fn minimum_travel_time(&self, _veh: Ptr<V>) -> f64 {
+        0.0
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        Ptr::null()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
