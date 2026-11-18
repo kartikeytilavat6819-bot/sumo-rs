@@ -16,16 +16,17 @@ for d in tools/oracle/cases/tt_output_*/; do
     [ $want -eq 1 ] || continue
   fi
   flags=$(cat "$d/sim.args")
-  timeout 60 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
+  RUST_BACKTRACE=1 timeout 60 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
       --tripinfo-output "$OUT/$c.ti.xml" --fcd-output "$OUT/$c.fcd.xml" \
       --statistic-output "$OUT/$c.stat.xml" --no-step-log true $flags \
       >"$OUT/$c.log" 2>&1
   rc=$?
   res="PASS"
   if [ $rc -ne 0 ]; then
-    res="PANIC: $(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-160)"
-    pline=$(grep -m1 -A1 'panicked at' "$OUT/$c.log" | tail -1 | cut -c1-160)
+    res="PANIC: $(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-200)"
+    pline=$(grep -m1 -A1 'panicked at' "$OUT/$c.log" | tail -1 | cut -c1-200)
     [ -n "$pline" ] && res="$res || $pline"
+    grep -m8 -E 'at crates|at C:' "$OUT/$c.log" | cut -c1-200 | while read -r bl; do echo "   BT $bl"; done
   else
     x=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" 2>&1 | head -1)
     case "$x" in ""|MATCH) ;; *) res="TI:$x";; esac
