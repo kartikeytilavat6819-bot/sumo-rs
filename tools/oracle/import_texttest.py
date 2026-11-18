@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import collections
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -109,6 +110,22 @@ def collect_files_and_config(source: str, tests_sumo: str):
             if f.startswith("config."):
                 config_files[f[7:]].append(path)
     return option_files, config_files, potentials
+
+
+def config_copy_names(config_files):
+    """File names listed as copy_test_path in the config files (TextTest copies these)."""
+    names = set()
+    for paths in config_files.values():
+        for p in paths:
+            try:
+                with open(p, encoding="utf-8", errors="replace") as fh:
+                    for line in fh:
+                        m = re.match(r"\s*copy_test_path(?:_merge)?\s*:\s*(\S+)", line)
+                        if m:
+                            names.add(os.path.basename(m.group(1).strip()))
+            except OSError:
+                pass
+    return names
 
 
 def collate_options(option_files, app="sumo"):
@@ -294,6 +311,13 @@ def import_one(source, tests_sumo, force=False):
     chosen += [os.path.basename(resolve(a, potentials)) for a in additions if resolve(a, potentials)]
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
+    # TextTest copies every copy_test_path file present in the test dir; additional files
+    # often reference these by name (input_definition*.def.xml, input_selection.txt, ...).
+    for cfname in sorted(config_copy_names(config_files)):
+        hit = resolve(cfname, potentials)
+        if hit and os.path.dirname(realpath(hit)) == realpath(source):
+            chosen.append(os.path.basename(hit))
+    chosen = list(dict.fromkeys(chosen))
 
     if os.path.isdir(case_dir):
         shutil.rmtree(case_dir)
