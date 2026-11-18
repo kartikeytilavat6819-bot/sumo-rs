@@ -1,0 +1,10 @@
+<routes>
+    <vType id="aggressive" accel="5.00" decel="0.50" sigma="1.00" tau="0.50" length="5.00" maxSpeed="25.00" actionStepLength="2.00"/>
+    <vehicle id="lead" depart="0.00" departSpeed="max">
+        <route edges="E0 E1"/>
+        <stop lane="E0_0" endPos="120.00" duration="200.00"/>
+    </vehicle>
+    <vehicle id="follow" type="aggressive" depart="4.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+</routes>
