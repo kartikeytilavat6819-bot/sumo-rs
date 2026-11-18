@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/pt_triggered_bus_stop/pt_triggered_bus_stop.nod.xml --edge-files tools/oracle/cases/pt_triggered_bus_stop/pt_triggered_bus_stop.edg.xml --sidewalks.guess --crossings.guess --walkingareas

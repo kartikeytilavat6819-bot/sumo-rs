@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:16:07.336677-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/pt_two_line_transfer/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/pt_two_line_transfer/routes.rou"/>
+        <additional-files value="tools/oracle/cases/pt_two_line_transfer/pt_two_line_transfer.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_two_line_transfer/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_two_line_transfer/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_two_line_transfer/ref.personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_two_line_transfer/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_two_line_transfer/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="l1a" depart="0.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="102.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="8.37" duration="102.00" routeLength="188.00" waitingTime="25.00" waitingCount="1" stopTime="39.00" timeLoss="32.86" rerouteNo="0" devices="tripinfo_l1a fcd_l1a person_l1a" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="l2a" depart="30.00" departLane="E1_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="133.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="7.84" duration="103.00" routeLength="188.00" waitingTime="0.00" waitingCount="0" stopTime="70.00" timeLoss="5.38" rerouteNo="0" devices="tripinfo_l2a fcd_l2a" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="l1b" depart="60.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="163.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="9.18" duration="103.00" routeLength="188.00" waitingTime="25.00" waitingCount="2" stopTime="37.00" timeLoss="35.75" rerouteNo="0" devices="tripinfo_l1b fcd_l1b" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="l2b" depart="90.00" departLane="E1_1" departPos="12.10" departSpeed="4.83" departDelay="0.00" arrival="193.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="8.50" duration="103.00" routeLength="188.00" waitingTime="0.00" waitingCount="0" stopTime="66.00" timeLoss="10.86" rerouteNo="0" devices="tripinfo_l2b fcd_l2b person_l2b" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="l1c" depart="120.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="222.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="8.28" duration="102.00" routeLength="188.00" waitingTime="26.00" waitingCount="2" stopTime="37.00" timeLoss="34.04" rerouteNo="0" devices="tripinfo_l1c fcd_l1c person_l1c" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="l2c" depart="150.00" departLane="E1_1" departPos="12.10" departSpeed="4.63" departDelay="0.00" arrival="253.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="8.39" duration="103.00" routeLength="188.00" waitingTime="1.00" waitingCount="1" stopTime="62.00" timeLoss="14.70" rerouteNo="0" devices="tripinfo_l2c fcd_l2c person_l2c" vType="bus" speedFactor="1.00" vaporized=""/>
+</tripinfos>

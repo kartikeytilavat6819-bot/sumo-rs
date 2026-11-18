@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T02:09:17.101867-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/pt_triggered_bus_stop/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/pt_triggered_bus_stop/routes.rou"/>
+        <additional-files value="tools/oracle/cases/pt_triggered_bus_stop/pt_triggered_bus_stop.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_triggered_bus_stop/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_triggered_bus_stop/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_triggered_bus_stop/ref.personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_triggered_bus_stop/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_triggered_bus_stop/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="tr0" depart="15.00" type="ped" speedFactor="1.06" duration="28.00" waitingTime="2.00" timeLoss="4.62" traveltime="26.00">
+        <ride waitingTime="2.00" vehicle="tb0" depart="17.00" arrival="43.00" arrivalPos="59.99" duration="26.00" routeLength="200.19" timeLoss="4.62"/>
+    </personinfo>
+    <personinfo id="tr1" depart="18.00" type="ped" speedFactor="0.94" duration="65.00" waitingTime="40.00" timeLoss="2.72" traveltime="25.00">
+        <ride waitingTime="40.00" vehicle="tb1" depart="58.00" arrival="83.00" arrivalPos="60.00" duration="25.00" routeLength="200.21" timeLoss="2.72"/>
+    </personinfo>
+    <personinfo id="tr2" depart="55.00" type="ped" speedFactor="1.01" duration="28.00" waitingTime="3.00" timeLoss="2.72" traveltime="25.00">
+        <ride waitingTime="3.00" vehicle="tb1" depart="58.00" arrival="83.00" arrivalPos="60.00" duration="25.00" routeLength="200.20" timeLoss="2.72"/>
+    </personinfo>
+    <personinfo id="tr3" depart="58.00" type="ped" speedFactor="1.08" duration="66.00" waitingTime="40.00" timeLoss="3.22" traveltime="26.00">
+        <ride waitingTime="40.00" vehicle="tb2" depart="98.00" arrival="124.00" arrivalPos="60.00" duration="26.00" routeLength="200.21" timeLoss="3.22"/>
+    </personinfo>
+    <personinfo id="tr4" depart="95.00" type="ped" speedFactor="1.03" duration="29.00" waitingTime="3.00" timeLoss="3.22" traveltime="26.00">
+        <ride waitingTime="3.00" vehicle="tb2" depart="98.00" arrival="124.00" arrivalPos="60.00" duration="26.00" routeLength="200.20" timeLoss="3.22"/>
+    </personinfo>
+</tripinfos>

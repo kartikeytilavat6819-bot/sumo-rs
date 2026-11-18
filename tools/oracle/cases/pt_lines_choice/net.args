@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/pt_lines_choice/pt_lines_choice.nod.xml --edge-files tools/oracle/cases/pt_lines_choice/pt_lines_choice.edg.xml --sidewalks.guess --crossings.guess --walkingareas

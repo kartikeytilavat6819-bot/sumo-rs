@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:43:32.410682-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/pt_personflow_public/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/pt_personflow_public/routes.rou"/>
+        <additional-files value="tools/oracle/cases/pt_personflow_public/pt_personflow_public.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_personflow_public/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_personflow_public/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_personflow_public/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_personflow_public/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pf0.0" depart="10.00" type="ped" speedFactor="1.06" duration="80.00" waitingTime="2.00" timeLoss="8.77" traveltime="78.00">
+        <walk depart="10.00" departPos="0.00" arrival="43.00" arrivalPos="50.00" duration="33.00" routeLength="50.00" timeLoss="3.52" maxSpeed="1.70" waitingTime="0.00"/>
+        <ride waitingTime="2.00" vehicle="l1a" depart="45.00" arrival="70.00" arrivalPos="59.99" duration="25.00" routeLength="200.19" timeLoss="2.95"/>
+        <walk depart="70.00" departPos="59.99" arrival="90.00" arrivalPos="90.00" duration="20.00" routeLength="30.01" timeLoss="2.31" maxSpeed="1.70" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pf0.3" depart="70.00" type="ped" speedFactor="1.08" duration="82.00" waitingTime="3.00" timeLoss="12.41" traveltime="80.00">
+        <walk depart="70.00" departPos="0.00" arrival="103.00" arrivalPos="50.00" duration="33.00" routeLength="50.00" timeLoss="4.14" maxSpeed="1.73" waitingTime="0.00"/>
+        <ride waitingTime="2.00" vehicle="l1b" depart="105.00" arrival="131.00" arrivalPos="60.00" duration="26.00" routeLength="200.20" timeLoss="4.59"/>
+        <walk depart="131.00" departPos="60.00" arrival="152.00" arrivalPos="90.00" duration="21.00" routeLength="30.00" timeLoss="3.68" maxSpeed="1.73" waitingTime="1.00"/>
+    </personinfo>
+    <personinfo id="pf0.1" depart="30.00" type="ped" speedFactor="0.94" duration="124.00" waitingTime="38.00" timeLoss="11.30" traveltime="86.00">
+        <walk depart="30.00" departPos="0.00" arrival="67.00" arrivalPos="50.00" duration="37.00" routeLength="50.00" timeLoss="3.70" maxSpeed="1.50" waitingTime="0.00"/>
+        <ride waitingTime="38.00" vehicle="l1b" depart="105.00" arrival="131.00" arrivalPos="60.00" duration="26.00" routeLength="200.25" timeLoss="4.59"/>
+        <walk depart="131.00" departPos="60.00" arrival="154.00" arrivalPos="90.00" duration="23.00" routeLength="30.00" timeLoss="3.02" maxSpeed="1.50" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pf0.2" depart="50.00" type="ped" speedFactor="1.01" duration="104.00" waitingTime="20.00" timeLoss="13.10" traveltime="84.00">
+        <walk depart="50.00" departPos="0.00" arrival="85.00" arrivalPos="50.00" duration="35.00" routeLength="50.00" timeLoss="4.07" maxSpeed="1.62" waitingTime="0.00"/>
+        <ride waitingTime="20.00" vehicle="l1b" depart="105.00" arrival="131.00" arrivalPos="60.00" duration="26.00" routeLength="200.20" timeLoss="4.59"/>
+        <walk depart="131.00" departPos="60.00" arrival="154.00" arrivalPos="90.00" duration="23.00" routeLength="30.00" timeLoss="4.44" maxSpeed="1.62" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

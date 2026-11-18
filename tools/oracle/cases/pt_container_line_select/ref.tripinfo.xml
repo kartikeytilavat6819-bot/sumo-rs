@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:14:44.127096-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/pt_container_line_select/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/pt_container_line_select/routes.rou"/>
+        <additional-files value="tools/oracle/cases/pt_container_line_select/pt_container_line_select.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_container_line_select/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_container_line_select/ref.tripinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_container_line_select/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc21/tools/oracle/cases/pt_container_line_select/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <containerinfo id="k0" depart="10.00" type="DEFAULT_CONTAINERTYPE" duration="211.00" waitingTime="184.00" timeLoss="4.75" traveltime="27.00">
+        <transport waitingTime="184.00" vehicle="c1_0" depart="194.00" arrival="221.00" arrivalPos="140.00" duration="27.00" routeLength="200.12" timeLoss="4.75"/>
+    </containerinfo>
+    <containerinfo id="k1" depart="20.00" type="DEFAULT_CONTAINERTYPE" duration="202.00" waitingTime="151.00" timeLoss="36.60" traveltime="51.00">
+        <transport waitingTime="151.00" vehicle="c2_0" depart="171.00" arrival="222.00" arrivalPos="125.46" duration="51.00" routeLength="200.08" timeLoss="36.60"/>
+    </containerinfo>
+    <containerinfo id="k3" depart="130.00" type="DEFAULT_CONTAINERTYPE" duration="126.00" waitingTime="100.00" timeLoss="4.72" traveltime="26.00">
+        <transport waitingTime="100.00" vehicle="c1_1" depart="230.00" arrival="256.00" arrivalPos="110.96" duration="26.00" routeLength="200.08" timeLoss="4.72"/>
+    </containerinfo>
+</tripinfos>
