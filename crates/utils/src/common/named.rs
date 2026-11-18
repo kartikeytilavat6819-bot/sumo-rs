@@ -3,6 +3,7 @@ use super::ptr::Ptr;
 use super::to_string::ToStringPrec;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::fmt;
 
 /// Anything with an id (the virtual getID() of Named subclasses)
 pub trait HasId {
@@ -50,6 +51,11 @@ impl<T> Ord for NumIdKey<T> {
         self.0.cmp(&other.0)
     }
 }
+impl<T> fmt::Debug for NumIdKey<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("NumIdKey").field(&self.0).field(&self.1).finish()
+    }
+}
 
 /// C++ `ComparatorIdLess` (utils/common/Named.h) expressed as a BTreeMap/BTreeSet key: pointers are
 /// ordered by `getID()` (bytewise std::string order), not by address.
@@ -82,6 +88,11 @@ impl<T> PartialOrd for IdKey<T> {
 impl<T> Ord for IdKey<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
+    }
+}
+impl<T> fmt::Debug for IdKey<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("IdKey").field(&self.0).field(&self.1).finish()
     }
 }
 
