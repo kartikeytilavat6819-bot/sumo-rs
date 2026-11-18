@@ -1,23 +1,24 @@
 #!/bin/bash
-# Round 1: probe the gate environment, then measure the whole TraCI suite.
+# Probe the gate VM for the materials needed to obtain a TraCI test client.
 set -u
 export PATH="$HOME/.cargo/bin:$PATH"
-echo "=== env probe ==="
-echo "CARGO_TARGET_DIR=$CARGO_TARGET_DIR"
-echo "SUMO_HOME=$SUMO_HOME"
-echo "SUMO_PRISTINE_BIN=$SUMO_PRISTINE_BIN"
-for f in "$CARGO_TARGET_DIR/debug/sumo" "$SUMO_PRISTINE_BIN/sumo" "$SUMO_PRISTINE_BIN/TraCITestClient"; do
-  if [ -x "$f" ]; then echo "OK $f"; else echo "MISSING $f"; fi
-done
-echo "tests in SUMO_HOME:"
-ls "$SUMO_HOME/tests/traci" 2>/dev/null | head -5 || true
-echo "imported tests:"
-ls tools/oracle/traci_inputs 2>/dev/null | head -5 || true
-echo "python3: $(command -v python3 || echo none)"
-echo "=== measurement ==="
-export TRACI_JOBS=${TRACI_JOBS:-6}
-export TRACI_SHOW=${TRACI_SHOW:-70}
-export TRACI_SUITE_OUT=/tmp/traci_oc64
-timeout 1500 bash tools/oracle/run_traci_suite.sh 2>&1 | tail -350
-echo "=== result table head ==="
-head -5 "$TRACI_SUITE_OUT/results.tsv" 2>/dev/null || true
+echo "=== pristine bin ==="
+ls "$SUMO_PRISTINE_BIN" | head -80
+echo "=== SUMO_HOME top ==="
+ls "$SUMO_HOME" | head -60
+echo "=== SUMO_HOME/include ==="
+ls "$SUMO_HOME/include" 2>/dev/null | head -40 || echo none
+echo "=== SUMO_HOME/lib ==="
+ls "$SUMO_HOME/lib" 2>/dev/null | head -40 || echo none
+echo "=== SUMO_HOME/tools/traci ==="
+ls "$SUMO_HOME/tools/traci" 2>/dev/null | head -30 || echo none
+echo "=== build tools ==="
+for c in cmake g++ gcc make ccache pkg-config python3; do echo "$c: $(command -v $c || echo none)"; done
+echo "=== sumo source dirs on VM ==="
+find /home/gate -maxdepth 4 -type d -name 'traci_testclient' 2>/dev/null | head
+find / -maxdepth 4 -type d -name 'sumo-src' 2>/dev/null | head
+echo "=== relevant libs ==="
+find "$SUMO_HOME" -maxdepth 3 \( -name 'libtraci*' -o -name 'libsumo*' -o -name 'TraCIAPI*' -o -name 'storage.h' -o -name 'socket.h' \) 2>/dev/null | head -40
+echo "=== python traci import ==="
+PYTHONPATH="$SUMO_HOME/tools" python3 -c 'import traci; print("traci OK", traci.__file__)' 2>&1 | head -5
+echo "PROBE DONE"
