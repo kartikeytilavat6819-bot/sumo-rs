@@ -29,24 +29,41 @@ gen_case() {  # gen_case <seed> <dir>; writes netgen.args, conv.args; prints a s
     spider) r 3; ng="--spider --spider.arm-number $((R + 3)) --spider.circle-number 2 --spider.space-radius 100 $ng";;
     rand)   r 3; ng="--rand --rand.iterations $((10 + R * 5)) --rand.max-distance 300 --rand.grid true $ng";;
   esac
-  local pool=("--no-turnarounds true" "--junctions.corner-detail 3" "--sidewalks.guess true"
+  r 6; local cd=$R   # corner-detail value shared by both stages
+  local pool=("--no-turnarounds true" "--junctions.corner-detail $cd" "--sidewalks.guess true"
     "--crossings.guess true" "--bikelanes.guess true" "--roundabouts.guess true"
-    "--ramps.guess true" "--geometry.remove true" "--edges.join true"
-    "--no-internal-links true" "--lefthand true" "--tls.guess true")
+    "--geometry.remove true" "--edges.join true" "--no-internal-links true"
+    "--lefthand true" "--tls.guess true" "--tls.discard-simple true"
+    "--tls.layout alternateOneWay" "--opposites.guess true" "--junctions.join true"
+    "--junctions.limit-turn-speed 5.5" "--speed.factor 0.8" "--default.speed 8.33"
+    "--turn-lanes 1 --turn-lanes.length 30" "--junctions.internal-link-detail 2"
+    "--sidewalks.guess.from-permissions true" "--tls.uncontrolled-within true"
+    "--default.right-of-way edgePriority" "--junctions.left-before-right true")
   local picked=""
   for o in "${pool[@]}"; do r 3; [ $R -eq 0 ] && picked="$picked $o"; done
   ng="$ng$picked"
+  case "$ng" in
+    *--no-internal-links*--crossings.guess*|*--crossings.guess*--no-internal-links*)
+      ng=${ng/ --crossings.guess true/};;   # mutually exclusive in both tools
+  esac
   printf '%s\n' "$ng" > "$d/netgen.args"
 
-  local pool2=("--no-turnarounds true" "--junctions.corner-detail 4" "--sidewalks.guess true"
+  local pool2=("--no-turnarounds true" "--junctions.corner-detail $cd" "--sidewalks.guess true"
     "--crossings.guess true" "--bikelanes.guess true" "--roundabouts.guess true"
-    "--ramps.guess true" "--geometry.remove true" "--edges.join true"
-    "--no-internal-links true" "--lefthand true" "--tls.guess true"
-    "--tls.guess.joining true" "--opposites.guess true" "--junctions.join true"
-    "--junctions.limit-turn-speed 5.5" "--speed.factor 0.8" "--default.speed 8.33"
-    "--keep-edges.components 1" "--tls.discard-simple true" "--tls.layout incoming")
+    "--geometry.remove true" "--edges.join true" "--no-internal-links true"
+    "--lefthand true" "--tls.guess true" "--tls.guess.joining true"
+    "--opposites.guess true" "--opposites.guess.fix-lengths true" "--junctions.join true"
+    "--junctions.join-dist 20" "--junctions.limit-turn-speed 5.5" "--speed.factor 0.8"
+    "--default.speed 8.33" "--keep-edges.components 1" "--tls.discard-simple true"
+    "--tls.layout incoming" "--tls.default-type actuated" "--tls.guess-signals true"
+    "--geometry.max-segment-length 15" "--geometry.min-dist 1" "--remove-edges.isolated true"
+    "--offset.disable-normalization true")
   cv=""
-  for o in "${pool2[@]}"; do r 4; [ $R -eq 0 ] && cv="$cv $o"; done
+  for o in "${pool2[@]}"; do r 3; [ $R -eq 0 ] && cv="$cv $o"; done
+  case "$cv" in
+    *--no-internal-links*--crossings.guess*|*--crossings.guess*--no-internal-links*)
+      cv=${cv/ --crossings.guess true/};;
+  esac
   printf '%s\n' "$cv" > "$d/conv.args"
   echo "mode=$mode lanes=$lanes jt=$jt ng=[$picked] cv=[$cv]"
 }
