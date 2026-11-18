@@ -1,0 +1,5 @@
+<additional>
+    <edgeData id="ed_wae" period="60" writeAttributes="CO2_abs CO2_perVeh" file="out_ed_wae.xml"/>
+    <edgeData id="ed_wan" period="60" writeAttributes="noise" file="out_ed_wan.xml"/>
+    <laneData id="ld_wae" period="60" writeAttributes="CO2_abs" file="out_ld_wae.xml"/>
+</additional>

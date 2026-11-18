@@ -1,0 +1,3 @@
+out_ed_wae.xml ed_wae
+out_ed_wan.xml ed_wan
+out_ld_wae.xml ld_wae

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:44:01.275132-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_wrattr_emis/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_wrattr_emis/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_wrattr_emis/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="60.00" id="ed_wae">
+        <edge id="--103226#0" CO2_abs="0.00"/>
+        <edge id="--103226#1" CO2_abs="0.00"/>
+        <edge id="--103227#0" CO2_abs="65982.02" CO2_perVeh="16495.51"/>
+        <edge id="--103227#1" CO2_abs="433183.34" CO2_perVeh="86636.67"/>
+        <edge id="--103227#2" CO2_abs="280042.14" CO2_perVeh="33213.71"/>
+        <edge id="-103224#0" CO2_abs="91984.15" CO2_perVeh="6718.38"/>
+        <edge id="-103224#1" CO2_abs="405883.04" CO2_perVeh="33659.69"/>
+        <edge id="-103224#2" CO2_abs="422993.63" CO2_perVeh="59672.08"/>
+        <edge id="-103224#3" CO2_abs="123486.38" CO2_perVeh="12763.72"/>
+        <edge id="-103226#0" CO2_abs="10724.12" CO2_perVeh="2981.61"/>
+        <edge id="-103226#1" CO2_abs="95676.30" CO2_perVeh="24715.20"/>
+        <edge id="-103227#0" CO2_abs="1687.33" CO2_perVeh="269.89"/>
+        <edge id="-103227#1" CO2_abs="517496.73" CO2_perVeh="49595.22"/>
+        <edge id="-103227#2" CO2_abs="717180.68" CO2_perVeh="74067.77"/>
+        <edge id="-103228" CO2_abs="24705.54" CO2_perVeh="9982.12"/>
+        <edge id="-103230" CO2_abs="15220.27" CO2_perVeh="5525.38"/>
+    </interval>
+    <interval begin="60.00" end="120.00" id="ed_wae">
+        <edge id="--103226#0" CO2_abs="0.00"/>
+        <edge id="--103226#1" CO2_abs="0.00"/>
+        <edge id="--103227#0" CO2_abs="85959.20" CO2_perVeh="17191.84"/>
+        <edge id="--103227#1" CO2_abs="418562.85" CO2_perVeh="83712.57"/>
+        <edge id="--103227#2" CO2_abs="301901.80" CO2_perVeh="35821.10"/>
+        <edge id="-103224#0" CO2_abs="78639.46" CO2_perVeh="6153.97"/>
+        <edge id="-103224#1" CO2_abs="943331.37" CO2_perVeh="95436.61"/>
+        <edge id="-103224#2" CO2_abs="507867.18" CO2_perVeh="64194.64"/>
+        <edge id="-103224#3" CO2_abs="138987.31" CO2_perVeh="12272.39"/>
+        <edge id="-103226#0" CO2_abs="12717.94" CO2_perVeh="3535.94"/>
+        <edge id="-103226#1" CO2_abs="81149.65" CO2_perVeh="19787.27"/>
+        <edge id="-103227#0" CO2_abs="22633.82" CO2_perVeh="4137.48"/>
+        <edge id="-103227#1" CO2_abs="465722.01" CO2_perVeh="48337.46"/>
+        <edge id="-103227#2" CO2_abs="1084373.97" CO2_perVeh="75739.05"/>
+        <edge id="-103228" CO2_abs="3956.18" CO2_perVeh="1598.47"/>
+        <edge id="-103230" CO2_abs="9891.02" CO2_perVeh="3590.71"/>
+    </interval>
+    <interval begin="120.00" end="180.00" id="ed_wae">
+        <edge id="--103226#0" CO2_abs="0.00"/>
+        <edge id="--103226#1" CO2_abs="0.00"/>
+        <edge id="--103227#0" CO2_abs="67432.02" CO2_perVeh="13486.40"/>
+        <edge id="--103227#1" CO2_abs="311824.83" CO2_perVeh="66250.75"/>
+        <edge id="--103227#2" CO2_abs="324817.16" CO2_perVeh="40430.49"/>
+        <edge id="-103224#0" CO2_abs="436224.91" CO2_perVeh="45955.73"/>
+        <edge id="-103224#1" CO2_abs="1370291.16" CO2_perVeh="360546.74"/>
+        <edge id="-103224#2" CO2_abs="454496.97" CO2_perVeh="57033.33"/>
+        <edge id="-103224#3" CO2_abs="122253.64" CO2_perVeh="12600.07"/>
+        <edge id="-103226#0" CO2_abs="15364.72" CO2_perVeh="4271.82"/>
+        <edge id="-103226#1" CO2_abs="81439.98" CO2_perVeh="20219.75"/>
+        <edge id="-103227#0" CO2_abs="17076.48" CO2_perVeh="2731.39"/>
+        <edge id="-103227#1" CO2_abs="518333.60" CO2_perVeh="53899.10"/>
+        <edge id="-103227#2" CO2_abs="822820.39" CO2_perVeh="82282.04"/>
+        <edge id="-103228" CO2_abs="13577.58" CO2_perVeh="5485.94"/>
+        <edge id="-103230" CO2_abs="14222.05" CO2_perVeh="5163.00"/>
+    </interval>
+    <interval begin="180.00" end="200.00" id="ed_wae">
+        <edge id="--103226#0" CO2_abs="0.00"/>
+        <edge id="--103226#1" CO2_abs="0.00"/>
+        <edge id="--103227#0" CO2_abs="52542.24" CO2_perVeh="26271.12"/>
+        <edge id="--103227#1" CO2_abs="176023.84" CO2_perVeh="126306.70"/>
+        <edge id="--103227#2" CO2_abs="123898.49" CO2_perVeh="40100.56"/>
+        <edge id="-103224#0" CO2_abs="365543.90" CO2_perVeh="279335.55"/>
+        <edge id="-103224#1" CO2_abs="478137.58" CO2_perVeh="280112.40"/>
+        <edge id="-103224#2" CO2_abs="130277.28" CO2_perVeh="64685.04"/>
+        <edge id="-103224#3" CO2_abs="60344.43" CO2_perVeh="18300.72"/>
+        <edge id="-103226#0" CO2_abs="4825.84" CO2_perVeh="2779.24"/>
+        <edge id="-103226#1" CO2_abs="27643.87" CO2_perVeh="27643.87"/>
+        <edge id="-103227#0" CO2_abs="0.00" CO2_perVeh="0.00"/>
+        <edge id="-103227#1" CO2_abs="268624.75" CO2_perVeh="51996.26"/>
+        <edge id="-103227#2" CO2_abs="309868.85" CO2_perVeh="74156.21"/>
+        <edge id="-103228" CO2_abs="6945.19" CO2_perVeh="8418.49"/>
+        <edge id="-103230" CO2_abs="6477.87" CO2_perVeh="7054.94"/>
+    </interval>
+</meandata>

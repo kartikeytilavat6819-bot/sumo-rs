@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:44:01.283476-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/md_wrattr_emis/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/md_wrattr_emis/routes.rou"/>
+        <additional-files value="tools/oracle/cases/md_wrattr_emis/meandata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc14/tools/oracle/cases/md_wrattr_emis/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="60.00" id="ld_wae">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" CO2_abs="65982.02"/>
+            <lane id="--103227#0_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" CO2_abs="433183.34"/>
+            <lane id="--103227#1_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" CO2_abs="280042.14"/>
+            <lane id="--103227#2_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" CO2_abs="42510.30"/>
+            <lane id="-103224#0_1" CO2_abs="49473.85"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" CO2_abs="241440.58"/>
+            <lane id="-103224#1_1" CO2_abs="164442.46"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" CO2_abs="244304.21"/>
+            <lane id="-103224#2_1" CO2_abs="178689.41"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" CO2_abs="102566.90"/>
+            <lane id="-103224#3_1" CO2_abs="20919.48"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" CO2_abs="10724.12"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" CO2_abs="95676.30"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" CO2_abs="0.00"/>
+            <lane id="-103227#0_1" CO2_abs="1687.33"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" CO2_abs="18859.54"/>
+            <lane id="-103227#1_1" CO2_abs="498637.19"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" CO2_abs="133750.39"/>
+            <lane id="-103227#2_1" CO2_abs="583430.29"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" CO2_abs="0.00"/>
+            <lane id="-103228_1" CO2_abs="24705.54"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" CO2_abs="15220.27"/>
+        </edge>
+    </interval>
+    <interval begin="60.00" end="120.00" id="ld_wae">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" CO2_abs="85959.20"/>
+            <lane id="--103227#0_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" CO2_abs="418562.85"/>
+            <lane id="--103227#1_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" CO2_abs="301901.80"/>
+            <lane id="--103227#2_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" CO2_abs="44334.95"/>
+            <lane id="-103224#0_1" CO2_abs="34304.51"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" CO2_abs="477882.81"/>
+            <lane id="-103224#1_1" CO2_abs="465448.56"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" CO2_abs="325223.94"/>
+            <lane id="-103224#2_1" CO2_abs="182643.24"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" CO2_abs="120865.30"/>
+            <lane id="-103224#3_1" CO2_abs="18122.01"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" CO2_abs="12717.94"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" CO2_abs="81149.65"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" CO2_abs="16353.59"/>
+            <lane id="-103227#0_1" CO2_abs="6280.24"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" CO2_abs="102411.78"/>
+            <lane id="-103227#1_1" CO2_abs="363310.23"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" CO2_abs="444477.94"/>
+            <lane id="-103227#2_1" CO2_abs="639896.04"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" CO2_abs="0.00"/>
+            <lane id="-103228_1" CO2_abs="3956.18"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" CO2_abs="9891.02"/>
+        </edge>
+    </interval>
+    <interval begin="120.00" end="180.00" id="ld_wae">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" CO2_abs="56584.65"/>
+            <lane id="--103227#0_1" CO2_abs="10847.37"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" CO2_abs="260007.39"/>
+            <lane id="--103227#1_1" CO2_abs="51817.44"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" CO2_abs="267907.63"/>
+            <lane id="--103227#2_1" CO2_abs="56909.53"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" CO2_abs="224908.48"/>
+            <lane id="-103224#0_1" CO2_abs="211316.43"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" CO2_abs="707403.11"/>
+            <lane id="-103224#1_1" CO2_abs="662888.05"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" CO2_abs="277871.01"/>
+            <lane id="-103224#2_1" CO2_abs="176625.95"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" CO2_abs="114077.17"/>
+            <lane id="-103224#3_1" CO2_abs="8176.47"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" CO2_abs="15364.72"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" CO2_abs="81439.98"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" CO2_abs="1588.78"/>
+            <lane id="-103227#0_1" CO2_abs="15487.70"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" CO2_abs="97157.31"/>
+            <lane id="-103227#1_1" CO2_abs="421176.29"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" CO2_abs="225762.98"/>
+            <lane id="-103227#2_1" CO2_abs="597057.41"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" CO2_abs="0.00"/>
+            <lane id="-103228_1" CO2_abs="13577.58"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" CO2_abs="14222.05"/>
+        </edge>
+    </interval>
+    <interval begin="180.00" end="200.00" id="ld_wae">
+        <edge id="--103226#0">
+            <lane id="--103226#0_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103226#1">
+            <lane id="--103226#1_0" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#0">
+            <lane id="--103227#0_0" CO2_abs="52542.24"/>
+            <lane id="--103227#0_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#1">
+            <lane id="--103227#1_0" CO2_abs="176023.84"/>
+            <lane id="--103227#1_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="--103227#2">
+            <lane id="--103227#2_0" CO2_abs="123898.49"/>
+            <lane id="--103227#2_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="-103224#0">
+            <lane id="-103224#0_0" CO2_abs="204305.30"/>
+            <lane id="-103224#0_1" CO2_abs="161238.61"/>
+        </edge>
+        <edge id="-103224#1">
+            <lane id="-103224#1_0" CO2_abs="249197.56"/>
+            <lane id="-103224#1_1" CO2_abs="228940.01"/>
+        </edge>
+        <edge id="-103224#2">
+            <lane id="-103224#2_0" CO2_abs="92200.18"/>
+            <lane id="-103224#2_1" CO2_abs="38077.10"/>
+        </edge>
+        <edge id="-103224#3">
+            <lane id="-103224#3_0" CO2_abs="36349.36"/>
+            <lane id="-103224#3_1" CO2_abs="23995.07"/>
+        </edge>
+        <edge id="-103226#0">
+            <lane id="-103226#0_0" CO2_abs="4825.84"/>
+        </edge>
+        <edge id="-103226#1">
+            <lane id="-103226#1_0" CO2_abs="27643.87"/>
+        </edge>
+        <edge id="-103227#0">
+            <lane id="-103227#0_0" CO2_abs="0.00"/>
+            <lane id="-103227#0_1" CO2_abs="0.00"/>
+        </edge>
+        <edge id="-103227#1">
+            <lane id="-103227#1_0" CO2_abs="52530.93"/>
+            <lane id="-103227#1_1" CO2_abs="216093.82"/>
+        </edge>
+        <edge id="-103227#2">
+            <lane id="-103227#2_0" CO2_abs="58116.85"/>
+            <lane id="-103227#2_1" CO2_abs="251752.00"/>
+        </edge>
+        <edge id="-103228">
+            <lane id="-103228_0" CO2_abs="0.00"/>
+            <lane id="-103228_1" CO2_abs="6945.19"/>
+        </edge>
+        <edge id="-103230">
+            <lane id="-103230_0" CO2_abs="6477.87"/>
+        </edge>
+    </interval>
+</meandata>

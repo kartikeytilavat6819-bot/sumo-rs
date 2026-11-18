@@ -1,0 +1,4 @@
+<additional>
+    <laneData id="ld_mt" period="50" maxTraveltime="30" minSamples="3" file="out_ld_mt.xml"/>
+    <laneData id="ld_int" period="50" withInternal="true" file="out_ld_int.xml"/>
+</additional>
