@@ -40,8 +40,11 @@ while IFS=$'\t' read -r case verdict rrc crc detail; do
   fi
   n=$((n+1))
 done < "$R"
-echo "--- all PANIC backtraces ---"
+echo "--- PANIC frames (first 3) ---"
+n=0
 grep -l 'panicked at' "$OUT/dua"/*/cand.log 2>/dev/null | while read -r f; do
-  echo "=== $f ==="
-  grep -A45 'panicked at' "$f" | head -50
+  [ "$n" -ge 3 ] && break
+  echo "=== $(basename "$(dirname "$f")") ==="
+  grep -A12 'panicked at' "$f" | head -14
+  n=$((n+1))
 done
