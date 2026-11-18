@@ -1,0 +1,9 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="rA" edges="A B C D"/>
+    <route id="rB" edges="B C D"/>
+    <route id="rC" edges="C D"/>
+    <flow id="fA" type="car" route="rA" begin="0" end="50" probability="0.20" departSpeed="max"/>
+    <flow id="fB" type="car" route="rB" begin="0" end="50" probability="0.25" departSpeed="max"/>
+    <flow id="fC" type="car" route="rC" begin="0" end="50" probability="0.15" departSpeed="max"/>
+</routes>
