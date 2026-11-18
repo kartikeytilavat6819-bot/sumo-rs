@@ -362,7 +362,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
             self.myNode2EdgeRouter.m().compute_node2_edges(boundaryNode, &boundaryEdgesSet, vehicle, msTime, false);
             for &boundaryEdge in boundaryEdges.iter() {
                 debug_assert!(!boundaryEdge.is_internal());
-                let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*boundaryEdge) as usize];
+                let arcInfo = self.myArcInfos[boundaryEdge.numerical_id() as usize];
                 if boundaryNode == boundaryEdge.get_from_junction() {
                     arcInfo.m().effortsToBoundaryNodes.push(0.);
                     incomingEdgesOfOutgoingBoundaryEdges.get_mut(&boundaryEdge).unwrap()[index] = Ptr::null();
@@ -464,7 +464,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
         for &boundaryNode in boundaryNodes.iter() {
             for &boundaryEdge in boundaryEdges.iter() {
                 debug_assert!(!boundaryEdge.is_internal());
-                let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*boundaryEdge) as usize];
+                let arcInfo = self.myArcInfos[boundaryEdge.numerical_id() as usize];
                 if boundaryNode == boundaryEdge.get_from_junction() {
                     arcInfo.m().effortsToBoundaryNodes.push(0.);
                     continue;
@@ -522,7 +522,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     {
         for &boundaryEdge in boundaryEdges.iter() {
             debug_assert!(!boundaryEdge.is_internal());
-            let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*boundaryEdge) as usize];
+            let arcInfo = self.myArcInfos[boundaryEdge.numerical_id() as usize];
             if arcInfo.arcFlags.is_empty() {
                 for _ in 0..self.myFlippedPartition.number_of_arc_flags() {
                     arcInfo.m().arcFlags.push(false);
@@ -578,7 +578,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
                 if boundaryEdgesSet.contains(&supercellEdge) {
                     continue;
                 }
-                let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*supercellEdge) as usize];
+                let arcInfo = self.myArcInfos[supercellEdge.numerical_id() as usize];
                 if arcInfo.arcFlags.is_empty() {
                     for _ in 0..self.myFlippedPartition.number_of_arc_flags() {
                         arcInfo.m().arcFlags.push(false);
@@ -800,7 +800,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
                 if self.myNode2EdgeRouter.is_prohibited(supercellEdge, vehicle, utils::common::time::steps2time(msTime)) {
                     continue;
                 }
-                arcInfosOnAShortestPath.insert(self.myArcInfos[FlippedEdge::get_numerical_id(&*supercellEdge) as usize]);
+                arcInfosOnAShortestPath.insert(self.myArcInfos[supercellEdge.numerical_id() as usize]);
             }
         }
         let vClass = if vehicle.is_null() { SVC_IGNORING } else { vehicle.v_class() };
@@ -822,7 +822,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
                 let oldSTime = sTime;
                 for follower in edge.get_via_successors(vClass, false) {
                     debug_assert!(!follower.0.is_internal());
-                    let followerInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*follower.0) as usize];
+                    let followerInfo = self.myArcInfos[follower.0.numerical_id() as usize];
                     if self.myNode2EdgeRouter.is_prohibited(follower.0, vehicle, sTime) {
                         let vehicleId = if vehicle.is_null() { "NULL".to_string() } else { vehicle.get_id() };
                         let msg = format!("Vehicle '{}' is not allowed on source edge '{}'.", vehicleId, followerInfo.edge.cast::<FlippedEdge<E, N, V>>().id());
@@ -854,7 +854,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
         arcInfosOnAShortestPath = survivors.into_iter().collect();
         let edgesInsideCell = cell.edge_set::<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>(vehicle);
         for edgeInsideCell in edgesInsideCell.iter().copied() {
-            let arcInfo = self.myArcInfos[FlippedEdge::get_numerical_id(&*edgeInsideCell) as usize];
+            let arcInfo = self.myArcInfos[edgeInsideCell.numerical_id() as usize];
             if self.myNode2EdgeRouter.is_prohibited(edgeInsideCell, vehicle, utils::common::time::steps2time(msTime)) {
                 continue;
             }
