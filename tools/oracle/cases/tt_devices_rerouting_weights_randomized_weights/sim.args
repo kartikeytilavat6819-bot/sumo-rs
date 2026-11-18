@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --weights.random-factor 1.1 --device.rerouting.period 0 --device.rerouting.pre-period 0

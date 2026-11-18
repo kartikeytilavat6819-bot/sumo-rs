@@ -1,0 +1,1 @@
+--duration-log.statistics --vehroute-output.cost --device.rerouting.adaptation-steps 60 --device.rerouting.adaptation-interval 3

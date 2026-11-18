@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --device.rerouting.adaptation-steps 18 --device.rerouting.adaptation-interval 10 -a tools/oracle/cases/tt_devices_rerouting_tlsPenalty_default/input_additional.add.xml

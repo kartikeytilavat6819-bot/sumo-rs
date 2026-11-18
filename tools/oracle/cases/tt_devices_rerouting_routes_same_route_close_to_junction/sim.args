@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.rerouting.probability 1 -b 0 --no-duration-log --device.rerouting.pre-period 0 --device.rerouting.period 1
