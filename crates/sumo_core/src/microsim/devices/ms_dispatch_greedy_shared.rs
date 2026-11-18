@@ -27,6 +27,13 @@ impl std::ops::DerefMut for MSDispatch_GreedyShared {
     }
 }
 
+/// C++ virtual `dispatch()` override — installs the ride-sharing body for the base `computeDispatch`.
+fn greedy_shared_dispatch(g: &mut MSDispatch_Greedy, taxi: Ptr<MSDevice_Taxi>, resIt: &mut usize, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
+    // SAFETY: installed only by MSDispatch_GreedyShared::new; g is the MSDispatch_Greedy base of an MSDispatch_GreedyShared (repr(C), base first)
+    let shared = unsafe { &mut *(g as *mut MSDispatch_Greedy as *mut MSDispatch_GreedyShared) };
+    shared.dispatch(taxi, resIt, router, reservations)
+}
+
 impl MSDispatch_GreedyShared {
     /// C++: `void MSDispatch_GreedyShared::MSDispatch_GreedyShared(const Parameterised::Map &)`
     // MSDispatch_GreedyShared(const Parameterised::Map& params) :
@@ -36,7 +43,8 @@ impl MSDispatch_GreedyShared {
     //     {}
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        let base = MSDispatch_Greedy::new(params);
+        let mut base = MSDispatch_Greedy::new(params);
+        base.dispatch_vt = greedy_shared_dispatch;
         let myAbsoluteLossThreshold = utils::common::string_utils::to_double(&base.base.base.get_parameter("absLossThreshold", "300")).unwrap();
         let myRelativeLossThreshold = utils::common::string_utils::to_double(&base.base.base.get_parameter("relLossThreshold", "0.2")).unwrap();
         MSDispatch_GreedyShared {
