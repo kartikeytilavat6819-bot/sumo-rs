@@ -4084,6 +4084,12 @@ impl MSPModel_Striping_PState {
         }
         if xSpeed == 0. {
             let sharedWA = MY_WALKING_AREA_FOES.with(|m| m.borrow().contains_key(&Ptr::from_mut(self.myLane.get_edge())));
+            if self.myPerson.get_id() == "pedNS.3" {
+                let ov = &obs[current as usize];
+                let vid = if ov.vehicle.is_null() { "null".to_string() } else { ov.vehicle.get_id().to_string() };
+                let vw = if ov.vehicle.is_null() { -1. } else { ov.vehicle.cast::<crate::microsim::ms_vehicle::MSVehicle>().get_waiting_time(false) };
+                eprintln!("DBG jam pedNS.3 t={} wait={} xDist={} lane={} sharedWA={} jamCross={} jamTime={} obsVeh={} obsWait={} jammed={}", MSNet::get_instance().get_current_time_step(), self.myWaitingTime, xDist, self.myLane.get_id(), sharedWA, jam_time_crossing(), jam_time(), vid, vw, self.myAmJammed);
+            }
             let jamTimeHere = if self.myLane.is_crossing()
                 // treat shared walkingarea like a crossing to avoid deadlocking vehicles
                 || (self.myLane.is_walking_area()

@@ -18,6 +18,8 @@ echo "=== DBG process_next_stop (first 40) ==="
 grep 'DBG process_next_stop' "$OUT/$c.log" | head -40
 echo "=== DBG process_next_stop (last 40) ==="
 grep 'DBG process_next_stop' "$OUT/$c.log" | tail -40
+echo "=== DBG jam pedNS.3 (t=60..72) ==="
+grep 'DBG jam pedNS.3' "$OUT/$c.log" | grep -E ' t=(6[0-9]|7[0-2])[0-9]{3} ' | head -40
 echo "=== DBG intermodal WE.1 (all) ==="
 grep 'DBG intermodal' "$OUT/$c.log" | head -80
 echo "=== DBG collision_stop_time (t=45..85, dedup by t) ==="
