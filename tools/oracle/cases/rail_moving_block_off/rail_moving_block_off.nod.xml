@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+    <node id="w" x="0.00" y="0.00" type="dead_end"/>
+    <node id="r1" x="300.00" y="0.00" type="rail_signal"/>
+    <node id="j1" x="400.00" y="0.00" type="priority"/>
+    <node id="j2" x="700.00" y="0.00" type="priority"/>
+    <node id="r2" x="1000.00" y="0.00" type="rail_signal"/>
+    <node id="e" x="1300.00" y="0.00" type="dead_end"/>
+</nodes>

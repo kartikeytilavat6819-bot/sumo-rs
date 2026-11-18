@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <!-- eastbound -->
+    <edge id="w_r1" from="w" to="r1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="r1_j1" from="r1" to="j1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="j1_j2_main" from="j1" to="j2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="j1_j2_loop" from="j1" to="j2" numLanes="1" speed="30" allow="rail" spreadType="center" shape="400.00,0.00 450.00,25.00 650.00,25.00 700.00,0.00"/>
+    <edge id="j2_r2" from="j2" to="r2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="r2_e" from="r2" to="e" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <!-- westbound -->
+    <edge id="e_r2" from="e" to="r2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="r2_j2" from="r2" to="j2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="j2_j1_main" from="j2" to="j1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="j2_j1_loop" from="j2" to="j1" numLanes="1" speed="30" allow="rail" spreadType="center" shape="700.00,0.00 650.00,25.00 450.00,25.00 400.00,0.00"/>
+    <edge id="j1_r1" from="j1" to="r1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="r1_w" from="r1" to="w" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+</edges>

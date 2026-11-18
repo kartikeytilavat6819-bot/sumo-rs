@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:07:05.650142-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail_station_stops/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail_station_stops/routes.rou"/>
+        <additional-files value="tools/oracle/cases/rail_station_stops/station.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_station_stops/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_station_stops/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_station_stops/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="t_east" depart="0.00" departLane="w_r1_0" departPos="50.10" departSpeed="27.79" departDelay="0.00" arrival="148.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="17.00" duration="148.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="51.00" timeLoss="0.07" rerouteNo="0" devices="tripinfo_t_east fcd_t_east" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="t_west" depart="148.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="108.00" arrival="220.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="26.00" duration="72.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="1.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_t_west fcd_t_west" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>

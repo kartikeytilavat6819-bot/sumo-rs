@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <edge id="rw_rc" from="rw" to="rc" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="rc_re" from="rc" to="re" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="re_rc" from="re" to="rc" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="rc_rw" from="rc" to="rw" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="rn_rc" from="rn" to="rc" numLanes="1" speed="30" allow="passenger" spreadType="center"/>
+    <edge id="rc_rs" from="rc" to="rs" numLanes="1" speed="30" allow="passenger" spreadType="center"/>
+    <edge id="rs_rc" from="rs" to="rc" numLanes="1" speed="30" allow="passenger" spreadType="center"/>
+    <edge id="rc_rn" from="rc" to="rn" numLanes="1" speed="30" allow="passenger" spreadType="center"/>
+</edges>

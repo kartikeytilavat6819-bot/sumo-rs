@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="train" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <route id="east" edges="w_r1 r1_r2 r2_e"/>
+    <route id="west" edges="e_r2 r2_r1 r1_w"/>
+    <vehicle id="t_east" type="train" route="east" depart="0">
+        <stop busStop="central" until="60"/>
+        <stop busStop="east" duration="20"/>
+    </vehicle>
+    <vehicle id="t_west" type="train" route="west" depart="40">
+        <stop busStop="central_w" until="75"/>
+    </vehicle>
+</routes>

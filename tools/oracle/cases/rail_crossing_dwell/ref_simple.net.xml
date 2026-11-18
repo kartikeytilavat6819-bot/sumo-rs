@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:06:20.415457-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/rail_crossing_dwell/rail_crossing_dwell.nod.xml"/>
+        <edge-files value="tools/oracle/cases/rail_crossing_dwell/rail_crossing_dwell.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/rail_crossing_dwell/ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,200.00" convBoundary="0.00,0.00,900.00,400.00" origBoundary="0.00,-200.00,900.00,200.00" projParameter="!"/>
+
+    <edge id=":rc_0" function="internal">
+        <lane id=":rc_0_0" index="0" allow="passenger" speed="30.00" length="6.20" shape="298.40,203.10 298.40,196.90"/>
+    </edge>
+    <edge id=":rc_1" function="internal" bidi=":rc_3">
+        <lane id=":rc_1_0" index="0" allow="rail" speed="30.00" length="9.40" shape="304.70,200.00 295.30,200.00"/>
+    </edge>
+    <edge id=":rc_2" function="internal">
+        <lane id=":rc_2_0" index="0" allow="passenger" speed="30.00" length="6.20" shape="301.60,196.90 301.60,203.10"/>
+    </edge>
+    <edge id=":rc_3" function="internal" bidi=":rc_1">
+        <lane id=":rc_3_0" index="0" allow="rail" speed="30.00" length="9.40" shape="295.30,200.00 304.70,200.00"/>
+    </edge>
+    <edge id=":re_0" function="internal">
+        <lane id=":re_0_0" index="0" allow="rail" speed="0.10" length="0.10" shape="900.00,200.00 900.00,200.00"/>
+    </edge>
+    <edge id=":rn_0" function="internal">
+        <lane id=":rn_0_0" index="0" allow="passenger" speed="3.65" length="4.67" shape="298.40,-0.01 299.20,-1.21 300.00,-1.61 300.80,-1.21 301.60,-0.01"/>
+    </edge>
+    <edge id=":rs_0" function="internal">
+        <lane id=":rs_0_0" index="0" allow="passenger" speed="3.65" length="4.67" shape="301.60,400.01 300.80,401.21 300.00,401.61 299.20,401.21 298.40,400.01"/>
+    </edge>
+    <edge id=":rw_0" function="internal">
+        <lane id=":rw_0_0" index="0" allow="rail" speed="0.10" length="0.10" shape="0.00,200.00 0.00,200.00"/>
+    </edge>
+
+    <edge id="rc_re" from="rc" to="re" priority="-1" spreadType="center" bidi="re_rc">
+        <lane id="rc_re_0" index="0" allow="rail" speed="30.00" length="595.30" shape="304.70,200.00 900.00,200.00"/>
+    </edge>
+    <edge id="rc_rn" from="rc" to="rn" priority="-1" spreadType="center" shape="298.40,200.00 298.40,-0.01">
+        <lane id="rc_rn_0" index="0" allow="passenger" speed="30.00" length="196.91" shape="298.40,196.90 298.40,-0.01"/>
+    </edge>
+    <edge id="rc_rs" from="rc" to="rs" priority="-1" spreadType="center" shape="301.60,200.00 301.60,400.01">
+        <lane id="rc_rs_0" index="0" allow="passenger" speed="30.00" length="196.91" shape="301.60,203.10 301.60,400.01"/>
+    </edge>
+    <edge id="rc_rw" from="rc" to="rw" priority="-1" spreadType="center" bidi="rw_rc">
+        <lane id="rc_rw_0" index="0" allow="rail" speed="30.00" length="295.30" shape="295.30,200.00 0.00,200.00"/>
+    </edge>
+    <edge id="re_rc" from="re" to="rc" priority="-1" spreadType="center" bidi="rc_re">
+        <lane id="re_rc_0" index="0" allow="rail" speed="30.00" length="595.30" shape="900.00,200.00 304.70,200.00"/>
+    </edge>
+    <edge id="rn_rc" from="rn" to="rc" priority="-1" spreadType="center" shape="301.60,-0.01 301.60,200.00">
+        <lane id="rn_rc_0" index="0" allow="passenger" speed="30.00" length="196.91" shape="301.60,-0.01 301.60,196.90"/>
+    </edge>
+    <edge id="rs_rc" from="rs" to="rc" priority="-1" spreadType="center" shape="298.40,400.01 298.40,200.00">
+        <lane id="rs_rc_0" index="0" allow="passenger" speed="30.00" length="196.91" shape="298.40,400.01 298.40,203.10"/>
+    </edge>
+    <edge id="rw_rc" from="rw" to="rc" priority="-1" spreadType="center" bidi="rc_rw">
+        <lane id="rw_rc_0" index="0" allow="rail" speed="30.00" length="295.30" shape="0.00,200.00 295.30,200.00"/>
+    </edge>
+
+    <junction id="rc" type="rail_crossing" x="300.00" y="200.00" incLanes="rs_rc_0 re_rc_0 rn_rc_0 rw_rc_0" intLanes=":rc_0_0 :rc_1_0 :rc_2_0 :rc_3_0" shape="296.80,203.10 303.20,203.10 303.37,202.27 303.58,201.97 303.87,201.77 304.24,201.64 304.70,201.60 304.70,198.40 303.87,198.23 303.58,198.03 303.37,197.73 303.24,197.36 303.20,196.90 296.80,196.90 296.63,197.73 296.42,198.02 296.13,198.23 295.76,198.36 295.30,198.40 295.30,201.60 296.13,201.77 296.42,201.97 296.63,202.27 296.76,202.64">
+        <request index="0" response="0000" foes="1010" cont="0"/>
+        <request index="1" response="0101" foes="0101" cont="0"/>
+        <request index="2" response="0000" foes="1010" cont="0"/>
+        <request index="3" response="0101" foes="0101" cont="0"/>
+    </junction>
+    <junction id="re" type="priority" x="900.00" y="200.00" incLanes="rc_re_0" intLanes=":re_0_0" shape="900.00,198.40 900.00,201.60 900.00,198.40 900.00,201.60">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="rn" type="priority" x="300.00" y="0.00" incLanes="rc_rn_0" intLanes=":rn_0_0" shape="300.00,-0.00 296.80,-0.00 300.00,-0.00">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="rs" type="priority" x="300.00" y="400.00" incLanes="rc_rs_0" intLanes=":rs_0_0" shape="300.00,400.00 303.20,400.00 300.00,400.00">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="rw" type="priority" x="0.00" y="200.00" incLanes="rc_rw_0" intLanes=":rw_0_0" shape="0.00,201.60 0.00,198.40 0.00,201.60 0.00,198.40">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+
+    <connection from="rc_re" to="re_rc" fromLane="0" toLane="0" speed="0.10" via=":re_0_0" dir="t" state="M"/>
+    <connection from="rc_rn" to="rn_rc" fromLane="0" toLane="0" via=":rn_0_0" dir="t" state="M"/>
+    <connection from="rc_rs" to="rs_rc" fromLane="0" toLane="0" via=":rs_0_0" dir="t" state="M"/>
+    <connection from="rc_rw" to="rw_rc" fromLane="0" toLane="0" speed="0.10" via=":rw_0_0" dir="t" state="M"/>
+    <connection from="re_rc" to="rc_rw" fromLane="0" toLane="0" via=":rc_1_0" tl="rc" linkIndex="-1" dir="s" state="M"/>
+    <connection from="rn_rc" to="rc_rs" fromLane="0" toLane="0" via=":rc_2_0" tl="rc" linkIndex="1" dir="s" state="O"/>
+    <connection from="rs_rc" to="rc_rn" fromLane="0" toLane="0" via=":rc_0_0" tl="rc" linkIndex="0" dir="s" state="O"/>
+    <connection from="rw_rc" to="rc_re" fromLane="0" toLane="0" via=":rc_3_0" tl="rc" linkIndex="-1" dir="s" state="M"/>
+
+    <connection from=":rc_0" to="rc_rn" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":rc_1" to="rc_rw" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":rc_2" to="rc_rs" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":rc_3" to="rc_re" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":re_0" to="re_rc" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from=":rn_0" to="rn_rc" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from=":rs_0" to="rs_rc" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from=":rw_0" to="rw_rc" fromLane="0" toLane="0" dir="t" state="M"/>
+
+</net>
