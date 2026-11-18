@@ -114,11 +114,18 @@ pub fn railway_set_bulk_mode<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMO
     Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().set_bulk_mode(mode)
 }
 
+/// The `RailwayRouter::recomputeCosts` reached from the base router's virtual slot.
+pub fn railway_recompute_costs<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAbstractRouter<E, V>, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 {
+    let p = Ptr::from_raw(base as *const SUMOAbstractRouter<E, V> as *mut SUMOAbstractRouter<E, V>);
+    p.cast::<RailwayRouter<E, V>>().m().recompute_costs(edges, v, msTime, lengthp)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
     /// Installs this router's compute and setBulkMode into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(railway_compute::<E, V>);
         self.base.mySetBulkMode = Some(railway_set_bulk_mode::<E, V>);
+        self.base.myRecomputeCosts = Some(railway_recompute_costs::<E, V>);
         self
     }
 
