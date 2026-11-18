@@ -1,0 +1,1 @@
+--write-license --sumo-net-file=tools/oracle/cases/itt_nc_netconvert_import_SUMO_traffic_light_right_on_red/input_net.net.xml --offset.disable-normalization

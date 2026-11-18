@@ -1,0 +1,1 @@
+--write-license --sumo-net-file=tools/oracle/cases/itt_nc_netconvert_import_SUMO_customTLS_deleteIncoming/input_net.net.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_SUMO_customTLS_deleteIncoming/input_plain.edg.xml

@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_4arm_2lane_tls_prio_turn/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_4arm_2lane_tls_prio_turn/input_plain.edg.xml --no-turnarounds --no-internal-links

@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_bugs_ticket6115/osm.xml --type-files tools/oracle/cases/itt_nc_netconvert_import_OSM_bugs_ticket6115/input_plain.typ.xml --lefthand

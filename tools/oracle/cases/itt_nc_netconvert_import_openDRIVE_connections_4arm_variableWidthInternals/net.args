@@ -1,0 +1,1 @@
+--write-license --opendrive tools/oracle/cases/itt_nc_netconvert_import_openDRIVE_connections_4arm_variableWidthInternals/opendrive.xodr --output.original-names --offset.disable-normalization --opendrive.internal-shapes --opendrive.import-all-lanes

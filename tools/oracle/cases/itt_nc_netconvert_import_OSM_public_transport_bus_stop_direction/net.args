@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_public_transport_bus_stop_direction/osm.xml --osm.stop-output.length 200 --type-files tools/oracle/cases/itt_nc_netconvert_import_OSM_public_transport_bus_stop_direction/input_types.typ.xml

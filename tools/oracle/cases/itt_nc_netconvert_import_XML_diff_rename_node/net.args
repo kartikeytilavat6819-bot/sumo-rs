@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_import_XML_diff_rename_node/input_net.net.xml -e tools/oracle/cases/itt_nc_netconvert_import_XML_diff_rename_node/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_diff_rename_node/input_plain.nod.xml

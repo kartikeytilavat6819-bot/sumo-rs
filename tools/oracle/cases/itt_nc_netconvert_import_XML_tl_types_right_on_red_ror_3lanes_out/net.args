@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_right_on_red_ror_3lanes_out/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_right_on_red_ror_3lanes_out/input_plain.nod.xml

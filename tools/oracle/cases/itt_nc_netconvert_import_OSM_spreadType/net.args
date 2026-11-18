@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_spreadType/osm.xml --default.spreadtype roadCenter --keep-edges.by-vclass passenger --tls.guess-signals --tls.discard-simple -R

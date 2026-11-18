@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_tl_layouts_incoming_right_on_red_layout_incoming/input_edges.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_tl_layouts_incoming_right_on_red_layout_incoming/input_nodes.nod.xml --tls.layout incoming

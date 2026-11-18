@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_edge_overwrite_lane_0/input_edges2.edg.xml -s tools/oracle/cases/itt_nc_netconvert_import_XML_edge_overwrite_lane_0/input_net.net.xml

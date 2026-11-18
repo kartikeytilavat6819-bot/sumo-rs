@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_junctionLogic_checkLaneFoes/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_junctionLogic_checkLaneFoes/input_plain.nod.xml --check-lane-foes.all

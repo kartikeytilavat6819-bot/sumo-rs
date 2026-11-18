@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_railway_line_4813_moving_block/osm.xml.gz --no-internal-links --keep-edges.by-vclass rail --osm.all-attributes --osm.etcs-moving-block

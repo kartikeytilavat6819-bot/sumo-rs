@@ -35,8 +35,9 @@ pub fn latin1_to_utf8(s: &[u8]) -> String {
     s.iter().map(|&b| b as char).collect()
 }
 
-/// C++ replaces the latin1 bytes; Rust strings are unicode, so the same chars are replaced
-pub fn convert_umlaute(s: &str) -> String {
+/// Replacement for strings decoded from Latin-1 bytes (e.g. VISSIM): C++ sees the raw
+/// Latin-1 bytes and transliterates them, which is equivalent to replacing the code points.
+pub fn convert_umlaute_latin1(s: &str) -> String {
     let mut s = replace(s, "\u{E4}", "ae");
     s = replace(&s, "\u{C4}", "Ae");
     s = replace(&s, "\u{F6}", "oe");
@@ -48,6 +49,33 @@ pub fn convert_umlaute(s: &str) -> String {
     s = replace(&s, "\u{E9}", "e");
     s = replace(&s, "\u{C8}", "E");
     replace(&s, "\u{E8}", "e")
+}
+
+/// C++ StringUtils::convertUmlaute replaces single Latin-1 *bytes* in a byte string.
+/// XML input is decoded to UTF-8 first (e.g. 'ä' is C3 A4), so those bytes do not match
+/// and C++ leaves the characters intact. Operate on the UTF-8 bytes, not on code points.
+pub fn convert_umlaute(s: &str) -> String {
+    const REPL: [(u8, &[u8]); 11] = [
+        (0xE4, b"ae"), (0xC4, b"Ae"), (0xF6, b"oe"), (0xD6, b"Oe"),
+        (0xFC, b"ue"), (0xDC, b"Ue"), (0xDF, b"ss"), (0xC9, b"E"),
+        (0xE9, b"e"), (0xC8, b"E"), (0xE8, b"e"),
+    ];
+    let mut bytes = s.as_bytes().to_vec();
+    for (needle, repl) in REPL {
+        if !bytes.contains(&needle) {
+            continue;
+        }
+        let mut out = Vec::with_capacity(bytes.len());
+        for &b in &bytes {
+            if b == needle {
+                out.extend_from_slice(repl);
+            } else {
+                out.push(b);
+            }
+        }
+        bytes = out;
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 pub fn replace(s: &str, what: &str, by: &str) -> String {
@@ -775,7 +803,8 @@ mod tests {
         assert_eq!(trim("  x \n", " \t\n"), "x");
         assert_eq!(wrap_text("aa bb cc", 6), "aa bb\ncc");
         assert_eq!(adjust_decimal_value(1.2500, 4), "1.25");
-        assert_eq!(convert_umlaute("Grüße"), "Gruesse");
+        assert_eq!(convert_umlaute("Grüße"), "Grüße"); // UTF-8 bytes are untouched by C++
+        assert_eq!(convert_umlaute_latin1("Grüße"), "Gruesse"); // Latin-1 decoded bytes
         assert_eq!(latin1_to_utf8(b"\xe4"), "ä");
     }
 

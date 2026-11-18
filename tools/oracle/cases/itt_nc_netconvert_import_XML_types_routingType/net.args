@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_types_routingType/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_types_routingType/input_plain.nod.xml -p plain

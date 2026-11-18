@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_set_lane_shape_sumo_net/input_net.net.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_set_lane_shape_sumo_net/input_plain.edg.xml --offset.disable-normalization

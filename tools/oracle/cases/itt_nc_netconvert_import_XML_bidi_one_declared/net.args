@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_bidi_one_declared/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_bidi_one_declared/input_plain.nod.xml

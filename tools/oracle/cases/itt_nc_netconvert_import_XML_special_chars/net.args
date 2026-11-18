@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_special_chars/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_special_chars/input_plain.nod.xml

@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_bugs_ticket16557c/osm.xml.gz -R --junctions.join --no-internal-links --keep-edges.by-vclass passenger --tls.guess-signals

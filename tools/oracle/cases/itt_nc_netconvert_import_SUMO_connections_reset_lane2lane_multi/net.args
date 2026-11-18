@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_import_SUMO_connections_reset_lane2lane_multi/input_net.net.xml --connection-files tools/oracle/cases/itt_nc_netconvert_import_SUMO_connections_reset_lane2lane_multi/input_connections.con.xml --speed-in-kmh

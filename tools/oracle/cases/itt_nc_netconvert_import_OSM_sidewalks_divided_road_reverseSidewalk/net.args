@@ -1,0 +1,1 @@
+--write-license -c tools/oracle/cases/itt_nc_netconvert_import_OSM_sidewalks_divided_road_reverseSidewalk/osm.netccfg --osm.oneway-reverse-sidewalk

@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_double_split_attach/input_net.net.xml --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_double_split_attach/input_plain.edg.xml

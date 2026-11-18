@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_lane_expansion_center_spread_four_minus_two_right/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_lane_expansion_center_spread_four_minus_two_right/input_nodes.nod.xml

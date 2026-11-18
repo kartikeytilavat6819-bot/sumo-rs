@@ -374,7 +374,8 @@ def skip_test(leaf: Path, app: str, root: Path, tokens: list[str]) -> bool:
     return any(s in joined for s in SKIP_TOKENS)
 
 
-def import_app(app: str, subtrees: list[Path], limit: int) -> tuple[list[str], int]:
+def import_app(app: str, subtrees: list[Path], limit: int,
+               merge: bool = False) -> tuple[list[str], int]:
     prefix = PREFIX[app]
     # Additive by design: previously imported cases/rows are kept so several agents
     # can contribute subtrees to the same shared oracle without clobbering each other.
@@ -432,9 +433,11 @@ def main() -> int:
     ap.add_argument("--app", choices=sorted(PREFIX), required=True)
     ap.add_argument("--subtree", action="append", required=True, type=Path)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--merge", action="store_true",
+                    help="keep existing cases and rows; add the imported ones to them")
     args = ap.parse_args()
 
-    rows, count = import_app(args.app, args.subtree, args.limit)
+    rows, count = import_app(args.app, args.subtree, args.limit, args.merge)
     if args.app == "netconvert":
         # Merge with rows already contributed by earlier imports (dedup by name).
         def row_name(line: str) -> str | None:

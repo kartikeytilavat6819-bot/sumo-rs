@@ -1,0 +1,1 @@
+--write-license --no-internal-links --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_roundabout_too_big/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_roundabout_too_big/input_plain.nod.xml

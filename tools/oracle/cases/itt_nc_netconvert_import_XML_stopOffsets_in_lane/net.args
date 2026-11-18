@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_stopOffsets_in_lane/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_stopOffsets_in_lane/input_nodes.nod.xml --junctions.limit-turn-speed.warn.turn 100

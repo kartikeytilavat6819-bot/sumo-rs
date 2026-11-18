@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_import_XML_diff_lane_specific_settings/input_plain.nod.xml --edge-files input_plain.edg.xml,input_edges.edg.xml --offset.disable-normalization

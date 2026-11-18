@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_tl_layouts_alternateOneWay_crossings/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_tl_layouts_alternateOneWay_crossings/input_plain.nod.xml --sidewalks.guess --crossings.guess

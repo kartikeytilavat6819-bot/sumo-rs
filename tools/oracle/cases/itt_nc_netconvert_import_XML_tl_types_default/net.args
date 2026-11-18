@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_default/input_edges.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_default/input_nodes.nod.xml

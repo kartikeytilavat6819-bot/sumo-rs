@@ -1,7 +1,7 @@
 //! Port of netimport/vissim/NIImporter_Vissim.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::string_utils::{convert_umlaute, ends_with, hex_to_int, to_double, to_int, to_lower_case};
+use utils::common::string_utils::{convert_umlaute_latin1, ends_with, hex_to_int, to_double, to_int, to_lower_case};
 use utils::common::msg_handler::{progress_begin_message, progress_done_message};
 use utils::common::string_tokenizer::StringTokenizer;
 use utils::common::util_exceptions::ProcessError;
@@ -2810,7 +2810,7 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
             }
             name = if name.len() >= 2 { name[1..name.len() - 1].to_string() } else { String::new() };
         }
-        convert_umlaute(&name)
+        convert_umlaute_latin1(&name)
     }
 
     /// C++: `bool VissimSingleTypeParser::skipOverreading(std::istream &, const std::string &)` [protected]

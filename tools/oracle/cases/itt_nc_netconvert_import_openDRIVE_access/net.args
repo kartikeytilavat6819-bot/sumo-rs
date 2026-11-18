@@ -1,0 +1,1 @@
+--write-license --opendrive tools/oracle/cases/itt_nc_netconvert_import_openDRIVE_access/opendrive.xodr -v --no-turnarounds true
