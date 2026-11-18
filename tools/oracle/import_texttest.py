@@ -62,6 +62,7 @@ OUTPUT_OPTS = (
     "--rail-signal-output", "--person-route-output", "--link-output",
     "--weights-output", "--deadlock-output", "--ssm-output", "--bh-output",
     "--save-state.files", "--save-state.times", "--movereminder-output",
+    "--edgedata-output", "--lanedata-output",
 )
 ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
 # Sub-options of these output files are meaningful: run_all/make_sim_refs

@@ -1,1 +1,1 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-lane-queue --duration-log.statistics --edgedata-output aggregated.xml -a tools/oracle/cases/tt_meso_lane_queue_lookahead_edge_type/input_additional.add.xml
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-lane-queue --duration-log.statistics -a tools/oracle/cases/tt_meso_lane_queue_lookahead_edge_type/input_additional.add.xml

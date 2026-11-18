@@ -1,1 +1,1 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-lane-queue --no-duration-log --edgedata-output aggregated.xml
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-lane-queue --no-duration-log
