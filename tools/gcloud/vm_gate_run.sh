@@ -42,22 +42,23 @@ shards=$((16 / active)); [ $shards -lt 2 ] && shards=2; [ $shards -gt 8 ] && sha
 case "$2" in wave2\ *) [ $shards -lt 4 ] && shards=4;; esac
 export RUN_SHARDS=$shards
 # official netconvert/duarouter outputs are replayed from a cache keyed by inputs (tools/gcloud/pristine_cache.sh)
+PC=""
 if [ -f /home/gate/pristine_cache.sh ]; then
   mkdir -p /home/gate/pcache/bin$slot
   for t in netconvert duarouter; do printf '#!/bin/bash\nexec bash /home/gate/pristine_cache.sh %s "$@"\n' "$SUMO_PRISTINE_BIN/$t" > /home/gate/pcache/bin$slot/$t; chmod +x /home/gate/pcache/bin$slot/$t; done
-  export CPP_NETCONVERT=/home/gate/pcache/bin$slot/netconvert REF_BIN=/home/gate/pcache/bin$slot/duarouter
+  PC=/home/gate/pcache/bin$slot   # passed ONLY to the duarouter/netopts runners: run_dfag/odtool/jtrrouter also read REF_BIN
   find /home/gate/pcache/entries -mindepth 2 -maxdepth 2 -name rc -mtime +7 -printf '%h\n' 2>/dev/null | xargs -r rm -rf   # unused for a week
 fi
 export NETOPTS2_JOBS=$((shards * 2))
 bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|TIMEOUT|PASS=|STALE|MISSING'
 bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
 if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
-  OUT=/tmp/dua$slot timeout 1800 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
+  OUT=/tmp/dua$slot env ${PC:+REF_BIN=$PC/duarouter} timeout 1800 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
   echo "duarouter oracle: PASS=$(grep -c $'\tPASS\t' /tmp/dua$slot/results.tsv) of $(($(wc -l < /tmp/dua$slot/results.tsv) - 1))"; grep -v $'\tPASS\t' /tmp/dua$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
 fi
 # netconvert option rows outside run_all (h08); one summary line + the non-PASS row names
 if [ -f tools/oracle/run_netopts_new.sh ]; then
-  rm -rf /tmp/netopts2_$slot; NETOPTS2_OUT=/tmp/netopts2_$slot timeout 2400 bash tools/oracle/run_netopts_new.sh >/dev/null 2>&1
+  rm -rf /tmp/netopts2_$slot; NETOPTS2_OUT=/tmp/netopts2_$slot env ${PC:+CPP_NETCONVERT=$PC/netconvert} timeout 2400 bash tools/oracle/run_netopts_new.sh >/dev/null 2>&1
   T=/tmp/netopts2_$slot/summary.tsv
   echo "netopts_new: PASS=$(grep -c $'\tPASS\t' $T 2>/dev/null) of $(cat $T 2>/dev/null | wc -l); not passing: $(grep -v $'\tPASS\t' $T 2>/dev/null | cut -f1,2 | tr '\t\n' ': ')"
 fi
