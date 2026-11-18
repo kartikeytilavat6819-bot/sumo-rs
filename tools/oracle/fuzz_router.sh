@@ -28,7 +28,10 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   local net="--default.lanenumber $lanes --default-junction-type $jt --seed $s"
   [ $nil = 1 ] && net="$net --no-internal-links"
   r 3; sidewalks=$R
-  [ $sidewalks = 0 ] && net="$net --sidewalks.guess --crossings.guess"
+  if [ $sidewalks = 0 ]; then
+    net="$net --sidewalks.guess"
+    [ $nil = 0 ] && net="$net --crossings.guess"   # crossings.guess conflicts with --no-internal-links
+  fi
   case $mode in
     grid)   r 3; net="--grid --grid.number $((R + 2)) --grid.length 150 $net";;
     spider) net="--spider --spider.arm-number 4 --spider.circle-number 2 --spider.space-radius 150 $net";;
@@ -69,7 +72,7 @@ out = ET.Element('flows')
 for i, t in enumerate(ts[:6]):
     ET.SubElement(out, 'flow', {'id': 'f%d' % i, 'begin': t.get('depart', '0'),
         'end': str(end), 'period': str(10 + i * 5), 'from': t.get('from'), 'to': t.get('to')})
-ET.ElementTree(out).write(sys.argv[3])
+ET.ElementTree(out).write(sys.argv[2])
 PYEOF
     input="--flow-files $d/flows.xml"
   }
@@ -83,7 +86,7 @@ f, s = sys.argv[1], int(sys.argv[2])
 vc = ['passenger', 'bus', 'truck'][s % 3]
 sf = 0.8 + (s % 5) * 0.1
 T = ET.parse(f); root = T.getroot()
-ET.SubElement(root, 'vType', {'id': 'fuzzv', 'vClass': vc, 'speedFactor': '%.2f' % sf})
+root.insert(0, ET.Element('vType', {'id': 'fuzzv', 'vClass': vc, 'speedFactor': '%.2f' % sf}))
 for el in list(root):
     if el.tag in ('trip', 'flow'): el.set('type', 'fuzzv')
 T.write(f)
