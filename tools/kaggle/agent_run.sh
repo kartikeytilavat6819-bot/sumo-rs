@@ -2,7 +2,7 @@
 # oc51: focused lane-change / sublane measure. Runs the LC cases through our binary and compares
 # against the committed pristine refs. Prints only failures and the first differing lines.
 set -u
-cd /tmp/src 2>/dev/null || cd "$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$(cd "$(dirname "$0")/../.." && pwd)"
 BIN=${CARGO_TARGET_DIR:-/tmp/target}/debug
 [ -x "$BIN/sumo.exe" ] || ln -sf "$BIN/sumo" "$BIN/sumo.exe" 2>/dev/null
 OUT=/tmp/oc51-lc; mkdir -p "$OUT"
