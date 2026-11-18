@@ -42,7 +42,7 @@ impl Command_SaveTLCoupledDet {
     // }
     #[allow(unused_variables)]
     pub fn new(tlls: &mut MSTLLogicControl_TLSLogicVariants, dtf: Ptr<MSDetectorFileOutput>, begin: SUMOTime, device: &mut OutputDevice) -> Self {
-        // shortcut: C++ calls tlls.addSwitchCommand(this); a by-value constructor has no stable address yet, so the caller must register the boxed object with tlls.add_switch_command(Ptr::from_mut(..)); upgrade when constructors return Box<Self>
+        // note: as in C++, the caller registers the boxed object with tlls.add_switch_command (see nl_detector_builder.rs).
         dtf.write_xml_detector_prolog(device);
         Self {
             base: MSTLLogicControl_OnSwitchAction {},

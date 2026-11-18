@@ -42,7 +42,6 @@ impl Command_SaveTLSState {
     // }
     #[allow(unused_variables)]
     pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice, saveDetectors: bool, saveConditions: bool) -> Box<Self> {
-        // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
         let mut b = Box::new(Self {
             base: (),
             myOutputDevice: Ptr::from_mut(od),

@@ -6,6 +6,8 @@ use std::cell::{Cell, RefCell};
 thread_local! {
     /// C++ `static bool MSDevice_BTreceiver::myWasInitialised`
     static MY_WAS_INITIALISED: Cell<bool> = const { Cell::new(false) };
+    /// The single BTreceiverUpdate; C++ ~MSNet deletes it so its destructor runs the final pass + bt-output.
+    static BT_UPDATE: RefCell<Option<Ptr<MSDevice_BTreceiver_BTreceiverUpdate>>> = RefCell::new(None);
     /// C++ `static bool MSDevice_BTreceiver::myHasPersons`
     static MY_HAS_PERSONS: Cell<bool> = const { Cell::new(true) };
     /// C++ `static double MSDevice_BTreceiver::myRange`
@@ -86,12 +88,21 @@ fn boxes_overlap(amin: [f32; 2], amax: [f32; 2], bmin: [f32; 2], bmax: [f32; 2])
 /// Initialises the bt-system from the options the first time a device is built
 fn init_once_from_options() {
     if !MY_WAS_INITIALISED.with(|c| c.get()) {
-        // shortcut: C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate (drop_: final pass + bt-output for vehicles still running); MSNet teardown here frees MSEventControl without deleting its commands, so that pass is not run; upgrade when MSEventControl deletes its commands on drop
-        let _update = Box::leak(MSDevice_BTreceiver_BTreceiverUpdate::new());
+        // C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate (drop_: final pass + bt-output for vehicles still running).
+        // The event control here never drops its commands, so MSNet invokes finish() to run that final pass.
+        let update = Box::leak(MSDevice_BTreceiver_BTreceiverUpdate::new());
+        BT_UPDATE.with(|c| *c.borrow_mut() = Some(Ptr::from_mut(update)));
         MY_WAS_INITIALISED.with(|c| c.set(true));
         MY_RANGE.with(|c| c.set(utils::options::options_cont::get_float("device.btreceiver.range")));
         MY_OFF_TIME.with(|c| c.set(utils::options::options_cont::get_float("device.btreceiver.offtime")));
         S_RECOGNITION_RNG.with(|r| r.m().set_seed(utils::options::options_cont::get_int("seed")));
+    }
+}
+
+/// Runs the C++ `~BTreceiverUpdate` final pass (final visibility updates + bt-output for vehicles still running).
+pub fn finish() {
+    if let Some(u) = BT_UPDATE.with(|c| c.borrow_mut().take()) {
+        u.m().drop_();
     }
 }
 
