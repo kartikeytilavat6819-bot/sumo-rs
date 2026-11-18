@@ -1,0 +1,37 @@
+diff --git a/tools/kaggle/agent_run.sh b/tools/kaggle/agent_run.sh
+deleted file mode 100644
+--- a/tools/kaggle/agent_run.sh
++++ /dev/null
+@@ -1,32 +0,0 @@
+-#!/bin/bash
+-# Measure state_* save-state parity: our sumo vs pristine sumo, print first diffs.
+-set -u
+-cd "$(dirname "$0")/../.." || exit 1
+-ROOT=$(pwd)
+-BIN="${CARGO_TARGET_DIR:-/tmp/target}/debug"
+-OURS=$BIN/sumo
+-PRISTINE=${SUMO_PRISTINE_BIN:-$HOME/sumo-pristine/bin}/sumo
+-OUT=/tmp/oc12-state; rm -rf "$OUT"; mkdir -p "$OUT"
+-
+-for dir in tools/oracle/cases/state_*; do
+-  c=$(basename "$dir")
+-  NET=$dir/ref_simple.net.xml; ROU=$dir/routes.rou
+-  EXTRA=$(cat "$dir/sim.args" | tr -d '\r')
+-  SO=$(sed "s#@OUT@#$OUT/ours_$c#g" "$dir/sim_outputs.txt" | tr -d '\r')
+-  SP=$(sed "s#@OUT@#$OUT/pris_$c#g" "$dir/sim_outputs.txt" | tr -d '\r')
+-  mkdir -p "$OUT/ours_$c" "$OUT/pris_$c"
+-  "$OURS" -n "$NET" -r "$ROU" --no-step-log true $EXTRA $SO >"$OUT/ours_$c.log" 2>&1
+-  "$PRISTINE" -n "$NET" -r "$ROU" --no-step-log true $EXTRA $SP >"$OUT/pris_$c.log" 2>&1
+-  echo "=== $c ==="
+-  grep -m1 -E 'panicked at|Error:' "$OUT/ours_$c.log" | cut -c1-120
+-  n=0
+-  for f in "$OUT/pris_$c"/*; do
+-    [ -f "$f" ] || continue
+-    bn=$(basename "$f")
+-    if [ ! -f "$OUT/ours_$c/$bn" ]; then echo "MISSING ours: $bn"; continue; fi
+-    r=$(python3 tools/oracle/compare_xml.py "$f" "$OUT/ours_$c/$bn" 2>&1 | head -2)
+-    case "$r" in MATCH) ;; *) echo "$bn: $r"; n=$((n+1));; esac
+-  done
+-  [ $n -eq 0 ] && echo "  all state files MATCH"
+-done
+-echo "AGENT_RUN DONE"
