@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:04:46.591596-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_4xxx_ticket4189/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_4xxx_ticket4189/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4189/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4189/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4189/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="EW_bike" depart="0.00" departLane="EW1_0" departPos="204.76" departSpeed="0.00" departDelay="0.00" arrival="121.90" arrivalLane="EW2_1" arrivalPos="336.49" arrivalSpeed="6.00" duration="121.90" routeLength="376.26" waitingTime="14.90" waitingCount="1" stopTime="30.00" timeLoss="22.24" rerouteNo="0" devices="tripinfo_EW_bike fcd_EW_bike" vType="bicycle" speedFactor="1.44" vaporized=""/>
+    <tripinfo id="NW_bike" depart="0.00" departLane="NS1_0" departPos="103.06" departSpeed="0.00" departDelay="0.00" arrival="123.20" arrivalLane="EW2_0" arrivalPos="336.49" arrivalSpeed="5.72" duration="123.20" routeLength="358.08" waitingTime="0.00" waitingCount="0" stopTime="50.00" timeLoss="3.28" rerouteNo="0" devices="tripinfo_NW_bike fcd_NW_bike" vType="bicycle" speedFactor="0.95" vaporized=""/>
+    <tripinfo id="NW_passenger" depart="40.00" departLane="NS1_0" departPos="96.06" departSpeed="0.00" departDelay="0.00" arrival="123.30" arrivalLane="EW2_1" arrivalPos="336.49" arrivalSpeed="7.64" duration="83.30" routeLength="367.01" waitingTime="16.40" waitingCount="1" stopTime="0.00" timeLoss="59.98" rerouteNo="0" devices="tripinfo_NW_passenger fcd_NW_passenger" vType="passenger" speedFactor="1.13" vaporized=""/>
+    <tripinfo id="SW_passenger" depart="40.00" departLane="SN1_0" departPos="142.10" departSpeed="0.00" departDelay="0.00" arrival="125.00" arrivalLane="EW2_1" arrivalPos="336.49" arrivalSpeed="8.90" duration="85.00" routeLength="368.91" waitingTime="20.80" waitingCount="2" stopTime="0.00" timeLoss="59.92" rerouteNo="0" devices="tripinfo_SW_passenger fcd_SW_passenger" vType="passenger" speedFactor="1.06" vaporized=""/>
+</tripinfos>

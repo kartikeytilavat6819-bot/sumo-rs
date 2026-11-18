@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:04:49.206179-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_4xxx_ticket4255/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_4xxx_ticket4255/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4255/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4255/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_4xxx_ticket4255/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="NS_car" depart="0.00" departLane="SN1_1" departPos="84.61" departSpeed="0.00" departDelay="0.00" arrival="173.00" arrivalLane="EW2_2" arrivalPos="161.29" arrivalSpeed="15.26" duration="173.00" routeLength="194.99" waitingTime="46.00" waitingCount="1" stopTime="100.00" timeLoss="55.58" rerouteNo="0" devices="tripinfo_NS_car fcd_NS_car" vType="passenger" speedFactor="1.11" vaporized=""/>
+    <tripinfo id="EW_car1" depart="80.00" departLane="EW1_2" departPos="196.71" departSpeed="0.00" departDelay="0.00" arrival="176.00" arrivalLane="EW2_2" arrivalPos="161.29" arrivalSpeed="13.36" duration="96.00" routeLength="199.44" waitingTime="69.00" waitingCount="2" stopTime="0.00" timeLoss="80.97" rerouteNo="0" devices="tripinfo_EW_car1 fcd_EW_car1" vType="passenger" speedFactor="0.99" vaporized=""/>
+    <tripinfo id="EW_car2" depart="91.00" departLane="EW1_2" departPos="192.71" departSpeed="0.00" departDelay="11.00" arrival="178.00" arrivalLane="EW2_2" arrivalPos="161.29" arrivalSpeed="14.01" duration="87.00" routeLength="203.44" waitingTime="59.00" waitingCount="1" stopTime="0.00" timeLoss="72.32" rerouteNo="0" devices="tripinfo_EW_car2 fcd_EW_car2" vType="passenger" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="WN_bikes.0" depart="80.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="0.00" arrival="188.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="6.00" duration="108.00" routeLength="156.16" waitingTime="65.00" waitingCount="2" stopTime="0.00" timeLoss="81.68" rerouteNo="0" devices="tripinfo_WN_bikes.0 fcd_WN_bikes.0" vType="bicycle" speedFactor="1.53" vaporized=""/>
+    <tripinfo id="WN_bikes.1" depart="83.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="2.00" arrival="190.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="6.00" duration="107.00" routeLength="156.16" waitingTime="65.00" waitingCount="2" stopTime="0.00" timeLoss="80.18" rerouteNo="0" devices="tripinfo_WN_bikes.1 fcd_WN_bikes.1" vType="bicycle" speedFactor="1.32" vaporized=""/>
+    <tripinfo id="WN_bikes.2" depart="93.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="11.00" arrival="209.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="3.15" duration="116.00" routeLength="156.16" waitingTime="59.00" waitingCount="1" stopTime="0.00" timeLoss="65.38" rerouteNo="0" devices="tripinfo_WN_bikes.2 fcd_WN_bikes.2" vType="bicycle" speedFactor="0.52" vaporized=""/>
+    <tripinfo id="WN_bikes.3" depart="96.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="13.00" arrival="210.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="3.65" duration="114.00" routeLength="156.16" waitingTime="58.00" waitingCount="1" stopTime="0.00" timeLoss="87.88" rerouteNo="0" devices="tripinfo_WN_bikes.3 fcd_WN_bikes.3" vType="bicycle" speedFactor="1.38" vaporized=""/>
+    <tripinfo id="WN_bikes.4" depart="100.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="16.00" arrival="212.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="4.15" duration="112.00" routeLength="156.16" waitingTime="56.00" waitingCount="1" stopTime="0.00" timeLoss="76.64" rerouteNo="0" devices="tripinfo_WN_bikes.4 fcd_WN_bikes.4" vType="bicycle" speedFactor="0.74" vaporized=""/>
+    <tripinfo id="WN_bikes.5" depart="103.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="18.00" arrival="214.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="4.65" duration="111.00" routeLength="156.16" waitingTime="54.00" waitingCount="1" stopTime="0.00" timeLoss="83.06" rerouteNo="0" devices="tripinfo_WN_bikes.5 fcd_WN_bikes.5" vType="bicycle" speedFactor="0.95" vaporized=""/>
+    <tripinfo id="WN_bikes.6" depart="107.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="21.00" arrival="216.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="3.77" duration="109.00" routeLength="156.16" waitingTime="52.00" waitingCount="1" stopTime="0.00" timeLoss="66.78" rerouteNo="0" devices="tripinfo_WN_bikes.6 fcd_WN_bikes.6" vType="bicycle" speedFactor="0.63" vaporized=""/>
+    <tripinfo id="WN_bikes.7" depart="110.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="23.00" arrival="217.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="4.27" duration="107.00" routeLength="156.16" waitingTime="52.00" waitingCount="1" stopTime="0.00" timeLoss="80.92" rerouteNo="0" devices="tripinfo_WN_bikes.7 fcd_WN_bikes.7" vType="bicycle" speedFactor="1.56" vaporized=""/>
+    <tripinfo id="WN_bikes.8" depart="114.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="26.00" arrival="219.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="4.78" duration="105.00" routeLength="156.16" waitingTime="60.00" waitingCount="1" stopTime="0.00" timeLoss="78.63" rerouteNo="0" devices="tripinfo_WN_bikes.8 fcd_WN_bikes.8" vType="bicycle" speedFactor="1.31" vaporized=""/>
+    <tripinfo id="WN_bikes.9" depart="117.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="28.00" arrival="221.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.29" duration="104.00" routeLength="156.16" waitingTime="60.00" waitingCount="1" stopTime="0.00" timeLoss="77.25" rerouteNo="0" devices="tripinfo_WN_bikes.9 fcd_WN_bikes.9" vType="bicycle" speedFactor="1.39" vaporized=""/>
+    <tripinfo id="WN_bikes.10" depart="182.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="92.00" arrival="222.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.31" duration="40.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="13.76" rerouteNo="0" devices="tripinfo_WN_bikes.10 fcd_WN_bikes.10" vType="bicycle" speedFactor="1.69" vaporized=""/>
+    <tripinfo id="WN_bikes.11" depart="186.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="95.00" arrival="224.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.83" duration="38.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="11.30" rerouteNo="0" devices="tripinfo_WN_bikes.11 fcd_WN_bikes.11" vType="bicycle" speedFactor="1.16" vaporized=""/>
+    <tripinfo id="WN_bikes.12" depart="189.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="97.00" arrival="226.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.44" duration="37.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.35" rerouteNo="0" devices="tripinfo_WN_bikes.12 fcd_WN_bikes.12" vType="bicycle" speedFactor="0.91" vaporized=""/>
+    <tripinfo id="WN_bikes.13" depart="193.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="100.00" arrival="234.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="4.28" duration="41.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.24" rerouteNo="0" devices="tripinfo_WN_bikes.13 fcd_WN_bikes.13" vType="bicycle" speedFactor="0.71" vaporized=""/>
+    <tripinfo id="WN_bikes.14" depart="196.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="102.00" arrival="236.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.29" duration="40.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="12.35" rerouteNo="0" devices="tripinfo_WN_bikes.14 fcd_WN_bikes.14" vType="bicycle" speedFactor="0.97" vaporized=""/>
+    <tripinfo id="WN_bikes.15" depart="200.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="105.00" arrival="237.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.33" duration="37.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="9.29" rerouteNo="0" devices="tripinfo_WN_bikes.15 fcd_WN_bikes.15" vType="bicycle" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="WN_bikes.16" depart="203.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="107.00" arrival="239.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="5.90" duration="36.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="9.38" rerouteNo="0" devices="tripinfo_WN_bikes.16 fcd_WN_bikes.16" vType="bicycle" speedFactor="1.83" vaporized=""/>
+    <tripinfo id="WN_bikes.17" depart="207.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="110.00" arrival="241.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="6.00" duration="34.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.26" rerouteNo="0" devices="tripinfo_WN_bikes.17 fcd_WN_bikes.17" vType="bicycle" speedFactor="1.27" vaporized=""/>
+    <tripinfo id="WN_bikes.18" depart="210.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="112.00" arrival="242.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="6.00" duration="32.00" routeLength="156.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.87" rerouteNo="0" devices="tripinfo_WN_bikes.18 fcd_WN_bikes.18" vType="bicycle" speedFactor="1.24" vaporized=""/>
+    <tripinfo id="WN_bikes.19" depart="214.00" departLane="WE1_0" departPos="169.53" departSpeed="0.00" departDelay="115.00" arrival="301.00" arrivalLane="SN2_0" arrivalPos="104.75" arrivalSpeed="6.00" duration="87.00" routeLength="156.16" waitingTime="51.00" waitingCount="1" stopTime="0.00" timeLoss="60.86" rerouteNo="0" devices="tripinfo_WN_bikes.19 fcd_WN_bikes.19" vType="bicycle" speedFactor="1.10" vaporized=""/>
+</tripinfos>
