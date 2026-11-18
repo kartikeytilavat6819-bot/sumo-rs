@@ -2803,7 +2803,8 @@ impl NIImporter_OpenStreetMap {
                     n.name.clone(),
                     n.permissions,
                     0.0,
-                    RGBColor::default(),
+                    // C++ NBPTStop default color is RGBColor(false) -> write() omits the attribute
+                    RGBColor::new_valid(false),
                     -1.0,
                 ))));
                 nb.get_pt_stop_cont().insert(ptStop, true);
