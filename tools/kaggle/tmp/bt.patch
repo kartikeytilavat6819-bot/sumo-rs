@@ -1,0 +1,11 @@
+--- a/src/microsim/devices/MSDevice_BTreceiver.cpp
++++ b/src/microsim/devices/MSDevice_BTreceiver.cpp
+@@ -194,6 +194,8 @@
+                 // seeing oneself? skip
+                 continue;
+             }
++            fprintf(stderr, "V %.2f %s %s
++", SIMTIME, (*i).first.c_str(), vehicle->getID().c_str());
+             updateVisibility(*vi, *MSDevice_BTsender::sVehicles.find(vehicle->getID())->second);
+         }
+ 

@@ -269,6 +269,7 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
                     // seeing oneself? skip
                     continue;
                 }
+                eprintln!("V {:.2} {} {}", simtime(), id, vid);
                 self.update_visibility(v, svi.m());
             }
 
