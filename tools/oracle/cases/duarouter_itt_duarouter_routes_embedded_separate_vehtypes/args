@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_routes_embedded_separate_vehtypes/input_routes.rou.xml -o @DIR@/routes.rou.xml --vtype-output @DIR@/vtypes.rou.xml
