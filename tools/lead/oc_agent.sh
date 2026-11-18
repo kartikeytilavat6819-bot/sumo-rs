@@ -10,8 +10,8 @@ REPO=/c/Users/karti/sumo-rs WT=$REPO/.claude/worktrees/agent-$ID BR=worktree-age
 OC="$APPDATA/npm/node_modules/@opencode/cli/bin/opencode.exe"
 MODEL=${OC_MODEL:-opencode/hy4-flash-free}
 LOG=$REPO/.claude/oc-$ID.log
-# rows failing on main c2ffe04a: not regressions
-KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_noperiod/ref md_persons/ref md_public/ref md_stop/ref md_vtypes/ref md_window/ref "
+# rows failing on main eb1c4aa8: not regressions
+KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_noperiod/ref md_persons/ref md_public/ref md_stop/ref md_vtypes/ref md_window/ref tt_basic_personFlow_walk_routeDist2/ref tt_basic_person_person_inserted_departPos/ref tt_basic_person_walking_walk_routeDist/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref "
 
 say() { echo "$(date +%H:%M) $*" | tee -a "$LOG"; }
 # every failing line whose row is not a known main FAIL, plus build/test/harness failures
