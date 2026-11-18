@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 150 --tripinfo-output.write-unfinished -a tools/oracle/cases/tt_output_tripinfo_write_unfinished/input_additional2.add.xml,tools/oracle/cases/tt_output_tripinfo_write_unfinished/input_routes.rou.xml
