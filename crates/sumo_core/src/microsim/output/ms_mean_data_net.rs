@@ -304,8 +304,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     //                 ++nVehDeparted;
     //             } else if (reason == MSMoveReminder::NOTIFICATION_LANE_CHANGE) {
     //                 ++nVehLaneChangeTo;
-    //             } else if (reason != MSMoveReminder::NOTIFICATION_TELEPORT
-    //                     && (myParent == nullptr || reason != MSMoveReminder::NOTIFICATION_SEGMENT)) {
+    //             } else if (myParent == nullptr || reason != MSMoveReminder::NOTIFICATION_SEGMENT) {
     //                 ++nVehEntered;
     //             }
     //         }
@@ -321,7 +320,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
                     self.nVehDeparted += 1;
                 } else if reason == MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
                     self.nVehLaneChangeTo += 1;
-                } else if reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT && (self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT) {
+                } else if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
                     self.nVehEntered += 1;
                 }
             }
