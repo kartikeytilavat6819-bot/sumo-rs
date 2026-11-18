@@ -89,9 +89,8 @@ pub struct Simulation {
 //   static ContextSubscriptionResults Simulation::myContextSubscriptionResults;
 
 /// C++ `toString(SumoXMLAttr)`: the canonical name of an attribute
-// shortcut: scans the ATTRS table instead of the SumoXMLAttrs bijection, upgrade when sumo_xml_definitions exposes toString
 fn attr_to_string(attr: i32) -> String {
-    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, v)| *v == attr).map(|(s, _)| s.to_string()).unwrap_or_default()
+    utils::xml::sumo_xml_definitions::Attrs.get_string(attr).to_string()
 }
 
 /// wall-clock milliseconds for the progress messages (C++ PROGRESS_BEGIN_TIME_MESSAGE)
