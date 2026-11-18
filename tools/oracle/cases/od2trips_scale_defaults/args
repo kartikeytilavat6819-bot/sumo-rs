@@ -1,0 +1,1 @@
+-n tools/oracle/cases/odshared/taz.add.xml -d tools/oracle/cases/odshared/m.o --scale 2.5 --vtype car --departlane best --departspeed max --departpos random --arrivallane current -o @DIR@/trips.xml --seed 4

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <trip id="a1" depart="0" fromTaz="za" toTaz="zb"/>
+  <trip id="a2" depart="5" fromTaz="zb" toTaz="za"/>
+  <trip id="a3" depart="10" fromTaz="za" toTaz="zc"/>
+  <flow id="f1" begin="0" end="100" number="10" fromTaz="zb" toTaz="za"/>
+</routes>

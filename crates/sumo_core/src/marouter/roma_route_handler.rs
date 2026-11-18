@@ -247,3 +247,17 @@ impl ROMARouteHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for ROMARouteHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        ROMARouteHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        ROMARouteHandler::my_end_element(self, element);
+        Ok(())
+    }
+}

@@ -1,0 +1,1 @@
+-n tools/oracle/cases/odshared/taz.add.xml -z tools/oracle/cases/odshared/tazrel.xml -o @DIR@/trips.xml --spread.uniform --seed 5
