@@ -336,9 +336,18 @@ def classify(fn, t):
         return {"type": type(e).__name__, "value": str(e)}, False
 
 
-def run_session(side, port, ours, calls, step_every):
-    """Run the whole call sequence on one server; return (list of results, dead_from)."""
-    extra = ("--additional-files", str(INFRA))
+def dump_log(side, port, n=20):
+    log = Path(os.environ.get("TEMP", "/tmp")) / f"fuzz_{side}_{port}.log"
+    try:
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        print(f"  {side} log tail (port {port}): " + " | ".join(lines[-n:]))
+    except OSError as e:
+        print(f"  {side} log unavailable: {e}")
+
+
+def run_session(side, port, ours, calls, step_every, use_infra=True):
+    """Run the whole call sequence on one server; return (results, dead_from, init_error)."""
+    extra = ("--additional-files", str(INFRA)) if use_infra else ()
     log = Path(os.environ.get("TEMP", "/tmp")) / f"fuzz_{side}_{port}.log"
     with open(log, "a") as fh:
         proc = subprocess.Popen(C.sumo_command(side, port, NET, ROU, ours, extra),
@@ -347,8 +356,14 @@ def run_session(side, port, ours, calls, step_every):
         dead_from = None
         try:
             try:
+                # a previous failed init can leave traci's singleton connection registered
+                try:
+                    traci.close()
+                except Exception:
+                    pass
                 traci.init(port=port, numRetries=30, host="localhost")
             except Exception as e:
+                dump_log(side, port)
                 return [], 0, {"type": "InitFailed:" + type(e).__name__, "value": str(e)}
             try:
                 traci.simulationStep(0)
@@ -358,6 +373,8 @@ def run_session(side, port, ours, calls, step_every):
                     results.append(res)
                     if dead:
                         dead_from = k
+                        if side == "ours":
+                            dump_log(side, port)
                         break
                     if step_every and (k + 1) % step_every == 0:
                         try:
@@ -384,6 +401,7 @@ def main():
     ap.add_argument("--seeds", default="1,2,3,4,5")
     ap.add_argument("--n", type=int, default=45, help="calls per session")
     ap.add_argument("--step-every", type=int, default=5)
+    ap.add_argument("--no-infra", action="store_true", help="do not load infra.add.xml")
     a = ap.parse_args()
 
     seeds = [int(s) for s in a.seeds.split(",") if s]
@@ -392,12 +410,12 @@ def main():
     for si, seed in enumerate(seeds):
         calls = build_calls(seed, a.n)
         port = a.port + si * 4
-        ours_res, ours_dead, ours_init = run_session("ours", port, a.ours, calls, a.step_every)
+        ours_res, ours_dead, ours_init = run_session("ours", port, a.ours, calls, a.step_every, not a.no_infra)
         C.kill_cpp(port)
-        cpp_res, cpp_dead, cpp_init = run_session("cpp", port + 2, a.ours, calls, a.step_every)
+        cpp_res, cpp_dead, cpp_init = run_session("cpp", port + 2, a.ours, calls, a.step_every, not a.no_infra)
         C.kill_cpp(port + 2)
 
-        print(f"FUZZ seed={seed}: ours={len(ours_res)} calls (dead={ours_dead}, init={ours_init}) "
+        print(f"FUZZ seed={seed} infra={not a.no_infra}: ours={len(ours_res)} calls (dead={ours_dead}, init={ours_init}) "
               f"official={len(cpp_res)} calls (dead={cpp_dead}, init={cpp_init})")
         if ours_init or cpp_init:
             # an init failure on either side is itself a finding (unless official just died)
