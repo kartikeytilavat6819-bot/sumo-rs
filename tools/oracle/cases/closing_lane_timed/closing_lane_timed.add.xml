@@ -1,0 +1,7 @@
+<additional>
+    <rerouter id="rr" edges="E0">
+        <interval begin="30.00" end="90.00">
+            <closingLaneReroute id="E1_0" disallow="passenger"/>
+        </interval>
+    </rerouter>
+</additional>

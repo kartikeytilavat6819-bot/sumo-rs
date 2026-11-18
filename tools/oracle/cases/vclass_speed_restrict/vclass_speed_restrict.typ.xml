@@ -1,0 +1,10 @@
+<types>
+    <type id="highway" priority="3" numLanes="2" speed="33.33">
+        <restriction vClass="passenger" speed="33.33"/>
+        <restriction vClass="bus" speed="20.00"/>
+        <restriction vClass="truck" speed="15.00"/>
+        <restriction vClass="hov" speed="25.00"/>
+        <restriction vClass="taxi" speed="28.00"/>
+        <restriction vClass="emergency" speed="40.00"/>
+    </type>
+</types>
