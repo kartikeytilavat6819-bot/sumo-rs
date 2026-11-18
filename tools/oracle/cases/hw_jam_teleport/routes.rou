@@ -1,0 +1,9 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="20.00" accel="1.50" decel="3.00"/>
+    <route id="r0" edges="E0 E1"/>
+    <vehicle id="blocker" type="bus" route="r0" depart="0.00" departLane="0" departSpeed="max">
+        <stop lane="E1_0" endPos="300.00" duration="200.00"/>
+    </vehicle>
+    <flow id="f" type="car" route="r0" begin="0.00" end="300.00" period="2.00" departSpeed="max"/>
+</routes>

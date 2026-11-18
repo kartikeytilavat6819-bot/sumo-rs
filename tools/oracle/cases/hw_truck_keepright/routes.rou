@@ -1,0 +1,23 @@
+<routes>
+    <vType id="truck" vClass="truck" length="12.00" maxSpeed="13.00" accel="1.00" decel="3.00" laneChangeModel="LC2013" lcKeepRight="3"/>
+    <vType id="car" vClass="passenger" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <route id="r0" edges="E0"/>
+    <vehicle id="tr0" type="truck" route="r0" depart="0.00" departLane="2" departSpeed="max"/>
+    <vehicle id="tr1" type="truck" route="r0" depart="2.00" departLane="1" departSpeed="max"/>
+    <vehicle id="tr2" type="truck" route="r0" depart="4.00" departLane="2" departSpeed="max"/>
+    <vehicle id="tr3" type="truck" route="r0" depart="6.00" departLane="1" departSpeed="max"/>
+    <vehicle id="tr4" type="truck" route="r0" depart="8.00" departLane="2" departSpeed="max"/>
+    <vehicle id="tr5" type="truck" route="r0" depart="10.00" departLane="1" departSpeed="max"/>
+    <vehicle id="tr6" type="truck" route="r0" depart="12.00" departLane="2" departSpeed="max"/>
+    <vehicle id="tr7" type="truck" route="r0" depart="14.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c0" type="car" route="r0" depart="1.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c1" type="car" route="r0" depart="3.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c2" type="car" route="r0" depart="5.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c3" type="car" route="r0" depart="7.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c4" type="car" route="r0" depart="9.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c5" type="car" route="r0" depart="11.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c6" type="car" route="r0" depart="13.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c7" type="car" route="r0" depart="15.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c8" type="car" route="r0" depart="17.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c9" type="car" route="r0" depart="19.00" departLane="0" departSpeed="max"/>
+</routes>

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_truck_keepright/hw_truck_keepright.nod.xml --edge-files tools/oracle/cases/hw_truck_keepright/hw_truck_keepright.edg.xml
