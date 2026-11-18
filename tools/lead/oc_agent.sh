@@ -18,6 +18,7 @@ say() { echo "$(date +%H:%M) $*" | tee -a "$LOG"; }
 regressions() {
   local r=""
   grep -q 'GATE DONE' <<<"$1" || r="gate did not finish;"
+  grep -q 'BUILD FAILED' <<<"$1" || grep -q '^PASS=[0-9]' <<<"$1" || r="$r no run_all summary (partial gate);"
   while read -r row _; do
     [[ "$KNOWN" == *" $row "* ]] || r="$r $row;"
   done < <(grep -E 'FAIL|PANIC|TIMEOUT|panicked|STALE|MISSING' <<<"$1" | grep -vE '(^| )PASS=[0-9]+ FAIL=0|^PASS=')
