@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:59:49.019095-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_bugs_ticket3244/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_bugs_ticket3244/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket3244/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket3244/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket3244/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.2"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="left" x="186.00" y="1.65" angle="90.00" type="t0" speed="0.00" pos="186.00" lane="beg_1" slope="0.00"/>
+        <vehicle id="right" x="189.00" y="-0.65" angle="90.00" type="t0" speed="7.00" pos="189.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="left" x="188.60" y="1.65" angle="90.00" type="t0" speed="2.60" pos="188.60" lane="beg_1" slope="0.00"/>
+        <vehicle id="right" x="196.09" y="-0.85" angle="91.11" type="t0" speed="7.00" pos="6.00" lane=":B_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="left" x="190.40" y="1.68" angle="89.81" type="t0" speed="1.80" pos="0.40" lane=":B_0_2" slope="0.00"/>
+        <vehicle id="right" x="203.06" y="-1.42" angle="94.20" type="t0" speed="7.00" pos="13.00" lane=":B_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="left" x="192.25" y="1.13" angle="92.97" type="t0" speed="1.80" pos="2.20" lane=":B_0_2" slope="0.00"/>
+        <vehicle id="right" x="209.86" y="-0.89" angle="88.82" type="t0" speed="7.00" pos="20.00" lane=":B_0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="left" x="196.61" y="1.79" angle="87.42" type="t0" speed="4.40" pos="6.60" lane=":B_0_2" slope="0.00"/>
+        <vehicle id="right" x="216.93" y="0.10" angle="83.97" type="t0" speed="7.00" pos="6.93" lane="end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="left" x="203.51" y="3.27" angle="80.28" type="t0" speed="7.00" pos="13.60" lane=":B_0_2" slope="0.00"/>
+        <vehicle id="right" x="223.93" y="1.10" angle="82.06" type="t0" speed="7.00" pos="13.93" lane="end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="left" x="210.53" y="3.70" angle="84.61" type="t0" speed="7.00" pos="0.53" lane="end_2" slope="0.00"/>
+        <vehicle id="right" x="230.93" y="2.20" angle="81.93" type="t0" speed="7.00" pos="20.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="left" x="217.52" y="2.70" angle="94.30" type="t0" speed="7.00" pos="7.52" lane="end_2" slope="0.00"/>
+        <vehicle id="right" x="237.93" y="2.60" angle="85.28" type="t0" speed="7.00" pos="27.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="right" x="244.93" y="2.60" angle="88.58" type="t0" speed="7.00" pos="34.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="right" x="251.93" y="2.60" angle="89.57" type="t0" speed="7.00" pos="41.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="right" x="258.93" y="2.60" angle="89.87" type="t0" speed="7.00" pos="48.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="right" x="265.93" y="2.60" angle="89.96" type="t0" speed="7.00" pos="55.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="right" x="272.93" y="2.60" angle="89.99" type="t0" speed="7.00" pos="62.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="right" x="279.93" y="2.60" angle="90.00" type="t0" speed="7.00" pos="69.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="right" x="286.93" y="2.60" angle="90.00" type="t0" speed="7.00" pos="76.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="right" x="293.93" y="2.60" angle="90.00" type="t0" speed="7.00" pos="83.93" lane="end_2" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00"/>
+</fcd-export>
