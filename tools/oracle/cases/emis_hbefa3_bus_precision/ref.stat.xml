@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:37:28.722361-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/emis_hbefa3_bus_precision/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/emis_hbefa3_bus_precision/routes.rou"/>
+        <additional-files value="tools/oracle/cases/emis_hbefa3_bus_precision/vt.add.xml"/>
+    </input>
+
+    <output>
+        <emission-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.emission.xml"/>
+        <emission-output.precision value="4"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.probability value="1"/>
+    </emissions>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794940648.73" clockEnd="1794940648.76" clockDuration="0.03" traciDuration="0.00" realTimeFactor="6451.61" vehicleUpdatesPerSecond="2709.68" personUpdatesPerSecond="0.00" begin="0.00" end="200.00" duration="200.00"/>
+    <vehicles loaded="5" inserted="5" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="0" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="5" routeLength="274.81" speed="16.22" duration="16.80" waitingTime="0.00" timeLoss="4.38" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="84.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="0" routeLength="0.00" duration="0.00" timeLoss="0.00"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>

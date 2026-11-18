@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:37:28.717974-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/emis_hbefa3_bus_precision/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/emis_hbefa3_bus_precision/routes.rou"/>
+        <additional-files value="tools/oracle/cases/emis_hbefa3_bus_precision/vt.add.xml"/>
+    </input>
+
+    <output>
+        <emission-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.emission.xml"/>
+        <emission-output.precision value="4"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h15/tools/oracle/cases/emis_hbefa3_bus_precision/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.probability value="1"/>
+    </emissions>
+
+</sumoConfiguration>
+-->
+
+<emission-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/emission_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="18081.1278" CO="24.0876" HC="6.4177" NOx="130.3109" PMx="2.7474" fuel="5723.7922" electricity="0.0000" noise="80.79" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#0_0" pos="5.10" speed="22.22" angle="90.35" x="5.09" y="148.75"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="64619.2903" CO="77.3280" HC="12.5023" NOx="461.0835" PMx="8.4729" fuel="20450.8785" electricity="0.0000" noise="86.05" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#0_0" pos="28.41" speed="23.31" angle="90.35" x="28.40" y="148.61"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="20295.7678" CO="24.7657" HC="6.6891" NOx="142.3510" PMx="2.8757" fuel="6425.2551" electricity="0.0000" noise="82.97" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#0_0" pos="5.10" speed="26.07" angle="180.34" x="139.55" y="307.54"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="78.29" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#0_0" pos="50.73" speed="22.32" angle="90.35" x="50.72" y="148.47"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="79.23" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137717_0_0" pos="6.54" speed="24.78" angle="180.36" x="139.40" y="282.76"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="17843.7693" CO="24.0149" HC="6.3887" NOx="129.0205" PMx="2.7336" fuel="5648.6115" electricity="0.0000" noise="80.55" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103228_1" pos="5.10" speed="21.81" angle="270.00" x="218.65" y="280.43"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="28663.6088" CO="36.1436" HC="7.8008" NOx="205.4257" PMx="4.0454" fuel="9072.6549" electricity="0.0000" noise="81.92" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="0.41" speed="22.57" angle="90.32" x="73.28" y="148.34"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="52560.5242" CO="62.3273" HC="10.9139" NOx="372.9712" PMx="6.8957" fuel="16635.2732" electricity="0.0000" noise="85.52" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_0" pos="17.64" speed="25.50" angle="180.34" x="139.24" y="257.26"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="6842.2635" CO="11.4393" HC="4.9504" NOx="50.8474" PMx="1.3809" fuel="2167.1614" electricity="0.0000" noise="79.49" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103228_1" pos="26.63" speed="21.53" angle="270.00" x="197.12" y="280.43"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="13284.4361" CO="22.6187" HC="5.8300" NOx="104.2334" PMx="2.4695" fuel="4204.4928" electricity="0.0000" noise="75.64" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103230_0" pos="5.10" speed="13.89" angle="1.03" x="268.22" y="84.34"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="76.62" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="21.32" speed="20.90" angle="90.35" x="94.19" y="148.21"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="7308.3359" CO="10.1722" HC="4.9937" NOx="50.5692" PMx="1.2984" fuel="2315.2681" electricity="0.0000" noise="81.60" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_0" pos="42.86" speed="25.22" angle="180.34" x="139.09" y="232.04"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="73.37" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103228_1" pos="43.66" speed="17.03" angle="270.00" x="180.09" y="280.43"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="26598.9711" CO="37.7579" HC="7.5699" NOx="198.6820" PMx="4.1004" fuel="8417.9335" electricity="0.0000" noise="78.02" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103230_0" pos="19.49" speed="14.39" angle="1.03" x="268.48" y="98.73"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="18081.1278" CO="24.0876" HC="6.4177" NOx="130.3109" PMx="2.7474" fuel="5723.7922" electricity="0.0000" noise="80.79" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#0_0" pos="5.10" speed="22.22" angle="90.35" x="5.09" y="148.75"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="72.91" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="37.72" speed="16.40" angle="90.35" x="110.59" y="148.11"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="41404.1811" CO="49.3449" HC="9.4531" NOx="293.2393" PMx="5.5061" fuel="13104.9033" electricity="0.0000" noise="84.54" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_0" pos="68.54" speed="25.68" angle="180.34" x="138.94" y="206.36"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="69.95" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103228_1" pos="56.47" speed="12.81" angle="270.00" x="167.28" y="280.43"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="30227.9040" CO="41.6556" HC="8.0419" NOx="223.9685" PMx="4.5271" fuel="9566.4029" electricity="0.0000" noise="78.84" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103230_0" pos="34.49" speed="15.00" angle="1.03" x="268.75" y="113.73"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="10051.3305" CO="14.9067" HC="5.3679" NOx="73.2494" PMx="1.7599" fuel="3182.7464" electricity="0.0000" noise="80.02" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#0_0" pos="27.12" speed="22.02" angle="90.35" x="27.11" y="148.61"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="69.07" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="49.62" speed="11.90" angle="90.35" x="122.49" y="148.03"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="80.84" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_0" pos="93.69" speed="25.15" angle="180.34" x="138.79" y="181.21"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="64.95" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103228_1" pos="64.78" speed="8.31" angle="270.00" x="158.97" y="280.43"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="70.45" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103230_0" pos="47.31" speed="12.82" angle="1.03" x="268.98" y="126.54"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="18282.1762" CO="24.4138" HC="6.4450" NOx="131.9318" PMx="2.7796" fuel="5787.3814" electricity="0.0000" noise="80.70" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#0_0" pos="49.15" speed="22.03" angle="90.35" x="49.14" y="148.48"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="63.70" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="57.05" speed="7.43" angle="90.35" x="129.92" y="147.99"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="37290.5265" CO="44.6689" HC="8.9156" NOx="264.0613" PMx="5.0024" fuel="11803.1195" electricity="0.0000" noise="84.10" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137721_0_0" pos="1.05" speed="25.52" angle="180.34" x="138.63" y="155.69"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="69.84" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137717_4_0" pos="3.55" speed="7.91" angle="267.30" x="151.07" y="280.19"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="64.96" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103230_0" pos="55.62" speed="8.32" angle="1.03" x="269.13" y="134.86"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="39989.5702" CO="49.2355" HC="9.2830" NOx="286.1946" PMx="5.4493" fuel="12656.7298" electricity="0.0000" noise="83.05" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137720_7_0" pos="13.25" speed="22.56" angle="90.32" x="71.69" y="148.35"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="58.20" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137721_9_0" pos="1.10" speed="4.17" angle="90.35" x="134.09" y="147.96"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="6472.4608" CO="9.2017" HC="4.8842" NOx="44.5998" PMx="1.1945" fuel="2050.7587" electricity="0.0000" noise="81.55" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_0" pos="11.88" speed="25.23" angle="180.35" x="138.49" y="130.46"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="12954.2065" CO="25.0629" HC="5.8145" NOx="107.5148" PMx="2.6481" fuel="4099.0236" electricity="0.0000" noise="72.68" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137717_4_0" pos="11.66" speed="8.11" angle="243.71" x="143.61" y="277.54"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="58.92" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103230_0" pos="60.27" speed="4.64" angle="1.03" x="269.21" y="139.50"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="75.03" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="18.17" speed="19.35" angle="90.35" x="91.04" y="148.23"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="38544.1255" CO="55.3538" HC="9.1702" NOx="291.4221" PMx="5.8753" fuel="12196.6519" electricity="0.0000" noise="83.89" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137721_9_0" pos="7.74" speed="6.64" angle="90.33" x="140.73" y="147.93"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="5211.4235" CO="7.9019" HC="4.7208" NOx="35.9219" PMx="1.0504" fuel="1651.6522" electricity="0.0000" noise="81.29" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_0" pos="36.79" speed="24.91" angle="180.35" x="138.34" y="105.55"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="69.94" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="4.84" speed="7.76" angle="180.90" x="142.52" y="270.04"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="25069.0012" CO="40.0362" HC="7.4094" NOx="195.8428" PMx="4.2251" fuel="7932.3906" electricity="0.0000" noise="78.16" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137719_0_0" pos="4.04" speed="6.12" angle="14.59" x="270.46" y="145.35"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="71.70" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="33.01" speed="14.85" angle="90.35" x="105.88" y="148.14"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="32340.7131" CO="47.4407" HC="8.3511" NOx="245.7030" PMx="5.0487" fuel="10233.8506" electricity="0.0000" noise="79.49" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137721_9_0" pos="15.90" speed="8.16" angle="90.33" x="148.89" y="147.88"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="30255.8221" CO="36.7278" HC="7.9969" NOx="214.2746" PMx="4.1452" fuel="9576.9379" electricity="0.0000" noise="83.30" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_0" pos="61.93" speed="25.14" angle="180.35" x="138.19" y="80.41"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="51496.4688" CO="68.6740" HC="10.8490" NOx="380.4948" PMx="7.3525" fuel="16295.9579" electricity="0.0000" noise="84.44" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="14.84" speed="10.00" angle="180.34" x="142.46" y="260.04"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="13143.7485" CO="26.0829" HC="5.8472" NOx="110.4638" PMx="2.7338" fuel="4158.7292" electricity="0.0000" noise="72.38" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="1.53" speed="6.47" angle="80.02" x="276.41" y="147.11"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="70.16" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="45.58" speed="12.56" angle="90.35" x="118.45" y="148.06"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="48876.6750" CO="65.5444" HC="10.5052" NOx="361.6103" PMx="7.0199" fuel="15466.9648" electricity="0.0000" noise="83.48" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="5.31" speed="10.21" angle="90.35" x="159.10" y="147.82"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="60822.2228" CO="71.6238" HC="11.9926" NOx="431.3826" PMx="7.9001" fuel="19249.7559" electricity="0.0000" noise="86.53" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_0" pos="87.94" speed="26.01" angle="180.35" x="138.03" y="54.40"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="68046.0542" CO="86.5866" HC="13.0027" NOx="496.0867" PMx="9.3093" fuel="21533.4541" electricity="0.0000" noise="87.05" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="27.32" speed="12.48" angle="180.34" x="142.39" y="247.56"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="43114.9069" CO="59.6757" HC="9.7589" NOx="322.0999" PMx="6.3672" fuel="13643.3950" electricity="0.0000" noise="83.02" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="10.13" speed="8.60" angle="90.35" x="285.01" y="147.06"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="64.95" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="53.87" speed="8.30" angle="90.35" x="126.74" y="148.01"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="58819.2411" CO="76.0075" HC="11.7961" NOx="430.4598" PMx="8.1723" fuel="18613.6204" electricity="0.0000" noise="84.88" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="17.62" speed="12.31" angle="90.35" x="171.41" y="147.74"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="80.88" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_0" pos="113.36" speed="25.43" angle="180.35" x="137.87" y="28.98"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="46427.9132" CO="60.9532" HC="10.1674" NOx="340.6358" PMx="6.5796" fuel="14692.6632" electricity="0.0000" noise="81.69" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="41.13" speed="13.82" angle="180.34" x="142.30" y="233.75"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="44184.8838" CO="60.0483" HC="9.8905" NOx="328.0066" PMx="6.4327" fuel="13982.2830" electricity="0.0000" noise="82.01" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="20.50" speed="10.37" angle="90.35" x="295.38" y="146.99"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="59.71" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#1_0" pos="58.81" speed="4.94" angle="90.35" x="131.68" y="147.98"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="53731.7829" CO="69.3394" HC="11.1227" NOx="392.6092" PMx="7.4805" fuel="17003.9756" electricity="0.0000" noise="83.20" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="31.55" speed="13.92" angle="90.35" x="185.34" y="147.66"/>
+        <vehicle id="v1" eclass="HBEFA3/Bus" CO2="14026.8952" CO="17.8970" HC="5.8725" NOx="98.3989" PMx="2.1280" fuel="4441.3551" electricity="0.0000" noise="82.11" route="r1" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_0" pos="138.66" speed="25.30" angle="180.35" x="137.72" y="3.68"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="53052.5967" CO="67.9124" HC="11.0275" NOx="386.4854" PMx="7.3465" fuel="16789.2688" electricity="0.0000" noise="82.97" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="56.37" speed="15.24" angle="180.34" x="142.21" y="218.51"/>
+        <vehicle id="v3" eclass="HBEFA3/Bus" CO2="65885.5093" CO="83.9829" HC="12.7190" NOx="480.4673" PMx="9.0332" fuel="20849.7910" electricity="0.0000" noise="86.38" route="r3" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="33.20" speed="12.70" angle="90.35" x="308.08" y="146.92"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="41606.4304" CO="58.5382" HC="9.5675" NOx="312.5517" PMx="6.2273" fuel="13165.8332" electricity="0.0000" noise="84.02" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137721_9_0" pos="6.05" speed="7.36" angle="90.33" x="139.04" y="147.94"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="83416.9416" CO="102.4924" HC="14.9959" NOx="601.9879" PMx="11.0699" fuel="26398.1749" electricity="0.0000" noise="88.50" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="47.82" speed="16.27" angle="90.35" x="201.61" y="147.56"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="61092.6982" CO="76.4545" HC="12.0723" NOx="442.3227" PMx="8.2847" fuel="19333.7983" electricity="0.0000" noise="84.41" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="73.14" speed="16.77" angle="180.34" x="142.11" y="201.74"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="43474.2781" CO="59.7390" HC="9.8025" NOx="323.9604" PMx="6.3844" fuel="13757.2379" electricity="0.0000" noise="82.48" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137721_9_0" pos="15.37" speed="9.32" angle="90.33" x="148.36" y="147.88"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="91431.0598" CO="110.6459" HC="16.0338" NOx="656.9247" PMx="11.9770" fuel="28934.6051" electricity="0.0000" noise="89.34" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="66.36" speed="18.54" angle="90.35" x="220.15" y="147.45"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="60257.3804" CO="74.8216" HC="11.9564" NOx="435.0348" PMx="8.1293" fuel="19069.6927" electricity="0.0000" noise="84.36" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="91.27" speed="18.13" angle="180.34" x="142.00" y="183.61"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="53528.2407" CO="70.3584" HC="11.1083" NOx="393.6595" PMx="7.5527" fuel="16939.1352" electricity="0.0000" noise="84.05" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="5.93" speed="11.36" angle="90.35" x="159.72" y="147.81"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="83938.1758" CO="101.0941" HC="15.0445" NOx="601.7144" PMx="10.9791" fuel="26563.8042" electricity="0.0000" noise="88.06" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="86.72" speed="20.36" angle="90.35" x="240.51" y="147.32"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="98853.7899" CO="118.3280" HC="16.9963" NOx="708.0674" PMx="12.8274" fuel="31283.8191" electricity="0.0000" noise="90.24" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#1_1" pos="111.64" speed="20.37" angle="180.34" x="141.88" y="163.24"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="75390.0887" CO="94.4009" HC="13.9572" NOx="547.1134" PMx="10.1672" fuel="23857.6886" electricity="0.0000" noise="87.91" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="19.78" speed="13.85" angle="90.35" x="173.57" y="147.73"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="73769.5218" CO="88.6461" HC="13.7070" NOx="527.8148" PMx="9.6647" fuel="23346.1945" electricity="0.0000" noise="86.82" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="108.51" speed="21.79" angle="90.35" x="262.30" y="147.19"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="90876.8017" CO="108.2183" HC="15.9437" NOx="649.4081" PMx="11.7695" fuel="28759.8239" electricity="0.0000" noise="89.12" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_1" pos="1.27" speed="22.19" angle="180.33" x="141.75" y="141.05"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="77645.7493" CO="95.9374" HC="14.2418" NOx="561.0634" PMx="10.3636" fuel="24571.8544" electricity="0.0000" noise="87.49" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="35.83" speed="16.04" angle="90.35" x="189.62" y="147.63"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="58675.4951" CO="70.7238" HC="11.7271" NOx="419.2278" PMx="7.7569" fuel="18569.8866" electricity="0.0000" noise="85.20" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="10.19" speed="22.78" angle="90.35" x="285.07" y="147.06"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="135316.6249" CO="158.2997" HC="21.7465" NOx="963.7538" PMx="17.1780" fuel="42823.1469" electricity="0.0000" noise="94.81" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_1" pos="26.06" speed="24.79" angle="180.35" x="141.60" y="116.26"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="92742.9928" CO="112.2446" HC="16.2063" NOx="666.4444" PMx="12.1461" fuel="29349.7351" electricity="0.0000" noise="89.58" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="54.19" speed="18.37" angle="90.35" x="207.98" y="147.52"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="v0" eclass="HBEFA3/Bus" CO2="18384.5527" CO="24.1669" HC="6.4548" NOx="131.9335" PMx="2.7639" fuel="5819.9034" electricity="0.0000" noise="81.10" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="32.96" speed="22.77" angle="90.35" x="307.84" y="146.92"/>
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="127362.6626" CO="148.0352" HC="20.6952" NOx="904.8968" PMx="16.1089" fuel="40306.5005" electricity="0.0000" noise="93.92" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_1" pos="53.05" speed="26.98" angle="180.35" x="141.44" y="89.27"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="81074.2655" CO="97.8945" HC="14.6708" NOx="581.5121" PMx="10.6327" fuel="25657.4882" electricity="0.0000" noise="87.64" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="74.33" speed="20.14" angle="90.35" x="228.12" y="147.40"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="29131.2373" CO="34.4444" HC="7.8401" NOx="204.2935" PMx="3.9294" fuel="9221.4027" electricity="0.0000" noise="84.19" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_1" pos="80.20" speed="27.15" angle="180.35" x="141.28" y="62.12"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="103569.8876" CO="122.8454" HC="17.6043" NOx="739.8364" PMx="13.3394" fuel="32776.5377" electricity="0.0000" noise="90.81" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#2_0" pos="96.61" speed="22.27" angle="90.35" x="250.40" y="147.26"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="24035.2207" CO="28.5251" HC="7.1729" NOx="167.8950" PMx="3.2955" fuel="7608.7896" electricity="0.0000" noise="83.83" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_1" pos="107.41" speed="27.21" angle="180.35" x="141.11" y="34.91"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="43901.9432" CO="53.5957" HC="9.7934" NOx="313.7715" PMx="5.9217" fuel="13894.8470" electricity="0.0000" noise="83.60" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane=":-137719_1_0" pos="9.51" speed="22.89" angle="90.31" x="273.28" y="147.13"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="v2" eclass="HBEFA3/Bus" CO2="19323.9692" CO="23.0973" HC="6.5566" NOx="134.3336" PMx="2.7129" fuel="6117.9185" electricity="0.0000" noise="83.47" route="r2" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103227#2_1" pos="134.59" speed="27.18" angle="180.35" x="140.95" y="7.73"/>
+        <vehicle id="v4" eclass="HBEFA3/Bus" CO2="0.0000" CO="0.0000" HC="0.0000" NOx="0.0000" PMx="0.0000" fuel="0.0000" electricity="0.0000" noise="78.97" route="r0" type="DEFAULT_VEHTYPE" waiting="0.00" lane="-103224#3_0" pos="20.65" speed="22.25" angle="90.35" x="295.53" y="146.99"/>
+    </timestep>
+    <timestep time="23.00"/>
+    <timestep time="24.00"/>
+    <timestep time="25.00"/>
+    <timestep time="26.00"/>
+    <timestep time="27.00"/>
+    <timestep time="28.00"/>
+    <timestep time="29.00"/>
+    <timestep time="30.00"/>
+    <timestep time="31.00"/>
+    <timestep time="32.00"/>
+    <timestep time="33.00"/>
+    <timestep time="34.00"/>
+    <timestep time="35.00"/>
+    <timestep time="36.00"/>
+    <timestep time="37.00"/>
+    <timestep time="38.00"/>
+    <timestep time="39.00"/>
+    <timestep time="40.00"/>
+    <timestep time="41.00"/>
+    <timestep time="42.00"/>
+    <timestep time="43.00"/>
+    <timestep time="44.00"/>
+    <timestep time="45.00"/>
+    <timestep time="46.00"/>
+    <timestep time="47.00"/>
+    <timestep time="48.00"/>
+    <timestep time="49.00"/>
+    <timestep time="50.00"/>
+    <timestep time="51.00"/>
+    <timestep time="52.00"/>
+    <timestep time="53.00"/>
+    <timestep time="54.00"/>
+    <timestep time="55.00"/>
+    <timestep time="56.00"/>
+    <timestep time="57.00"/>
+    <timestep time="58.00"/>
+    <timestep time="59.00"/>
+    <timestep time="60.00"/>
+    <timestep time="61.00"/>
+    <timestep time="62.00"/>
+    <timestep time="63.00"/>
+    <timestep time="64.00"/>
+    <timestep time="65.00"/>
+    <timestep time="66.00"/>
+    <timestep time="67.00"/>
+    <timestep time="68.00"/>
+    <timestep time="69.00"/>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00"/>
+    <timestep time="91.00"/>
+    <timestep time="92.00"/>
+    <timestep time="93.00"/>
+    <timestep time="94.00"/>
+    <timestep time="95.00"/>
+    <timestep time="96.00"/>
+    <timestep time="97.00"/>
+    <timestep time="98.00"/>
+    <timestep time="99.00"/>
+    <timestep time="100.00"/>
+    <timestep time="101.00"/>
+    <timestep time="102.00"/>
+    <timestep time="103.00"/>
+    <timestep time="104.00"/>
+    <timestep time="105.00"/>
+    <timestep time="106.00"/>
+    <timestep time="107.00"/>
+    <timestep time="108.00"/>
+    <timestep time="109.00"/>
+    <timestep time="110.00"/>
+    <timestep time="111.00"/>
+    <timestep time="112.00"/>
+    <timestep time="113.00"/>
+    <timestep time="114.00"/>
+    <timestep time="115.00"/>
+    <timestep time="116.00"/>
+    <timestep time="117.00"/>
+    <timestep time="118.00"/>
+    <timestep time="119.00"/>
+    <timestep time="120.00"/>
+    <timestep time="121.00"/>
+    <timestep time="122.00"/>
+    <timestep time="123.00"/>
+    <timestep time="124.00"/>
+    <timestep time="125.00"/>
+    <timestep time="126.00"/>
+    <timestep time="127.00"/>
+    <timestep time="128.00"/>
+    <timestep time="129.00"/>
+    <timestep time="130.00"/>
+    <timestep time="131.00"/>
+    <timestep time="132.00"/>
+    <timestep time="133.00"/>
+    <timestep time="134.00"/>
+    <timestep time="135.00"/>
+    <timestep time="136.00"/>
+    <timestep time="137.00"/>
+    <timestep time="138.00"/>
+    <timestep time="139.00"/>
+    <timestep time="140.00"/>
+    <timestep time="141.00"/>
+    <timestep time="142.00"/>
+    <timestep time="143.00"/>
+    <timestep time="144.00"/>
+    <timestep time="145.00"/>
+    <timestep time="146.00"/>
+    <timestep time="147.00"/>
+    <timestep time="148.00"/>
+    <timestep time="149.00"/>
+    <timestep time="150.00"/>
+    <timestep time="151.00"/>
+    <timestep time="152.00"/>
+    <timestep time="153.00"/>
+    <timestep time="154.00"/>
+    <timestep time="155.00"/>
+    <timestep time="156.00"/>
+    <timestep time="157.00"/>
+    <timestep time="158.00"/>
+    <timestep time="159.00"/>
+    <timestep time="160.00"/>
+    <timestep time="161.00"/>
+    <timestep time="162.00"/>
+    <timestep time="163.00"/>
+    <timestep time="164.00"/>
+    <timestep time="165.00"/>
+    <timestep time="166.00"/>
+    <timestep time="167.00"/>
+    <timestep time="168.00"/>
+    <timestep time="169.00"/>
+    <timestep time="170.00"/>
+    <timestep time="171.00"/>
+    <timestep time="172.00"/>
+    <timestep time="173.00"/>
+    <timestep time="174.00"/>
+    <timestep time="175.00"/>
+    <timestep time="176.00"/>
+    <timestep time="177.00"/>
+    <timestep time="178.00"/>
+    <timestep time="179.00"/>
+    <timestep time="180.00"/>
+    <timestep time="181.00"/>
+    <timestep time="182.00"/>
+    <timestep time="183.00"/>
+    <timestep time="184.00"/>
+    <timestep time="185.00"/>
+    <timestep time="186.00"/>
+    <timestep time="187.00"/>
+    <timestep time="188.00"/>
+    <timestep time="189.00"/>
+    <timestep time="190.00"/>
+    <timestep time="191.00"/>
+    <timestep time="192.00"/>
+    <timestep time="193.00"/>
+    <timestep time="194.00"/>
+    <timestep time="195.00"/>
+    <timestep time="196.00"/>
+    <timestep time="197.00"/>
+    <timestep time="198.00"/>
+    <timestep time="199.00"/>
+</emission-export>

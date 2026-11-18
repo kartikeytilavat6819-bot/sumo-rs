@@ -1,0 +1,1 @@
+--additional-files tools/oracle/cases/energy_track_fuel/vt.add.xml --end 200 --device.battery.track-fuel true
