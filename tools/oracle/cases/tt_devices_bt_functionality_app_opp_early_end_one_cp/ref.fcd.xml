@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:42:39.721302-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_bt_functionality_app_opp_early_end_one_cp/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_bt_functionality_app_opp_early_end_one_cp/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bt_functionality_app_opp_early_end_one_cp/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bt_functionality_app_opp_early_end_one_cp/ref.tripinfo.xml"/>
+        <bt-output value="bt.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bt_functionality_app_opp_early_end_one_cp/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="5"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <communication>
+        <device.btreceiver.probability value="1"/>
+        <device.btreceiver.range value="50"/>
+        <device.btsender.probability value="1"/>
+    </communication>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="1" x="109.77" y="5004.80" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="4890.00" lane="1o_0" slope="0.00"/>
+        <vehicle id="2" x="9.98" y="4998.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="10.00" lane="1i_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="1" x="99.79" y="5004.80" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="4900.00" lane="1o_0" slope="0.00"/>
+        <vehicle id="2" x="19.96" y="4998.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="20.00" lane="1i_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="1" x="89.81" y="5004.80" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="4910.00" lane="1o_0" slope="0.00"/>
+        <vehicle id="2" x="29.94" y="4998.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="30.00" lane="1i_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="1" x="79.83" y="5004.80" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="4920.00" lane="1o_0" slope="0.00"/>
+        <vehicle id="2" x="39.92" y="4998.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="40.00" lane="1i_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="1" x="69.85" y="5004.80" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="4930.00" lane="1o_0" slope="0.00"/>
+        <vehicle id="2" x="49.90" y="4998.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="50.00" lane="1i_1" slope="0.00"/>
+    </timestep>
+</fcd-export>

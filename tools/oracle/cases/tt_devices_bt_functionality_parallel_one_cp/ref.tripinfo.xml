@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:42:49.981036-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_bt_functionality_parallel_one_cp/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_bt_functionality_parallel_one_cp/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bt_functionality_parallel_one_cp/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bt_functionality_parallel_one_cp/ref.tripinfo.xml"/>
+        <bt-output value="bt.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bt_functionality_parallel_one_cp/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <communication>
+        <device.btreceiver.probability value="1"/>
+        <device.btreceiver.range value="50"/>
+        <device.btsender.probability value="1"/>
+    </communication>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="1" depart="0.00" departLane="1i_0" departPos="10.00" departSpeed="10.00" departDelay="0.00" arrival="10.00" arrivalLane="1i_0" arrivalPos="110.00" arrivalSpeed="10.00" duration="10.00" routeLength="100.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_1 btreceiver_1 btsender_1 fcd_1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="2" depart="0.00" departLane="1i_1" departPos="10.00" departSpeed="10.00" departDelay="0.00" arrival="10.00" arrivalLane="1i_1" arrivalPos="110.00" arrivalSpeed="10.00" duration="10.00" routeLength="100.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_2 btreceiver_2 btsender_2 fcd_2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:43:39.878207-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_assignment_auto_trip_with_stop/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_assignment_auto_trip_with_stop/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_assignment_auto_trip_with_stop/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_assignment_auto_trip_with_stop/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_assignment_auto_trip_with_stop/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="no_stop" depart="0.00" departLane="SC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="24.00" arrivalLane="NC_1" arrivalPos="91.95" arrivalSpeed="13.89" duration="24.00" routeLength="291.67" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.19" rerouteNo="1" devices="tripinfo_no_stop routing_no_stop fcd_no_stop" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="stop_first" depart="10.00" departLane="SC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="42.00" arrivalLane="NC_1" arrivalPos="91.95" arrivalSpeed="13.89" duration="32.00" routeLength="291.67" waitingTime="0.00" waitingCount="0" stopTime="5.00" timeLoss="2.19" rerouteNo="1" devices="tripinfo_stop_first routing_stop_first fcd_stop_first" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="stop_middle" depart="12.00" departLane="SC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="47.00" arrivalLane="NC_1" arrivalPos="91.95" arrivalSpeed="13.89" duration="35.00" routeLength="291.67" waitingTime="0.00" waitingCount="0" stopTime="5.00" timeLoss="5.10" rerouteNo="0" devices="tripinfo_stop_middle routing_stop_middle fcd_stop_middle" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="stop_last" depart="15.00" departLane="SC_0" departPos="5.10" departSpeed="0.00" departDelay="1.00" arrival="48.00" arrivalLane="NC_0" arrivalPos="91.95" arrivalSpeed="7.80" duration="33.00" routeLength="291.67" waitingTime="0.00" waitingCount="0" stopTime="5.00" timeLoss="3.46" rerouteNo="1" devices="tripinfo_stop_last routing_stop_last fcd_stop_last" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>
