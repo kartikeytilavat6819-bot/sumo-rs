@@ -1,0 +1,1 @@
+--write-license --no-internal-links --matsim tools/oracle/cases/itt_nc_netconvert_import_matsim_0_3_0_equil_halflanes/matsim.xml -v

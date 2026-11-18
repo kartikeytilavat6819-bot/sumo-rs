@@ -1,0 +1,1 @@
+--write-license --tls.discard-loaded --no-internal-links --dlr-navteq-prefix=tools/oracle/cases/itt_nc_netconvert_import_dlr_navteq_tls_discard/elmar -v

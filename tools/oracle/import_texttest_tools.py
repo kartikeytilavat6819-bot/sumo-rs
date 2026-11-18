@@ -61,7 +61,11 @@ VALUE_OPTS = {
     "--device.rerouting.threads", "--tripinfo-output", "--fcd-output",
     "--statistic-output", "--vehroute-output", "--summary-output",
     "--emergency-output", "--penalties",
+    # prefix-style input options (value is a path prefix, not a single file)
+    "--dlr-navteq-prefix", "--dlr-navteq", "--elmar2", "--shapefile-prefix",
 }
+# Options whose value is a path prefix; netconvert appends <prefix>_<suffix>.txt.
+PREFIX_OPTS = {"--dlr-navteq-prefix", "--dlr-navteq", "--elmar2", "--shapefile-prefix"}
 # Files the runners already write themselves: netconvert gets -o from the runner;
 # duarouter keeps -o but it must land in the per-side output directory.
 NET_OUT_OPTS = {
@@ -134,7 +138,10 @@ def effective_options(leaf: Path, app: str, root: Path) -> list[str]:
 
     opts: list[str] = []
     for f in chain:
-        tokens = shlex.split(f.read_text(encoding="utf-8", errors="replace"))
+        # A quoted option value may span lines in options.<app>; a literal newline
+        # in a token would break `source` of the generated .rows file. Fold it.
+        tokens = [t.replace("\r", " ").replace("\n", " ")
+                  for t in shlex.split(f.read_text(encoding="utf-8", errors="replace"))]
         new: list[str] = []
         skip = False
         clear: list[str] | None = None
@@ -260,6 +267,16 @@ def rewrite(tokens: list[str], app: str, copied: dict[str, Path], case: Path,
                 net = case_path(copied[val])
             continue
 
+        # Prefix-style inputs: netconvert reads <prefix>_<suffix>.txt. Repoint the
+        # bare prefix at the case dir so those files resolve there, not in the CWD.
+        if key in PREFIX_OPTS and val:
+            base = Path(val).name
+            target = next((p for name, p in copied.items()
+                           if Path(name).name.startswith(base + "_")), None)
+            if target is not None:
+                result.append(fmt(key, case_path(target.parent) + "/" + val))
+                continue
+
         # Outputs go to the per-side output directory (or are dropped for the net).
         if key in (NET_OUT_OPTS if app == "netconvert" else DUA_OUT_OPTS):
             if key in ("-o", "--output", "--output-file"):
@@ -324,9 +341,9 @@ def skip_test(leaf: Path, app: str, root: Path, tokens: list[str]) -> bool:
 
 def import_app(app: str, subtrees: list[Path], limit: int) -> tuple[list[str], int]:
     prefix = PREFIX[app]
-    for old in CASES.glob(prefix + "*"):
-        if old.is_dir():
-            shutil.rmtree(old)
+    # Additive by design: previously imported cases/rows are kept so several agents
+    # can contribute subtrees to the same shared oracle without clobbering each other.
+    # Each case is still replaced in place below when it is regenerated.
     rows: list[str] = []
     imported = 0
     for subtree in subtrees:
@@ -384,7 +401,24 @@ def main() -> int:
 
     rows, count = import_app(args.app, args.subtree, args.limit)
     if args.app == "netconvert":
-        ROWS.write_text("\n".join(rows) + ("\n" if rows else ""),
+        # Merge with rows already contributed by earlier imports (dedup by name).
+        def row_name(line: str) -> str | None:
+            parts = line.split()
+            return parts[1] if len(parts) >= 2 and parts[0] == "row" else None
+
+        new_names = {n for line in rows if (n := row_name(line)) is not None}
+        merged: list[str] = []
+        if ROWS.is_file():
+            for line in ROWS.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                n = row_name(line)
+                # Keep only whole rows (and comments/blanks); drop fragments left
+                # by an earlier malformed row that broke `source`.
+                if (not stripped or stripped.startswith("#") or stripped.startswith("row ")) \
+                        and (n is None or n not in new_names):
+                    merged.append(line)
+        merged += rows
+        ROWS.write_text("\n".join(merged) + ("\n" if merged else ""),
                         encoding="utf-8", newline="\n")
     print(f"imported {count} {args.app} tests")
     return 0
