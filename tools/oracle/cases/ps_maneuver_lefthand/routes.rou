@@ -1,0 +1,17 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A B C"/>
+    <vehicle id="p0" type="car" route="r" depart="0" departSpeed="max">
+        <stop parkingArea="pa0" parking="true" duration="30"/>
+    </vehicle>
+    <vehicle id="p1" type="car" route="r" depart="6" departSpeed="max">
+        <stop parkingArea="pa0" parking="true" duration="25"/>
+    </vehicle>
+    <vehicle id="p2" type="car" route="r" depart="12" departSpeed="max">
+        <stop parkingArea="pa1" duration="20"/>
+    </vehicle>
+    <vehicle id="p3" type="car" route="r" depart="18" departSpeed="max">
+        <stop parkingArea="pa1" duration="20"/>
+    </vehicle>
+    <flow id="thru" type="car" route="r" begin="2" end="100" period="10"/>
+</routes>
