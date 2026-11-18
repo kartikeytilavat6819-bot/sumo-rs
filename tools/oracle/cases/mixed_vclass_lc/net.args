@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/mixed_vclass_lc/mixed_vclass_lc.nod.xml --edge-files tools/oracle/cases/mixed_vclass_lc/mixed_vclass_lc.edg.xml
