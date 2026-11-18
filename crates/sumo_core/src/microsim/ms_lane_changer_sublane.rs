@@ -1174,7 +1174,7 @@ impl MSLaneChangerSublane {
             vehicle.m().get_influencer().set_sublane_change(remaining);
         }
         self.myChanger[fromIdx].lane.m().require_collision_check();
-        self.myChanger[to].lane.m().require_collision_check();
+        toLane.m().require_collision_check();
         changedToNewLane
     }
 
