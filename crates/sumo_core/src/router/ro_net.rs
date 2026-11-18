@@ -1691,13 +1691,22 @@ impl RONet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn write_intermodal(&self, options: &OptionsCont) {
-        // shortcut: ROIntermodalRouter is not ported, so the network and weight files are not written; only the device creation of the option is done
+    pub fn write_intermodal(&self, options: &OptionsCont, router: &mut crate::router::ro_routable::ROIntermodalRouter) {
         if oexists_in(options, "intermodal-network-output") && oset(options, "intermodal-network-output") {
             let _ = OutputDevice::create_device_by_option("intermodal-network-output", "intermodal", "", 0);
+            let dev = OutputDevice::get_device_by_option("intermodal-network-output").unwrap_or_else(|e| panic!("{e}"));
+            router.write_network(&mut *dev.borrow_mut());
         }
         if oexists_in(options, "intermodal-weight-output") && oset(options, "intermodal-weight-output") {
             let _ = OutputDevice::create_device_by_option("intermodal-weight-output", "weights", "meandata_file.xsd", 0);
+            let dev = OutputDevice::get_device_by_option("intermodal-weight-output").unwrap_or_else(|e| panic!("{e}"));
+            let mut dev = dev.borrow_mut();
+            dev.open_tag_id(SUMO_TAG_INTERVAL);
+            dev.write_attr(SUMO_ATTR_ID, "intermodalweights");
+            dev.write_attr(SUMO_ATTR_BEGIN, &0i32);
+            dev.write_attr(SUMO_ATTR_END, &utils::common::time::SUMOTIME_MAX);
+            router.write_weights(&mut *dev);
+            dev.close_tag("");
         }
     }
 
@@ -1811,8 +1820,42 @@ impl RONet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn adapt_intermodal_router() {
-        // shortcut: needs ROIntermodalRouter (access, schedules and car-access setup) which is not ported yet
+    pub fn adapt_intermodal_router(router: &mut crate::router::ro_routable::ROIntermodalRouter) {
+        let taxiWait = utils::common::time::steps2time(utils::common::time::string2time(&utils::options::options_cont::get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| panic!("{e}")));
+        let inst = RONet::get_instance();
+        for (element, stops) in inst.m().myStoppingPlaces.iter() {
+            // add access to all stopping places
+            let element = *element;
+            for (id, stop) in stops.iter() {
+                router.get_network().m().add_access(id, inst.get_edge_for_lane_id(&stop.lane), stop.startPos, stop.endPos, 0., element, false, taxiWait);
+                // shortcut: the parser never fills Stop::accessPos (Unmapped tuple vector), so bus stop access elements are not added, upgrade with that field
+            }
+        }
+        // fill the public transport router with pre-parsed public transport lines
+        for (_, flow) in inst.m().myFlows.iter() {
+            if !flow.line.is_empty() {
+                let route = inst.get_route_def(&flow.routeid);
+                let mut addStops: Ptr<StopParVector> = Ptr::null();
+                if !route.is_null() {
+                    if let Some(r) = route.get_first_route() {
+                        addStops = Ptr::from_raw(r.get_stops() as *const StopParVector as *mut StopParVector);
+                    }
+                }
+                router.get_network().m().add_schedule(&**flow, addStops);
+            }
+        }
+        for veh in inst.m().myPTVehicles.iter() {
+            // add single vehicles with line attribute which are not part of a flow
+            router.get_network().m().add_schedule(veh.get_parameter(), Ptr::null());
+        }
+        // add access to transfer from walking to taxi-use
+        if (router.get_car_walk_transfer() & crate::utils::router::intermodal_network::ModeChangeOptions::TAXI_PICKUP_ANYWHERE as i32) != 0 {
+            for edge in ROEdge::get_all_edges().iter() {
+                if !edge.is_taz_connector() && (edge.get_permissions() & SVC_PEDESTRIAN) != 0 && (edge.get_permissions() & SVC_TAXI) != 0 {
+                    router.get_network().m().add_car_access(*edge, SVC_TAXI, taxiWait);
+                }
+            }
+        }
     }
 
     /// C++: `bool RONet::hasPermissions() const` [const]

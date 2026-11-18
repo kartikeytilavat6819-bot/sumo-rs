@@ -295,15 +295,14 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     } else {
         Ptr::null()
     };
-    // shortcut: ROIntermodalRouter is not ported, so the intermodal router is null and net.write_intermodal writes nothing
-    let _ = (carWalk, taxiWait);
+    let interRouter: Ptr<crate::router::ro_routable::ROIntermodalRouter> = Ptr::from_raw(Box::into_raw(Box::new(crate::router::ro_routable::ROIntermodalRouter::new(RONet::adapt_intermodal_router, carWalk, taxiWait, &routingAlgorithm, 0, Ptr::null()))));
     let pedRouter: Ptr<crate::utils::router::pedestrian_router::PedestrianRouter<ROEdge, ROLane, RONode, ROVehicle>> = Ptr::from_mut(Box::leak(Box::new(crate::utils::router::pedestrian_router::PedestrianRouter::new())));
-    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(router, pedRouter, Ptr::null(), railRouter);
+    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(router, pedRouter, interRouter, railRouter);
     // process route definitions
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         net.open_output(oc);
         loader.process_routes(begin, end, string2time(&oc.get_string("route-steps").unwrap()).unwrap_or_else(|e| panic!("{e}")), net, &provider);
-        net.write_intermodal(oc);
+        net.write_intermodal(oc, interRouter.m());
     }));
     net.cleanup();
     if let Err(payload) = result {

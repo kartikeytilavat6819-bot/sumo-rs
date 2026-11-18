@@ -2,9 +2,9 @@
 <trips>
   <!-- walking person trips on the same edge pairs as the vehicle trips -->
   <person id="p1" depart="0">
-    <personTrip from="-103224#0" to="-103224#3" modes="walk"/>
+    <personTrip from="-103224#0" to="-103224#3"/>
   </person>
   <person id="p2" depart="5">
-    <personTrip from="-103227#0" to="-103227#2" modes="walk"/>
+    <personTrip from="-103227#0" to="-103227#2"/>
   </person>
 </trips>
