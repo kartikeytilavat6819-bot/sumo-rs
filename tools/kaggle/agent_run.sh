@@ -5,5 +5,4 @@ $CARGO_TARGET_DIR/debug/sumo $A --bt-output /tmp/z01.bt.xml 2>/tmp/rs.trace >/de
 B=$(bash tools/gcloud/vm_cpp_trace.sh z01 tools/kaggle/tmp/bt.patch sumo | tail -1)
 $B $A --bt-output /tmp/z01c.bt.xml 2>/tmp/cpp.trace >/dev/null
 grep -c "^V" /tmp/rs.trace /tmp/cpp.trace
-grep "^V" /tmp/rs.trace > /tmp/r.t; grep "^V" /tmp/cpp.trace > /tmp/c.t
-diff /tmp/r.t /tmp/c.t | head -20
+grep -E "^(V|NS|DR|DS)" /tmp/cpp.trace | head -260
