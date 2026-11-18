@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --scale 0.5 -a tools/oracle/cases/tt_lc_model_roundabout_no_cooperation_low_traffic/input_additional.add.xml

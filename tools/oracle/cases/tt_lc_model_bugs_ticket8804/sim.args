@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --ignore-route-errors --step-length 0.05 -a tools/oracle/cases/tt_lc_model_bugs_ticket8804/input_additional.add.xml

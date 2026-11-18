@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --collision.check-junctions --collision.action warn --ignore-junction-blocker 30 --time-to-teleport -1

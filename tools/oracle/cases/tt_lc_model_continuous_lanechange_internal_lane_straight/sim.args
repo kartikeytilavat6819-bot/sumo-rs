@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --step-length 0.5 --lanechange.duration 10 -a tools/oracle/cases/tt_lc_model_continuous_lanechange_internal_lane_straight/input_additional.add.xml

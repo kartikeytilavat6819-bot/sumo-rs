@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:31:59.334931-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_lc_model_ramps_on_ramp_blocker_on_main_frees_lane/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_lc_model_ramps_on_ramp_blocker_on_main_frees_lane/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_ramps_on_ramp_blocker_on_main_frees_lane/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_ramps_on_ramp_blocker_on_main_frees_lane/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_ramps_on_ramp_blocker_on_main_frees_lane/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="ramp" x="-194.70" y="-99.20" angle="63.43" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="ramp" x="-192.37" y="-98.04" angle="63.43" type="DEFAULT_VEHTYPE" speed="2.60" pos="7.70" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="ramp" x="-187.72" y="-95.71" angle="63.43" type="DEFAULT_VEHTYPE" speed="5.20" pos="12.90" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="ramp" x="-180.75" y="-92.22" angle="63.43" type="DEFAULT_VEHTYPE" speed="7.80" pos="20.70" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="ramp" x="-171.44" y="-87.57" angle="63.43" type="DEFAULT_VEHTYPE" speed="10.40" pos="31.10" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="ramp" x="-159.82" y="-81.76" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.00" pos="44.10" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="ramp" x="-147.39" y="-75.54" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="57.99" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="ramp" x="-134.97" y="-69.33" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="71.88" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="main" x="-194.90" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.00" pos="5.10" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-122.55" y="-63.12" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="85.77" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="main" x="-190.30" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="4.60" pos="9.70" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-110.12" y="-56.91" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="99.66" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="main" x="-183.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.20" pos="16.90" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-97.70" y="-50.70" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="113.55" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="main" x="-173.30" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.80" pos="26.70" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-85.27" y="-44.48" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="127.44" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="main" x="-160.90" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.40" pos="39.10" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-72.85" y="-38.27" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="141.33" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="main" x="-145.90" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.00" pos="54.10" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-60.43" y="-32.06" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="155.22" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="main" x="-128.30" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="17.60" pos="71.70" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-48.00" y="-25.85" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="169.11" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="main" x="-108.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="20.20" pos="91.90" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-35.58" y="-19.64" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="183.00" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="main" x="-85.30" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="22.80" pos="114.70" lane="main_beg_0" slope="0.00"/>
+        <vehicle id="ramp" x="-23.16" y="-13.42" angle="63.43" type="DEFAULT_VEHTYPE" speed="13.89" pos="196.89" lane="ramp_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="main" x="-59.90" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="25.40" pos="140.10" lane="main_beg_1" slope="0.00"/>
+        <vehicle id="ramp" x="-10.38" y="-8.25" angle="76.06" type="DEFAULT_VEHTYPE" speed="13.89" pos="0.55" lane="main_ramp_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="main" x="-31.90" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="28.00" pos="168.10" lane="main_beg_1" slope="0.00"/>
+        <vehicle id="ramp" x="1.11" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.49" pos="12.04" lane="main_ramp_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="main" x="-1.90" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="9.03" lane="main_ramp_2" slope="0.00"/>
+        <vehicle id="ramp" x="15.20" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="14.09" pos="26.13" lane="main_ramp_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="main" x="28.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="39.03" lane="main_ramp_2" slope="0.00"/>
+        <vehicle id="ramp" x="31.89" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="16.69" pos="42.82" lane="main_ramp_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="main" x="58.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="69.03" lane="main_ramp_2" slope="0.00"/>
+        <vehicle id="ramp" x="51.18" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="19.29" pos="62.11" lane="main_ramp_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="main" x="88.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="99.03" lane="main_ramp_2" slope="0.00"/>
+        <vehicle id="ramp" x="73.07" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="21.89" pos="84.00" lane="main_ramp_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="main" x="118.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="16.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="97.56" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="24.49" pos="108.49" lane="main_ramp_1" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="main" x="148.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="46.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="124.65" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.09" pos="23.15" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="main" x="178.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="76.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="154.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="29.69" pos="52.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="main" x="208.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="106.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="184.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="82.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="main" x="238.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="136.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="214.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="112.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="main" x="268.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="166.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="244.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="142.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="main" x="298.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="196.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="274.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="172.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="main" x="328.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="226.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="304.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="202.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="main" x="358.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="256.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="334.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="232.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="main" x="388.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="286.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="364.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="262.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="main" x="418.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="316.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="394.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="292.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="main" x="448.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="346.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="424.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="322.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="main" x="478.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="376.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="454.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="352.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="main" x="508.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="406.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="484.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="382.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="main" x="538.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="436.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="514.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="412.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="main" x="568.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="466.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="544.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="442.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="main" x="598.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="496.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="574.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="472.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="main" x="628.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="526.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="604.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="502.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="main" x="658.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="556.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="634.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="532.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="main" x="688.10" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="586.60" lane="main_end_1" slope="0.00"/>
+        <vehicle id="ramp" x="664.34" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="562.84" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="main" x="718.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="616.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="692.06" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.72" pos="590.56" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="main" x="748.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="646.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="720.42" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="28.36" pos="618.92" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="main" x="778.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="676.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="749.02" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="28.60" pos="647.52" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="main" x="808.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="706.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="777.81" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="28.80" pos="676.31" lane="main_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="main" x="838.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="736.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="806.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="28.97" pos="705.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="main" x="868.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="766.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="836.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="735.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="main" x="898.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="796.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="866.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="765.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="main" x="928.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="826.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="896.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="795.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="main" x="958.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="856.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="926.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="825.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="main" x="988.10" y="-4.95" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="886.60" lane="main_end_0" slope="0.00"/>
+        <vehicle id="ramp" x="956.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="855.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="ramp" x="986.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="30.00" pos="885.28" lane="main_end_1" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00"/>
+</fcd-export>

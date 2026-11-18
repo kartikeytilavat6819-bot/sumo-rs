@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 300 --extrapolate-departpos -a tools/oracle/cases/tt_junction_model_impatience_impatience_off/input_additional.add.xml

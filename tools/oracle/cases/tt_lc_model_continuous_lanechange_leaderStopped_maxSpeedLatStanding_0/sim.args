@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --lanechange.duration 3 --fcd-output.attributes speed,pos,lane,edge,posLat,speedLat

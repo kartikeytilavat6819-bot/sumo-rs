@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:57:33.785262-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_lc_model_overtaking_overtaking_right_road_speed/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_lc_model_overtaking_overtaking_right_road_speed/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_overtaking_overtaking_right_road_speed/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_overtaking_overtaking_right_road_speed/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_overtaking_overtaking_right_road_speed/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="slow_middle" x="-5001.07" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1000.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="slow_middle" x="-4984.41" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1016.67" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="slow_middle" x="-4967.76" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1033.34" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="slow_middle" x="-4951.11" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1050.01" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="overtaking" x="-5001.07" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1000.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4934.46" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1066.68" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="overtaking" x="-4976.09" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1025.01" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4917.80" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1083.35" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="overtaking" x="-4951.11" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1050.01" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4901.15" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1100.02" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="overtaking" x="-4926.13" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1075.02" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4884.50" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1116.69" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="overtaking" x="-4901.15" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1100.02" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4867.85" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1133.36" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="overtaking" x="-4876.17" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1125.03" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4851.20" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1150.03" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="overtaking" x="-4851.20" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1150.03" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4834.54" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1166.70" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="overtaking" x="-4826.22" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1175.04" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4817.89" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1183.37" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="overtaking" x="-4801.24" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1200.04" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4801.24" y="1.60" angle="90.00" type="slow" speed="16.67" pos="1200.04" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="overtaking" x="-4776.26" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1225.05" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4784.59" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1216.71" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="overtaking" x="-4751.28" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1250.05" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4767.93" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1233.38" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="overtaking" x="-4726.30" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1275.06" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4751.28" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1250.05" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="overtaking" x="-4701.33" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1300.06" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4734.63" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1266.72" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="overtaking" x="-4676.35" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1325.07" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4717.98" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1283.39" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="overtaking" x="-4651.37" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1350.07" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4701.33" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1300.06" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="overtaking" x="-4626.39" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1375.08" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4684.67" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1316.73" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="overtaking" x="-4601.41" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1400.08" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4668.02" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1333.40" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="overtaking" x="-4576.43" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1425.09" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4651.37" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1350.07" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="overtaking" x="-4551.46" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1450.09" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4634.72" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1366.74" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="overtaking" x="-4526.48" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1475.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4618.06" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1383.41" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="overtaking" x="-4501.50" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1500.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4601.41" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1400.08" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="overtaking" x="-4476.52" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1525.11" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4584.76" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1416.75" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="overtaking" x="-4451.54" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1550.11" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4568.11" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1433.42" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="overtaking" x="-4426.56" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1575.12" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4551.46" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1450.09" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="overtaking" x="-4401.58" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1600.12" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4534.80" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1466.76" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="overtaking" x="-4376.61" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1625.13" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4518.15" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1483.43" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="overtaking" x="-4351.63" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1650.13" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4501.50" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1500.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="overtaking" x="-4326.65" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1675.14" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4484.85" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1516.77" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="overtaking" x="-4301.67" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1700.14" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4468.19" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1533.44" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="overtaking" x="-4276.69" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1725.15" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4451.54" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1550.11" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="overtaking" x="-4251.71" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1750.15" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4434.89" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1566.78" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="overtaking" x="-4226.74" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1775.16" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4418.24" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1583.45" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="overtaking" x="-4201.76" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1800.16" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4401.58" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1600.12" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="overtaking" x="-4176.78" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1825.17" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4384.93" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1616.79" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="overtaking" x="-4151.80" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1850.17" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4368.28" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1633.46" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="overtaking" x="-4126.82" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1875.18" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4351.63" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1650.13" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="overtaking" x="-4101.84" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1900.18" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4334.98" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1666.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="overtaking" x="-4076.87" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1925.19" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4318.32" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1683.47" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="overtaking" x="-4051.89" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1950.19" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4301.67" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1700.14" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="overtaking" x="-4026.91" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="1975.20" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4285.02" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1716.81" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="overtaking" x="-4001.93" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2000.20" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4268.37" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1733.48" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="overtaking" x="-3976.95" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2025.21" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4251.71" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1750.15" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="overtaking" x="-3951.97" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2050.21" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4235.06" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1766.82" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="overtaking" x="-3927.00" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2075.22" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4218.41" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1783.49" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="overtaking" x="-3902.02" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2100.22" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4201.76" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1800.16" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="overtaking" x="-3877.04" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2125.23" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4185.11" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1816.83" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="overtaking" x="-3852.06" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2150.23" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4168.45" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1833.50" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="overtaking" x="-3827.08" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2175.24" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4151.80" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1850.17" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="overtaking" x="-3802.10" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2200.24" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4135.15" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1866.84" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="overtaking" x="-3777.13" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2225.25" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4118.50" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1883.51" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="overtaking" x="-3752.15" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2250.25" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4101.84" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1900.18" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="overtaking" x="-3727.17" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2275.26" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4085.19" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1916.85" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="overtaking" x="-3702.19" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2300.26" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4068.54" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1933.52" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="overtaking" x="-3677.21" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2325.27" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4051.89" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1950.19" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="overtaking" x="-3652.23" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2350.27" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4035.24" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1966.86" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="overtaking" x="-3627.26" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2375.28" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4018.58" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="1983.53" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="overtaking" x="-3602.28" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2400.28" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-4001.93" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2000.20" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="overtaking" x="-3577.30" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2425.29" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3985.28" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2016.87" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="overtaking" x="-3552.32" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2450.29" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3968.63" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2033.54" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="overtaking" x="-3527.34" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2475.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3951.97" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2050.21" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="overtaking" x="-3502.36" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2500.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3935.32" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2066.88" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="overtaking" x="-3477.39" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2525.31" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3918.67" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2083.55" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="overtaking" x="-3452.41" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2550.31" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3902.02" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2100.22" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="overtaking" x="-3427.43" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2575.32" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3885.37" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2116.89" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="overtaking" x="-3402.45" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2600.32" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3868.71" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2133.56" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="overtaking" x="-3377.47" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2625.33" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3852.06" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2150.23" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="overtaking" x="-3352.49" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2650.33" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3835.41" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2166.90" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="overtaking" x="-3327.52" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2675.34" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3818.76" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2183.57" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="overtaking" x="-3302.54" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2700.34" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3802.10" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2200.24" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="overtaking" x="-3277.56" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2725.35" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3785.45" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2216.91" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="overtaking" x="-3252.58" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2750.35" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3768.80" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2233.58" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="overtaking" x="-3227.60" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2775.36" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3752.15" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2250.25" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="overtaking" x="-3202.62" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2800.36" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3735.50" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2266.92" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="overtaking" x="-3177.65" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2825.37" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3718.84" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2283.59" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="overtaking" x="-3152.67" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2850.37" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3702.19" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2300.26" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="overtaking" x="-3127.69" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2875.38" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3685.54" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2316.93" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="overtaking" x="-3102.71" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2900.38" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3668.89" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2333.60" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="overtaking" x="-3077.73" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2925.39" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3652.23" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2350.27" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="overtaking" x="-3052.75" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2950.39" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3635.58" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2366.94" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="overtaking" x="-3027.78" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="2975.40" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3618.93" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2383.61" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="overtaking" x="-3002.80" y="-1.60" angle="90.00" type="fast" speed="25.01" pos="3000.40" lane="beg_0" slope="0.00"/>
+        <vehicle id="slow_middle" x="-3602.28" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2400.28" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="slow_middle" x="-3585.63" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2416.95" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="slow_middle" x="-3568.97" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2433.62" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="slow_middle" x="-3552.32" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2450.29" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="slow_middle" x="-3535.67" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2466.96" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="slow_middle" x="-3519.02" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2483.63" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="slow_middle" x="-3502.36" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2500.30" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="slow_middle" x="-3485.71" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2516.97" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="slow_middle" x="-3469.06" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2533.64" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="slow_middle" x="-3452.41" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2550.31" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="slow_middle" x="-3435.76" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2566.98" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="slow_middle" x="-3419.10" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2583.65" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="slow_middle" x="-3402.45" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2600.32" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="slow_middle" x="-3385.80" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2616.99" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="slow_middle" x="-3369.15" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2633.66" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="slow_middle" x="-3352.49" y="-1.60" angle="90.00" type="slow" speed="16.67" pos="2650.33" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="slow_middle" x="-3335.84" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2667.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="slow_middle" x="-3319.19" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2683.67" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="slow_middle" x="-3302.54" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2700.34" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="slow_middle" x="-3285.89" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2717.01" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="slow_middle" x="-3269.23" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2733.68" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="slow_middle" x="-3252.58" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2750.35" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="slow_middle" x="-3235.93" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2767.02" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="slow_middle" x="-3219.28" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2783.69" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="slow_middle" x="-3202.62" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2800.36" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="slow_middle" x="-3185.97" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2817.03" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="slow_middle" x="-3169.32" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2833.70" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="slow_middle" x="-3152.67" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2850.37" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="slow_middle" x="-3136.01" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2867.04" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="slow_middle" x="-3119.36" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2883.71" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="slow_middle" x="-3102.71" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2900.38" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="slow_middle" x="-3086.06" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2917.05" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="slow_middle" x="-3069.41" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2933.72" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="slow_middle" x="-3052.75" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2950.39" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="slow_middle" x="-3036.10" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2967.06" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="slow_middle" x="-3019.45" y="1.60" angle="90.00" type="slow" speed="16.67" pos="2983.73" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="slow_middle" x="-3002.80" y="1.60" angle="90.00" type="slow" speed="16.67" pos="3000.40" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00"/>
+</fcd-export>

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --time-to-teleport 10000 -e 10000 -a tools/oracle/cases/tt_lc_model_speedGain_speedGain0/input_additional.add.xml

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --step-length 0.5 --fcd-output.acceleration -a tools/oracle/cases/tt_junction_model_junction_type_tls_crossing_incoming_program/input_additional.add.xml

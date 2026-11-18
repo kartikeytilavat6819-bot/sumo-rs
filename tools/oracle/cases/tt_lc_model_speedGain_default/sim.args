@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --lanechange-output.xy -a tools/oracle/cases/tt_lc_model_speedGain_default/input_additional.add.xml
