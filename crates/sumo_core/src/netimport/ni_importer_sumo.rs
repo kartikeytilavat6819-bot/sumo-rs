@@ -1499,7 +1499,7 @@ impl NIImporter_SUMO {
             oc.set("no-internal-links", "true", false).unwrap();
         }
         if oc.is_writeable("lefthand").unwrap() && oc.is_default("lefthand") && self.myAmLefthand {
-            oc.set("lefthand", &format!("{}", self.myAmLefthand), false).unwrap();
+            oc.set("lefthand", &utils::common::to_string::to_string(&self.myAmLefthand), false).unwrap();
         }
         if oc.is_writeable("junctions.corner-detail").unwrap() && oc.is_default("junctions.corner-detail") && oc.get_int("junctions.corner-detail").unwrap() != self.myCornerDetail {
             oc.set("junctions.corner-detail", &format!("{}", self.myCornerDetail), false).unwrap();
@@ -1508,40 +1508,40 @@ impl NIImporter_SUMO {
             oc.set("junctions.internal-link-detail", &format!("{}", self.myLinkDetail), false).unwrap();
         }
         if oc.is_writeable("rectangular-lane-cut").unwrap() && oc.is_default("rectangular-lane-cut") && oc.get_bool("rectangular-lane-cut").unwrap() != self.myRectLaneCut {
-            oc.set("rectangular-lane-cut", &format!("{}", self.myRectLaneCut), false).unwrap();
+            oc.set("rectangular-lane-cut", &utils::common::to_string::to_string(&self.myRectLaneCut), false).unwrap();
         }
         if oc.is_writeable("walkingareas").unwrap() && oc.is_default("walkingareas") && oc.get_bool("walkingareas").unwrap() != self.myWalkingAreas {
-            oc.set("walkingareas", &format!("{}", self.myWalkingAreas), false).unwrap();
+            oc.set("walkingareas", &utils::common::to_string::to_string(&self.myWalkingAreas), false).unwrap();
         }
         if oc.is_writeable("junctions.limit-turn-speed").unwrap() && oc.is_default("junctions.limit-turn-speed") && oc.get_float("junctions.limit-turn-speed").unwrap() != self.myLimitTurnSpeed {
             oc.set("junctions.limit-turn-speed", &utils::common::to_string::to_string(&self.myLimitTurnSpeed), false).unwrap();
         }
         if oc.is_writeable("check-lane-foes.all").unwrap() && oc.is_default("check-lane-foes.all") && oc.get_bool("check-lane-foes.all").unwrap() != self.myCheckLaneFoesAll {
-            oc.set("check-lane-foes.all", &format!("{}", self.myCheckLaneFoesAll), false).unwrap();
+            oc.set("check-lane-foes.all", &utils::common::to_string::to_string(&self.myCheckLaneFoesAll), false).unwrap();
         }
         if oc.is_writeable("check-lane-foes.roundabout").unwrap() && oc.is_default("check-lane-foes.roundabout") && oc.get_bool("check-lane-foes.roundabout").unwrap() != self.myCheckLaneFoesRoundabout {
-            oc.set("check-lane-foes.roundabout", &format!("{}", self.myCheckLaneFoesRoundabout), false).unwrap();
+            oc.set("check-lane-foes.roundabout", &utils::common::to_string::to_string(&self.myCheckLaneFoesRoundabout), false).unwrap();
         }
         if oc.is_writeable("tls.ignore-internal-junction-jam").unwrap() && oc.is_default("tls.ignore-internal-junction-jam") && oc.get_bool("tls.ignore-internal-junction-jam").unwrap() != self.myTlsIgnoreInternalJunctionJam {
-            oc.set("tls.ignore-internal-junction-jam", &format!("{}", self.myTlsIgnoreInternalJunctionJam), false).unwrap();
+            oc.set("tls.ignore-internal-junction-jam", &utils::common::to_string::to_string(&self.myTlsIgnoreInternalJunctionJam), false).unwrap();
         }
         if oc.is_writeable("default.spreadtype").unwrap() && oc.is_default("default.spreadtype") && oc.get_string("default.spreadtype").unwrap() != self.myDefaultSpreadType {
             oc.set("default.spreadtype", &self.myDefaultSpreadType, false).unwrap();
         }
         if oc.is_writeable("geometry.avoid-overlap").unwrap() && oc.is_default("geometry.avoid-overlap") && oc.get_bool("geometry.avoid-overlap").unwrap() != self.myGeomAvoidOverlap {
-            oc.set("geometry.avoid-overlap", &format!("{}", self.myGeomAvoidOverlap), false).unwrap();
+            oc.set("geometry.avoid-overlap", &utils::common::to_string::to_string(&self.myGeomAvoidOverlap), false).unwrap();
         }
         if oc.is_writeable("junctions.higher-speed").unwrap() && oc.is_default("junctions.higher-speed") && oc.get_bool("junctions.higher-speed").unwrap() != self.myJunctionsHigherSpeed {
-            oc.set("junctions.higher-speed", &format!("{}", self.myJunctionsHigherSpeed), false).unwrap();
+            oc.set("junctions.higher-speed", &utils::common::to_string::to_string(&self.myJunctionsHigherSpeed), false).unwrap();
         }
         if oc.is_writeable("internal-junctions.vehicle-width").unwrap() && oc.is_default("internal-junctions.vehicle-width") && oc.get_float("internal-junctions.vehicle-width").unwrap() != self.myInternalJunctionsVehicleWidth {
             oc.set("internal-junctions.vehicle-width", &utils::common::to_string::to_string(&self.myInternalJunctionsVehicleWidth), false).unwrap();
         }
         if oc.is_writeable("junctions.minimal-shape").unwrap() && oc.is_default("junctions.minimal-shape") && oc.get_bool("junctions.minimal-shape").unwrap() != self.myJunctionsMinimalShape {
-            oc.set("junctions.minimal-shape", &format!("{}", self.myJunctionsMinimalShape), false).unwrap();
+            oc.set("junctions.minimal-shape", &utils::common::to_string::to_string(&self.myJunctionsMinimalShape), false).unwrap();
         }
         if oc.is_writeable("junctions.endpoint-shape").unwrap() && oc.is_default("junctions.endpoint-shape") && oc.get_bool("junctions.endpoint-shape").unwrap() != self.myJunctionsEndpointShape {
-            oc.set("junctions.endpoint-shape", &format!("{}", self.myJunctionsEndpointShape), false).unwrap();
+            oc.set("junctions.endpoint-shape", &utils::common::to_string::to_string(&self.myJunctionsEndpointShape), false).unwrap();
         }
         {
             let mut deprecated = DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap();

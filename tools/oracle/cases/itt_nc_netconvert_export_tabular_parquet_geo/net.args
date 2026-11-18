@@ -1,1 +1,0 @@
---write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_export_tabular_parquet_geo/input_net2.net.xml.gz --output.format parquet --proj.plain-geo
