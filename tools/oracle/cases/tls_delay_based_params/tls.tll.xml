@@ -1,0 +1,11 @@
+<tlLogics>
+    <tlLogic id="nC" type="delay_based" programID="0" offset="0">
+        <param key="minTimeloss" value="2.0"/>
+        <param key="extendMaxDur" value="true"/>
+        <param key="detectorRange" value="60"/>
+        <phase duration="12" minDur="8" maxDur="25" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="12" minDur="8" maxDur="25" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+</tlLogics>

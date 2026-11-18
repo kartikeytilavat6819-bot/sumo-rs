@@ -1,0 +1,14 @@
+<additional>
+    <!-- The WAUT starts on progA, goes dark (program "off", blinking) at t=60, and returns to program 0 at t=140. -->
+    <tlLogic id="nC" type="static" programID="progA" offset="0">
+        <phase duration="25" state="GGggrrrrGGggrrrr"/>
+        <phase duration="4" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="25" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="4" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="waut0" refTime="0" startProg="progA">
+        <wautSwitch time="60" to="off"/>
+        <wautSwitch time="140" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nC" procedure="Sta" wautID="waut0"/>
+</additional>
