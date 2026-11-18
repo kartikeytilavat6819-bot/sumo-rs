@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/lc_mixed_models/lc_mixed_models.nod.xml --edge-files tools/oracle/cases/lc_mixed_models/lc_mixed_models.edg.xml
