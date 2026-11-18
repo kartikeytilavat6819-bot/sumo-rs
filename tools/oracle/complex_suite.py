@@ -83,27 +83,37 @@ def run_one(src: pathlib.Path, sandbox: pathlib.Path, binary: str, nc: str, side
         except Exception as exc:  # noqa: BLE001 - a broken sandbox is a test failure
             log.write(f"\n[oracle: launch failed: {exc}]\n".encode())
             rc = 127
-    log.flush()
+        log.flush()
     return rc
 
 
-def first_diff(a: dict[str, bytes], b: dict[str, bytes]) -> str:
-    keys = sorted(set(a) | set(b))
-    for k in keys:
+def diff_text(a: dict[str, bytes], b: dict[str, bytes]) -> str:
+    chunks = []
+    for k in sorted(set(a) | set(b)):
         av, bv = a.get(k), b.get(k)
         if av == bv:
             continue
         if av is None:
-            return f"{k}: only in ours"
+            chunks.append(f"=== {k}: only in ours")
+            continue
         if bv is None:
-            return f"{k}: only in official"
+            chunks.append(f"=== {k}: only in official")
+            continue
         al = av.decode("utf-8", "replace").splitlines()
         bl = bv.decode("utf-8", "replace").splitlines()
-        for line in difflib.unified_diff(al, bl, "official", "ours", lineterm="", n=0):
-            if line.startswith(("+", "-")) and not line.startswith(("+++", "---")):
-                return f"{k}: {line[:160]}"
-        return f"{k}: binary/line difference"
-    return ""
+        if al == bl:
+            continue
+        chunks.append(f"=== {k}")
+        chunks.extend(list(difflib.unified_diff(al, bl, "official", "ours", lineterm="", n=0))[:40])
+    return "\n".join(chunks)
+
+
+def first_diff(a: dict[str, bytes], b: dict[str, bytes]) -> str:
+    d = diff_text(a, b)
+    if not d:
+        return ""
+    lines = [ln for ln in d.splitlines() if ln.startswith(("+", "-", "===")) and not ln.startswith(("+++", "---"))]
+    return " | ".join(lines[:5])[:400]
 
 
 def main():
@@ -130,6 +140,7 @@ def main():
         b = snapshot(base / "ours", paths)
         d = first_diff(a, b)
         if d:
+            (base / "diff.txt").write_text(diff_text(a, b), encoding="utf-8")
             fails.append((name, d))
             print(f"FAIL {name} | {d}", flush=True)
         else:
