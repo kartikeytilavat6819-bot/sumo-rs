@@ -2,6 +2,15 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `ROMAEdgeBuilder::buildEdge` body, the target of the virtual dispatch in ROAbstractEdgeBuilder
+fn roma_build_edge(eb: &mut ROAbstractEdgeBuilder, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
+    // C++ implicit derived-to-base conversion: point at the embedded ROEdge sub-object
+    let edge = Box::into_raw(Box::new(ROMAEdge::new(name, from, to, eb.get_next_index(), priority, type_, routingType)));
+    let base = Ptr::from_raw(unsafe { &raw mut (*edge).base });
+    ROEdge::register_in_all_edges(base);
+    base
+}
+
 /// Interface for building instances of duarouter-edges
 /// C++ class `ROMAEdgeBuilder` (marouter/ROMAEdgeBuilder.h)
 #[repr(C)]
@@ -29,7 +38,9 @@ impl ROMAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        ROMAEdgeBuilder { base: ROAbstractEdgeBuilder::new() }
+        let mut base = ROAbstractEdgeBuilder::new();
+        base.buildEdgeFn = roma_build_edge;
+        ROMAEdgeBuilder { base }
     }
 
     /// C++: `void ROMAEdgeBuilder::~ROMAEdgeBuilder() noexcept` [virtual]
@@ -47,9 +58,7 @@ impl ROMAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        // C++ implicit derived-to-base conversion: point at the embedded ROEdge sub-object
-        let edge = Box::into_raw(Box::new(ROMAEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType)));
-        Ptr::from_raw(unsafe { &raw mut (*edge).base })
+        roma_build_edge(&mut self.base, name, from, to, priority, type_, routingType)
     }
 
 }

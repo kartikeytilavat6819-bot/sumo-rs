@@ -1,1 +1,1 @@
--n tools/oracle/cases/trips/ref_simple.net.xml --additional-files tools/oracle/cases/odshared/taz.add.xml -m tools/oracle/cases/odshared/m.o -o @DIR@/routes.xml --assignment-method incremental --max-iterations 3 --seed 1
+-n tools/oracle/cases/trips/ref_simple.net.xml --additional-files tools/oracle/cases/odshared/taz_ma.add.xml -m tools/oracle/cases/odshared/ma.o -o @DIR@/routes.xml --assignment-method incremental --max-iterations 3 --seed 1

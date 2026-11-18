@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<demand>
+  <actorConfig id="car">
+    <timeSlice startTime="0" duration="1800">
+      <odPair origin="za" destination="zb" amount="12"/>
+      <odPair origin="zc" destination="zb" amount="7"/>
+    </timeSlice>
+    <timeSlice startTime="1800" duration="1800">
+      <odPair origin="za" destination="zc" amount="9"/>
+    </timeSlice>
+  </actorConfig>
+</demand>

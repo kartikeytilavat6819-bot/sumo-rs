@@ -1,1 +1,1 @@
--n tools/oracle/cases/trips/ref_simple.net.xml --additional-files tools/oracle/cases/odshared/taz.add.xml -m tools/oracle/cases/odshared/m.v -o @DIR@/routes.xml --assignment-method UE --max-iterations 4 --netload-output @DIR@/netload.xml --seed 1
+-n tools/oracle/cases/trips/ref_simple.net.xml --additional-files tools/oracle/cases/odshared/taz_ma.add.xml -m tools/oracle/cases/odshared/ma.v -o @DIR@/routes.xml --assignment-method UE --max-iterations 4 --netload-output @DIR@/netload.xml --seed 1
