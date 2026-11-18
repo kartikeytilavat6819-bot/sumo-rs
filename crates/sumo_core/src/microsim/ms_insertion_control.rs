@@ -951,8 +951,11 @@ impl MSInsertionControl {
                 if edge.insert_vehicle(v.m(), time, true, self.myEagerInsertionCheck) {
                     self.myEmitCandidates.insert(v);
                 } else {
-                    // shortcut: static_cast<MSDevice_Routing*>(v->getDevice(typeid(MSDevice_Routing))) needs a typed device
-                    // lookup and a downcast, neither is ported, so dev->skipRouting(time) is not called, upgrade when both exist
+                    // getDevice(typeid(MSDevice_Routing)): "rerouting" is the only device name MSDevice_Routing reports
+                    let dev = MSDevice::get_device_by_name(v.m().get_devices(), "rerouting");
+                    if !dev.is_null() {
+                        dev.cast::<MSDevice_Routing>().m().skip_routing(time);
+                    }
                 }
             }
         }

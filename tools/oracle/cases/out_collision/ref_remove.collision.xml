@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:04:09.632385-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_collision/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_collision/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_collision/ref_remove.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_collision/ref_remove.tripinfo.xml"/>
+        <collision-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_collision/ref_remove.collision.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_collision/ref_remove.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <processing>
+        <collision.action value="remove"/>
+        <collision.check-junctions value="true"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<collisions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/collision_file.xsd">
+    <collision time="24.00" type="collision" lane="-103227#2_0" pos="2.55" collider="fE.1" victim="fB.2" colliderType="reckless" victimType="reckless" colliderSpeed="6.16" victimSpeed="16.56" colliderFront="138.54,139.79" colliderBack="138.22,144.77" victimFront="138.53,137.56" victimBack="138.56,142.56"/>
+    <collision time="81.00" type="collision" lane="-103227#2_0" pos="3.76" collider="fE.5" victim="fB.9" colliderType="reckless" victimType="reckless" colliderSpeed="5.47" victimSpeed="17.10" colliderFront="138.54,138.58" colliderBack="138.39,143.57" victimFront="138.53,137.59" victimBack="138.56,142.59"/>
+    <collision time="91.00" type="junction" lane=":-137717_0_1" pos="13.34" collider="fB.11" victim="fG.4" colliderType="reckless" victimType="truck" colliderSpeed="4.99" victimSpeed="5.72" colliderFront="142.56,275.94" colliderBack="142.59,280.94" victimFront="142.50,267.07" victimBack="144.62,278.31"/>
+    <collision time="107.00" type="collision" lane="-103224#2_0" pos="3.20" collider="fF.6" victim="fA.16" colliderType="reckless" victimType="reckless" colliderSpeed="6.44" victimSpeed="10.16" colliderFront="156.99,147.83" colliderBack="152.00,147.60" victimFront="157.39,147.83" victimBack="152.39,147.86"/>
+    <collision time="108.00" type="collision" lane="-103224#3_0" pos="4.32" collider="fH.5" victim="fA.15" colliderType="reckless" victimType="reckless" colliderSpeed="5.68" victimSpeed="19.96" colliderFront="279.20,147.09" colliderBack="274.21,147.03" victimFront="280.29,147.09" victimBack="275.29,147.12"/>
+    <collision time="129.00" type="junction" lane=":-137721_9_1" pos="6.01" collider="fA.20" victim="fB.15" colliderType="reckless" victimType="reckless" colliderSpeed="6.32" victimSpeed="16.57" colliderFront="139.02,151.14" colliderBack="134.02,151.16" victimFront="138.60,149.44" victimBack="138.63,154.44"/>
+    <collision time="137.00" type="collision" lane="-103224#2_0" pos="1.63" collider="fF.8" victim="fA.21" colliderType="reckless" victimType="reckless" colliderSpeed="5.33" victimSpeed="11.00" colliderFront="155.42,147.84" colliderBack="150.57,147.05" victimFront="157.68,147.83" victimBack="152.68,147.86"/>
+    <collision time="155.00" type="collision" lane="-103224#2_0" pos="0.55" collider="fA.24" victim="fF.9" colliderType="reckless" victimType="reckless" colliderSpeed="9.70" victimSpeed="5.27" colliderFront="154.34,147.85" colliderBack="149.34,147.88" victimFront="155.19,147.84" victimBack="150.37,146.94"/>
+</collisions>

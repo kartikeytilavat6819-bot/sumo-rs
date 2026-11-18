@@ -1,0 +1,13 @@
+<routes>
+    <!-- burst insertion under the combined eager/max-delay/random-offset/insertion-checks options -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A B C D"/>
+    <vehicle id="b0" type="car" route="r" depart="5.00" departSpeed="max"/>
+    <vehicle id="b1" type="car" route="r" depart="5.00" departSpeed="max"/>
+    <vehicle id="b2" type="car" route="r" depart="5.00" departSpeed="max"/>
+    <vehicle id="b3" type="car" route="r" depart="5.00" departSpeed="max"/>
+    <vehicle id="b4" type="car" route="r" depart="5.25" departSpeed="max" departPos="0.00"/>
+    <vehicle id="b5" type="car" route="r" depart="8.40" departSpeed="max" departLane="1"/>
+    <vehicle id="b6" type="car" route="r" depart="8.40" departSpeed="max" departLane="1" departPos="2.00"/>
+    <flow id="f" type="car" route="r" begin="20.00" end="60.00" period="0.50" departSpeed="max"/>
+</routes>

@@ -1,0 +1,1 @@
+--flow-files tools/oracle/cases/duarouter_flows/flows.xml --randomize-flows true --seed 17 --output-file @DIR@/routes.rou.xml

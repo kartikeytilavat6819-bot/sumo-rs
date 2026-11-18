@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:05:39.999448-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_railsignal/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_railsignal/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.tripinfo.xml"/>
+        <railsignal-block-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.railblock.xml"/>
+        <railsignal-vehicle-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.railveh.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<railsignal-vehicle-output>
+    <railSignal id="r1">
+        <link linkIndex="0" from="j1_r1_0" to=":r1_0_0">
+            <driveWay id="r1.1">
+                <entry id="fW.0" time="76.00" reason="junction"/>
+                <exit id="fW.0" time="86.00" reason="arrived"/>
+                <entry id="fW.1" time="165.00" reason="junction"/>
+                <exit id="fW.1" time="175.00" reason="arrived"/>
+                <entry id="lateWest" time="204.00" reason="junction"/>
+                <exit id="lateWest" time="214.00" reason="arrived"/>
+                <entry id="fW.2" time="237.00" reason="junction"/>
+                <exit id="fW.2" time="247.00" reason="arrived"/>
+                <entry id="fW.3" time="355.00" reason="junction"/>
+                <exit id="fW.3" time="365.00" reason="arrived"/>
+            </driveWay>
+        </link>
+        <link linkIndex="1" from="w_r1_0" to=":r1_1_0">
+            <driveWay id="r1.0">
+                <entry id="fE.0" time="10.00" reason="junction"/>
+                <exit id="fE.0" time="35.00" reason="junction"/>
+                <entry id="fE.1" time="99.00" reason="junction"/>
+                <exit id="fE.1" time="124.00" reason="junction"/>
+                <entry id="fE.2" time="256.00" reason="junction"/>
+                <exit id="fE.2" time="281.00" reason="junction"/>
+                <entry id="fE.3" time="286.00" reason="junction"/>
+                <exit id="fE.3" time="314.00" reason="junction"/>
+            </driveWay>
+        </link>
+    </railSignal>
+    <railSignal id="r2">
+        <link linkIndex="0" from="e_r2_0" to=":r2_0_0">
+            <driveWay id="r2.1">
+                <entry id="lateWest" time="168.00" reason="junction"/>
+                <exit id="lateWest" time="206.00" reason="junction"/>
+            </driveWay>
+            <driveWay id="r2.2">
+                <entry id="fW.0" time="52.00" reason="junction"/>
+                <exit id="fW.0" time="77.00" reason="junction"/>
+                <entry id="fW.1" time="141.00" reason="junction"/>
+                <exit id="fW.1" time="166.00" reason="junction"/>
+                <entry id="fW.2" time="213.00" reason="junction"/>
+                <exit id="fW.2" time="239.00" reason="junction"/>
+                <entry id="fW.3" time="331.00" reason="junction"/>
+                <exit id="fW.3" time="356.00" reason="junction"/>
+            </driveWay>
+        </link>
+        <link linkIndex="1" from="j2_r2_0" to=":r2_1_0">
+            <driveWay id="r2.0">
+                <entry id="fE.0" time="33.00" reason="junction"/>
+                <exit id="fE.0" time="43.00" reason="arrived"/>
+                <entry id="fE.1" time="122.00" reason="junction"/>
+                <exit id="fE.1" time="132.00" reason="arrived"/>
+                <entry id="fE.2" time="279.00" reason="junction"/>
+                <exit id="fE.2" time="289.00" reason="arrived"/>
+                <entry id="fE.3" time="312.00" reason="junction"/>
+                <exit id="fE.3" time="322.00" reason="arrived"/>
+            </driveWay>
+        </link>
+    </railSignal>
+    <departJunction id="e">
+        <driveWay id="e.d0">
+            <entry id="lateWest" time="142.00" reason="departed"/>
+            <exit id="lateWest" time="176.00" reason="junction"/>
+        </driveWay>
+        <driveWay id="e.d1">
+            <entry id="fW.0" time="43.00" reason="departed"/>
+            <exit id="fW.0" time="53.00" reason="junction"/>
+            <entry id="fW.1" time="132.00" reason="departed"/>
+            <exit id="fW.1" time="142.00" reason="junction"/>
+            <entry id="fW.2" time="200.00" reason="departed"/>
+            <exit id="fW.2" time="215.00" reason="junction"/>
+            <entry id="fW.3" time="322.00" reason="departed"/>
+            <exit id="fW.3" time="332.00" reason="junction"/>
+        </driveWay>
+    </departJunction>
+    <departJunction id="w">
+        <driveWay id="w.d0">
+            <entry id="fE.0" time="0.00" reason="departed"/>
+            <exit id="fE.0" time="11.00" reason="junction"/>
+            <entry id="fE.1" time="90.00" reason="departed"/>
+            <exit id="fE.1" time="100.00" reason="junction"/>
+            <entry id="fE.2" time="247.00" reason="departed"/>
+            <exit id="fE.2" time="257.00" reason="junction"/>
+            <entry id="fE.3" time="270.00" reason="departed"/>
+            <exit id="fE.3" time="289.00" reason="junction"/>
+        </driveWay>
+    </departJunction>
+</railsignal-vehicle-output>

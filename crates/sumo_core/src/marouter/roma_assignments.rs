@@ -556,7 +556,7 @@ impl ROMAAssignments {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn ue(&mut self) {
-        // shortcut: ue() is declared in ROMAAssignments.h but never defined in ROMAAssignments.cpp; calling it is a link error in C++
+        // C++ note: ue() is declared in ROMAAssignments.h but never defined in ROMAAssignments.cpp; calling it is a link error in C++
         panic!("ROMAAssignments::ue is declared but not defined");
     }
 

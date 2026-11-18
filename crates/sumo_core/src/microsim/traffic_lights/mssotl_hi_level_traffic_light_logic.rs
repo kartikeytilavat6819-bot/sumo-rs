@@ -112,7 +112,7 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn decide_policy(&mut self) {
-        // shortcut: pure virtual with no C++ body; a subclass must override it, so calling the base is a bug (as in C++)
+        // pure virtual with no C++ body; a subclass must override it, so calling the base is a bug (as in C++)
         panic!("pure virtual method MSSOTLHiLevelTrafficLightLogic::decidePolicy called")
     }
 

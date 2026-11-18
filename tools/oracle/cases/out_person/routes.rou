@@ -1,0 +1,30 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+    <route id="rL" edges="E0 E1 E2"/>
+    <flow id="L1f" type="bus" route="rL" line="L1" begin="0.00" end="300.00" period="100.00" departSpeed="max">
+        <stop busStop="bs0" until="30.00" duration="15.00"/>
+        <stop busStop="bs1" until="200.00"/>
+    </flow>
+    <person id="pt0" type="ped" depart="10.00" departPos="20.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="pt1" type="ped" depart="30.00" departPos="5.00">
+        <personTrip from="E0" to="E1" modes="public" arrivalPos="60.00"/>
+    </person>
+    <person id="pt2" type="ped" depart="50.00">
+        <personTrip from="E1" to="E2" modes="public"/>
+    </person>
+    <person id="pwalk" type="ped" depart="60.00">
+        <walk edges="E0 E1 E2" arrivalPos="90.00"/>
+    </person>
+    <person id="pwalk2" type="ped" depart="90.00" departPos="100.00">
+        <walk edges="E1 E2" speed="1.1"/>
+    </person>
+    <person id="pt3" type="ped" depart="120.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="10.00"/>
+    </person>
+    <person id="pt4" type="ped" depart="210.00" departPos="50.00">
+        <personTrip from="E1" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+</routes>

@@ -1,0 +1,1 @@
+--route-files @CASE@/loops.rou.xml --remove-loops true --output-file @DIR@/routes.rou.xml

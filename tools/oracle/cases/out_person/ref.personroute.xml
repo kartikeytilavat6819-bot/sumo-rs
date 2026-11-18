@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:06:23.003474-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_person/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_person/routes.rou"/>
+        <additional-files value="tools/oracle/cases/out_person/ped_pt.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_person/ref.fcd.xml"/>
+        <person-summary-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_person/ref.personsummary.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_person/ref.tripinfo.xml"/>
+        <personroute-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_person/ref.personroute.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_person/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="400"/>
+    </time>
+
+    <routing>
+        <persontrip.walkfactor value="0.75"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <person id="pwalk2" type="ped" depart="90.00" departPos="100.00" arrival="141.00">
+        <walk edges="E1 E2" speed="1.10"/>
+    </person>
+
+    <person id="pt1" type="ped" depart="30.00" departPos="5.00" arrival="146.00">
+        <walk edges="E0 E1" arrivalPos="60.00"/>
+    </person>
+
+    <person id="pt2" type="ped" depart="50.00" arrival="154.00">
+        <walk edges="E1 E2"/>
+    </person>
+
+    <person id="pt0" type="ped" depart="10.00" departPos="20.00" arrival="187.00">
+        <walk edges="E0 E1 E2" arrivalPos="90.00"/>
+    </person>
+
+    <person id="pwalk" type="ped" depart="60.00" arrival="248.00">
+        <walk edges="E0 E1 E2" arrivalPos="90.00"/>
+    </person>
+
+    <person id="pt3" type="ped" depart="120.00" arrival="295.00">
+        <walk edges="E0 E1 E2" arrivalPos="10.00"/>
+    </person>
+
+    <person id="pt4" type="ped" depart="210.00" departPos="50.00" arrival="304.00">
+        <walk edges="E1 E2" arrivalPos="90.00"/>
+    </person>
+
+</routes>

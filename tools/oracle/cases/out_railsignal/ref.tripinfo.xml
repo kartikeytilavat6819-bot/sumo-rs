@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:05:39.987236-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_railsignal/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_railsignal/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.tripinfo.xml"/>
+        <railsignal-block-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.railblock.xml"/>
+        <railsignal-vehicle-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.railveh.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_railsignal/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="fE.0" depart="0.00" departLane="w_r1_0" departPos="50.10" departSpeed="21.86" departDelay="0.00" arrival="43.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="43.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.97" rerouteNo="0" devices="tripinfo_fE.0 fcd_fE.0" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fW.0" depart="43.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="23.00" arrival="86.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="43.00" routeLength="1261.97" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_fW.0 fcd_fW.0" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fE.1" depart="90.00" departLane="w_r1_0" departPos="50.10" departSpeed="30.00" departDelay="0.00" arrival="132.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="42.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_fE.1 fcd_fE.1" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fW.1" depart="132.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="22.00" arrival="175.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="43.00" routeLength="1261.97" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_fW.1 fcd_fW.1" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="lateWest" depart="142.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="12.00" arrival="214.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="72.00" routeLength="1250.10" waitingTime="3.00" waitingCount="1" stopTime="0.00" timeLoss="30.20" rerouteNo="0" devices="tripinfo_lateWest fcd_lateWest" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fW.2" depart="200.00" departLane="e_r2_0" departPos="50.10" departSpeed="21.86" departDelay="0.00" arrival="247.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="47.00" routeLength="1261.97" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.82" rerouteNo="0" devices="tripinfo_fW.2 fcd_fW.2" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fE.2" depart="247.00" departLane="w_r1_0" departPos="50.10" departSpeed="30.00" departDelay="67.00" arrival="289.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="42.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_fE.2 fcd_fE.2" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fE.3" depart="270.00" departLane="w_r1_0" departPos="50.10" departSpeed="21.86" departDelay="0.00" arrival="322.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="52.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.05" rerouteNo="0" devices="tripinfo_fE.3 fcd_fE.3" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fW.3" depart="322.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="32.00" arrival="365.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="43.00" routeLength="1261.97" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_fW.3 fcd_fW.3" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>

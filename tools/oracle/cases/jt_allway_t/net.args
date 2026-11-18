@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_allway_t/junction.nod.xml --edge-files tools/oracle/cases/jt_allway_t/junction.edg.xml --connection-files tools/oracle/cases/jt_allway_t/junction.con.xml

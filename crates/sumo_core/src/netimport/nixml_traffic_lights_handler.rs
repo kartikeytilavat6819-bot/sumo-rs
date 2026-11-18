@@ -327,13 +327,18 @@ impl NIXMLTrafficLightsHandler {
             let oldDef: Ptr<NBLoadedSUMOTLDef> = loaded_tl_def(self.myTLLCont.get_definition(&id, &existingProgram));
             if oldDef.is_null() {
                 // case 2
-                // shortcut: C++ dynamic_cast<NBOwnTLDef*> cannot be checked (no runtime type tag on NBTrafficLightDefinition); a non-null default program is taken to be the NBOwnTLDef, which is the only case that reaches case 2 while loaded_tl_def reports nothing as loaded; upgrade when a type tag is added
                 let newDef: Ptr<NBTrafficLightDefinition> = self.myTLLCont.get_definition(&id, DEFAULT_PROGRAM_ID);
-                if newDef.is_null() {
+                // C++ first dynamic_cast<NBOwnTLDef*>; else fall back to dynamic_cast<NBLoadedSUMOTLDef*>
+                let deleteDefault: bool;
+                if !newDef.is_null() && newDef.m().myKind == NBTrafficLightDefinitionKind::OwnTL {
+                    deleteDefault = true;
+                } else if !newDef.is_null() && newDef.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    // the default program may have already been replaced with a loaded program
+                    deleteDefault = false;
+                } else {
                     write_error(&tlf!("Cannot load traffic light program for unknown id '%', programID '%'.", id, programID));
                     return Ptr::null();
                 }
-                let deleteDefault = true;
                 loadedDef = Ptr::from_raw(Box::into_raw(Box::new(NBLoadedSUMOTLDef::new(&id, &programID, offset, type_))));
                 // copy nodes and controlled inner edges
                 for &n in newDef.get_nodes() {

@@ -1,0 +1,4 @@
+<additional>
+    <containerStop id="csIn" lane="B_0" startPos="100" endPos="140"/>
+    <containerStop id="csOut" lane="C_0" startPos="100" endPos="140"/>
+</additional>

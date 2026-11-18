@@ -1,0 +1,1 @@
+--trip-files tools/oracle/cases/duarouter_trips/trips.xml --routing-algorithm CHWrapper --output-file @DIR@/routes.rou.xml

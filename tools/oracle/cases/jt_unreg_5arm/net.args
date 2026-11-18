@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_unreg_5arm/junction.nod.xml --edge-files tools/oracle/cases/jt_unreg_5arm/junction.edg.xml --connection-files tools/oracle/cases/jt_unreg_5arm/junction.con.xml

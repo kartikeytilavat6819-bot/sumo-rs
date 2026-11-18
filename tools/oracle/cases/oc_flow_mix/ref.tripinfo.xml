@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T14:49:07.126960-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/oc_flow_mix/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/oc_flow_mix/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_flow_mix/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_flow_mix/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_flow_mix/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="80"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="9"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="f1.2" depart="9.00" departLane="A_0" departPos="219.30" departSpeed="12.53" departDelay="3.50" arrival="72.00" arrivalLane="D_0" arrivalPos="150.00" arrivalSpeed="13.80" duration="63.00" routeLength="831.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.45" rerouteNo="0" devices="tripinfo_f1.2 fcd_f1.2" vType="car" speedFactor="1.09" vaporized=""/>
+    <tripinfo id="f1.1" depart="4.00" departLane="A_0" departPos="120.51" departSpeed="13.09" departDelay="1.00" arrival="76.00" arrivalLane="D_0" arrivalPos="150.00" arrivalSpeed="13.19" duration="72.00" routeLength="929.79" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.24" rerouteNo="0" devices="tripinfo_f1.1 fcd_f1.1" vType="car" speedFactor="0.98" vaporized=""/>
+</tripinfos>
