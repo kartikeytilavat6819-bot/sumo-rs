@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:40:32.455518-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/glosa_queue/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/glosa_queue/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z27/tools/oracle/cases/glosa_queue/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z27/tools/oracle/cases/glosa_queue/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z27/tools/oracle/cases/glosa_queue/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <glosa_device>
+        <device.glosa.probability value="1"/>
+        <device.glosa.max-speedfactor value="1.2"/>
+        <device.glosa.add-switchtime value="2"/>
+        <device.glosa.use-queue value="true"/>
+        <device.glosa.ignore-cfmodel value="true"/>
+    </glosa_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="fY.0" depart="0.00" departLane="w2c_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="70.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.48" duration="70.00" routeLength="594.90" waitingTime="21.00" waitingCount="1" stopTime="0.00" timeLoss="26.55" rerouteNo="0" devices="tripinfo_fY.0 fcd_fY.0 glosa_fY.0" vType="vY" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="fS.0" depart="4.00" departLane="w2c_0" departPos="5.10" departSpeed="13.03" departDelay="0.50" arrival="73.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="12.53" duration="69.00" routeLength="594.90" waitingTime="17.00" waitingCount="1" stopTime="0.00" timeLoss="22.85" rerouteNo="0" devices="tripinfo_fS.0 fcd_fS.0 glosa_fS.0" vType="vStd" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="fY.1" depart="7.00" departLane="w2c_0" departPos="5.10" departSpeed="13.28" departDelay="0.00" arrival="75.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="12.99" duration="68.00" routeLength="594.90" waitingTime="17.00" waitingCount="1" stopTime="0.00" timeLoss="24.48" rerouteNo="0" devices="tripinfo_fY.1 fcd_fY.1 glosa_fY.1" vType="vY" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="fS.1" depart="11.00" departLane="w2c_0" departPos="5.10" departSpeed="13.06" departDelay="0.50" arrival="77.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.63" duration="66.00" routeLength="594.90" waitingTime="14.00" waitingCount="1" stopTime="0.00" timeLoss="22.26" rerouteNo="0" devices="tripinfo_fS.1 fcd_fS.1 glosa_fS.1" vType="vStd" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="fY.2" depart="14.00" departLane="w2c_0" departPos="5.10" departSpeed="13.01" departDelay="0.00" arrival="78.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.48" duration="64.00" routeLength="594.90" waitingTime="13.00" waitingCount="1" stopTime="0.00" timeLoss="21.00" rerouteNo="0" devices="tripinfo_fY.2 fcd_fY.2 glosa_fY.2" vType="vY" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="fS.2" depart="18.00" departLane="w2c_0" departPos="5.10" departSpeed="11.54" departDelay="0.50" arrival="83.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="10.66" duration="65.00" routeLength="594.90" waitingTime="3.00" waitingCount="1" stopTime="0.00" timeLoss="12.81" rerouteNo="0" devices="tripinfo_fS.2 fcd_fS.2 glosa_fS.2" vType="vStd" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="fY.3" depart="21.00" departLane="w2c_0" departPos="5.10" departSpeed="12.22" departDelay="0.00" arrival="84.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="12.71" duration="63.00" routeLength="594.90" waitingTime="3.00" waitingCount="1" stopTime="0.00" timeLoss="20.15" rerouteNo="0" devices="tripinfo_fY.3 fcd_fY.3 glosa_fY.3" vType="vY" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="fS.3" depart="25.00" departLane="w2c_0" departPos="5.10" departSpeed="10.70" departDelay="0.50" arrival="86.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="11.95" duration="61.00" routeLength="594.90" waitingTime="3.00" waitingCount="1" stopTime="0.00" timeLoss="12.41" rerouteNo="0" devices="tripinfo_fS.3 fcd_fS.3 glosa_fS.3" vType="vStd" speedFactor="0.89" vaporized=""/>
+    <tripinfo id="fY.4" depart="28.00" departLane="w2c_0" departPos="5.10" departSpeed="8.90" departDelay="0.00" arrival="88.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="12.14" duration="60.00" routeLength="594.90" waitingTime="1.00" waitingCount="1" stopTime="0.00" timeLoss="13.91" rerouteNo="0" devices="tripinfo_fY.4 fcd_fY.4 glosa_fY.4" vType="vY" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="fS.4" depart="32.00" departLane="w2c_0" departPos="5.10" departSpeed="7.16" departDelay="0.50" arrival="90.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="10.88" duration="58.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.88" rerouteNo="0" devices="tripinfo_fS.4 fcd_fS.4 glosa_fS.4" vType="vStd" speedFactor="0.86" vaporized=""/>
+    <tripinfo id="fY.5" depart="35.00" departLane="w2c_0" departPos="5.10" departSpeed="6.29" departDelay="0.00" arrival="92.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.66" duration="57.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="13.61" rerouteNo="0" devices="tripinfo_fY.5 fcd_fY.5 glosa_fY.5" vType="vY" speedFactor="1.09" vaporized=""/>
+    <tripinfo id="fS.5" depart="39.00" departLane="w2c_0" departPos="5.10" departSpeed="5.76" departDelay="0.50" arrival="94.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.46" duration="55.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="11.42" rerouteNo="0" devices="tripinfo_fS.5 fcd_fS.5 glosa_fS.5" vType="vStd" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="fY.6" depart="42.00" departLane="w2c_0" departPos="5.10" departSpeed="6.09" departDelay="0.00" arrival="95.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="12.74" duration="53.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.12" rerouteNo="0" devices="tripinfo_fY.6 fcd_fY.6 glosa_fY.6" vType="vY" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="fS.6" depart="46.00" departLane="w2c_0" departPos="5.10" departSpeed="5.95" departDelay="0.50" arrival="97.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.13" duration="51.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.81" rerouteNo="0" devices="tripinfo_fS.6 fcd_fS.6 glosa_fS.6" vType="vStd" speedFactor="1.12" vaporized=""/>
+    <tripinfo id="fY.7" depart="49.00" departLane="w2c_0" departPos="5.10" departSpeed="6.60" departDelay="0.00" arrival="99.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="13.00" duration="50.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="6.20" rerouteNo="0" devices="tripinfo_fY.7 fcd_fY.7 glosa_fY.7" vType="vY" speedFactor="0.99" vaporized=""/>
+    <tripinfo id="fS.7" depart="53.00" departLane="w2c_0" departPos="5.10" departSpeed="8.50" departDelay="0.50" arrival="102.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="12.08" duration="49.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.79" rerouteNo="0" devices="tripinfo_fS.7 fcd_fS.7 glosa_fS.7" vType="vStd" speedFactor="0.93" vaporized=""/>
+    <tripinfo id="fY.8" depart="56.00" departLane="w2c_0" departPos="5.10" departSpeed="9.17" departDelay="0.00" arrival="108.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="11.31" duration="52.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.61" rerouteNo="0" devices="tripinfo_fY.8 fcd_fY.8 glosa_fY.8" vType="vY" speedFactor="0.88" vaporized=""/>
+    <tripinfo id="fS.8" depart="60.00" departLane="w2c_0" departPos="5.10" departSpeed="10.41" departDelay="0.50" arrival="110.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="11.84" duration="50.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.64" rerouteNo="0" devices="tripinfo_fS.8 fcd_fS.8 glosa_fS.8" vType="vStd" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="fY.9" depart="63.00" departLane="w2c_0" departPos="5.10" departSpeed="11.73" departDelay="0.00" arrival="112.00" arrivalLane="c2e_0" arrivalPos="292.80" arrivalSpeed="11.94" duration="49.00" routeLength="594.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.66" rerouteNo="0" devices="tripinfo_fY.9 fcd_fY.9 glosa_fY.9" vType="vY" speedFactor="0.94" vaporized=""/>
+</tripinfos>

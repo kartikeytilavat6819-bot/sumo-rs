@@ -1,0 +1,9 @@
+<routes>
+    <route id="r0" edges="E0"/>
+    <vType id="slow" maxSpeed="20.00" desiredMaxSpeed="12.00" accel="2.60" decel="4.50"/>
+    <vType id="fast" maxSpeed="15.00" desiredMaxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <vType id="plain" maxSpeed="20.00" accel="2.60" decel="4.50"/>
+    <flow id="fs" type="slow" route="r0" begin="0.00" end="60.00" period="8.00"/>
+    <flow id="ff" type="fast" route="r0" begin="2.00" end="60.00" period="8.00"/>
+    <flow id="fp" type="plain" route="r0" begin="4.00" end="60.00" period="8.00"/>
+</routes>

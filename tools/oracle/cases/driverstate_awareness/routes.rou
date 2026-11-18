@@ -1,0 +1,10 @@
+<routes>
+    <route id="rWE" edges="w2c c2e"/>
+    <route id="rSN" edges="s2c c2n"/>
+    <vType id="vY" maxSpeed="13.89" jmDriveAfterYellowTime="3.00" accel="2.60" decel="4.50"/>
+    <vType id="vStd" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="vMinor" maxSpeed="8.33" accel="2.60" decel="4.50"/>
+    <flow id="fY" type="vY" route="rWE" begin="0.00" end="120.00" period="7.00"/>
+    <flow id="fS" type="vStd" route="rWE" begin="3.50" end="120.00" period="7.00"/>
+    <flow id="fM" type="vMinor" route="rSN" begin="1.00" end="120.00" period="9.00"/>
+</routes>

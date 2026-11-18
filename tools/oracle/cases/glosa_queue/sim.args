@@ -1,0 +1,1 @@
+--end 120 --device.glosa.probability 1 --device.glosa.use-queue true --device.glosa.add-switchtime 2 --device.glosa.ignore-cfmodel true --device.glosa.max-speedfactor 1.2
