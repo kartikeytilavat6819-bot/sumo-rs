@@ -4087,7 +4087,7 @@ impl MSPModel_Striping_PState {
             if self.myPerson.get_id() == "pedNS.3" {
                 let ov = &obs[current as usize];
                 let vid = if ov.vehicle.is_null() { "null".to_string() } else { ov.vehicle.get_id().to_string() };
-                let vw = if ov.vehicle.is_null() { -1. } else { ov.vehicle.cast::<crate::microsim::ms_vehicle::MSVehicle>().get_waiting_time(false) };
+                let vw = if ov.vehicle.is_null() { -1 } else { ov.vehicle.cast::<crate::microsim::ms_vehicle::MSVehicle>().get_waiting_time(false) };
                 eprintln!("DBG jam pedNS.3 t={} wait={} xDist={} lane={} sharedWA={} jamCross={} jamTime={} obsVeh={} obsWait={} jammed={}", MSNet::get_instance().get_current_time_step(), self.myWaitingTime, xDist, self.myLane.get_id(), sharedWA, jam_time_crossing(), jam_time(), vid, vw, self.myAmJammed);
             }
             let jamTimeHere = if self.myLane.is_crossing()
