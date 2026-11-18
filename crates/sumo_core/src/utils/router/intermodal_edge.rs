@@ -431,8 +431,7 @@ where
         if edge.is_null() {
             0.
         } else {
-            // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
-            let factor = utils::options::options_cont::get_float("weights.random-factor");
+            let factor = utils::common::std_defs::g_weights_random_factor();
             edge.get_travel_time(trip, time)
                 * utils::common::rand_helper::with_default(|r| r.rand_range(1., factor))
                 * Self::get_routing_factor(edge, trip)
