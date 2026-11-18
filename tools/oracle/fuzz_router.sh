@@ -34,14 +34,14 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
     spider) net="--spider --spider.arm-number 4 --spider.circle-number 2 --spider.space-radius 150 $net";;
     rand)   net="--rand --rand.iterations 12 --rand.max-distance 300 --rand.grid $net";;
   esac
-  "$OFF/netgenerate" $net -o "$d/ref_simple.net.xml" >"$d/gen.log" 2>&1 || { echo "GENFAIL(net)"; return 1; }
+  "$OFF/netgenerate" $net -o "$d/ref_simple.net.xml" >"$d/gen.log" 2>&1 || { echo "GENERR(net): $(tail -3 "$d/gen.log" | tr -d '\r' | tr '\n' ' ' | cut -c1-180) | net=$net"; return 1; }
 
   r 4; p=(2 3 5 7); p=${p[$R]}
   r 5; e=$((R * 40 + 100))
   r 6; local ff=(1 2 3 5 8 13); ff=${ff[$R]}
   local rt="-n $d/ref_simple.net.xml -e $e --seed $s --fringe-factor $ff --validate"
   "$PY" "$SUMO_HOME/tools/randomTrips.py" $rt -p $p --prefix v \
-      -o "$d/trips.xml" >"$d/rt.log" 2>&1 || { echo "GENFAIL(trips)"; return 1; }
+      -o "$d/trips.xml" >"$d/rt.log" 2>&1 || { echo "GENERR(trips): $(grep -m1 -iE 'error' "$d/rt.log" | tr -d '\r' | cut -c1-140)"; return 1; }
 
   # ---- random option draws ----
   r 6; algo=(dijkstra astar CH CHWrapper CCH arcflag); algo=${algo[$R]}
@@ -63,7 +63,7 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   [ $flows = 0 ] && {
     "$PY" - "$d/trips.xml" "$d/flows.xml" "$e" <<'PYEOF'
 import sys, xml.etree.ElementTree as ET
-r = ET.parse(sys.argv[1]).getroot(); end = int(sys.argv[2])
+r = ET.parse(sys.argv[1]).getroot(); end = int(sys.argv[3])
 ts = [t for t in r.findall('trip')]
 out = ET.Element('flows')
 for i, t in enumerate(ts[:6]):
@@ -150,7 +150,7 @@ PYEOF
 
 run_cmp() {  # run_cmp <dir>; sets DIFF; 0 PASS, 1 FAIL, 2 PANIC/TIMEOUT, 3 REFFAIL
   local d=$1 w bin rc f
-  local args="-n $d/ref_simple.net.xml $(cat "$d/dua.args")"
+  local args="$(cat "$d/dua.args")"
   for w in ref cand; do
     bin=$OFF; [ $w = cand ] && bin=$OURS
     rm -rf "$d/$w"; mkdir -p "$d/$w"
@@ -158,7 +158,7 @@ run_cmp() {  # run_cmp <dir>; sets DIFF; 0 PASS, 1 FAIL, 2 PANIC/TIMEOUT, 3 REFF
     timeout ${FUZZ_TMO:-60} "$bin/duarouter" $wa >"$d/$w.log" 2>&1
     rc=$?
     if [ $rc -ne 0 ]; then
-      if [ $w = ref ]; then DIFF="REFFAIL rc=$rc $(grep -m1 -iE 'error' "$d/ref.log" | tr -d '\r' | cut -c1-90)"; return 3; fi
+      if [ $w = ref ]; then DIFF="REFERR rc=$rc $(grep -m1 -iE 'error' "$d/ref.log" | tr -d '\r' | cut -c1-90)"; return 3; fi
       DIFF="rc=$rc $(grep -m1 -E 'panicked at|Error:' "$d/cand.log" | tr -d '\r' | cut -c1-120)"; return 2
     fi
     if grep -q 'panicked at' "$d/$w.log"; then
@@ -198,17 +198,17 @@ for ((s = FIRST; s < FIRST + N; s++)); do
   run_cmp "$d"; rc=$?
   case $rc in
     0) st=PASS; P=$((P+1));;
-    1) st=FAIL; F=$((F+1));;
+    1) st=DIFF; F=$((F+1));;
     2) st=PANIC; F=$((F+1));;
-    3) st=REFFAIL; R=$((R+1));;
+    3) st=REFERR; R=$((R+1));;
   esac
-  if [ $rc -eq 1 ] || [ $rc -eq 2 ]; then : > "$d/FAIL"; fi
+  if [ $rc -eq 1 ] || [ $rc -eq 2 ]; then : > "$d/.diff_found"; fi
   echo "seed $s $st ${DIFF:+| $DIFF} | $params" | cut -c1-500
 done
-echo "=== PASS=$P FAIL=$F REFFAIL=$R"
+echo "=== PASS=$P DIFF=$F REFERR=$R"
 for s in $(seq $FIRST $((FIRST + N - 1))); do
-  d=$OUT/seed$s; [ -f "$d/FAIL" ] || continue
-  echo "===== FAIL SEED $s"
+  d=$OUT/seed$s; [ -f "$d/.diff_found" ] || continue
+  echo "===== DIFF SEED $s"
   echo "--- diff"; cat "$d"/*.diff 2>/dev/null | head -20
   dump_case "$d"
 done
