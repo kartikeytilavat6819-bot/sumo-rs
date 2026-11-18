@@ -1,0 +1,1 @@
+--trip-files @CASE@/persons.xml --routing-algorithm astar --persontrip.walkfactor 0.5 --persontrip.walk-opposite-factor 0.8 --output-file @DIR@/routes.rou.xml
