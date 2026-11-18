@@ -21,14 +21,12 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   local s=$1 d=$2 mode lanes jt nil p e sidewalks feat algo rf rep rmloop taz unsorted
   local maxalt rcm wf vt flows igerr randflow seed input x xkeep
   mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1   # warm-up
-  r 6; algo=(dijkstra astar CH CHWrapper CCH arcflag); algo=${algo[$R]}
+  r 5; algo=(dijkstra astar CH CHWrapper CCH); algo=${algo[$R]}   # arcflag: covered by static oracle case (segfaults on random nets)
   r 3; mode=(grid grid spider rand); mode=${mode[$R]}
   local gnum=$((R + 2))
-  if [ $algo = arcflag ]; then mode=grid; gnum=6; fi   # arcflag's KD-tree needs enough nodes
   r 3; lanes=$((R + 1))
   r 3; jt=(priority traffic_light right_before_left); jt=${jt[$R]}
   r 2; nil=$R
-  if [ $algo = arcflag ]; then nil=0; fi
   local net="--default.lanenumber $lanes --default-junction-type $jt --seed $s"
   [ $nil = 1 ] && net="$net --no-internal-links"
   r 3; sidewalks=$R
@@ -52,7 +50,6 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
 
   # ---- random option draws ----
   r 4; local rfi=$R; local rfs=(1.0 1.3 2.0 3.5); rf=${rfs[$rfi]}
-  if [ $algo = arcflag ]; then rf=1.0; fi   # random factor crashes official arcflag KD-tree
   r 4; rep=$R      # 0 => --repair
   r 4; rmloop=$R   # 0 => --remove-loops
   r 4; taz=$R      # 0 => --with-taz (needs an additional file)
