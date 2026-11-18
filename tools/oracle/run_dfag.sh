@@ -23,7 +23,7 @@ run_case() {
   local c=$1 cdir=tools/oracle/cases/$1
   local sub=$OUT/$c args rargs cargs rrc crc verdict detail="" f
   rm -rf "$sub"; mkdir -p "$sub/ref" "$sub/cand"
-  args=$(tr -d "" < "$cdir/args")
+  args=$(tr -d "\r" < "$cdir/args")
   rargs=${args//@DIR@/$sub/ref}; cargs=${args//@DIR@/$sub/cand}
   "$REF_BIN" $rargs >"$sub/ref.log" 2>&1; rrc=$?
   "$BIN" $cargs >"$sub/cand.log" 2>&1; crc=$?
