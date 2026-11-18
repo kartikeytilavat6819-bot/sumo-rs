@@ -319,7 +319,6 @@ impl NBTrafficLightLogicCont {
     #[allow(unused_variables)]
     pub fn rename(&mut self, tlDef: Ptr<NBTrafficLightDefinition>, newID: &str) {
         let oldID = tlDef.get_id().to_string();
-        eprintln!("OC68 rename: oldID={oldID} newID={newID} defKeys={:?} compKeys={:?}", self.myDefinitions.keys().collect::<Vec<_>>(), self.myComputed.keys().collect::<Vec<_>>());
         if let Some(programs) = self.myDefinitions.get(&oldID).cloned() {
             for item in programs.values() {
                 item.m().set_id(newID);
