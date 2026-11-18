@@ -48,6 +48,7 @@ VALUE_OPTS = {
     "-n", "-o", "-s", "-t", "-a", "-e", "-i", "-b", "-c", "-d", "-p", "-x", "-y",
     "--net-file", "--net", "--sumo-net-file", "--node-files", "--edge-files",
     "--connection-files", "--type-files", "--tllogic-files", "--additional-files",
+    "--additional", "--districts",
     "--edge-data-files", "--edge-permission-files", "--trip-files", "--route-files",
     "--flow-files", "--alternatives-files", "--weights", "--weight-files",
     "--taz-files", "--shapes", "--opendrive-files", "--osm-files", "--matsim-files",
@@ -81,6 +82,7 @@ SKIP_TOKENS = (
     "netedit", "sumo-gui", "netgen.py", "polyconvert", "netconvert.py", ".jar",
     "java", "--gui", "--xdot", "--gdal", "xdot.py", "python",
     "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output",
+    "--routing-threads",  # parallel routing needs Fox; our build is single-threaded
 )
 
 
@@ -274,10 +276,15 @@ def rewrite(tokens: list[str], app: str, copied: dict[str, Path], case: Path,
             continue
 
         # Input operands: match the longest copied relative path, then the basename.
+        # File-list options also accept comma-separated names; rewrite each part.
         if val and (had_eq or key in VALUE_OPTS):
-            target = _find_copied(val, copied)
-            if target is not None:
-                result.append(fmt(key, case_path(target)))
+            parts = val.split(",")
+            targets = [_find_copied(p, copied) for p in parts]
+            if len(parts) == 1 and targets[0] is not None:
+                result.append(fmt(key, case_path(targets[0])))
+                continue
+            if len(parts) > 1 and all(t is not None for t in targets):
+                result.append(fmt(key, ",".join(case_path(t) for t in targets)))
                 continue
         elif tok and not tok.startswith("-"):
             target = _find_copied(tok, copied)
