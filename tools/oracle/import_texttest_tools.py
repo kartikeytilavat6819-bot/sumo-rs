@@ -75,7 +75,8 @@ NET_OUT_OPTS = {
 }
 DUA_OUT_OPTS = {
     "-o", "--output-file", "--alt-output-file", "--vtype-output",
-    "--write-trips", "--write-trips.geo", "--save-configuration", "--log",
+    # --write-trips / --write-trips.geo are booleans, not output paths
+    "--save-configuration", "--log",
 }
 SKIP_TOKENS = (
     "netedit", "sumo-gui", "netgen.py", "polyconvert", "netconvert.py", ".jar",

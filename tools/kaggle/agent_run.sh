@@ -12,6 +12,7 @@ if [ ! -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
   timeout 300 cargo build -p duarouter --message-format short >"$OUT/build.log" 2>&1 || tail -10 "$OUT/build.log"
 fi
 
+export RUST_BACKTRACE=1
 mapfile -t DU < <(cd tools/oracle/cases && ls -d duarouter_itt_* 2>/dev/null)
 echo "IMPORTED DUA CASES: ${#DU[@]}"
 OUT="$OUT/dua" timeout 900 bash tools/oracle/run_duarouter.sh "${DU[@]}" >"$OUT/dua.log" 2>&1
@@ -32,6 +33,15 @@ while IFS=$'\t' read -r case verdict rrc crc detail; do
     head -30 "$f"
   done
   echo "--- cand.log tail ---"
-  head -8 "$OUT/dua/$case/cand.log" 2>/dev/null
+  if [ "$verdict" = "PANIC" ]; then
+    grep -A40 'panicked at' "$OUT/dua/$case/cand.log" 2>/dev/null | head -45
+  else
+    head -8 "$OUT/dua/$case/cand.log" 2>/dev/null
+  fi
   n=$((n+1))
 done < "$R"
+echo "--- all PANIC backtraces ---"
+grep -l 'panicked at' "$OUT/dua"/*/cand.log 2>/dev/null | while read -r f; do
+  echo "=== $f ==="
+  grep -A45 'panicked at' "$f" | head -50
+done

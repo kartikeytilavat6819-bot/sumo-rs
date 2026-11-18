@@ -2822,7 +2822,8 @@ impl RORouteHandler {
             if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
                 let lastLength = self.myActiveRoute.last().unwrap().get_length();
                 let val: String = attrs.get(SUMO_ATTR_ARRIVALPOS, &objId, &mut ok, true);
-                arrivalPos = SUMOVehicleParserHelper::parse_walk_pos(SUMO_ATTR_ARRIVALPOS, self.myHardFail, &objId, lastLength, &val, SUMORouteHandler::get_parsing_rng());
+                // C++ RORouteHandler::addWalk calls parseWalkPos without an rng -> default RandHelper generator
+                arrivalPos = SUMOVehicleParserHelper::parse_walk_pos(SUMO_ATTR_ARRIVALPOS, self.myHardFail, &objId, lastLength, &val, Ptr::null());
             }
             let mut stoppingPlaceID = String::new();
             let errorSuffix = format!(" for walk of person '{}'", self.myVehicleParameter.id);
@@ -2891,13 +2892,14 @@ impl RORouteHandler {
         if !toEdge.is_null() {
             if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
                 let val: String = attrs.get(SUMO_ATTR_ARRIVALPOS, &description, ok, true);
+                // C++ RORouteHandler::parseWalkPositions calls parseWalkPos without an rng -> default RandHelper generator
                 *arrivalPos = SUMOVehicleParserHelper::parse_walk_pos(
                     SUMO_ATTR_ARRIVALPOS,
                     self.myHardFail,
                     &description,
                     toEdge.get_length(),
                     &val,
-                    SUMORouteHandler::get_parsing_rng(),
+                    Ptr::null(),
                 );
             }
         } else {
