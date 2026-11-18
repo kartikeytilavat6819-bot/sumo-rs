@@ -52,7 +52,7 @@ impl ROPerson_PersonTrip {
     #[allow(unused_variables)]
     pub fn new(_to: Ptr<ROEdge>, _stopDest: String) -> Self {
         ROPerson_PersonTrip {
-            base: ROPerson_PlanItem { base: Parameterised::default() },
+            base: ROPerson_PlanItem { base: Parameterised::default(), kind: 1 },
             from: Ptr::null(),
             to: _to,
             modes: SVC_PEDESTRIAN,
@@ -74,7 +74,7 @@ impl ROPerson_PersonTrip {
     #[allow(unused_variables)]
     pub fn new_2(_from: Ptr<ROEdge>, _to: Ptr<ROEdge>, modeSet: SVCPermissions, departPos: f64, _stopOrigin: &str, arrivalPos: f64, _stopDest: &str, _walkFactor: f64, _group: &str) -> Self {
         ROPerson_PersonTrip {
-            base: ROPerson_PlanItem { base: Parameterised::default() },
+            base: ROPerson_PlanItem { base: Parameterised::default(), kind: 1 },
             from: _from,
             to: _to,
             modes: modeSet,
@@ -497,6 +497,8 @@ impl ROPerson_PersonTrip {
 pub struct ROPerson_PlanItem {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
+    /// determinism-free virtual dispatch tag: 1 = PersonTrip, 2 = Stop (C++ vtable)
+    pub kind: u8,
 }
 
 impl std::ops::Deref for ROPerson_PlanItem {
@@ -527,7 +529,11 @@ impl ROPerson_PlanItem {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<ROPerson_PlanItem> {
-        panic!("ROPerson::PlanItem::clone is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().clone(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().clone(),
+            _ => panic!("ROPerson::PlanItem::clone is pure virtual"),
+        }
     }
 
     /// C++: `void PlanItem::addTripItem(TripItem *)` [virtual]
@@ -543,35 +549,53 @@ impl ROPerson_PlanItem {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        panic!("ROPerson::PlanItem::getOrigin is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().get_origin(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_origin(),
+            _ => panic!("ROPerson::PlanItem::getOrigin is pure virtual"),
+        }
     }
 
     /// C++: `const ROEdge * PlanItem::getDestination() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        panic!("ROPerson::PlanItem::getDestination is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().get_destination(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_destination(),
+            _ => panic!("ROPerson::PlanItem::getDestination is pure virtual"),
+        }
     }
 
     /// C++: `double PlanItem::getDestinationPos() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        panic!("ROPerson::PlanItem::getDestinationPos is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().get_destination_pos(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_destination_pos(),
+            _ => panic!("ROPerson::PlanItem::getDestinationPos is pure virtual"),
+        }
     }
 
     /// C++: `void PlanItem::saveVehicles(OutputDevice &, OutputDevice *const, bool, OptionsCont &) const` [const, virtual]
     // virtual void saveVehicles(OutputDevice& /* os */, OutputDevice* const /* typeos */, bool /* asAlternatives */, OptionsCont& /* options */) const {}
     #[allow(unused_variables)]
     pub fn save_vehicles(&self, arg0: &mut OutputDevice, arg1: Ptr<OutputDevice>, arg2: bool, arg3: &mut OptionsCont) {
-        // C++ body is an empty virtual no-op
+        if self.kind == 1 {
+            Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().save_vehicles(arg0, arg1, arg2, arg3);
+        }
     }
 
     /// C++: `void PlanItem::saveAsXML(OutputDevice &, const bool, const bool, OptionsCont &) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, asTrip: bool, options: &mut OptionsCont) {
-        panic!("ROPerson::PlanItem::saveAsXML is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().save_as_xml(os, extended, asTrip, options),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().save_as_xml(os, extended, asTrip, options),
+            _ => panic!("ROPerson::PlanItem::saveAsXML is pure virtual"),
+        }
     }
 
     /// C++: `bool PlanItem::isStop() const` [const, virtual]
@@ -580,7 +604,7 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn is_stop(&self) -> bool {
-        false
+        self.kind == 2
     }
 
     /// C++: `bool PlanItem::needsRouting() const` [const, virtual]
@@ -589,7 +613,7 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn needs_routing(&self) -> bool {
-        false
+        self.kind == 1 && Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().needs_routing()
     }
 
     /// C++: `SUMOVehicleParameter::Stop * PlanItem::getStopParameters()` [virtual]
@@ -598,6 +622,9 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_parameters(&mut self) -> Ptr<SUMOVehicleParameter_Stop> {
+        if self.kind == 2 {
+            return Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_stop_parameters();
+        }
         Ptr::null()
     }
 
@@ -605,7 +632,11 @@ impl ROPerson_PlanItem {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        panic!("ROPerson::PlanItem::getDuration is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().get_duration(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_duration(),
+            _ => panic!("ROPerson::PlanItem::getDuration is pure virtual"),
+        }
     }
 
     /// C++: `const std::string & PlanItem::getStopDest() const` [const, virtual]
@@ -614,7 +645,11 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_dest(&self) -> &str {
-        UNDEFINED_STOPPING_PLACE
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().get_stop_dest(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_stop_dest(),
+            _ => UNDEFINED_STOPPING_PLACE,
+        }
     }
 
 }
@@ -1260,7 +1295,7 @@ impl ROPerson_Ride {
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, _from: Ptr<ROEdge>, _to: Ptr<ROEdge>, _lines: &str, _group: &str, cost: f64, arrivalPos: f64, _length: f64, _destStop: &str, _intended: &str, _depart: SUMOTime) -> Self {
         ROPerson_Ride {
-            base: ROPerson_TripItem::new(start, cost),
+            base: ROPerson_TripItem { kind: 1, ..ROPerson_TripItem { kind: 2, ..ROPerson_TripItem { kind: 2, ..ROPerson_TripItem::new(start, cost) } } },
             from: _from,
             to: _to,
             lines: _lines.to_string(),
@@ -1440,7 +1475,7 @@ impl ROPerson_Stop {
     #[allow(unused_variables)]
     pub fn new(stop: &SUMOVehicleParameter_Stop, stopEdge: Ptr<ROEdge>) -> Self {
         ROPerson_Stop {
-            base: ROPerson_PlanItem { base: Parameterised::default() },
+            base: ROPerson_PlanItem { base: Parameterised::default(), kind: 2 },
             stopDesc: stop.clone(),
             edge: stopEdge,
         }
@@ -1568,6 +1603,8 @@ impl ROPerson_Stop {
 pub struct ROPerson_TripItem {
     pub myStart: SUMOTime,
     pub myCost: f64,
+    /// virtual dispatch tag: 1 = Ride, 2 = Walk (C++ vtable)
+    pub kind: u8,
 }
 
 impl ROPerson_TripItem {
@@ -1576,7 +1613,7 @@ impl ROPerson_TripItem {
     //             : myStart(start), myCost(cost) {}
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, cost: f64) -> Self {
-        ROPerson_TripItem { myStart: start, myCost: cost }
+        ROPerson_TripItem { myStart: start, myCost: cost, kind: 0 }
     }
 
     /// C++: `void TripItem::~TripItem() noexcept` [virtual]
@@ -1591,35 +1628,55 @@ impl ROPerson_TripItem {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<ROPerson_TripItem> {
-        panic!("ROPerson::TripItem::clone is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Ride>().m().clone(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Walk>().m().clone(),
+            _ => panic!("ROPerson::TripItem::clone is pure virtual"),
+        }
     }
 
     /// C++: `const ROEdge * TripItem::getOrigin() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        panic!("ROPerson::TripItem::getOrigin is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Ride>().m().get_origin(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Walk>().m().get_origin(),
+            _ => panic!("ROPerson::TripItem::getOrigin is pure virtual"),
+        }
     }
 
     /// C++: `const ROEdge * TripItem::getDestination() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        panic!("ROPerson::TripItem::getDestination is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Ride>().m().get_destination(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Walk>().m().get_destination(),
+            _ => panic!("ROPerson::TripItem::getDestination is pure virtual"),
+        }
     }
 
     /// C++: `double TripItem::getDestinationPos() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        panic!("ROPerson::TripItem::getDestinationPos is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Ride>().m().get_destination_pos(),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Walk>().m().get_destination_pos(),
+            _ => panic!("ROPerson::TripItem::getDestinationPos is pure virtual"),
+        }
     }
 
     /// C++: `void TripItem::saveAsXML(OutputDevice &, const bool, OptionsCont &) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, options: &mut OptionsCont) {
-        panic!("ROPerson::TripItem::saveAsXML is pure virtual: a subclass must implement it")
+        match self.kind {
+            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Ride>().m().save_as_xml(os, extended, options),
+            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Walk>().m().save_as_xml(os, extended, options),
+            _ => panic!("ROPerson::TripItem::saveAsXML is pure virtual"),
+        }
     }
 
     /// C++: `SUMOTime TripItem::getStart() const` [const]
