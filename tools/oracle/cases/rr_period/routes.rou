@@ -1,0 +1,11 @@
+<routes>
+    <!-- two parallel edges 11 (top) / 12 (bottom) between junctions 2 and 4 -->
+    <vType id="car" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5"/>
+    <route id="via_top" edges="10 11 13"/>
+    <route id="via_bottom" edges="10 12 13"/>
+    <vehicle id="v0" route="via_top" depart="0"/>
+    <vehicle id="v1" route="via_top" depart="5"/>
+    <vehicle id="v2" route="via_top" depart="10"/>
+    <vehicle id="v3" route="via_top" depart="15"/>
+    <vehicle id="v4" route="via_top" depart="20"/>
+</routes>

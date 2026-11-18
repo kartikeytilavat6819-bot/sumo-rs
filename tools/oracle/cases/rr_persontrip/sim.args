@@ -1,0 +1,1 @@
+--end 200 --seed 5 --person-device.rerouting.probability 1 --person-device.rerouting.period 20 --person-device.rerouting.scope trip --additional-files tools/oracle/cases/rr_persontrip/ped_pt.add.xml

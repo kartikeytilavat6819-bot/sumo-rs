@@ -1,0 +1,24 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6" sigma="0"/>
+    <route id="rL" edges="E0 E1 E2"/>
+    <flow id="L1f" type="bus" route="rL" line="L1" begin="0.00" end="200.00" period="60.00" departSpeed="max">
+        <stop busStop="bs0" until="30.00" duration="15.00"/>
+        <stop busStop="bs1" until="120.00"/>
+    </flow>
+    <person id="p0" type="ped" depart="5">
+        <personTrip from="E0" to="E2" modes="public"/>
+    </person>
+    <person id="p1" type="ped" depart="15" departPos="10">
+        <personTrip from="E0" to="E1" modes="public"/>
+    </person>
+    <person id="p2" type="ped" depart="35">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90"/>
+    </person>
+    <person id="p3" type="ped" depart="45">
+        <personTrip from="E1" to="E2" modes="public"/>
+    </person>
+    <person id="p4" type="ped" depart="70">
+        <personTrip from="E0" to="E2" modes="public"/>
+    </person>
+</routes>

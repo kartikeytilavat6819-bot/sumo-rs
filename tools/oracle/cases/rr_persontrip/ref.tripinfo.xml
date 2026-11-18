@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:03:51.064016-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rr_persontrip/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rr_persontrip/routes.rou"/>
+        <additional-files value="tools/oracle/cases/rr_persontrip/ped_pt.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.tripinfo.xml"/>
+        <personroute-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.personroute.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc07/tools/oracle/cases/rr_persontrip/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <routing>
+        <person-device.rerouting.probability value="1"/>
+        <person-device.rerouting.period value="20"/>
+        <person-device.rerouting.scope value="trip"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="5"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="L1f.0" depart="0.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="126.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="6.61" duration="126.00" routeLength="288.10" waitingTime="1.00" waitingCount="1" stopTime="85.00" timeLoss="7.36" rerouteNo="0" devices="tripinfo_L1f.0 fcd_L1f.0" vType="bus" speedFactor="1.00" vaporized=""/>
+    <personinfo id="p1" depart="15.00" type="ped" speedFactor="0.88" duration="112.00" waitingTime="0.00" timeLoss="12.60" traveltime="112.00">
+        <walk depart="15.00" departPos="10.00" arrival="127.00" arrivalPos="50.00" duration="112.00" routeLength="140.00" timeLoss="12.60" maxSpeed="1.41" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p3" depart="45.00" type="ped" speedFactor="1.16" duration="89.00" waitingTime="0.00" timeLoss="8.20" traveltime="89.00">
+        <walk depart="45.00" departPos="0.00" arrival="134.00" arrivalPos="50.00" duration="89.00" routeLength="150.00" timeLoss="8.20" maxSpeed="1.86" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p0" depart="5.00" type="ped" speedFactor="1.01" duration="173.00" waitingTime="0.00" timeLoss="18.47" traveltime="173.00">
+        <walk depart="5.00" departPos="0.00" arrival="178.00" arrivalPos="50.00" duration="173.00" routeLength="250.00" timeLoss="18.47" maxSpeed="1.62" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="L1f.1" depart="60.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="186.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="5.42" duration="126.00" routeLength="288.10" waitingTime="12.00" waitingCount="1" stopTime="68.00" timeLoss="21.10" rerouteNo="0" devices="tripinfo_L1f.1 fcd_L1f.1" vType="bus" speedFactor="1.00" vaporized=""/>
+    <personinfo id="p2" depart="35.00" type="ped" speedFactor="1.00" duration="161.00" waitingTime="10.00" timeLoss="-87.07" traveltime="151.00">
+        <walk depart="35.00" departPos="0.00" arrival="105.00" arrivalPos="90.00" duration="70.00" routeLength="290.00" timeLoss="-111.70" maxSpeed="1.60" waitingTime="0.00"/>
+        <walk depart="105.00" departPos="99.77" arrival="140.00" arrivalPos="50.00" duration="35.00" routeLength="50.23" timeLoss="3.53" maxSpeed="1.60" waitingTime="0.00"/>
+        <ride waitingTime="10.00" vehicle="L1f.2" depart="150.00" arrival="189.00" arrivalPos="80.00" duration="39.00" routeLength="120.12" timeLoss="20.38"/>
+        <walk depart="189.00" departPos="80.00" arrival="196.00" arrivalPos="90.00" duration="7.00" routeLength="10.00" timeLoss="0.73" maxSpeed="1.60" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

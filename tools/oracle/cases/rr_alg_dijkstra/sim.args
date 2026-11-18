@@ -1,0 +1,1 @@
+--end 200 --routing-algorithm dijkstra --device.rerouting.probability 1 --device.rerouting.period 10 --additional-files tools/oracle/cases/rr_alg_dijkstra/closing.add.xml

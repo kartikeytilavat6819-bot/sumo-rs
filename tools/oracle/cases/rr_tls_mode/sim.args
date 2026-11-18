@@ -1,0 +1,1 @@
+--end 200 --device.rerouting.probability 1 --device.rerouting.period 10 --device.rerouting.mode 1 --weights.tls-penalty 5 --additional-files tools/oracle/cases/rr_tls_mode/closing.add.xml
