@@ -1,0 +1,2 @@
+Official sumo exits 1 (error-only test): Duration of phase 4 for tlLogic '0' program '2' is zero.
+No tripinfo/fcd output, so it cannot be an oracle row.

@@ -1,0 +1,2 @@
+Official sumo exits 1 (error-only test): TLS program '2' for TLS '0' has a duration of 0.
+No tripinfo/fcd output, so it cannot be an oracle row.
