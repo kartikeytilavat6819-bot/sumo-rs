@@ -2726,7 +2726,8 @@ impl RORouteHandler {
         if ok {
             let originStopID: String = if planPtr.m().is_empty() { String::new() } else { planPtr.m().last().unwrap().get_stop_dest().to_string() };
             ROPerson::add_trip(planPtr.m(), &id, from, to, modeSet, &types, departPos, &originStopID, arrivalPos, &busStopID, walkFactor, &group);
-            // shortcut: myParamStack is an i32 counter in the skeleton, C++ pushes the new plan item pointer onto it
+            let last = *planPtr.m().last().unwrap();
+            self.myParamStack.push(last.cast::<Parameterised>());
         }
     }
 
@@ -2830,7 +2831,8 @@ impl RORouteHandler {
             if ok {
                 let planPtr = self.myActivePlan;
                 ROPerson::add_walk(planPtr.m(), &self.myActiveRoute, duration, speed, departPos, arrivalPos, &stoppingPlaceID);
-                // shortcut: myParamStack is an i32 counter in the skeleton, C++ pushes the new plan item pointer onto it
+                let last = *planPtr.m().last().unwrap();
+                self.myParamStack.push(last.cast::<Parameterised>());
             }
         } else {
             self.add_person_trip(attrs);

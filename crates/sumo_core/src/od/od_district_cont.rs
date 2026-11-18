@@ -60,8 +60,7 @@ impl ODDistrictCont {
         let Some(district) = self.base.get(name) else {
             panic!("{}", ProcessError::InvalidArgument(format!("There is no district '{}'.", name)));
         };
-        // shortcut: C++ catches OutOfBoundsException from getRandomSource() and rethrows ProcessError; ODDistrict::get_random_source panics instead of returning an error, so no catch here, upgrade when ODDistrict returns Result
-        district.get_random_source()
+        district.get_random_source().unwrap_or_else(|_| panic!("{}", ProcessError::new(utils::tlf!("District '%' does not provide any valid source.", name))))
     }
 
     /// C++: `std::string ODDistrictCont::getRandomSinkFromDistrict(const std::string &) const` [const]
@@ -85,8 +84,7 @@ impl ODDistrictCont {
         let Some(district) = self.base.get(name) else {
             panic!("{}", ProcessError::InvalidArgument(format!("There is no district '{}'.", name)));
         };
-        // shortcut: C++ catches OutOfBoundsException from getRandomSink() and rethrows ProcessError; ODDistrict::get_random_sink panics instead of returning an error, so no catch here, upgrade when ODDistrict returns Result
-        district.get_random_sink()
+        district.get_random_sink().unwrap_or_else(|_| panic!("{}", ProcessError::new(utils::tlf!("District '%' does not provide any valid sink.", name))))
     }
 
     /// C++: `void ODDistrictCont::loadDistricts(std::vector<std::string>)`
