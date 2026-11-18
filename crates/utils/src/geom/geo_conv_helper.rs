@@ -496,6 +496,8 @@ struct Etmerc {
     e: f64,
     alpha: [f64; 6],
     beta: [f64; 6],
+    /// spherical Mercator (`+proj=merc`) instead of extended transverse Mercator
+    merc: bool,
 }
 
 /// PROJ `adjlon`: wraps a longitude difference into [-pi, pi]
@@ -530,10 +532,17 @@ impl Etmerc {
             4583. * n5 / 161280. - 108847. * n6 / 3991680.,
             20648693. * n6 / 638668800.,
         ];
-        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta, merc: false }
     }
 
-    /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
+    /// Spherical Mercator (`+proj=merc`), matching PROJ with a==b:
+    /// x = x0 + k0*a*(lon-lon0), y = y0 + k0*a*ln(tan(pi/4 + lat/2))
+    fn new_merc(a: f64, k0: f64, lon0: f64, x0: f64, y0: f64, lat_ts: f64) -> Etmerc {
+        let k = if lat_ts == 0. { k0 } else { k0 * deg2rad(lat_ts).cos() };
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k * a, e: 0., alpha: [0.; 6], beta: [0.; 6], merc: true }
+    }
+
+    /// Parses the `+proj=utm`, `+proj=tmerc` (lat_0=0) and `+proj=merc` strings this port projects; None for anything else
     fn from_proj(proj: &str) -> Option<Etmerc> {
         let mut kind = None;
         let mut zone = None;
@@ -545,6 +554,9 @@ impl Etmerc {
         let mut k0 = 1.;
         let mut x0 = 0.;
         let mut y0 = 0.;
+        let mut a_opt = None;
+        let mut b_opt = None;
+        let mut lat_ts = 0.;
         for tok in proj.split_whitespace() {
             let body = tok.strip_prefix('+')?;
             let (key, val) = body.split_once('=').unwrap_or((body, ""));
@@ -554,6 +566,9 @@ impl Etmerc {
                 "south" => south = true,
                 "ellps" => ellps = Some(val),
                 "datum" => datum = Some(val),
+                "a" => a_opt = Some(val.parse::<f64>().ok()?),
+                "b" => b_opt = Some(val.parse::<f64>().ok()?),
+                "lat_ts" => lat_ts = val.parse::<f64>().ok()?,
                 "lon_0" => lon0 = val.parse::<f64>().ok()?,
                 "lat_0" => lat0 = val.parse::<f64>().ok()?,
                 "k" | "k_0" => k0 = val.parse::<f64>().ok()?,
@@ -561,6 +576,16 @@ impl Etmerc {
                 "y_0" => y0 = val.parse::<f64>().ok()?,
                 _ => {}
             }
+        }
+        if kind? == "merc" {
+            let a = a_opt?;
+            // PROJ +proj=merc is spherical (a == b); a missing b means a sphere.
+            if let Some(b) = b_opt {
+                if (a - b).abs() > 1e-9 {
+                    return None;
+                }
+            }
+            return Some(Etmerc::new_merc(a, k0, lon0, x0, y0, lat_ts));
         }
         let (a, rf) = match (ellps, datum) {
             (Some("WGS84"), _) | (None, Some("WGS84")) => (6378137., 298.257223563),
@@ -584,6 +609,9 @@ impl Etmerc {
     /// forward: lon/lat in radians to easting/northing
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
         let lam = adjlon(lon - self.lon0);
+        if self.merc {
+            return (self.x0 + self.qn * lam, self.y0 + self.qn * (PI / 4. + lat / 2.).tan().ln());
+        }
         let s = lat.sin();
         let psi = s.atanh() - self.e * (self.e * s).atanh();
         let t = psi.sinh();
@@ -600,6 +628,11 @@ impl Etmerc {
 
     /// inverse: easting/northing to lon/lat in radians
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        if self.merc {
+            let lon = self.lon0 + (x - self.x0) / self.qn;
+            let lat = (2. * ((y - self.y0) / self.qn).exp().atan() - PI / 2.);
+            return (adjlon(lon), lat);
+        }
         let xi = (y - self.y0) / self.qn;
         let eta = (x - self.x0) / self.qn;
         let (mut xi0, mut eta0) = (xi, eta);
@@ -656,6 +689,19 @@ mod tests {
         GeoConvHelper::init("!", Position::new(5., 5.), Boundary::new(), Boundary::new(), 1.0);
         GeoConvHelper::compute_final(false);
         assert_eq!(GeoConvHelper::with_final(|f| f.get_offset()), Position::new(5., 5.));
+    }
+
+    #[test]
+    fn web_mercator() {
+        let proj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs";
+        let h = GeoConvHelper::new(proj, Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(15.5835, 58.395);
+        assert!(h.x2cartesian_const(&mut p));
+        // EPSG:3857: x = a*lon(rad), y = a*ln(tan(pi/4+lat/2))
+        assert!((p.x() - 6378137. * (15.5835_f64).to_radians()).abs() < 1e-3);
+        h.cartesian2geo(&mut p);
+        assert!((p.x() - 15.5835).abs() < 1e-6);
+        assert!((p.y() - 58.395).abs() < 1e-6);
     }
 
     #[test]
