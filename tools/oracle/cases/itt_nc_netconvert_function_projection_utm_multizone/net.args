@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_function_projection_utm_multizone/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_projection_utm_multizone/input_nodes.nod.xml --proj.utm

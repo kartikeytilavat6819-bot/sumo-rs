@@ -1,0 +1,1 @@
+--write-license --no-internal-links -v --edge-files=tools/oracle/cases/itt_nc_netconvert_function_speed_modification/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_speed_modification/input_nodes.nod.xml --speed.factor 2 --speed.offset 3

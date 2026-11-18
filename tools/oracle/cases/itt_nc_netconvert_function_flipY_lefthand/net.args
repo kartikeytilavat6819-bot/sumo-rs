@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_flipY_lefthand/input_net.net.xml --flip-y-axis

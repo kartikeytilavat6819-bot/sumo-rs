@@ -1,0 +1,1 @@
+--write-license -e input_plain.edg.xml,input_edges.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_geometry_remove_after_merge/input_plain.nod.xml --no-turnarounds --no-internal-links -R --edges.join --junctions.join-same 0.1

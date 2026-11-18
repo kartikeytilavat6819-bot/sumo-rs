@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_geometry_remove_overlapping_same_dir/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_geometry_remove_overlapping_same_dir/input_plain.nod.xml --no-turnarounds --no-internal-links -R
