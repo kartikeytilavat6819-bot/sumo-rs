@@ -1,0 +1,38 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <routeDistribution id="rd">
+        <route id="r0" edges="A B C D" probability="0.5"/>
+        <route id="r1" edges="A B" probability="0.3"/>
+        <route id="r2" edges="D" probability="0.2"/>
+    </routeDistribution>
+    <vehicle id="v00" type="car" depart="0.00" route="rd" departSpeed="max"/>
+    <vehicle id="v01" type="car" depart="1.00" route="rd" departSpeed="max"/>
+    <vehicle id="v02" type="car" depart="2.00" route="rd" departSpeed="max"/>
+    <vehicle id="v03" type="car" depart="3.00" route="rd" departSpeed="max"/>
+    <vehicle id="v04" type="car" depart="4.00" route="rd" departSpeed="max"/>
+    <vehicle id="v05" type="car" depart="5.00" route="rd" departSpeed="max"/>
+    <vehicle id="v06" type="car" depart="6.00" route="rd" departSpeed="max"/>
+    <vehicle id="v07" type="car" depart="7.00" route="rd" departSpeed="max"/>
+    <vehicle id="v08" type="car" depart="8.00" route="rd" departSpeed="max"/>
+    <vehicle id="v09" type="car" depart="9.00" route="rd" departSpeed="max"/>
+    <vehicle id="v10" type="car" depart="10.00" route="rd" departSpeed="max"/>
+    <vehicle id="v11" type="car" depart="11.00" route="rd" departSpeed="max"/>
+    <vehicle id="v12" type="car" depart="12.00" route="rd" departSpeed="max"/>
+    <vehicle id="v13" type="car" depart="13.00" route="rd" departSpeed="max"/>
+    <vehicle id="v14" type="car" depart="14.00" route="rd" departSpeed="max"/>
+    <vehicle id="v15" type="car" depart="15.00" route="rd" departSpeed="max"/>
+    <vehicle id="v16" type="car" depart="16.00" route="rd" departSpeed="max"/>
+    <vehicle id="v17" type="car" depart="17.00" route="rd" departSpeed="max"/>
+    <vehicle id="v18" type="car" depart="18.00" route="rd" departSpeed="max"/>
+    <vehicle id="v19" type="car" depart="19.00" route="rd" departSpeed="max"/>
+    <vehicle id="v20" type="car" depart="20.00" route="rd" departSpeed="max"/>
+    <vehicle id="v21" type="car" depart="21.00" route="rd" departSpeed="max"/>
+    <vehicle id="v22" type="car" depart="22.00" route="rd" departSpeed="max"/>
+    <vehicle id="v23" type="car" depart="23.00" route="rd" departSpeed="max"/>
+    <vehicle id="v24" type="car" depart="24.00" route="rd" departSpeed="max"/>
+    <vehicle id="v25" type="car" depart="25.00" route="rd" departSpeed="max"/>
+    <vehicle id="v26" type="car" depart="26.00" route="rd" departSpeed="max"/>
+    <vehicle id="v27" type="car" depart="27.00" route="rd" departSpeed="max"/>
+    <vehicle id="v28" type="car" depart="28.00" route="rd" departSpeed="max"/>
+    <vehicle id="v29" type="car" depart="29.00" route="rd" departSpeed="max"/>
+</routes>

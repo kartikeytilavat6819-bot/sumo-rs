@@ -1,0 +1,36 @@
+<routes>
+    <vType id="normc" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" speedFactor="normc(1,0.2,0.5,1.5)"/>
+    <vType id="unif" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" speedFactor="norm(1.0,0.3)"/>
+    <vType id="dev" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" speedDev="0.1"/>
+    <route id="r" edges="e0 e1"/>
+    <vehicle id="v00" type="normc" depart="0.00" route="r" departSpeed="max"/>
+    <vehicle id="v01" type="unif" depart="1.00" route="r" departSpeed="max"/>
+    <vehicle id="v02" type="dev" depart="2.00" route="r" departSpeed="max"/>
+    <vehicle id="v03" type="normc" depart="3.00" route="r" departSpeed="max"/>
+    <vehicle id="v04" type="unif" depart="4.00" route="r" departSpeed="max"/>
+    <vehicle id="v05" type="dev" depart="5.00" route="r" departSpeed="max"/>
+    <vehicle id="v06" type="normc" depart="6.00" route="r" departSpeed="max"/>
+    <vehicle id="v07" type="unif" depart="7.00" route="r" departSpeed="max"/>
+    <vehicle id="v08" type="dev" depart="8.00" route="r" departSpeed="max"/>
+    <vehicle id="v09" type="normc" depart="9.00" route="r" departSpeed="max"/>
+    <vehicle id="v10" type="unif" depart="10.00" route="r" departSpeed="max"/>
+    <vehicle id="v11" type="dev" depart="11.00" route="r" departSpeed="max"/>
+    <vehicle id="v12" type="normc" depart="12.00" route="r" departSpeed="max"/>
+    <vehicle id="v13" type="unif" depart="13.00" route="r" departSpeed="max"/>
+    <vehicle id="v14" type="dev" depart="14.00" route="r" departSpeed="max"/>
+    <vehicle id="v15" type="normc" depart="15.00" route="r" departSpeed="max"/>
+    <vehicle id="v16" type="unif" depart="16.00" route="r" departSpeed="max"/>
+    <vehicle id="v17" type="dev" depart="17.00" route="r" departSpeed="max"/>
+    <vehicle id="v18" type="normc" depart="18.00" route="r" departSpeed="max"/>
+    <vehicle id="v19" type="unif" depart="19.00" route="r" departSpeed="max"/>
+    <vehicle id="v20" type="dev" depart="20.00" route="r" departSpeed="max"/>
+    <vehicle id="v21" type="normc" depart="21.00" route="r" departSpeed="max"/>
+    <vehicle id="v22" type="unif" depart="22.00" route="r" departSpeed="max"/>
+    <vehicle id="v23" type="dev" depart="23.00" route="r" departSpeed="max"/>
+    <vehicle id="v24" type="normc" depart="24.00" route="r" departSpeed="max"/>
+    <vehicle id="v25" type="unif" depart="25.00" route="r" departSpeed="max"/>
+    <vehicle id="v26" type="dev" depart="26.00" route="r" departSpeed="max"/>
+    <vehicle id="v27" type="normc" depart="27.00" route="r" departSpeed="max"/>
+    <vehicle id="v28" type="unif" depart="28.00" route="r" departSpeed="max"/>
+    <vehicle id="v29" type="dev" depart="29.00" route="r" departSpeed="max"/>
+</routes>
