@@ -1,9 +1,9 @@
 #!/bin/bash
-# Output oracle for od2trips / marouter (usage: run_odtool.sh <tool> [case ...]): runs the official SUMO 1.28.0 duarouter and ours on each case and
-# compares the written route files byte for byte. The reference is always run live from the
+# Output oracle for od2trips / marouter (usage: run_odtool.sh <tool> [case ...]): runs the official SUMO 1.28.0 tool and ours on each case and
+# compares the written files byte for byte. The reference is always run live from the
 # pristine binary (never committed): $SUMO_PRISTINE_BIN/$TOOL on the VM, ~/sumo-pristine/bin in WSL.
 # A case is a directory cases/<tool>_<name>/ with
-#   args  one line: duarouter options; @DIR@ is replaced by the per-side output dir, @CASE@ by the case dir
+#   args  one line: tool options; @DIR@ is replaced by the per-side output dir, @CASE@ by the case dir
 # Usage: bash tools/oracle/run_odtool.sh <tool> [case ...]     default: every cases/$TOOL_*
 # BIN selects our binary (default $CARGO_TARGET_DIR/debug/$TOOL, /tmp/target on Kaggle).
 # Writes $OUT/<case>/{ref,cand}/ and $OUT/results.tsv (truncated each run).
