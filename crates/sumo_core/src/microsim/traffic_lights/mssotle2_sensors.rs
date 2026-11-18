@@ -955,7 +955,10 @@ pub fn split<'a>(s: &str, delim: char, elems: &'a mut Vec<String>) -> &'a mut Ve
 // }
 #[allow(unused_variables)]
 pub fn trim(str: &mut String) -> String {
-    // shortcut: C++ substr throws std::out_of_range for an all-space or empty string; this returns ""
+    // an all-space or empty string makes the C++ substr(npos, 0) throw std::out_of_range, which is not a ProcessError and terminates the run
+    if str.bytes().all(|b| b == b' ') {
+        panic!("std::out_of_range: substr with pos npos in trim('{}')", str);
+    }
     str.trim_matches(' ').to_string()
 }
 

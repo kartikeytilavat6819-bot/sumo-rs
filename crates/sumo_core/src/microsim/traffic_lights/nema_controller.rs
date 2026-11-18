@@ -4,7 +4,7 @@ use crate::prelude::*;
 use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
 /// C++ `dynamic_cast<MSE2Collector*>(getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id))`.
-// shortcut: no runtime type check; the lane-area detector map holds only MSE2Collector, upgrade with a type flag check
+/// The tag's container only holds MSE2Collector, so the cast is exact without a runtime type check.
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
     match MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) {
         Some(d) if !d.is_null() => crate::microsim::output::mse2_collector::mse2_collector_of(*d),
@@ -807,9 +807,10 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // delete the phase objects (destructor only; the memory is owned by the container that allocated it)
+        // delete the phase objects (allocated with Box::leak in init, so Box::from_raw releases them)
         for p in self.myPhaseObjs.clone() {
             p.m().drop_();
+            unsafe { drop(Box::from_raw(p.as_raw())) };
         }
     }
 
@@ -1946,7 +1947,7 @@ impl NEMALogic {
                     let barrierNum = ringIter / 2;
 
                     // now ready to create the phase
-                    // shortcut: NEMAPhase objects are leaked boxes owned for the whole simulation, like the C++ new
+                    // Box::leak like the C++ `new`; NEMALogic::drop_ deletes them
                     let phaseObj = NEMAPhase::new(
                         p,
                         barrierPhase,

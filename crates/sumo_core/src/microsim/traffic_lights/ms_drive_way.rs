@@ -89,6 +89,16 @@ impl std::ops::DerefMut for MSDriveWay {
 //   static std::map<std::string, MSDriveWay *> MSDriveWay::myDriveWayLookup;
 //   static const std::vector<MSDriveWay *> MSDriveWay::EMPTY_DRIVEWAY_VECTOR;
 
+/// C++ `delete dw` for a driveway from build_drive_way/build_sub_foe (both Box::leak'd): like ~MSDriveWay,
+/// the parent deletes its sub-driveways first.
+fn delete_drive_way(dw: Ptr<MSDriveWay>) {
+    let subs: Vec<Ptr<MSDriveWay>> = std::mem::take(&mut dw.m().mySubDriveWays);
+    for sub in subs {
+        delete_drive_way(sub);
+    }
+    unsafe { drop(Box::from_raw(dw.as_raw())) };
+}
+
 thread_local! {
     /// C++ `MSDriveWay::myGlobalDriveWayIndex`
     static MY_GLOBAL_DRIVE_WAY_INDEX: std::cell::Cell<i32> = const { std::cell::Cell::new(0) };
@@ -288,8 +298,7 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ deletes the sub-driveways here; they are allocated with Box::leak (see build_sub_foe)
-        // and are therefore only released when the process exits.
+        // sub-driveways are released by delete_drive_way (the owner of a departure driveway deletes them)
         self.mySubDriveWays.clear();
     }
 
@@ -319,8 +328,12 @@ impl MSDriveWay {
         MY_BLOCK_LENGTH_WARNINGS.with(|w| w.borrow_mut().clear());
         MY_WRITE_VEHICLES.with(|w| w.set(false));
 
-        // shortcut: the departure driveways are allocated with Box::leak (see build_drive_way) so they
-        // cannot be deleted here; the maps below are cleared just like in C++.
+        // C++ deletes the departure driveways here (their sub-driveways go with them, see delete_drive_way);
+        // every driveway is allocated with Box::leak, so Box::from_raw releases the same allocation
+        let departures: Vec<Ptr<MSDriveWay>> = MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().values().flatten().copied().collect());
+        for dw in departures {
+            delete_drive_way(dw);
+        }
         MY_SWITCH_DRIVE_WAYS.with(|m| m.borrow_mut().clear());
         MY_REVERSAL_DRIVE_WAYS.with(|m| m.borrow_mut().clear());
         MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow_mut().clear());
@@ -2081,8 +2094,7 @@ impl MSDriveWay {
     pub fn build_drive_way(id: &str, link: Ptr<MSLink>, route: &ConstMSEdgeVector, first: MSRouteIterator, end: MSRouteIterator) -> Ptr<MSDriveWay> {
         // collect lanes and links that are relevant for setting this signal for the current driveWay
         // (see the C++ comment block above for the full description)
-        // shortcut: the driveway is allocated with Box::leak because the C++ code hands the pointer to the
-        // rail signal (or the departure map) without a matching delete; upgrade when ownership is modelled.
+        // allocated with Box::leak like the C++ `new`: freed by cleanup() for departure driveways only
         let dw = Ptr::from_mut(Box::leak(Box::new(MSDriveWay::new(link, id, false))));
         let mut visited: MSRailSignal_LaneVisitedMap = BTreeMap::new();
         let mut before: Vec<Ptr<MSLane>> = Vec::new();
@@ -4353,7 +4365,7 @@ impl MSDriveWay {
                 return false;
             }
         }
-        // shortcut: the sub-driveway is allocated with Box::leak (see build_drive_way)
+        // allocated with Box::leak like the C++ `new`: freed by delete_drive_way only through a departure driveway
         let sub = Ptr::from_mut(Box::leak(Box::new(MSDriveWay::new(
             self.myOrigin,
             &format!("{}.{}", self.base2.get_id(), self.mySubDriveWays.len()),
