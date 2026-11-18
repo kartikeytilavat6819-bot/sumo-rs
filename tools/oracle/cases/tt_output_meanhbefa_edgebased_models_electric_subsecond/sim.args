@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --step-length=0.1 --battery-output.precision 4 --device.battery.probability 1 -a tools/oracle/cases/tt_output_meanhbefa_edgebased_models_electric_subsecond/input_additional.add.xml
