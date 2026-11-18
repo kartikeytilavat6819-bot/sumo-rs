@@ -44,12 +44,19 @@ CASES = join(REPO, "tools", "oracle", "cases")
 DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
 
 # Option names (long and short) whose value is an input file.
-NET_OPTS = ("--net-file", "-n")
+NET_OPTS = ("--net-file", "-n", "--net")
 ROUTE_OPTS = ("-r", "--route-files", "--routes")
 ADD_OPTS = ("-a", "--additional-files", "--additional", "--a")
-# File-valued behaviour options: their files must be copied into the case, but
-# the option itself stays in sim.args (it is not an -a/--additional-files list).
-EXTRA_INPUT_OPTS = ("--weight-files", "--device.fcd-replay.file")  # (oc54: fcd-replay input)
+# Other input-file options (single file or comma list).  These are kept in
+# sim.args but their paths are rewritten to the case dir like additionals.
+EXTRA_INPUT_OPTS = {
+    "--gui-settings-file", "-g", "--gui-settings",
+    "--weight-files", "--lane-weight-files",
+    "--edgedata-files", "--data-files",
+    "--taz-files", "--taz",
+    "--detector-files", "--detectors",
+    "--device.fcd-replay.file", "--device.fcd-replay.files",
+}
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
 OUTPUT_OPTS = (
@@ -148,9 +155,8 @@ def collate_options(option_files, app="sumo"):
             if skip:
                 skip = False
                 continue
-            if o == "--xml-validation":
-                skip = True
-                continue
+            # Keep --xml-validation (faithful to the official test); only the
+            # extractTest --skip-validation mode drops it.
             if o == "{CLEAR}":
                 app_options = []
                 continue
@@ -230,7 +236,20 @@ def parse_file_options(tokens):
         else:
             outputs.append((name, val))
     stripped = {OUTPUT_CANON.get(n, n) for n, _ in outputs} - set(HARNESS_OUTPUTS)
-    sim = [t for t in sim if not any(t.startswith(o + ".") for o in stripped)]
+    # Drop sub-options of stripped outputs, including their (space-separated)
+    # values, so we do not leave stray parameters behind.
+    new_sim = []
+    i = 0
+    while i < len(sim):
+        t = sim[i]
+        if any(t.startswith(o + ".") for o in stripped):
+            i += 1
+            if i < len(sim) and not sim[i].startswith("-"):
+                i += 1
+            continue
+        new_sim.append(t)
+        i += 1
+    sim = new_sim
     return sim, net, routes, additions, outputs
 
 
@@ -346,12 +365,10 @@ def import_one(source, tests_sumo, force=False):
             continue
         if route_path is None and is_route_file(p):
             route_path = p
-        else:
-            # run_all.sh and make_sim_refs.sh both run from the repo root, so
-            # additional files must be addressed relative to it (existing cases
-            # use "tools/oracle/cases/<case>/<file>" for the same reason).
-            kept_additions.append(os.path.relpath(
-                join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
+        # A file may be both a route and an additional; keep it in the
+        # additional list as the official test does.
+        kept_additions.append(os.path.relpath(
+            join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
     empty_route = False
     if not route_path:
         # Some tests define their vehicles only inside an additional file. The
@@ -394,11 +411,99 @@ def import_one(source, tests_sumo, force=False):
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
 
+    # Rewrite extra input-file options in sim and collect their files.
+    new_sim = []
+    i = 0
+    while i < len(sim):
+        t = sim[i]
+        opt = None
+        val = None
+        is_eq = False
+        if "=" in t and t.split("=", 1)[0] in EXTRA_INPUT_OPTS:
+            opt, val = t.split("=", 1)
+            is_eq = True
+            i += 1
+        elif t in EXTRA_INPUT_OPTS:
+            opt = t
+            val = sim[i + 1] if i + 1 < len(sim) else ""
+            i += 2
+        else:
+            new_sim.append(t)
+            i += 1
+            continue
+        files = [x for x in val.split(",") if x.strip()]
+        new_vals = []
+        for f in files:
+            p = resolve(f, potentials)
+            if p and os.path.exists(p):
+                base = os.path.basename(p)
+                if base not in chosen:
+                    chosen.append(base)
+                repo_rel = os.path.relpath(join(case_dir, base), REPO).replace(os.sep, "/")
+                new_vals.append(repo_rel)
+            else:
+                new_vals.append(f)
+        new_val = ",".join(new_vals)
+        if is_eq:
+            new_sim.append(opt + "=" + new_val)
+        else:
+            new_sim.append(opt)
+            new_sim.append(new_val)
+    sim = new_sim
+
+    # Scan additionals for internal file references (file=, edgesFile=, output=)
+    # and collect those files too.
+    ref_map = {}
+    for a in additions:
+        p = resolve(a, potentials)
+        if not p or not os.path.isfile(p):
+            continue
+        try:
+            content = open(p, encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        for m in re.finditer(r'\b(file|edgesFile|output)\s*=\s*"([^"]*)"', content):
+            val = m.group(2)
+            rp = resolve(val, potentials)
+            if rp and os.path.exists(rp):
+                base = os.path.basename(rp)
+                if base not in chosen:
+                    chosen.append(base)
+                repo_rel = os.path.relpath(join(case_dir, base), REPO).replace(os.sep, "/")
+                ref_map[val] = repo_rel
+                ref_map[os.path.basename(val)] = repo_rel
+
     if os.path.isdir(case_dir):
         shutil.rmtree(case_dir)
     os.makedirs(case_dir)
 
     copy_inputs(case_dir, potentials, config_files, chosen)
+
+    # Rewrite internal file references in copied additional files.
+    if ref_map:
+        for a in additions:
+            p = resolve(a, potentials)
+            if not p:
+                continue
+            dst = join(case_dir, os.path.basename(p))
+            if not os.path.isfile(dst):
+                continue
+            try:
+                text = open(dst, encoding="utf-8", errors="replace").read()
+            except OSError:
+                continue
+            def _repl(m):
+                attr = m.group(1)
+                val = m.group(2)
+                if val in ref_map:
+                    return attr + '="' + ref_map[val] + '"'
+                if os.path.basename(val) in ref_map:
+                    return attr + '="' + ref_map[os.path.basename(val)] + '"'
+                return m.group(0)
+            new_text = re.sub(r'\b(file|edgesFile|output)\s*=\s*"([^"]*)"', _repl, text)
+            if new_text != text:
+                with open(dst, "w", encoding="utf-8", newline="\n") as fh:
+                    fh.write(new_text)
 
     # Normalised, stable inputs for run_all.sh.
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))

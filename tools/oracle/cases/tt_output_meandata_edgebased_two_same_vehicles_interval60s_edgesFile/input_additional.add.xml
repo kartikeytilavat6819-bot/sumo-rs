@@ -1,0 +1,5 @@
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+
+    <edgeData id="dump_60" freq="60" file="aggregated_60.xml" excludeEmpty="true" edgesFile="tools/oracle/cases/tt_output_meandata_edgebased_two_same_vehicles_interval60s_edgesFile/input_selection.txt"/>
+
+</additional>
