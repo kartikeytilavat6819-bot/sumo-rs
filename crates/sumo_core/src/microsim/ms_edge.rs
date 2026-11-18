@@ -148,6 +148,13 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn other_taz_connector(&self) -> Ptr<MSEdge> {
         self.get_other_taz_connector()
     }
+    // CCHGraph's orderer calls these on the network edge's lane / junction types
+    fn lane_geometry_position_at_offset(lane: Ptr<MSLane>, offset: f64) -> Position {
+        lane.geometry_position_at_offset(offset, 0.)
+    }
+    fn junction_position(node: Ptr<MSJunction>) -> Position {
+        node.get_position(false).clone()
+    }
     fn stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
         MSEdge::get_stop_position(stop)
     }
