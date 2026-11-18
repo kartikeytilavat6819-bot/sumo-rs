@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- route alternatives as written by a previous duarouter iteration, on the reroute_bypass net -->
+<routes>
+    <vehicle id="v0" depart="0.00">
+        <routeDistribution last="0">
+            <route cost="33.71" probability="0.70000000" edges="LEAD IN AB OUT"/>
+            <route cost="39.48" probability="0.30000000" edges="LEAD IN AC CB OUT"/>
+        </routeDistribution>
+    </vehicle>
+    <vehicle id="v1" depart="5.00">
+        <routeDistribution last="1">
+            <route cost="52.10" probability="0.45000000" edges="LEAD IN AB OUT"/>
+            <route cost="41.00" probability="0.55000000" edges="LEAD IN AC CB OUT"/>
+        </routeDistribution>
+    </vehicle>
+    <vehicle id="v2" depart="10.00">
+        <routeDistribution last="0">
+            <route cost="33.71" probability="1.00000000" edges="LEAD IN AB OUT"/>
+        </routeDistribution>
+    </vehicle>
+    <vehicle id="v3" depart="15.00">
+        <routeDistribution last="0">
+            <route cost="45.00" probability="0.50000000" edges="IN AB OUT"/>
+            <route cost="45.00" probability="0.50000000" edges="IN AC CB OUT"/>
+        </routeDistribution>
+    </vehicle>
+    <trip id="v4" depart="20.00" from="LEAD" to="OUT"/>
+</routes>

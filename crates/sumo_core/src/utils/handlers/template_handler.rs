@@ -69,7 +69,7 @@ impl TemplateHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_template(options: &mut OptionsCont, templateString: &str) {
-        // shortcut: TemplateHandler is not a SaxHandler yet (its start_element takes (name, value) pairs, not SUMOSAXAttributes), so utils::xml::sumo_sax_reader::parse_string cannot be driven with it; upgrade with an attribute adapter
+        // shortcut: TemplateHandler::parseTemplate is called only from netedit (GUI), which is not ported; upgrade when netedit is ported (the SAX entry point utils::xml::SUMOSAXReader::parse_string exists)
         panic!("TemplateHandler::parseTemplate: cannot parse template '{}' yet", templateString);
     }
 

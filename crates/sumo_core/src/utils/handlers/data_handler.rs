@@ -1,6 +1,7 @@
 //! Port of utils/handlers/DataHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 use utils::xml::common_xml_structure::CommonXMLStructure_SumoBaseObject;
 use utils::xml::generic_sax_handler::SaxHandler;
 use utils::common::msg_handler::{write_error, write_warning};
@@ -49,12 +50,11 @@ impl DataHandler {
     //     CommonHandler(fileBucket),
     //     SUMOSAXHandler(fileBucket->getFilename()) {
     // }
-    #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
-        let file_name = fileBucket.get().expect("DataHandler: null FileBucket").get_filename();
+    pub fn new(fileBucket: Ptr<FileBucket>) -> Self {
+        let file_name = fileBucket.get_filename().to_string();
         Self {
             base: CommonHandler::new(fileBucket),
-            base2: utils::xml::sumo_sax_handler::new(file_name, ""),
+            base2: utils::xml::sumo_sax_handler::new(&file_name, ""),
         }
     }
 

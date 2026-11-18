@@ -1,0 +1,7 @@
+<additional>
+    <rerouter id="rrClose" edges="E0" vTypes="car">
+        <interval begin="0.00" end="150.00">
+            <closingReroute id="E1"/>
+        </interval>
+    </rerouter>
+</additional>

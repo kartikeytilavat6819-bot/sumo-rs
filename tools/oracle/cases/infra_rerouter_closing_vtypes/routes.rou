@@ -1,0 +1,12 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="truck" vClass="truck" length="12.00" maxSpeed="11.00" accel="1.00" decel="3.00"/>
+    <route id="r0" edges="E0 E1 E4"/>
+    <vehicle id="c0" type="car" route="r0" depart="0.00" departSpeed="max"/>
+    <vehicle id="t0" type="truck" route="r0" depart="5.00" departSpeed="max"/>
+    <vehicle id="c1" type="car" route="r0" depart="20.00" departSpeed="max"/>
+    <vehicle id="c2" type="car" route="r0" depart="60.00" departSpeed="max"/>
+    <vehicle id="t1" type="truck" route="r0" depart="70.00" departSpeed="max"/>
+    <vehicle id="c3" type="car" route="r0" depart="120.00" departSpeed="max"/>
+    <vehicle id="c4" type="car" route="r0" depart="200.00" departSpeed="max"/>
+</routes>

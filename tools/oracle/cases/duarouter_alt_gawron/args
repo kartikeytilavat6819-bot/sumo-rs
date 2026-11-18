@@ -1,0 +1,1 @@
+--route-files @CASE@/alts.rou.alt.xml --weight-files @CASE@/weights.xml --weight-attribute traveltime --route-choice-method gawron --seed 7 --output-file @DIR@/routes.rou.xml

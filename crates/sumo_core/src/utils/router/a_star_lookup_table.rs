@@ -789,7 +789,7 @@ fn e_distance_to<E, V>(from: Ptr<E>, to: Ptr<E>) -> f64 where E: RouterEdge<V> {
     from.distance_to(to, false)
 }
 
-// shortcut: needs map-matcher trait bounds (lead), M::parseGeoEdges is not callable on generic M
+// shortcut: geo (lon,lat) landmarks need M::parseGeoEdges, but the Rust MapMatcher needs its host route handler (C++ passes the RORouteHandler itself) and duarouter passes no map matcher; upgrade by passing the handler as a MapMatcherHost
 fn e_geo_landmark_edges<E, M>(_mapMatcher: Ptr<M>, _lon: f64, _lat: f64) -> Vec<Ptr<E>> {
     panic!("shortcut: needs map-matcher trait bounds (lead), M::parseGeoEdges")
 }

@@ -1,0 +1,15 @@
+<additional>
+    <tlLogic id="nC" type="swarm" programID="sotl" offset="0">
+        <param key="PHERO_DERIVATIVE_ALPHA" value="0.5"/>
+        <param key="LOSS_OF_SIGNAL_LIMIT" value="5"/>
+        <param key="PHERO_MEAN_SPEED_HISTORY_SIZE" value="5"/>
+        <phase duration="10" minDur="5" maxDur="30" type="decisional target" targetLanes="W2C_0 E2C_0" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" type="transient" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="10" minDur="5" maxDur="30" type="decisional target" targetLanes="S2C_0 N2C_0" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" type="transient" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="waut0" refTime="0" startProg="0">
+        <wautSwitch time="1" to="sotl"/>
+    </WAUT>
+    <wautJunction junctionID="nC" procedure="Sta" wautID="waut0"/>
+</additional>

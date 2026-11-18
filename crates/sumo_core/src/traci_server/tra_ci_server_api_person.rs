@@ -194,7 +194,7 @@ impl TraCIServerAPI_Person {
         use crate::libsumo::person::Person;
         use crate::libsumo::storage_helper::StorageHelper;
         use crate::libsumo::tra_ci_defs::TraCIStage;
-        // shortcut: C++ try/catch turns ProcessError and TraCIException raised by StorageHelper/Person into an error status; here they panic, upgrade when StorageHelper and Person return Result
+        // C++ outer catch (TraCIException) is reproduced by dispatch_command; a ProcessError escapes in C++ too and is re-raised there (the default branch has its own catch below)
         let warning = String::new(); // additional description for response
         // variable
         let variable = inputStorage.read_unsigned_byte().unwrap();
@@ -336,8 +336,11 @@ impl TraCIServerAPI_Person {
                 Person::set_parameter(&id, &name, &value);
             }
             _ => {
-                if !TraCIServerAPI_VehicleType::set_variable(CMD_SET_PERSON_VARIABLE, variable, p.m().get_singular_type().get_id(), server, inputStorage, outputStorage) {
-                    return false;
+                // C++ inner `catch (ProcessError&)` and outer `catch (TraCIException&)` both answer with writeErrorStatusCmd
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| TraCIServerAPI_VehicleType::set_variable(CMD_SET_PERSON_VARIABLE, variable, p.m().get_singular_type().get_id(), server, inputStorage, outputStorage))) {
+                    Ok(true) => {}
+                    Ok(false) => return false,
+                    Err(e) => return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, &crate::traci_server::tra_ci_server::panic_text(e), outputStorage),
                 }
             }
         }

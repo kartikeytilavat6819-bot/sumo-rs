@@ -1,0 +1,1 @@
+-n tools/oracle/cases/person_trip_bike_vtypes/person_trip_bike_vtypes.nod.xml -e tools/oracle/cases/person_trip_bike_vtypes/person_trip_bike_vtypes.edg.xml

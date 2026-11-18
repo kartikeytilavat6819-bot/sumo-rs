@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+    <busStop id="bsW" lane="WA_0" startPos="100.00" endPos="120.00" lines="L1 L2"/>
+    <busStop id="bsE" lane="AE_0" startPos="100.00" endPos="120.00" lines="L1 L2"/>
+</additional>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="car" length="5" maxSpeed="13.89"/>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <route id="rwe" edges="WC CE"/>
+  <route id="rnw" edges="NC CW"/>
+  <flow id="cwe" type="car" route="rwe" begin="0" end="200" period="10"/>
+  <flow id="cnw" type="car" route="rnw" begin="5" end="200" period="13"/>
+  <person id="pa0" type="ped" depart="0"><walk edges="WC CE" arrivalPos="50"/></person>
+  <person id="pa1" type="ped" depart="3"><walk edges="WC CN" speed="0.9"/></person>
+  <person id="pa2" type="ped" depart="7"><walk edges="NC CW"/></person>
+  <person id="pa3" type="ped" depart="11" departPos="20"><walk edges="EC CN" arrivalPos="30"/></person>
+  <person id="pa4" type="ped" depart="16"><walk edges="CN NC"/></person>
+  <person id="pa5" type="ped" depart="22"><walk edges="CE EC" speed="1.2"/></person>
+  <person id="pa6" type="ped" depart="30"><walk edges="WC CN"/></person>
+</routes>

@@ -1609,10 +1609,16 @@ impl SUMOVehicleParameter {
     // }
     #[allow(unused_variables)]
     pub fn parse_insertion_checks(value: &str) -> i32 {
+        Self::try_parse_insertion_checks(value).unwrap_or_else(|e| panic!("{}", e))
+    }
+
+    /// C++ `parseInsertionChecks` with its `throw InvalidArgument` returned as `Err`
+    #[allow(unused_variables)]
+    pub fn try_parse_insertion_checks(value: &str) -> Result<i32, utils::common::util_exceptions::ProcessError> {
         // first reset insertionChecks
         let mut result: i32 = 0;
         if value.is_empty() {
-            return InsertionCheck::ALL as i32;
+            return Ok(InsertionCheck::ALL as i32);
         } else {
             // split value in substrings
             let mut insertionCheckStrs = StringTokenizer::with_token(value, " ", true);
@@ -1623,11 +1629,15 @@ impl SUMOVehicleParameter {
                         result |= check as i32;
                     }
                 } else {
-                    panic!("Unknown value '{}' in {}.", val, SUMO_ATTR_INSERTIONCHECKS.attr_name());
+                    return Err(utils::common::util_exceptions::ProcessError::InvalidArgument(format!(
+                        "Unknown value '{}' in {}.",
+                        val,
+                        SUMO_ATTR_INSERTIONCHECKS.attr_name()
+                    )));
                 }
             }
         }
-        result
+        Ok(result)
     }
 
     /// C++: `void SUMOVehicleParameter::incrementFlow(double, SumoRNG *)`

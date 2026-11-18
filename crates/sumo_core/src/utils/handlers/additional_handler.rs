@@ -1,6 +1,7 @@
 //! Port of utils/handlers/AdditionalHandler.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 use super::common_handler::{attr_str, tag_str};
 use utils::xml::common_xml_structure::CommonXMLStructure_SumoBaseObject;
 use utils::common::std_defs::NETWORK_VERSION;
@@ -82,7 +83,7 @@ impl AdditionalHandler {
     //     CommonHandler(fileBucket) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
+    pub fn new(fileBucket: Ptr<FileBucket>) -> Self {
         Self { base: CommonHandler::new(fileBucket) }
     }
 

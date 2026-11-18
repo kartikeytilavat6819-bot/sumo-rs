@@ -33,7 +33,7 @@ impl ROCCHMetrics {
     //                                      nullptr, &ROCCHMetrics::patchRestrictions);
     // }
     #[allow(unused_variables)]
-    pub fn init(graph: Ptr<ROCCHGraph>, effort: CCHGraph_EffortOperation, begin: SUMOTime, weightPeriod: SUMOTime) {
+    pub fn init(graph: Ptr<ROCCHGraph>, effort: CCHGraph_EffortOperation<ROEdge, ROVehicle>, begin: SUMOTime, weightPeriod: SUMOTime) {
         use std::sync::atomic::Ordering;
         // delete myFamily;
         let old = MY_FAMILY.swap(std::ptr::null_mut(), Ordering::SeqCst);
@@ -41,9 +41,7 @@ impl ROCCHMetrics {
             let mut b = unsafe { Box::from_raw(old) };
             b.drop_();
         }
-        // shortcut: CCHMetricFamily's factory and weight-patch fields are unmapped (()), so nullptr is passed
-        // and patchRestrictions is not installed; restore once CCHMetricFamily's function-pointer fields are ported
-        let fam = Box::new(ROCCHMetricFamily::new(graph.cast::<CCHMetricFamily_Graph>(), effort, begin, weightPeriod, (), ()));
+        let fam = Box::new(ROCCHMetricFamily::new(graph, effort, begin, weightPeriod, None, Some(ROCCHMetrics::patch_restrictions)));
         MY_FAMILY.store(Box::into_raw(fam), Ordering::SeqCst);
     }
 
@@ -60,7 +58,7 @@ impl ROCCHMetrics {
     //     return myFamily->get(veh == nullptr ? nullptr : veh->getType(), vClass, time, veh);
     // }
     #[allow(unused_variables)]
-    pub fn get(vClass: SUMOVehicleClass, time: SUMOTime, veh: Ptr<ROVehicle>) -> Ptr<i32> {
+    pub fn get(vClass: SUMOVehicleClass, time: SUMOTime, veh: Ptr<ROVehicle>) -> Ptr<CCHMetric> {
         use std::sync::atomic::Ordering;
         let fam = MY_FAMILY.load(Ordering::SeqCst);
         if fam.is_null() {
@@ -129,8 +127,9 @@ impl ROCCHMetrics {
         for e in ROEdge::get_all_edges().iter() {
             let e = *e;
             if !e.is_internal() && !e.is_taz_connector() && e.restricts(veh) {
-                // shortcut: CCHGraph::arcs_of_edge is still a placeholder returning &i32; iterate its arc list once ported
-                let _ = (graph, e);
+                for &a in graph.arcs_of_edge(e).iter() {
+                    weights[a as usize] = foreign::routingkit::constants::INF_WEIGHT;
+                }
             }
         }
     }

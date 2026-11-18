@@ -1,0 +1,25 @@
+<routes>
+    <vType id="truck" vClass="truck" length="10.00" maxSpeed="13.89" accel="1.30" decel="4.00" containerCapacity="3"/>
+    <route id="AB" edges="A B"/>
+    <vehicle id="truck0" type="truck" line="lineX" depart="0" route="AB">
+        <stop containerStop="cs0" duration="10" triggered="container"/>
+        <stop containerStop="cs1" duration="20"/>
+    </vehicle>
+    <vehicle id="truck1" type="truck" line="lineY" depart="90" route="AB">
+        <stop containerStop="cs0" duration="10"/>
+        <stop containerStop="cs1" duration="20"/>
+    </vehicle>
+    <!-- lines="ANY": any vehicle serving the stops may carry the container -->
+    <container id="k0" depart="10" departPos="110">
+        <transport from="A" to="B" lines="ANY" arrivalPos="110"/>
+    </container>
+    <container id="k1" depart="25">
+        <transport from="A" to="B" lines="ANY" arrivalPos="120"/>
+    </container>
+    <container id="k2" depart="40" departPos="105">
+        <tranship from="A" to="B" departPos="105" arrivalPos="110" speed="10"/>
+    </container>
+    <container id="k3" depart="60">
+        <transport from="A" to="B" lines="ANY" arrivalPos="130"/>
+    </container>
+</routes>

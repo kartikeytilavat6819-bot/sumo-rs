@@ -1,6 +1,4 @@
-//! Minimal stand-ins for pieces of utils/common and utils/geom that xml and iodevices need.
-// shortcut: Position/PositionVector/Boundary below are xml-local copies, because sumo_sax_attributes reads
-// PositionVector.0 directly; switch them to utils::geom once that code uses the geom types
+//! Minimal stand-ins for pieces of utils/common that xml and iodevices need (geometry uses utils::geom).
 use crate::common::msg_handler::{with_instance, MsgType};
 
 pub use crate::common::msg_handler::{write_error, write_message, write_warning};
@@ -22,61 +20,6 @@ pub fn tokenize_white(s: &str) -> Vec<&str> {
 /// StringTokenizer(s, sep).getVector(): keeps empty tokens, but "" gives no token
 pub fn tokenize<'a>(s: &'a str, sep: &str) -> Vec<&'a str> {
     if s.is_empty() { Vec::new() } else { s.split(sep).collect() }
-}
-
-/// utils/geom/Position
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Position {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-}
-impl Position {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Position { x, y, z }
-    }
-}
-
-/// utils/geom/PositionVector
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct PositionVector(pub Vec<Position>);
-
-/// utils/geom/Boundary (only the 2D constructor)
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Boundary {
-    pub xmin: f64,
-    pub xmax: f64,
-    pub ymin: f64,
-    pub ymax: f64,
-    pub zmin: f64,
-    pub zmax: f64,
-    pub was_initialised: bool,
-}
-impl Default for Boundary {
-    fn default() -> Self {
-        Boundary { xmin: 10000000000.0, xmax: -10000000000.0, ymin: 10000000000.0, ymax: -10000000000.0, zmin: 10000000000.0, zmax: -10000000000.0, was_initialised: false }
-    }
-}
-impl Boundary {
-    pub fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {
-        let mut b = Boundary::default();
-        b.add(x1, y1, 0.);
-        b.add(x2, y2, 0.);
-        b
-    }
-    pub fn add(&mut self, x: f64, y: f64, z: f64) {
-        if !self.was_initialised {
-            (self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax) = (x, x, y, y, z, z);
-        } else {
-            self.xmin = if self.xmin < x { self.xmin } else { x };
-            self.xmax = if self.xmax > x { self.xmax } else { x };
-            self.ymin = if self.ymin < y { self.ymin } else { y };
-            self.ymax = if self.ymax > y { self.ymax } else { y };
-            self.zmin = if self.zmin < z { self.zmin } else { z };
-            self.zmax = if self.zmax > z { self.zmax } else { z };
-        }
-        self.was_initialised = true;
-    }
 }
 
 /// FileHelpers::isSocket

@@ -484,8 +484,9 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_node2_edge(&mut self, fromNode: Ptr<N>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
-        // shortcut: C++ calls the two-argument isProhibited(edge, vehicle) and EdgeInfo::prohibited, which no base class provides (the C++ template is not instantiated for this path), upgrade when computeNode2Edge is instantiated in C++
-        panic!("shortcut: two-argument isProhibited(edge, vehicle) is not ported")
+        // C++ calls a two-argument isProhibited(edge, vehicle) and EdgeInfo::prohibited that no base class provides:
+        // the member is never instantiated in C++ (it would not compile), so it has no behaviour to port
+        panic!("Node2EdgeRouter::computeNode2Edge is never instantiated in C++")
     }
 
     /// C++: `void Node2EdgeRouter::updateViaCostUpToEdge(const E *const, const E *const, const V *const, double &, double &, double &) const` [const]
@@ -553,8 +554,8 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
             if e == lastEdge {
                 break;
             }
-            // shortcut: the C++ calls the two-argument isProhibited(e, v), which SUMOAbstractRouter does not provide, upgrade when that overload is ported
-            if panic!("shortcut: two-argument isProhibited(edge, vehicle) is not ported") {
+            // C++ calls a two-argument isProhibited(e, v) that SUMOAbstractRouter does not provide: never instantiated in C++ (it would not compile)
+            if panic!("Node2EdgeRouter: two-argument isProhibited is never instantiated in C++") {
                 return -1.;
             }
             self.update_via_cost(prev, e, v, &mut time, &mut effort, lengthp);

@@ -89,6 +89,14 @@ impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
     fn ignore_transient_permissions(&self) -> bool {
         self.base.ignore_transient_permissions()
     }
+    /// C++ `ROVehicle::getVTypeParameter()`: `*getType()`
+    fn v_type_parameter(&self) -> &SUMOVTypeParameter {
+        self.get_type().get().expect("ROVehicle without a vehicle type")
+    }
+    /// C++ `V::getParameter().vtypeid`
+    fn vtype_id(&self) -> String {
+        self.get_parameter().vtypeid.clone()
+    }
 }
 
 // C++ static members of ROVehicle (port as module-level statics, see AGENTS.md):
@@ -132,10 +140,10 @@ impl ROVehicle {
         v.base.vt = &RO_VEHICLE_ROUTABLE_VT;
         v.get_parameter_mutable().stops.clear();
         if !route.is_null() {
-            // shortcut: getFirstRoute() returns Rc (never null), so the C++ nullptr check is not repeated
-            let first = route.get_first_route().expect("first route");
-            for s in first.get_stops().iter() {
-                v.add_stop(s, net, errorHandler);
+            if let Some(first) = route.get_first_route() {
+                for s in first.get_stops().iter() {
+                    v.add_stop(s, net, errorHandler);
+                }
             }
         }
         for s in pars.stops.iter() {
@@ -249,17 +257,21 @@ impl ROVehicle {
             return;
         }
         routeDef.m().validate_alternatives(Ptr::from_mut(self), errorHandler);
-        // shortcut: getFirstRoute() returns Rc (never null), so the C++ "everything is invalid" nullptr check is not repeated
-        let mut current = routeDef.build_current_route(router, self.get_departure_time(), self).expect("current route");
-        // shortcut: buildCurrentRoute returns Rc (never null); only the empty-route case is checked
-        if current.size() == 0 {
-            if !routeDef.discard_silent() {
+        if routeDef.get_first_route().is_none() {
+            // everything is invalid and no new routes will be computed
+            self.myRoutingSuccess = false;
+            return;
+        }
+        let current = routeDef.build_current_route(router, self.get_departure_time(), self);
+        if current.as_ref().map_or(true, |c| c.size() == 0) {
+            if current.is_none() || !routeDef.discard_silent() {
                 let args: [&dyn ToStringPrec; 1] = [&self.get_id().to_string()];
                 errorHandler.m().informf("The vehicle '%' has no valid route.", &args);
             }
             self.myRoutingSuccess = false;
             return;
         }
+        let current = current.unwrap();
         // check whether we have to evaluate the route for not containing loops
         if removeLoops {
             let requiredStart = if self.get_parameter().departPosProcedure == DepartPosDefinition::GIVEN
@@ -280,7 +292,8 @@ impl ROVehicle {
             for m in self.get_mandatory_edges(requiredStart, requiredEnd) {
                 mandatory.push(m.edge);
             }
-            Rc::get_mut(&mut current).unwrap().recheck_for_loops(&mandatory);
+            // C++ mutates the shared route (myPrecomputed holds the same shared_ptr)
+            Ptr::new(&*current).m().recheck_for_loops(&mandatory);
             // check whether the route is still valid
             if current.size() == 0 {
                 let args: [&dyn ToStringPrec; 1] = [&self.get_id().to_string()];
@@ -300,16 +313,17 @@ impl ROVehicle {
         }
         // add built route
         let replaced = routeDef.m().add_alternative(router, Ptr::from_mut(self), current.clone(), self.get_departure_time(), errorHandler);
-        // shortcut: addAlternative returns Rc (never null), so the C++ "replaced != nullptr" check is not repeated
-        if self.get_parameter().departEdge > 0 {
-            let mut idx = self.get_parameter().departEdge;
-            self.update_index(replaced.clone().expect("replaced route"), current.clone(), &mut idx);
-            self.get_parameter_mutable().departEdge = idx;
-        }
-        if self.get_parameter().arrivalEdge >= 0 {
-            let mut idx = self.get_parameter().arrivalEdge;
-            self.update_index(replaced.clone().expect("replaced route"), current.clone(), &mut idx);
-            self.get_parameter_mutable().arrivalEdge = idx;
+        if let Some(replaced) = replaced {
+            if self.get_parameter().departEdge > 0 {
+                let mut idx = self.get_parameter().departEdge;
+                self.update_index(replaced.clone(), current.clone(), &mut idx);
+                self.get_parameter_mutable().departEdge = idx;
+            }
+            if self.get_parameter().arrivalEdge >= 0 {
+                let mut idx = self.get_parameter().arrivalEdge;
+                self.update_index(replaced.clone(), current.clone(), &mut idx);
+                self.get_parameter_mutable().arrivalEdge = idx;
+            }
         }
         self.myRoutingSuccess = true;
     }

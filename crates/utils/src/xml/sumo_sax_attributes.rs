@@ -1,7 +1,7 @@
 //! Port of utils/xml/SUMOSAXAttributes.{h,cpp}, SUMOSAXAttributesImpl_Xerces.{h,cpp} and
 //! SUMOSAXAttributesImpl_Cached.{h,cpp}: one concrete type; `cached` marks the Cached flavour
 //! (std::map ordered, keyed by local name) produced by `clone()`.
-use super::stand_ins::{tokenize, tokenize_white, write_error, Boundary, Position, PositionVector, ProcessError};
+use super::stand_ins::{tokenize, tokenize_white, write_error, ProcessError};
 use super::sumo_xml_definitions as defs;
 use super::sumo_xml_definitions::{FringeType, ParkingType, RightOfWay, RoundaboutType, SumoXMLEdgeFunc, SumoXMLNodeType};
 use crate::common::string_utils;
@@ -83,47 +83,7 @@ impl FromAttr for bool {
         to_bool(value)
     }
 }
-impl FromAttr for Position {
-    fn invalid_return() -> Self {
-        Position::default()
-    }
-    fn from_attr(value: &str) -> Result<Self, ProcessError> {
-        // only the first position is used
-        if let Some(first) = tokenize_white(value).first() {
-            let pos = tokenize(first, ",");
-            // check that position has X-Y or X-Y-Z
-            if pos.len() != 2 && pos.len() != 3 {
-                return Err(ProcessError::Format("is not a valid position".into()));
-            }
-            let x = to_double(pos[0])?;
-            let y = to_double(pos[1])?;
-            let z = if pos.len() == 3 { to_double(pos[2])? } else { 0. };
-            return Ok(Position::new(x, y, z));
-        }
-        // empty positions aren't allowed
-        Err(ProcessError::Format("is not a valid position".into()))
-    }
-}
-impl FromAttr for PositionVector {
-    fn invalid_return() -> Self {
-        PositionVector::default()
-    }
-    fn from_attr(value: &str) -> Result<Self, ProcessError> {
-        let mut shape = PositionVector::default();
-        for p in tokenize_white(value) {
-            let pos = tokenize(p, ",");
-            if pos.len() != 2 && pos.len() != 3 {
-                return Err(ProcessError::Format("is not a valid list of positions".into()));
-            }
-            let x = to_double(pos[0])?;
-            let y = to_double(pos[1])?;
-            let z = if pos.len() == 3 { to_double(pos[2])? } else { 0. };
-            shape.0.push(Position::new(x, y, z));
-        }
-        Ok(shape)
-    }
-}
-// the real geom::PositionVector (netload/netbuild ports); same parsing as the stand-in above
+// geom::PositionVector parsing (netload/netbuild ports)
 impl FromAttr for crate::geom::position_vector::PositionVector {
     fn invalid_return() -> Self {
         Self::default()
@@ -143,19 +103,7 @@ impl FromAttr for crate::geom::position_vector::PositionVector {
         Ok(shape)
     }
 }
-impl FromAttr for Boundary {
-    fn invalid_return() -> Self {
-        Boundary::default()
-    }
-    fn from_attr(value: &str) -> Result<Self, ProcessError> {
-        let st = tokenize(value, ",");
-        if st.len() != 4 {
-            return Err(ProcessError::Format("is not a valid boundary".into()));
-        }
-        Ok(Boundary::new(to_double(st[0])?, to_double(st[1])?, to_double(st[2])?, to_double(st[3])?))
-    }
-}
-// the real geom::Position / geom::Boundary (same parsing as the stand-ins above)
+// geom::Position / geom::Boundary parsing
 impl FromAttr for crate::geom::position::Position {
     fn invalid_return() -> Self {
         Self::default()
@@ -517,7 +465,7 @@ mod tests {
         assert_eq!(a.get::<String>(SUMO_ATTR_ID, "", &mut ok, true), "v0");
         assert_eq!(a.get::<f64>(SUMO_ATTR_SPEED, "v0", &mut ok, true), 13.5);
         assert_eq!(a.get_sumo_time_reporting(SUMO_ATTR_DEPART, "v0", &mut ok, true), 3_600_000);
-        assert_eq!(a.get::<PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, true).0, vec![Position::new(0., 0., 0.), Position::new(1., 2., 3.)]);
+        assert_eq!(a.get::<crate::geom::position_vector::PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, true).0, vec![crate::geom::position::Position::new3(0., 0., 0.), crate::geom::position::Position::new3(1., 2., 3.)]);
         assert_eq!(a.get::<Vec<String>>(SUMO_ATTR_VCLASS, "", &mut ok, true), vec!["a", "b"]);
         assert_eq!(a.get_period("", &mut ok, true), 5000);
         assert_eq!(a.get_opt::<i32>(SUMO_ATTR_INDEX, "", &mut ok, 7, true), 7);
@@ -532,9 +480,9 @@ mod tests {
         assert_eq!(c.get_attribute_names()[0], "depart");
         assert_eq!(c.get_string_secure_name("lane", "d"), "d");
         assert_eq!(a.get_string_secure_name("lane", "d"), "");
-        assert_eq!(a.get::<Boundary>(SUMO_ATTR_SHAPE, "", &mut ok, false), Boundary::default());
-        let b = attrs(&[("convBoundary", "3,4,1,2")]).get::<Boundary>(SUMO_ATTR_CONV_BOUNDARY, "", &mut ok, true);
-        assert_eq!((b.xmin, b.ymin, b.xmax, b.ymax), (1., 2., 3., 4.));
+        assert_eq!(a.get::<crate::geom::boundary::Boundary>(SUMO_ATTR_SHAPE, "", &mut ok, false), crate::geom::boundary::Boundary::default());
+        let b = attrs(&[("convBoundary", "3,4,1,2")]).get::<crate::geom::boundary::Boundary>(SUMO_ATTR_CONV_BOUNDARY, "", &mut ok, true);
+        assert_eq!((b.xmin(), b.ymin(), b.xmax(), b.ymax()), (1., 2., 3., 4.));
     }
 
     #[test]

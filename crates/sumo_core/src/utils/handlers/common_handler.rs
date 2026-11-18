@@ -1,6 +1,7 @@
 //! Port of utils/handlers/CommonHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Every method is now ported from the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 use utils::xml::common_xml_structure::{CommonXMLStructure, CommonXMLStructure_SumoBaseObject};
 use utils::xml::sumo_xml_definitions::{
     SUMO_ATTR_FROM, SUMO_ATTR_FROM_JUNCTION, SUMO_ATTR_FROM_TAZ, SUMO_ATTR_ID, SUMO_ATTR_KEY, SUMO_ATTR_ROUTE, SUMO_ATTR_TO,
@@ -9,42 +10,36 @@ use utils::xml::sumo_xml_definitions::{
     SUMO_TAG_VEHICLE, SUMO_TAG_VTYPE_DISTRIBUTION,
 };
 
-/// C++ `toString(SumoXMLTag)`: reverse lookup in the generated tag table.
-/// The reverse map is built once; the first table entry wins for a repeated value, as in the linear scan.
+/// C++ `toString(SumoXMLTag)`: reverse lookup in the generated tag table (first entry wins, like the C++ map build).
 pub(crate) fn tag_str(tag: SumoXMLTag) -> String {
-    static MAP: std::sync::OnceLock<HashMap<SumoXMLTag, &'static str>> = std::sync::OnceLock::new();
-    MAP.get_or_init(|| {
-        let mut m = HashMap::new();
+    static MAP: std::sync::OnceLock<std::collections::HashMap<SumoXMLTag, &'static str>> = std::sync::OnceLock::new();
+    let map = MAP.get_or_init(|| {
+        let mut m = std::collections::HashMap::new();
         for (n, t) in utils::xml::sumo_xml_definitions::TAGS.iter() {
             m.entry(*t).or_insert(*n);
         }
         m
-    })
-    .get(&tag)
-    .map(|n| n.to_string())
-    .unwrap_or_default()
+    });
+    map.get(&tag).map(|n| n.to_string()).unwrap_or_default()
 }
 
-/// C++ `toString(SumoXMLAttr)`: reverse lookup in the generated attribute table.
-/// The reverse map is built once; the first table entry wins for a repeated value, as in the linear scan.
+/// C++ `toString(SumoXMLAttr)`: reverse lookup in the generated attribute table (first entry wins).
 pub(crate) fn attr_str(attr: SumoXMLAttr) -> String {
-    static MAP: std::sync::OnceLock<HashMap<SumoXMLAttr, &'static str>> = std::sync::OnceLock::new();
-    MAP.get_or_init(|| {
-        let mut m = HashMap::new();
+    static MAP: std::sync::OnceLock<std::collections::HashMap<SumoXMLAttr, &'static str>> = std::sync::OnceLock::new();
+    let map = MAP.get_or_init(|| {
+        let mut m = std::collections::HashMap::new();
         for (n, a) in utils::xml::sumo_xml_definitions::ATTRS.iter() {
             m.entry(*a).or_insert(*n);
         }
         m
-    })
-    .get(&attr)
-    .map(|n| n.to_string())
-    .unwrap_or_default()
+    });
+    map.get(&attr).map(|n| n.to_string()).unwrap_or_default()
 }
 
 /// C++ class `CommonHandler` (utils/handlers/CommonHandler.h)
 pub struct CommonHandler {
     /// fileBucket
-    pub myFileBucket: Ptr<utils::common::file_bucket::FileBucket>,
+    pub myFileBucket: Ptr<FileBucket>,
     /// common XML Structure
     pub myCommonXMLStructure: CommonXMLStructure,
     /// flag for mark if a element wasn't created
@@ -64,7 +59,7 @@ impl CommonHandler {
     //     myFileBucket(fileBucket) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
+    pub fn new(fileBucket: Ptr<FileBucket>) -> Self {
         Self { myFileBucket: fileBucket, myCommonXMLStructure: CommonXMLStructure::default(), myErrorCreatingElement: false, myOverwriteElements: false, myRemainElements: false, myAbortLoading: false }
     }
 

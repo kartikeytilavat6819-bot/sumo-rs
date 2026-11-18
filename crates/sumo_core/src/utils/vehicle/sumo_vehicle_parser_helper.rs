@@ -3754,8 +3754,12 @@ impl SUMOVehicleParserHelper {
             if !ok {
                 Self::handle_vehicle_error(true, ret, String::new());
             } else {
-                // shortcut: parse_insertion_checks panics instead of throwing InvalidArgument, so the C++ catch (handleVehicleError with e.what()) is not reproduced here; upgrade when parse_insertion_checks returns Result
-                ret.m().insertionChecks = SUMOVehicleParameter::parse_insertion_checks(&checks);
+                match SUMOVehicleParameter::try_parse_insertion_checks(&checks) {
+                    Ok(v) => ret.m().insertionChecks = v,
+                    Err(e) => {
+                        Self::handle_vehicle_error(true, ret, e.to_string());
+                    }
+                }
             }
         }
         // parse parking access rights

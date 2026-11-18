@@ -101,7 +101,7 @@ impl TraCIServerAPI_Lane {
         if l.is_null() {
             return server.write_error_status_cmd(CMD_SET_LANE_VARIABLE, &format!("Lane '{}' is not known", id), outputStorage);
         }
-        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // C++ catch (writeErrorStatusCmd) is reproduced by TraCIServer::dispatch_command, which turns the TraCIException panic into an error status
         // process
         match variable {
             VAR_MAXSPEED => {

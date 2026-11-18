@@ -71,6 +71,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarRouter<E, V, M> {
     /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(astar_compute::<E, V, M>);
+        self.base.myClone = Some(|base| Ptr::from_mut(base).cast::<AStarRouter<E, V, M>>().m().clone());
         self
     }
 

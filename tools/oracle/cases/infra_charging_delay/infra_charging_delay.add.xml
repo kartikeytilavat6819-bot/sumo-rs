@@ -1,0 +1,4 @@
+<additionalFiles>
+    <chargingStation id="csA" lane="E0_0" startPos="200.00" endPos="260.00" power="30000" efficiency="0.80" chargeInTransit="true" chargeDelay="8.00"/>
+    <chargingStation id="csB" lane="E1_0" startPos="20.00" endPos="60.00" power="50000" efficiency="0.90" chargeInTransit="false" chargeDelay="3.00"/>
+</additionalFiles>

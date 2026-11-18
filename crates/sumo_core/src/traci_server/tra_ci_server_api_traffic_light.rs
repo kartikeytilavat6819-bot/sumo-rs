@@ -142,7 +142,7 @@ impl TraCIServerAPI_TrafficLight {
         // id
         let id = inputStorage.read_string().expect("readString");
 
-        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // C++ catch (writeErrorStatusCmd) is reproduced by TraCIServer::dispatch_command, which turns the TraCIException panic into an error status
         match variable {
             TL_PHASE_INDEX => {
                 TrafficLight::set_phase(&id, StorageHelper::read_typed_int(inputStorage, "The phase index must be given as an integer."));

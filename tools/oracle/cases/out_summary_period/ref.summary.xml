@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:11:28.486542-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_summary_period/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_summary_period/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_summary_period/ref.fcd.xml"/>
+        <summary-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_summary_period/ref.summary.xml"/>
+        <summary-output.period value="25"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_summary_period/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_summary_period/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<summary xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/summary_file.xsd">
+    <step time="0.00" loaded="8" inserted="6" running="6" waiting="2" ended="0" arrived="0" collisions="0" teleports="0" halting="0" stopped="0" meanWaitingTime="0.00" meanTravelTime="-1.00" meanSpeed="20.23" meanSpeedRelative="0.96" discarded="0" duration="2"/>
+    <step time="25.00" loaded="22" inserted="22" running="15" waiting="0" ended="7" arrived="7" collisions="0" teleports="0" halting="4" stopped="0" meanWaitingTime="0.09" meanTravelTime="15.43" meanSpeed="10.40" meanSpeedRelative="0.44" discarded="0" duration="1"/>
+    <step time="50.00" loaded="39" inserted="39" running="20" waiting="0" ended="19" arrived="19" collisions="0" teleports="0" halting="0" stopped="0" meanWaitingTime="0.08" meanTravelTime="17.47" meanSpeed="10.09" meanSpeedRelative="0.40" discarded="0" duration="1"/>
+    <step time="75.00" loaded="55" inserted="55" running="18" waiting="0" ended="37" arrived="37" collisions="0" teleports="0" halting="4" stopped="0" meanWaitingTime="0.05" meanTravelTime="21.27" meanSpeed="8.70" meanSpeedRelative="0.37" discarded="0" duration="1"/>
+    <step time="100.00" loaded="73" inserted="73" running="24" waiting="0" ended="49" arrived="49" collisions="0" teleports="0" halting="2" stopped="0" meanWaitingTime="0.05" meanTravelTime="21.37" meanSpeed="10.06" meanSpeedRelative="0.44" discarded="0" duration="0"/>
+    <step time="125.00" loaded="88" inserted="88" running="25" waiting="0" ended="63" arrived="63" collisions="0" teleports="0" halting="16" stopped="0" meanWaitingTime="0.05" meanTravelTime="23.25" meanSpeed="4.87" meanSpeedRelative="0.20" discarded="0" duration="0"/>
+    <step time="150.00" loaded="106" inserted="106" running="29" waiting="0" ended="77" arrived="77" collisions="0" teleports="0" halting="8" stopped="0" meanWaitingTime="0.07" meanTravelTime="23.10" meanSpeed="5.09" meanSpeedRelative="0.22" discarded="0" duration="1"/>
+    <step time="175.00" loaded="121" inserted="121" running="32" waiting="0" ended="89" arrived="89" collisions="0" teleports="0" halting="19" stopped="0" meanWaitingTime="0.07" meanTravelTime="23.82" meanSpeed="2.75" meanSpeedRelative="0.13" discarded="0" duration="0"/>
+</summary>

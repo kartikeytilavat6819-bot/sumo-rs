@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) CCHGraph::EffortOperation`
-pub type CCHGraph_EffortOperation = Unmapped /* double (*)(const E *const, const V *const, double) */;
+pub type CCHGraph_EffortOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f64;
 
 /// Metric-independent RoutingKit CCH topology over the PURE road graph.
 /// C++ class `CCHGraph` (utils/router/CCHGraph.h)
@@ -40,7 +40,8 @@ static EMPTY_NODES: Vec<u32> = Vec::new();
 
 // C++ static members of CCHGraph (port as module-level statics, see AGENTS.md):
 //   static const unsigned int CCHGraph::INVALID_NODE;
-const INVALID_NODE: u32 = foreign::routingkit::constants::INVALID_ID;
+pub const CCHGraph_INVALID_NODE: u32 = foreign::routingkit::constants::INVALID_ID;
+const INVALID_NODE: u32 = CCHGraph_INVALID_NODE;
 
 impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     /// C++: `void CCHGraph::CCHGraph<E, V>(const int &)`
@@ -165,8 +166,137 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(allEdges: &Vec<Ptr<E>>) -> Self {
-        // shortcut: needs E::getOtherTazConnector (for isStarConnector) and L::geometryPositionAtOffset plus junction getPosition (lane/junction geometry), none in RouterEdge
-        panic!("shortcut: CCHGraph::new needs E::getOtherTazConnector and junction/lane geometry, not in RouterEdge")
+        let mut myNodeToEdge: Vec<Ptr<E>> = Vec::new();
+        let mut myArcTail: Vec<u32> = Vec::new();
+        let mut myArcHead: Vec<u32> = Vec::new();
+        let mut myArcVia: Vec<Ptr<E>> = Vec::new();
+        let mut myArcOf: HashMap<(u32, u32), u32> = HashMap::new();
+        let mut myTazSrcNodes: HashMap<Ptr<E>, Vec<u32>> = HashMap::new();
+        let mut myTazSnkNodes: HashMap<Ptr<E>, Vec<u32>> = HashMap::new();
+        // 1. dense node indexing over real (non-internal, non-taz) edges.
+        let mut maxNumID: u32 = 0;
+        for e in allEdges.iter() {
+            let id = e.numerical_id() as u32;
+            maxNumID = if maxNumID > id { maxNumID } else { id };
+        }
+        let mut myEdgeToNode: Vec<u32> = vec![INVALID_NODE; maxNumID as usize + 1];
+        for &e in allEdges.iter() {
+            if e.is_internal() || Self::is_star_connector(e) {
+                continue;
+            }
+            let node = myNodeToEdge.len() as u32;
+            myEdgeToNode[e.numerical_id() as usize] = node;
+            myNodeToEdge.push(e);
+        }
+        let nNodes = myNodeToEdge.len() as u32;
+        // nodeOf() before the struct exists
+        let nodeOf = |e: Ptr<E>, edgeToNode: &Vec<u32>| -> u32 {
+            if e.is_null() || e.numerical_id() < 0 || e.numerical_id() as usize >= edgeToNode.len() {
+                return INVALID_NODE;
+            }
+            edgeToNode[e.numerical_id() as usize]
+        };
+
+        // 2. arcs from the union successors; coordinates for the orderer.
+        let mut lon: Vec<f32> = vec![0.; nNodes as usize];
+        let mut lat: Vec<f32> = vec![0.; nNodes as usize];
+        for n in 0..nNodes as usize {
+            let e = myNodeToEdge[n];
+            let mut p: Position;
+            if !e.lanes().is_empty() {
+                p = E::lane_geometry_position_at_offset(e.lanes()[0], e.length() * 0.5);
+            } else {
+                let j = if !e.to_junction().is_null() { e.to_junction() } else { e.from_junction() };
+                p = if !j.is_null() { E::junction_position(j) } else { Position::new(0., 0.) };
+            }
+            if GeoConvHelper::with_final(|g| g.using_geo_projection()) {
+                GeoConvHelper::with_final(|g| g.cartesian2geo(&mut p));
+            }
+            lon[n] = p.x() as f32;
+            lat[n] = p.y() as f32;
+        }
+        for n in 0..nNodes {
+            let u = myNodeToEdge[n as usize];
+            for follower in u.via_successors(utils::common::sumo_vehicle_class::SVC_IGNORING, false).iter() {
+                let to = follower.0;
+                if to.is_null() || to.numerical_id() >= myEdgeToNode.len() as i32 {
+                    continue;
+                }
+                let toNode = myEdgeToNode[to.numerical_id() as usize];
+                if toNode == INVALID_NODE {
+                    continue; // successor is internal/taz -> not a routable node
+                }
+                myArcOf.insert((n, toNode), myArcTail.len() as u32);
+                myArcTail.push(n);
+                myArcHead.push(toNode);
+                myArcVia.push(follower.1); // leading internal edge or nullptr
+            }
+        }
+        let myArcPerm: Vec<SVCPermissions> = vec![0; myArcTail.len()];
+        // 2b. reverse image for sparse re-customization: for every arc, the
+        // edges its weight reads at fill time (head edge + folded via chain;
+        // the tail edge is deliberately absent from the weight, see the arc
+        // weight convention above)
+        let mut myEdgeToArcs: Vec<Vec<u32>> = vec![Vec::new(); myEdgeToNode.len()];
+        for a in 0..myArcHead.len() as u32 {
+            myEdgeToArcs[myNodeToEdge[myArcHead[a as usize] as usize].numerical_id() as usize].push(a);
+            let mut via = myArcVia[a as usize];
+            while !via.is_null() && via.is_internal() {
+                if via.numerical_id() >= 0 && via.numerical_id() < myEdgeToArcs.len() as i32 {
+                    myEdgeToArcs[via.numerical_id() as usize].push(a);
+                }
+                let vs = via.via_successors(utils::common::sumo_vehicle_class::SVC_IGNORING, false);
+                via = if vs.is_empty() { Ptr::null() } else { vs[0].1 };
+            }
+        }
+
+        // 3. TAZ member sets (query-time "phantom nodes"): successors for a
+        // source connector (entry edges), predecessors for a sink connector.
+        for &e in allEdges.iter() {
+            if !Self::is_star_connector(e) {
+                continue;
+            }
+            let mut srcNodes: Vec<u32> = Vec::new();
+            for follower in e.via_successors(utils::common::sumo_vehicle_class::SVC_IGNORING, false).iter() {
+                let m = nodeOf(follower.0, &myEdgeToNode);
+                if m != INVALID_NODE {
+                    srcNodes.push(m);
+                }
+            }
+            let mut snkNodes: Vec<u32> = Vec::new();
+            for &pred in e.predecessors().iter() {
+                let m = nodeOf(pred, &myEdgeToNode);
+                if m != INVALID_NODE {
+                    snkNodes.push(m);
+                }
+            }
+            if !srcNodes.is_empty() {
+                myTazSrcNodes.insert(e, srcNodes);
+            }
+            if !snkNodes.is_empty() {
+                myTazSnkNodes.insert(e, snkNodes);
+            }
+        }
+
+        // 4. metric-independent order + CCH topology (the one-time work).
+        // @todo persist the order keyed by a network hash (recompute is fast)
+        let order = foreign::routingkit::nested_dissection::compute_nested_node_dissection_order_using_inertial_flow(nNodes, &myArcTail, &myArcHead, &lat, &lon);
+        let myCCH = CustomizableContractionHierarchy::new(order, myArcTail.clone(), myArcHead.clone()).unwrap_or_else(|e| std::panic::panic_any(e));
+        CCHGraph {
+            myNodeToEdge,
+            myEdgeToNode,
+            myArcTail,
+            myArcHead,
+            myArcVia,
+            myArcOf,
+            myArcPerm: std::cell::RefCell::new(myArcPerm),
+            myPrimedClasses: std::cell::Cell::new(0),
+            myEdgeToArcs,
+            myTazSrcNodes,
+            myTazSnkNodes,
+            myCCH,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CCHGraph::~CCHGraph<E, V>()` [virtual]
@@ -301,9 +431,15 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //         return sum;
     //     }
     #[allow(unused_variables)]
-    pub fn via_chain_effort(via: Ptr<E>, effort: CCHGraph_EffortOperation, veh: Ptr<V>, time: f64) -> f64 {
-        // shortcut: CCHGraph_EffortOperation is Unmapped, so effort(via, veh, time) cannot be called; the alias needs E,V params (rocch_metrics.rs outside this batch uses it bare)
-        panic!("shortcut: CCHGraph::viaChainEffort needs typed EffortOperation")
+    pub fn via_chain_effort(via: Ptr<E>, effort: CCHGraph_EffortOperation<E, V>, veh: Ptr<V>, time: f64) -> f64 {
+        let mut via = via;
+        let mut sum: f64 = 0.;
+        while !via.is_null() && via.is_internal() {
+            sum += effort(via, veh, time);
+            let vs = via.via_successors(utils::common::sumo_vehicle_class::SVC_IGNORING, false);
+            via = if vs.is_empty() { Ptr::null() } else { vs[0].1 };
+        }
+        sum
     }
 
     /// C++: `unsigned int CCHGraph::computeArcWeight(unsigned int, EffortOperation, SUMOVehicleClass, const V *, double) const` [const]
@@ -318,7 +454,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //         return computeArcWeightRaw(a, effort, veh, time);
     //     }
     #[allow(unused_variables)]
-    pub fn compute_arc_weight(&self, a: u32, effort: CCHGraph_EffortOperation, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64) -> u32 {
+    pub fn compute_arc_weight(&self, a: u32, effort: CCHGraph_EffortOperation<E, V>, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64) -> u32 {
         if maskClass != utils::common::sumo_vehicle_class::SVC_IGNORING
                 && (((self.myArcPerm.borrow()[a as usize] & maskClass) == 0)
                     || ({
@@ -343,7 +479,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn fill_input_weights(&self, effort: CCHGraph_EffortOperation, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64, weight: &mut Vec<u32>) {
+    pub fn fill_input_weights(&self, effort: CCHGraph_EffortOperation<E, V>, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64, weight: &mut Vec<u32>) {
         self.prime_class_mask(maskClass);
         weight.resize(self.arc_count() as usize, 0);
         for a in 0..self.arc_count() {
@@ -370,8 +506,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_star_connector(e: Ptr<E>) -> bool {
-        // shortcut: E::getOtherTazConnector is not in RouterEdge, add it to the trait to upgrade
-        panic!("shortcut: CCHGraph::isStarConnector needs E::getOtherTazConnector, not in RouterEdge")
+        e.is_taz_connector() && !e.other_taz_connector().is_null()
     }
 
     /// C++: `void CCHGraph::primeClassMask(SUMOVehicleClass) const` [const, private]
@@ -429,9 +564,17 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //                                         ? RoutingKit::inf_weight - 1 : cs));
     //     }
     #[allow(unused_variables)]
-    pub fn compute_arc_weight_raw(&self, a: u32, effort: CCHGraph_EffortOperation, veh: Ptr<V>, time: f64) -> u32 {
-        // shortcut: CCHGraph_EffortOperation is still an Unmapped placeholder (rocch_metrics uses the non-generic alias), so effort(to, veh, time) cannot be called; upgrade with the typedef
-        panic!("shortcut: CCHGraph::computeArcWeightRaw needs typed EffortOperation")
+    pub fn compute_arc_weight_raw(&self, a: u32, effort: CCHGraph_EffortOperation<E, V>, veh: Ptr<V>, time: f64) -> u32 {
+        use foreign::routingkit::constants::INF_WEIGHT;
+        let to = self.myNodeToEdge[self.myArcHead[a as usize] as usize];
+        let bigEffort = (INF_WEIGHT - 1) as f64 / 100.0;
+        let eff = Self::via_chain_effort(self.myArcVia[a as usize], effort, veh, time) + effort(to, veh, time);
+        if !(eff < bigEffort) {
+            return INF_WEIGHT;
+        }
+        // std::llround: round half away from zero
+        let cs = (eff * 100.0).round() as i64;
+        (if cs < 0 { 0 } else if cs >= INF_WEIGHT as i64 { INF_WEIGHT as i64 - 1 } else { cs }) as u32
     }
 
     /// C++: `void CCHGraph::CCHGraph<E, V>(const CCHGraph<E, V> &)` [private]

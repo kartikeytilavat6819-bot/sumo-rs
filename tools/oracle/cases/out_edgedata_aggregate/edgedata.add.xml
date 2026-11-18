@@ -1,0 +1,3 @@
+<additional>
+    <edgeData id="ed_ag" period="50" edges="-103224#1 -103227#1" aggregate="true" maxTraveltime="60" minSamples="2" file="out_ed_ag.xml"/>
+</additional>

@@ -1,6 +1,7 @@
 //! Port of utils/handlers/MeanDataHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 use super::common_handler::{attr_str, tag_str};
 use utils::xml::common_xml_structure::CommonXMLStructure_SumoBaseObject;
 use utils::xml::sumo_xml_definitions::{ExcludeEmptys, MeanDataTypes};
@@ -51,7 +52,7 @@ impl MeanDataHandler {
     //     CommonHandler(fileBucket) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
+    pub fn new(fileBucket: Ptr<FileBucket>) -> Self {
         Self { base: CommonHandler::new(fileBucket) }
     }
 

@@ -1,6 +1,7 @@
 //! Port of utils/router/LogitCalculator.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// Cost calculation with c-logit or logit method.
 /// C++ class `LogitCalculator` (utils/router/LogitCalculator.h)
@@ -31,14 +32,18 @@ impl<R, E, V> std::ops::DerefMut for LogitCalculator<R, E, V> {
     }
 }
 
-impl<R, E, V> LogitCalculator<R, E, V> {
+impl<R: RouteCostRoute<E>, E: RouterEdge<V>, V> LogitCalculator<R, E, V> {
     /// C++: `void LogitCalculator::LogitCalculator<R, E, V>(const double, const double, const double)`
     /// Constructor
     // LogitCalculator(const double beta, const double gamma,
     //                     const double theta) : myBeta(beta), myGamma(gamma), myTheta(theta) {}
     #[allow(unused_variables)]
     pub fn new(beta: f64, gamma: f64, theta: f64) -> Self {
-        Self { base: RouteCostCalculator::new(), myBeta: beta, myGamma: gamma, myTheta: theta, myCommonalities: BTreeMap::new(), _p: std::marker::PhantomData }
+        let mut base = RouteCostCalculator::new();
+        // C++ vtable: the base is the first field of this #[repr(C)] struct, so the cast is the C++ static_cast
+        base.vt_set_costs = Some(|b, route, costs, isActive| unsafe { &*(b as *const RouteCostCalculator<R, E, V> as *const Self) }.set_costs(route, costs, isActive));
+        base.vt_calculate_probabilities = Some(|b, alternatives, veh, time| unsafe { &mut *(b as *mut RouteCostCalculator<R, E, V> as *mut Self) }.calculate_probabilities(alternatives, veh, time));
+        Self { base, myBeta: beta, myGamma: gamma, myTheta: theta, myCommonalities: BTreeMap::new(), _p: std::marker::PhantomData }
     }
 
     /// C++: `void LogitCalculator::~LogitCalculator<R, E, V>()` [virtual]
@@ -55,8 +60,7 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_costs(&self, route: Rc<R>, costs: f64, arg2: bool) {
-        // shortcut: needs router trait bounds (lead), R::setCosts is not callable on generic R
-        panic!("shortcut: needs router trait bounds (lead), R::setCosts")
+        route.set_costs(costs);
     }
 
     /// C++: `void LogitCalculator::calculateProbabilities(const std::vector<std::shared_ptr<R>> &, const V *const, const SUMOTime)`
@@ -99,8 +103,43 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn calculate_probabilities(&mut self, alternatives: &Vec<Rc<R>>, veh: Ptr<V>, time: SUMOTime) {
-        // shortcut: needs router trait bounds (lead), R::getEdgeVector / R::getCosts / R::setProbability and E::getTravelTime are not callable on generic R, E
-        panic!("shortcut: needs router trait bounds (lead), R::getEdgeVector")
+        let theta = if self.myTheta >= 0. { self.myTheta } else { self.get_theta_for_c_logit(alternatives.clone()) };
+        let beta = if self.myBeta >= 0. { self.myBeta } else { self.get_beta_for_c_logit(alternatives.clone()) };
+        let t = utils::common::time::steps2time(time);
+        if beta > 0. {
+            // calculate commonalities
+            for pR in alternatives.iter() {
+                let mut lengthR: f64 = 0.;
+                let edgesR = pR.get_edge_vector();
+                for edge in edgesR.iter() {
+                    //@todo we should use costs here
+                    lengthR += edge.travel_time(veh, t);
+                }
+                let mut overlapSum: f64 = 0.;
+                for pS in alternatives.iter() {
+                    let mut overlapLength: f64 = 0.;
+                    let mut lengthS: f64 = 0.;
+                    for edge in pS.get_edge_vector().iter() {
+                        lengthS += edge.travel_time(veh, t);
+                        if edgesR.contains(edge) {
+                            overlapLength += edge.travel_time(veh, t);
+                        }
+                    }
+                    overlapSum += (overlapLength / (lengthR * lengthS).sqrt()).powf(self.myGamma);
+                }
+                self.myCommonalities.insert(Ptr::new(&**pR), beta * overlapSum.ln());
+            }
+        }
+        for pR in alternatives.iter() {
+            let mut weightedSum: f64 = 0.;
+            for pS in alternatives.iter() {
+                // C++ std::map::operator[] default-inserts 0
+                let cR = *self.myCommonalities.entry(Ptr::new(&**pR)).or_insert(0.);
+                let cS = *self.myCommonalities.entry(Ptr::new(&**pS)).or_insert(0.);
+                weightedSum += (theta * (pR.get_costs() - pS.get_costs() + cR - cS)).exp();
+            }
+            pR.set_probability(1. / weightedSum);
+        }
     }
 
     /// C++: `double LogitCalculator::getBetaForCLogit(const std::vector<std::shared_ptr<R>>) const` [const, private]
@@ -117,8 +156,14 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_beta_for_c_logit(&self, alternatives: Vec<Rc<R>>) -> f64 {
-        // shortcut: needs router trait bounds (lead), R::getCosts is not callable on generic R
-        panic!("shortcut: needs router trait bounds (lead), R::getCosts")
+        let mut min = f64::MAX;
+        for pR in alternatives.iter() {
+            let cost = pR.get_costs() / 3600.;
+            if cost < min {
+                min = cost;
+            }
+        }
+        min
     }
 
     /// C++: `double LogitCalculator::getThetaForCLogit(const std::vector<std::shared_ptr<R>>) const` [const, private]
@@ -148,8 +193,28 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_theta_for_c_logit(&self, alternatives: Vec<Rc<R>>) -> f64 {
-        // shortcut: needs router trait bounds (lead), R::getCosts is not callable on generic R
-        panic!("shortcut: needs router trait bounds (lead), R::getCosts")
+        // @todo this calculation works for travel times only
+        let mut sum: f64 = 0.;
+        let mut diff: f64 = 0.;
+        let mut min = f64::MAX;
+        for pR in alternatives.iter() {
+            let cost = pR.get_costs() / 3600.;
+            sum += cost;
+            if cost < min {
+                min = cost;
+            }
+        }
+        let meanCost = sum / (alternatives.len() as f64);
+        for pR in alternatives.iter() {
+            diff += (pR.get_costs() / 3600. - meanCost).powf(2.);
+        }
+        let cvCost = (diff / (alternatives.len() as f64)).sqrt() / meanCost;
+        // @todo re-evaluate function
+        if cvCost > 0. {
+            // all Magic numbers from Lohse book, original says this should be cvCost > 0.04
+            return 3.1415926535897932384626433832795 / ((6.0f64).sqrt() * cvCost * (min + 1.1)) / 3600.;
+        }
+        1. / 3600.
     }
 
     /// C++: `LogitCalculator<R, E, V> & LogitCalculator::operator=(const LogitCalculator<R, E, V> &)` [private]

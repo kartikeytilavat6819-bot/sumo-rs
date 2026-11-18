@@ -1,6 +1,6 @@
 //! What iodevices needs from OptionsCont::getOptions(), plus the port of OptionsCont::writeXMLHeader.
-// Production uses the OptionsCont singleton (RealOptions); `set_options_hook` is only a test seam
-// that lets the unit tests replace it with fixed values.
+// seam: the options singleton is reached through this trait so the iodevices tests can inject FakeOptions
+// (RealOptions below forwards to utils::options::options_cont); not a C++ construct
 use crate::xml::stand_ins::iso_time_string;
 use crate::xml::sumo_sax_attributes::ENCODING;
 use std::io::Write;

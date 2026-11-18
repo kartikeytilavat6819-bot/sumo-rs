@@ -1,13 +1,18 @@
 //! Port of utils/handlers/RouteHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 use utils::xml::common_xml_structure::{CommonXMLStructure_PlanParameters, CommonXMLStructure_SumoBaseObject};
 use crate::utils::handlers::common_handler::{attr_str, tag_str};
 use utils::common::msg_handler::write_warning;
 use utils::common::std_defs::INVALID_DOUBLE;
-use utils::xml::sumo_xml_definitions::{GNE_TAG_FLOW_JUNCTIONS, GNE_TAG_FLOW_ROUTE, GNE_TAG_FLOW_TAZS, GNE_TAG_FLOW_WITHROUTE, GNE_TAG_TRIP_JUNCTIONS, GNE_TAG_TRIP_TAZS, GNE_TAG_VEHICLE_WITHROUTE};
 
-// NamespaceIDs::routes / vehicles / persons / containers (utils/xml/NamespaceIDs.cpp), GNE_* tags included
+// NamespaceIDs::routes / vehicles / persons / containers (utils/xml/NamespaceIDs.cpp), copied in full.
+// The other NamespaceIDs lists (busStops, polygons, ...) are only used by netedit and are not ported.
+use utils::xml::sumo_xml_definitions::{
+    GNE_TAG_FLOW_JUNCTIONS, GNE_TAG_FLOW_ROUTE, GNE_TAG_FLOW_TAZS, GNE_TAG_FLOW_WITHROUTE, GNE_TAG_TRIP_JUNCTIONS, GNE_TAG_TRIP_TAZS,
+    GNE_TAG_VEHICLE_WITHROUTE,
+};
 const NS_ROUTES: [SumoXMLTag; 2] = [SUMO_TAG_ROUTE, SUMO_TAG_ROUTE_DISTRIBUTION];
 const NS_VEHICLES: [SumoXMLTag; 10] = [
     SUMO_TAG_TRIP,
@@ -90,6 +95,10 @@ fn vehicle_parameter_of(obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> &'static
 fn vehicle_type_parameter_of(obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> &'static SUMOVTypeParameter {
     or_throw(obj.get().unwrap().get_vehicle_type_parameter()).downcast_ref::<SUMOVTypeParameter>().expect("SumoBaseObject does not hold a SUMOVTypeParameter")
 }
+/// C++ `SUMOVehicleParameter::Stop stop;` (default member values of utils/vehicle/SUMOVehicleParameter.h)
+fn new_stop() -> SUMOVehicleParameter_Stop {
+    SUMOVehicleParameter_Stop::default()
+}
 
 /// C++ `new`-allocated parameter that the caller `delete`s after the copy went into the XML structure:
 /// the Box takes over the allocation, so dropping it later is the C++ `delete`
@@ -133,7 +142,7 @@ impl RouteHandler {
     //     myFlowEndDefault(string2time(OptionsCont::getOptions().getString("end"))) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>, hardFail: bool) -> Self {
+    pub fn new(fileBucket: Ptr<FileBucket>, hardFail: bool) -> Self {
         Self {
             base: CommonHandler::new(fileBucket),
             myHardFail: hardFail,
@@ -1206,8 +1215,8 @@ impl RouteHandler {
     #[allow(unused_variables)]
     pub fn parse_v_type(&mut self, attrs: &SUMOSAXAttributes) {
         // parse vehicleType
-        let file_name = self.myFileBucket.get().expect("RouteHandler: null FileBucket").get_filename();
-        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, file_name, Ptr::null());
+        let file_name = self.myFileBucket.get_filename().to_string();
+        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, &file_name, Ptr::null());
         if !vehicleTypeParameter.is_null() {
             let id = vehicleTypeParameter.id.clone();
             // set tag
@@ -1975,7 +1984,7 @@ impl RouteHandler {
         // declare Ok Flag
         let mut parsedOk = true;
         // declare stop
-        let mut stop = SUMOVehicleParameter_Stop::default();
+        let mut stop = new_stop();
         // plan parameters
         let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
         // get parents

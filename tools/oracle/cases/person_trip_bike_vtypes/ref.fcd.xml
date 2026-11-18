@@ -1,0 +1,1137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:35:20.499768-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/person_trip_bike_vtypes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/person_trip_bike_vtypes/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_bike_vtypes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_bike_vtypes/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_bike_vtypes/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_bike_vtypes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00"/>
+    <timestep time="1.00"/>
+    <timestep time="2.00"/>
+    <timestep time="3.00"/>
+    <timestep time="4.00"/>
+    <timestep time="5.00">
+        <vehicle id="pk0_0" x="2.00" y="-1.60" angle="90.00" type="bikeB" speed="4.00" pos="2.00" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="2.00" y="-1.60" angle="90.00" type="ped" speed="4.00" pos="2.00" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="pk0_0" x="5.82" y="-1.60" angle="90.00" type="bikeB" speed="3.82" pos="5.82" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="5.82" y="-1.60" angle="90.00" type="ped" speed="3.82" pos="5.82" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="pk0_0" x="9.63" y="-1.60" angle="90.00" type="bikeB" speed="3.80" pos="9.63" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="9.63" y="-1.60" angle="90.00" type="ped" speed="3.80" pos="9.63" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="pk0_0" x="13.61" y="-1.60" angle="90.00" type="bikeB" speed="3.99" pos="13.61" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="13.61" y="-1.60" angle="90.00" type="ped" speed="3.99" pos="13.61" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="pk0_0" x="17.34" y="-1.60" angle="90.00" type="bikeB" speed="3.73" pos="17.34" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="17.34" y="-1.60" angle="90.00" type="ped" speed="3.73" pos="17.34" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="pk0_0" x="20.98" y="-1.60" angle="90.00" type="bikeB" speed="3.64" pos="20.98" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="20.98" y="-1.60" angle="90.00" type="ped" speed="3.64" pos="20.98" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="pk0_0" x="24.70" y="-1.60" angle="90.00" type="bikeB" speed="3.72" pos="24.70" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="24.70" y="-1.60" angle="90.00" type="ped" speed="3.72" pos="24.70" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="pk0_0" x="28.41" y="-1.60" angle="90.00" type="bikeB" speed="3.71" pos="28.41" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="28.41" y="-1.60" angle="90.00" type="ped" speed="3.71" pos="28.41" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="pk0_0" x="32.04" y="-1.60" angle="90.00" type="bikeB" speed="3.63" pos="32.04" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="32.04" y="-1.60" angle="90.00" type="ped" speed="3.63" pos="32.04" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="pk0_0" x="35.78" y="-1.60" angle="90.00" type="bikeB" speed="3.74" pos="35.78" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="35.78" y="-1.60" angle="90.00" type="ped" speed="3.74" pos="35.78" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="pk0_0" x="39.63" y="-1.60" angle="90.00" type="bikeB" speed="3.85" pos="39.63" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="39.63" y="-1.60" angle="90.00" type="ped" speed="3.85" pos="39.63" edge="AB" slope="0.00"/>
+        <person id="pk1" x="200.00" y="-2.88" angle="270.00" type="ped" speed="0.00" pos="0.00" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="pk0_0" x="43.25" y="-1.60" angle="90.00" type="bikeB" speed="3.62" pos="43.25" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="43.25" y="-1.60" angle="90.00" type="ped" speed="3.62" pos="43.25" edge="AB" slope="0.00"/>
+        <person id="pk1" x="198.77" y="-2.88" angle="270.00" type="ped" speed="1.23" pos="198.77" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="pk0_0" x="47.07" y="-1.60" angle="90.00" type="bikeB" speed="3.82" pos="47.07" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="47.07" y="-1.60" angle="90.00" type="ped" speed="3.82" pos="47.07" edge="AB" slope="0.00"/>
+        <person id="pk1" x="197.48" y="-2.88" angle="270.00" type="ped" speed="1.29" pos="197.48" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="pk0_0" x="50.81" y="-1.60" angle="90.00" type="bikeB" speed="3.74" pos="50.81" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="50.81" y="-1.60" angle="90.00" type="ped" speed="3.74" pos="50.81" edge="AB" slope="0.00"/>
+        <person id="pk1" x="195.99" y="-2.88" angle="270.00" type="ped" speed="1.49" pos="195.99" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="pk0_0" x="54.45" y="-1.60" angle="90.00" type="bikeB" speed="3.64" pos="54.45" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="54.45" y="-1.60" angle="90.00" type="ped" speed="3.64" pos="54.45" edge="AB" slope="0.00"/>
+        <person id="pk1" x="194.64" y="-2.88" angle="270.00" type="ped" speed="1.35" pos="194.64" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="pk0_0" x="58.19" y="-1.60" angle="90.00" type="bikeB" speed="3.74" pos="58.19" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="58.19" y="-1.60" angle="90.00" type="ped" speed="3.74" pos="58.19" edge="AB" slope="0.00"/>
+        <person id="pk1" x="193.31" y="-2.88" angle="270.00" type="ped" speed="1.32" pos="193.31" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="pk0_0" x="61.89" y="-1.60" angle="90.00" type="bikeB" speed="3.69" pos="61.89" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="61.89" y="-1.60" angle="90.00" type="ped" speed="3.69" pos="61.89" edge="AB" slope="0.00"/>
+        <person id="pk1" x="191.83" y="-2.88" angle="270.00" type="ped" speed="1.49" pos="191.83" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="pk0_0" x="65.52" y="-1.60" angle="90.00" type="bikeB" speed="3.64" pos="65.52" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="65.52" y="-1.60" angle="90.00" type="ped" speed="3.64" pos="65.52" edge="AB" slope="0.00"/>
+        <person id="pk1" x="190.55" y="-2.88" angle="270.00" type="ped" speed="1.28" pos="190.55" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="pk0_0" x="69.51" y="-1.60" angle="90.00" type="bikeB" speed="3.99" pos="69.51" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="69.51" y="-1.60" angle="90.00" type="ped" speed="3.99" pos="69.51" edge="AB" slope="0.00"/>
+        <person id="pk1" x="189.12" y="-2.88" angle="270.00" type="ped" speed="1.43" pos="189.12" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="pk0_0" x="73.24" y="-1.60" angle="90.00" type="bikeB" speed="3.73" pos="73.24" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="73.24" y="-1.60" angle="90.00" type="ped" speed="3.73" pos="73.24" edge="AB" slope="0.00"/>
+        <person id="pk1" x="187.78" y="-2.88" angle="270.00" type="ped" speed="1.34" pos="187.78" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="pk0_0" x="77.23" y="-1.60" angle="90.00" type="bikeB" speed="3.99" pos="77.23" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="77.23" y="-1.60" angle="90.00" type="ped" speed="3.99" pos="77.23" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="398.30" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.21" pos="1.70" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="398.30" y="1.60" angle="270.00" type="ped" speed="5.21" pos="1.70" edge="CB" slope="0.00"/>
+        <person id="pk1" x="186.51" y="-2.88" angle="270.00" type="ped" speed="1.28" pos="186.51" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="pk0_0" x="81.08" y="-1.60" angle="90.00" type="bikeB" speed="3.85" pos="81.08" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="81.08" y="-1.60" angle="90.00" type="ped" speed="3.85" pos="81.08" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="393.14" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.16" pos="6.86" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="393.14" y="1.60" angle="270.00" type="ped" speed="5.16" pos="6.86" edge="CB" slope="0.00"/>
+        <person id="pk1" x="185.01" y="-2.88" angle="270.00" type="ped" speed="1.50" pos="185.01" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="pk0_0" x="84.93" y="-1.60" angle="90.00" type="bikeB" speed="3.85" pos="84.93" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="84.93" y="-1.60" angle="90.00" type="ped" speed="3.85" pos="84.93" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="388.27" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.87" pos="11.73" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="388.27" y="1.60" angle="270.00" type="ped" speed="4.87" pos="11.73" edge="CB" slope="0.00"/>
+        <person id="pk1" x="183.71" y="-2.88" angle="270.00" type="ped" speed="1.30" pos="183.71" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="pk0_0" x="88.82" y="-1.60" angle="90.00" type="bikeB" speed="3.89" pos="88.82" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="88.82" y="-1.60" angle="90.00" type="ped" speed="3.89" pos="88.82" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="383.08" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.19" pos="16.92" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="383.08" y="1.60" angle="270.00" type="ped" speed="5.19" pos="16.92" edge="CB" slope="0.00"/>
+        <person id="pk1" x="182.35" y="-2.88" angle="270.00" type="ped" speed="1.36" pos="182.35" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="pk0_0" x="92.66" y="-1.60" angle="90.00" type="bikeB" speed="3.84" pos="92.66" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="92.66" y="-1.60" angle="90.00" type="ped" speed="3.84" pos="92.66" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="378.05" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.03" pos="21.95" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="378.05" y="1.60" angle="270.00" type="ped" speed="5.03" pos="21.95" edge="CB" slope="0.00"/>
+        <person id="pk1" x="180.98" y="-2.88" angle="270.00" type="ped" speed="1.37" pos="180.98" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="pk0_0" x="96.38" y="-1.60" angle="90.00" type="bikeB" speed="3.72" pos="96.38" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="96.38" y="-1.60" angle="90.00" type="ped" speed="3.72" pos="96.38" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="372.91" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.13" pos="27.09" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="372.91" y="1.60" angle="270.00" type="ped" speed="5.13" pos="27.09" edge="CB" slope="0.00"/>
+        <person id="pk1" x="179.65" y="-2.88" angle="270.00" type="ped" speed="1.33" pos="179.65" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="pk0_0" x="100.04" y="-1.60" angle="90.00" type="bikeB" speed="3.66" pos="100.04" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="100.04" y="-1.60" angle="90.00" type="ped" speed="3.66" pos="100.04" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="367.87" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.05" pos="32.13" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="367.87" y="1.60" angle="270.00" type="ped" speed="5.05" pos="32.13" edge="CB" slope="0.00"/>
+        <person id="pk1" x="178.23" y="-2.88" angle="270.00" type="ped" speed="1.42" pos="178.23" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="pk0_0" x="103.76" y="-1.60" angle="90.00" type="bikeB" speed="3.72" pos="103.76" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="103.76" y="-1.60" angle="90.00" type="ped" speed="3.72" pos="103.76" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="363.11" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.76" pos="36.89" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="363.11" y="1.60" angle="270.00" type="ped" speed="4.76" pos="36.89" edge="CB" slope="0.00"/>
+        <person id="pk1" x="176.74" y="-2.88" angle="270.00" type="ped" speed="1.48" pos="176.74" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="pk0_0" x="107.62" y="-1.60" angle="90.00" type="bikeB" speed="3.86" pos="107.62" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="107.62" y="-1.60" angle="90.00" type="ped" speed="3.86" pos="107.62" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="357.92" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.19" pos="42.08" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="357.92" y="1.60" angle="270.00" type="ped" speed="5.19" pos="42.08" edge="CB" slope="0.00"/>
+        <person id="pk1" x="175.50" y="-2.88" angle="270.00" type="ped" speed="1.24" pos="175.50" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="pk0_0" x="111.31" y="-1.60" angle="90.00" type="bikeB" speed="3.69" pos="111.31" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="111.31" y="-1.60" angle="90.00" type="ped" speed="3.69" pos="111.31" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="352.87" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.05" pos="47.13" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="352.87" y="1.60" angle="270.00" type="ped" speed="5.05" pos="47.13" edge="CB" slope="0.00"/>
+        <person id="pk1" x="174.10" y="-2.88" angle="270.00" type="ped" speed="1.40" pos="174.10" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="pk0_0" x="115.15" y="-1.60" angle="90.00" type="bikeB" speed="3.84" pos="115.15" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="115.15" y="-1.60" angle="90.00" type="ped" speed="3.84" pos="115.15" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="347.66" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.21" pos="52.34" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="347.66" y="1.60" angle="270.00" type="ped" speed="5.21" pos="52.34" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="1.90" y="-1.60" angle="90.00" type="bikeA" speed="3.84" pos="1.90" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="1.90" y="-1.60" angle="90.00" type="ped" speed="3.84" pos="1.90" edge="AB" slope="0.00"/>
+        <person id="pk1" x="172.80" y="-2.88" angle="270.00" type="ped" speed="1.30" pos="172.80" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="pk0_0" x="119.08" y="-1.60" angle="90.00" type="bikeB" speed="3.93" pos="119.08" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="119.08" y="-1.60" angle="90.00" type="ped" speed="3.93" pos="119.08" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="342.97" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.70" pos="57.03" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="342.97" y="1.60" angle="270.00" type="ped" speed="4.70" pos="57.03" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="6.14" y="-1.60" angle="90.00" type="bikeA" speed="4.24" pos="6.14" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="6.14" y="-1.60" angle="90.00" type="ped" speed="4.24" pos="6.14" edge="AB" slope="0.00"/>
+        <person id="pk1" x="171.32" y="-2.88" angle="270.00" type="ped" speed="1.49" pos="171.32" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="pk0_0" x="122.74" y="-1.60" angle="90.00" type="bikeB" speed="3.65" pos="122.74" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="122.74" y="-1.60" angle="90.00" type="ped" speed="3.65" pos="122.74" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="338.22" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.75" pos="61.78" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="338.22" y="1.60" angle="270.00" type="ped" speed="4.75" pos="61.78" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="10.42" y="-1.60" angle="90.00" type="bikeA" speed="4.28" pos="10.42" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="10.42" y="-1.60" angle="90.00" type="ped" speed="4.28" pos="10.42" edge="AB" slope="0.00"/>
+        <person id="pk1" x="169.97" y="-2.88" angle="270.00" type="ped" speed="1.35" pos="169.97" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="pk0_0" x="126.61" y="-1.60" angle="90.00" type="bikeB" speed="3.87" pos="126.61" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="126.61" y="-1.60" angle="90.00" type="ped" speed="3.87" pos="126.61" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="333.41" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.81" pos="66.59" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="333.41" y="1.60" angle="270.00" type="ped" speed="4.81" pos="66.59" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="15.06" y="-1.60" angle="90.00" type="bikeA" speed="4.65" pos="15.06" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="15.06" y="-1.60" angle="90.00" type="ped" speed="4.65" pos="15.06" edge="AB" slope="0.00"/>
+        <person id="pk1" x="168.56" y="-2.88" angle="270.00" type="ped" speed="1.41" pos="168.56" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="pk0_0" x="130.50" y="-1.60" angle="90.00" type="bikeB" speed="3.89" pos="130.50" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="130.50" y="-1.60" angle="90.00" type="ped" speed="3.89" pos="130.50" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="328.56" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.85" pos="71.44" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="328.56" y="1.60" angle="270.00" type="ped" speed="4.85" pos="71.44" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="19.40" y="-1.60" angle="90.00" type="bikeA" speed="4.33" pos="19.40" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="19.40" y="-1.60" angle="90.00" type="ped" speed="4.33" pos="19.40" edge="AB" slope="0.00"/>
+        <person id="pk1" x="167.25" y="-2.88" angle="270.00" type="ped" speed="1.31" pos="167.25" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="pk0_0" x="134.25" y="-1.60" angle="90.00" type="bikeB" speed="3.75" pos="134.25" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="134.25" y="-1.60" angle="90.00" type="ped" speed="3.75" pos="134.25" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="323.80" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.76" pos="76.20" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="323.80" y="1.60" angle="270.00" type="ped" speed="4.76" pos="76.20" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="23.99" y="-1.60" angle="90.00" type="bikeA" speed="4.59" pos="23.99" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="23.99" y="-1.60" angle="90.00" type="ped" speed="4.59" pos="23.99" edge="AB" slope="0.00"/>
+        <person id="pk1" x="166.03" y="-2.88" angle="270.00" type="ped" speed="1.22" pos="166.03" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="pk0_0" x="138.13" y="-1.60" angle="90.00" type="bikeB" speed="3.87" pos="138.13" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="138.13" y="-1.60" angle="90.00" type="ped" speed="3.87" pos="138.13" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="318.62" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.19" pos="81.38" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="318.62" y="1.60" angle="270.00" type="ped" speed="5.19" pos="81.38" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="28.25" y="-1.60" angle="90.00" type="bikeA" speed="4.26" pos="28.25" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="28.25" y="-1.60" angle="90.00" type="ped" speed="4.26" pos="28.25" edge="AB" slope="0.00"/>
+        <person id="pk1" x="164.78" y="-2.88" angle="270.00" type="ped" speed="1.25" pos="164.78" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="pk0_0" x="142.03" y="-1.60" angle="90.00" type="bikeB" speed="3.90" pos="142.03" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="142.03" y="-1.60" angle="90.00" type="ped" speed="3.90" pos="142.03" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="313.57" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.05" pos="86.43" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="313.57" y="1.60" angle="270.00" type="ped" speed="5.05" pos="86.43" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="32.60" y="-1.60" angle="90.00" type="bikeA" speed="4.35" pos="32.60" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="32.60" y="-1.60" angle="90.00" type="ped" speed="4.35" pos="32.60" edge="AB" slope="0.00"/>
+        <person id="pk1" x="163.54" y="-2.88" angle="270.00" type="ped" speed="1.23" pos="163.54" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="pk0_0" x="145.63" y="-1.60" angle="90.00" type="bikeB" speed="3.60" pos="145.63" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="145.63" y="-1.60" angle="90.00" type="ped" speed="3.60" pos="145.63" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="308.67" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.90" pos="91.33" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="308.67" y="1.60" angle="270.00" type="ped" speed="4.90" pos="91.33" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="37.33" y="-1.60" angle="90.00" type="bikeA" speed="4.73" pos="37.33" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="37.33" y="-1.60" angle="90.00" type="ped" speed="4.73" pos="37.33" edge="AB" slope="0.00"/>
+        <person id="pk1" x="162.16" y="-2.88" angle="270.00" type="ped" speed="1.38" pos="162.16" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="pk0_0" x="149.53" y="-1.60" angle="90.00" type="bikeB" speed="3.90" pos="149.53" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="149.53" y="-1.60" angle="90.00" type="ped" speed="3.90" pos="149.53" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="303.58" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.08" pos="96.42" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="303.58" y="1.60" angle="270.00" type="ped" speed="5.08" pos="96.42" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="41.94" y="-1.60" angle="90.00" type="bikeA" speed="4.61" pos="41.94" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="41.94" y="-1.60" angle="90.00" type="ped" speed="4.61" pos="41.94" edge="AB" slope="0.00"/>
+        <person id="pk1" x="160.82" y="-2.88" angle="270.00" type="ped" speed="1.34" pos="160.82" edge="AB" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="pk0_0" x="153.42" y="-1.60" angle="90.00" type="bikeB" speed="3.89" pos="153.42" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="153.42" y="-1.60" angle="90.00" type="ped" speed="3.89" pos="153.42" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="298.51" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.08" pos="101.49" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="298.51" y="1.60" angle="270.00" type="ped" speed="5.08" pos="101.49" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="46.16" y="-1.60" angle="90.00" type="bikeA" speed="4.21" pos="46.16" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="46.16" y="-1.60" angle="90.00" type="ped" speed="4.21" pos="46.16" edge="AB" slope="0.00"/>
+        <person id="pk1" x="159.39" y="-2.88" angle="270.00" type="ped" speed="1.43" pos="159.39" edge="AB" slope="0.00"/>
+        <person id="pk4" x="200.00" y="2.88" angle="90.00" type="ped" speed="0.00" pos="0.00" edge="BA" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="pk0_0" x="157.14" y="-1.60" angle="90.00" type="bikeB" speed="3.73" pos="157.14" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="157.14" y="-1.60" angle="90.00" type="ped" speed="3.73" pos="157.14" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="293.68" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.83" pos="106.32" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="293.68" y="1.60" angle="270.00" type="ped" speed="4.83" pos="106.32" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="50.48" y="-1.60" angle="90.00" type="bikeA" speed="4.32" pos="50.48" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="50.48" y="-1.60" angle="90.00" type="ped" speed="4.32" pos="50.48" edge="AB" slope="0.00"/>
+        <person id="pk1" x="157.90" y="-2.88" angle="270.00" type="ped" speed="1.49" pos="157.90" edge="AB" slope="0.00"/>
+        <person id="pk4" x="201.55" y="-0.32" angle="90.00" type="ped" speed="1.55" pos="1.55" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="pk0_0" x="160.87" y="-1.60" angle="90.00" type="bikeB" speed="3.73" pos="160.87" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="160.87" y="-1.60" angle="90.00" type="ped" speed="3.73" pos="160.87" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="288.71" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.97" pos="111.29" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="288.71" y="1.60" angle="270.00" type="ped" speed="4.97" pos="111.29" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="54.65" y="-1.60" angle="90.00" type="bikeA" speed="4.18" pos="54.65" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="54.65" y="-1.60" angle="90.00" type="ped" speed="4.18" pos="54.65" edge="AB" slope="0.00"/>
+        <person id="pk1" x="156.45" y="-2.88" angle="270.00" type="ped" speed="1.45" pos="156.45" edge="AB" slope="0.00"/>
+        <person id="pk4" x="202.95" y="-0.32" angle="90.00" type="ped" speed="1.40" pos="2.95" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="pk0_0" x="164.62" y="-1.60" angle="90.00" type="bikeB" speed="3.74" pos="164.62" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="164.62" y="-1.60" angle="90.00" type="ped" speed="3.74" pos="164.62" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="283.80" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.91" pos="116.20" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="283.80" y="1.60" angle="270.00" type="ped" speed="4.91" pos="116.20" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="59.04" y="-1.60" angle="90.00" type="bikeA" speed="4.39" pos="59.04" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="59.04" y="-1.60" angle="90.00" type="ped" speed="4.39" pos="59.04" edge="AB" slope="0.00"/>
+        <person id="pk1" x="154.95" y="-2.88" angle="270.00" type="ped" speed="1.49" pos="154.95" edge="AB" slope="0.00"/>
+        <person id="pk4" x="204.28" y="-0.32" angle="90.00" type="ped" speed="1.33" pos="4.28" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="pk0_0" x="168.55" y="-1.60" angle="90.00" type="bikeB" speed="3.93" pos="168.55" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="168.55" y="-1.60" angle="90.00" type="ped" speed="3.93" pos="168.55" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="278.60" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.20" pos="121.40" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="278.60" y="1.60" angle="270.00" type="ped" speed="5.20" pos="121.40" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="63.59" y="-1.60" angle="90.00" type="bikeA" speed="4.54" pos="63.59" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="63.59" y="-1.60" angle="90.00" type="ped" speed="4.54" pos="63.59" edge="AB" slope="0.00"/>
+        <person id="pk1" x="153.55" y="-2.88" angle="270.00" type="ped" speed="1.40" pos="153.55" edge="AB" slope="0.00"/>
+        <person id="pk4" x="205.70" y="-0.32" angle="90.00" type="ped" speed="1.42" pos="5.70" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="pk0_0" x="172.43" y="-1.60" angle="90.00" type="bikeB" speed="3.88" pos="172.43" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="172.43" y="-1.60" angle="90.00" type="ped" speed="3.88" pos="172.43" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="273.81" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.79" pos="126.19" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="273.81" y="1.60" angle="270.00" type="ped" speed="4.79" pos="126.19" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="67.86" y="-1.60" angle="90.00" type="bikeA" speed="4.27" pos="67.86" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="67.86" y="-1.60" angle="90.00" type="ped" speed="4.27" pos="67.86" edge="AB" slope="0.00"/>
+        <person id="pk1" x="152.09" y="-2.88" angle="270.00" type="ped" speed="1.46" pos="152.09" edge="AB" slope="0.00"/>
+        <person id="pk4" x="207.31" y="-0.32" angle="90.00" type="ped" speed="1.61" pos="7.31" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="pk0_0" x="176.32" y="-1.60" angle="90.00" type="bikeB" speed="3.89" pos="176.32" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="176.32" y="-1.60" angle="90.00" type="ped" speed="3.89" pos="176.32" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="268.63" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.18" pos="131.37" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="268.63" y="1.60" angle="270.00" type="ped" speed="5.18" pos="131.37" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="72.16" y="-1.60" angle="90.00" type="bikeA" speed="4.30" pos="72.16" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="72.16" y="-1.60" angle="90.00" type="ped" speed="4.30" pos="72.16" edge="AB" slope="0.00"/>
+        <person id="pk1" x="150.88" y="-2.88" angle="270.00" type="ped" speed="1.21" pos="150.88" edge="AB" slope="0.00"/>
+        <person id="pk4" x="208.82" y="-0.32" angle="90.00" type="ped" speed="1.51" pos="8.82" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="pk0_0" x="180.09" y="-1.60" angle="90.00" type="bikeB" speed="3.78" pos="180.09" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="180.09" y="-1.60" angle="90.00" type="ped" speed="3.78" pos="180.09" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="263.96" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.67" pos="136.04" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="263.96" y="1.60" angle="270.00" type="ped" speed="4.67" pos="136.04" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="76.67" y="-1.60" angle="90.00" type="bikeA" speed="4.51" pos="76.67" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="76.67" y="-1.60" angle="90.00" type="ped" speed="4.51" pos="76.67" edge="AB" slope="0.00"/>
+        <person id="pk1" x="149.44" y="-2.88" angle="270.00" type="ped" speed="1.43" pos="149.44" edge="AB" slope="0.00"/>
+        <person id="pk4" x="210.38" y="-0.32" angle="90.00" type="ped" speed="1.56" pos="10.38" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="pk0_0" x="183.90" y="-1.60" angle="90.00" type="bikeB" speed="3.81" pos="183.90" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="183.90" y="-1.60" angle="90.00" type="ped" speed="3.81" pos="183.90" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="259.24" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.72" pos="140.76" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="259.24" y="1.60" angle="270.00" type="ped" speed="4.72" pos="140.76" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="81.34" y="-1.60" angle="90.00" type="bikeA" speed="4.67" pos="81.34" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="81.34" y="-1.60" angle="90.00" type="ped" speed="4.67" pos="81.34" edge="AB" slope="0.00"/>
+        <person id="pk1" x="148.11" y="-2.88" angle="270.00" type="ped" speed="1.33" pos="148.11" edge="AB" slope="0.00"/>
+        <person id="pk4" x="211.97" y="-0.32" angle="90.00" type="ped" speed="1.59" pos="11.97" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="pk0_0" x="187.86" y="-1.60" angle="90.00" type="bikeB" speed="3.96" pos="187.86" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="187.86" y="-1.60" angle="90.00" type="ped" speed="3.96" pos="187.86" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="254.14" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.10" pos="145.86" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="254.14" y="1.60" angle="270.00" type="ped" speed="5.10" pos="145.86" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="85.65" y="-1.60" angle="90.00" type="bikeA" speed="4.31" pos="85.65" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="85.65" y="-1.60" angle="90.00" type="ped" speed="4.31" pos="85.65" edge="AB" slope="0.00"/>
+        <person id="pk1" x="146.86" y="-2.88" angle="270.00" type="ped" speed="1.26" pos="146.86" edge="AB" slope="0.00"/>
+        <person id="pk4" x="213.54" y="-0.32" angle="90.00" type="ped" speed="1.57" pos="13.54" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="pk0_0" x="191.60" y="-1.60" angle="90.00" type="bikeB" speed="3.74" pos="191.60" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="191.60" y="-1.60" angle="90.00" type="ped" speed="3.74" pos="191.60" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="249.18" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.96" pos="150.82" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="249.18" y="1.60" angle="270.00" type="ped" speed="4.96" pos="150.82" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="90.15" y="-1.60" angle="90.00" type="bikeA" speed="4.49" pos="90.15" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="90.15" y="-1.60" angle="90.00" type="ped" speed="4.49" pos="90.15" edge="AB" slope="0.00"/>
+        <person id="pk1" x="145.55" y="-2.88" angle="270.00" type="ped" speed="1.30" pos="145.55" edge="AB" slope="0.00"/>
+        <person id="pk4" x="215.16" y="-0.32" angle="90.00" type="ped" speed="1.62" pos="15.16" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="pk0_0" x="195.42" y="-1.60" angle="90.00" type="bikeB" speed="3.81" pos="195.42" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="195.42" y="-1.60" angle="90.00" type="ped" speed="3.81" pos="195.42" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="244.09" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.09" pos="155.91" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="244.09" y="1.60" angle="270.00" type="ped" speed="5.09" pos="155.91" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="94.77" y="-1.60" angle="90.00" type="bikeA" speed="4.63" pos="94.77" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="94.77" y="-1.60" angle="90.00" type="ped" speed="4.63" pos="94.77" edge="AB" slope="0.00"/>
+        <person id="pk1" x="144.23" y="-2.88" angle="270.00" type="ped" speed="1.32" pos="144.23" edge="AB" slope="0.00"/>
+        <person id="pk4" x="216.57" y="-0.32" angle="90.00" type="ped" speed="1.41" pos="16.57" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="pk0_0" x="199.20" y="-1.60" angle="90.00" type="bikeB" speed="3.79" pos="199.20" lane="AB_0" slope="0.00"/>
+        <person id="pk0" x="199.20" y="-1.60" angle="90.00" type="ped" speed="3.79" pos="199.20" edge="AB" slope="0.00"/>
+        <vehicle id="pk2_b0" x="239.20" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.90" pos="160.80" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="239.20" y="1.60" angle="270.00" type="ped" speed="4.90" pos="160.80" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="99.07" y="-1.60" angle="90.00" type="bikeA" speed="4.30" pos="99.07" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="99.07" y="-1.60" angle="90.00" type="ped" speed="4.30" pos="99.07" edge="AB" slope="0.00"/>
+        <person id="pk1" x="143.01" y="-2.88" angle="270.00" type="ped" speed="1.22" pos="143.01" edge="AB" slope="0.00"/>
+        <person id="pk4" x="218.00" y="-0.32" angle="90.00" type="ped" speed="1.42" pos="18.00" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="pk0_0" x="202.87" y="-1.60" angle="90.00" type="bikeB" speed="3.76" pos="2.87" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="202.87" y="-1.60" angle="90.00" type="ped" speed="3.76" pos="2.87" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="234.43" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.77" pos="165.57" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="234.43" y="1.60" angle="270.00" type="ped" speed="4.77" pos="165.57" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="103.81" y="-1.60" angle="90.00" type="bikeA" speed="4.74" pos="103.81" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="103.81" y="-1.60" angle="90.00" type="ped" speed="4.74" pos="103.81" edge="AB" slope="0.00"/>
+        <person id="pk1" x="141.60" y="-2.88" angle="270.00" type="ped" speed="1.41" pos="141.60" edge="AB" slope="0.00"/>
+        <person id="pk4" x="219.33" y="-0.32" angle="90.00" type="ped" speed="1.33" pos="19.33" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="pk0_0" x="206.69" y="-1.60" angle="90.00" type="bikeB" speed="3.82" pos="6.69" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="206.69" y="-1.60" angle="90.00" type="ped" speed="3.82" pos="6.69" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="229.58" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.85" pos="170.42" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="229.58" y="1.60" angle="270.00" type="ped" speed="4.85" pos="170.42" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="108.55" y="-1.60" angle="90.00" type="bikeA" speed="4.75" pos="108.55" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="108.55" y="-1.60" angle="90.00" type="ped" speed="4.75" pos="108.55" edge="AB" slope="0.00"/>
+        <person id="pk1" x="140.28" y="-2.88" angle="270.00" type="ped" speed="1.33" pos="140.28" edge="AB" slope="0.00"/>
+        <person id="pk4" x="220.81" y="-0.32" angle="90.00" type="ped" speed="1.49" pos="20.81" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="pk0_0" x="210.46" y="-1.60" angle="90.00" type="bikeB" speed="3.76" pos="10.46" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="210.46" y="-1.60" angle="90.00" type="ped" speed="3.76" pos="10.46" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="224.57" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.01" pos="175.43" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="224.57" y="1.60" angle="270.00" type="ped" speed="5.01" pos="175.43" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="113.16" y="-1.60" angle="90.00" type="bikeA" speed="4.61" pos="113.16" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="113.16" y="-1.60" angle="90.00" type="ped" speed="4.61" pos="113.16" edge="AB" slope="0.00"/>
+        <person id="pk1" x="139.06" y="-2.88" angle="270.00" type="ped" speed="1.21" pos="139.06" edge="AB" slope="0.00"/>
+        <person id="pk4" x="222.41" y="-0.32" angle="90.00" type="ped" speed="1.59" pos="22.41" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="pk0_0" x="214.37" y="-1.60" angle="90.00" type="bikeB" speed="3.92" pos="14.37" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="214.37" y="-1.60" angle="90.00" type="ped" speed="3.92" pos="14.37" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="219.55" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.02" pos="180.45" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="219.55" y="1.60" angle="270.00" type="ped" speed="5.02" pos="180.45" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="117.55" y="-1.60" angle="90.00" type="bikeA" speed="4.39" pos="117.55" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="117.55" y="-1.60" angle="90.00" type="ped" speed="4.39" pos="117.55" edge="AB" slope="0.00"/>
+        <person id="pk1" x="137.75" y="-2.88" angle="270.00" type="ped" speed="1.31" pos="137.75" edge="AB" slope="0.00"/>
+        <person id="pk4" x="223.99" y="-0.32" angle="90.00" type="ped" speed="1.59" pos="23.99" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="pk0_0" x="218.35" y="-1.60" angle="90.00" type="bikeB" speed="3.97" pos="18.35" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="218.35" y="-1.60" angle="90.00" type="ped" speed="3.97" pos="18.35" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="214.39" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.16" pos="185.61" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="214.39" y="1.60" angle="270.00" type="ped" speed="5.16" pos="185.61" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="121.95" y="-1.60" angle="90.00" type="bikeA" speed="4.40" pos="121.95" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="121.95" y="-1.60" angle="90.00" type="ped" speed="4.40" pos="121.95" edge="AB" slope="0.00"/>
+        <person id="pk1" x="136.26" y="-2.88" angle="270.00" type="ped" speed="1.49" pos="136.26" edge="AB" slope="0.00"/>
+        <person id="pk4" x="225.59" y="-0.32" angle="90.00" type="ped" speed="1.60" pos="25.59" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="pk0_0" x="222.07" y="-1.60" angle="90.00" type="bikeB" speed="3.72" pos="22.07" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="222.07" y="-1.60" angle="90.00" type="ped" speed="3.72" pos="22.07" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="209.27" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.12" pos="190.73" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="209.27" y="1.60" angle="270.00" type="ped" speed="5.12" pos="190.73" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="126.44" y="-1.60" angle="90.00" type="bikeA" speed="4.50" pos="126.44" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="126.44" y="-1.60" angle="90.00" type="ped" speed="4.50" pos="126.44" edge="AB" slope="0.00"/>
+        <person id="pk1" x="134.92" y="-2.88" angle="270.00" type="ped" speed="1.34" pos="134.92" edge="AB" slope="0.00"/>
+        <person id="pk4" x="227.15" y="-0.32" angle="90.00" type="ped" speed="1.56" pos="27.15" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="pk0_0" x="225.99" y="-1.60" angle="90.00" type="bikeB" speed="3.92" pos="25.99" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="225.99" y="-1.60" angle="90.00" type="ped" speed="3.92" pos="25.99" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="204.47" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.80" pos="195.53" lane="CB_0" slope="0.00"/>
+        <person id="pk2" x="204.47" y="1.60" angle="270.00" type="ped" speed="4.80" pos="195.53" edge="CB" slope="0.00"/>
+        <vehicle id="pk3_0" x="130.70" y="-1.60" angle="90.00" type="bikeA" speed="4.25" pos="130.70" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="130.70" y="-1.60" angle="90.00" type="ped" speed="4.25" pos="130.70" edge="AB" slope="0.00"/>
+        <person id="pk1" x="133.44" y="-2.88" angle="270.00" type="ped" speed="1.48" pos="133.44" edge="AB" slope="0.00"/>
+        <person id="pk4" x="228.49" y="-0.32" angle="90.00" type="ped" speed="1.34" pos="28.49" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="pk0_0" x="229.72" y="-1.60" angle="90.00" type="bikeB" speed="3.73" pos="29.72" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="229.72" y="-1.60" angle="90.00" type="ped" speed="3.73" pos="29.72" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="199.55" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.02" pos="0.45" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="199.55" y="1.60" angle="270.00" type="ped" speed="5.02" pos="0.45" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="134.87" y="-1.60" angle="90.00" type="bikeA" speed="4.18" pos="134.87" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="134.87" y="-1.60" angle="90.00" type="ped" speed="4.18" pos="134.87" edge="AB" slope="0.00"/>
+        <person id="pk1" x="132.24" y="-2.88" angle="270.00" type="ped" speed="1.20" pos="132.24" edge="AB" slope="0.00"/>
+        <person id="pk4" x="230.08" y="-0.32" angle="90.00" type="ped" speed="1.59" pos="30.08" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="pk0_0" x="233.42" y="-1.60" angle="90.00" type="bikeB" speed="3.70" pos="33.42" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="233.42" y="-1.60" angle="90.00" type="ped" speed="3.70" pos="33.42" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="194.88" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.67" pos="5.12" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="194.88" y="1.60" angle="270.00" type="ped" speed="4.67" pos="5.12" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="139.29" y="-1.60" angle="90.00" type="bikeA" speed="4.41" pos="139.29" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="139.29" y="-1.60" angle="90.00" type="ped" speed="4.41" pos="139.29" edge="AB" slope="0.00"/>
+        <person id="pk1" x="130.84" y="-2.88" angle="270.00" type="ped" speed="1.40" pos="130.84" edge="AB" slope="0.00"/>
+        <person id="pk4" x="231.63" y="-0.32" angle="90.00" type="ped" speed="1.55" pos="31.63" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="pk0_0" x="237.38" y="-1.60" angle="90.00" type="bikeB" speed="3.96" pos="37.38" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="237.38" y="-1.60" angle="90.00" type="ped" speed="3.96" pos="37.38" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="189.67" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.21" pos="10.33" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="189.67" y="1.60" angle="270.00" type="ped" speed="5.21" pos="10.33" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="143.82" y="-1.60" angle="90.00" type="bikeA" speed="4.54" pos="143.82" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="143.82" y="-1.60" angle="90.00" type="ped" speed="4.54" pos="143.82" edge="AB" slope="0.00"/>
+        <person id="pk1" x="129.51" y="-2.88" angle="270.00" type="ped" speed="1.33" pos="129.51" edge="AB" slope="0.00"/>
+        <person id="pk4" x="233.25" y="-0.32" angle="90.00" type="ped" speed="1.62" pos="33.25" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="pk0_0" x="241.07" y="-1.60" angle="90.00" type="bikeB" speed="3.69" pos="41.07" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="241.07" y="-1.60" angle="90.00" type="ped" speed="3.69" pos="41.07" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="184.66" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.01" pos="15.34" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="184.66" y="1.60" angle="270.00" type="ped" speed="5.01" pos="15.34" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="148.02" y="-1.60" angle="90.00" type="bikeA" speed="4.19" pos="148.02" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="148.02" y="-1.60" angle="90.00" type="ped" speed="4.19" pos="148.02" edge="AB" slope="0.00"/>
+        <person id="pk1" x="128.06" y="-2.88" angle="270.00" type="ped" speed="1.45" pos="128.06" edge="AB" slope="0.00"/>
+        <person id="pk4" x="234.83" y="-0.32" angle="90.00" type="ped" speed="1.58" pos="34.83" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="pk0_0" x="245.06" y="-1.60" angle="90.00" type="bikeB" speed="3.99" pos="45.06" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="245.06" y="-1.60" angle="90.00" type="ped" speed="3.99" pos="45.06" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="179.53" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.13" pos="20.47" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="179.53" y="1.60" angle="270.00" type="ped" speed="5.13" pos="20.47" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="152.62" y="-1.60" angle="90.00" type="bikeA" speed="4.61" pos="152.62" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="152.62" y="-1.60" angle="90.00" type="ped" speed="4.61" pos="152.62" edge="AB" slope="0.00"/>
+        <person id="pk1" x="126.58" y="-2.88" angle="270.00" type="ped" speed="1.48" pos="126.58" edge="AB" slope="0.00"/>
+        <person id="pk4" x="236.46" y="-0.32" angle="90.00" type="ped" speed="1.63" pos="36.46" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="pk0_0" x="248.68" y="-1.60" angle="90.00" type="bikeB" speed="3.62" pos="48.68" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="248.68" y="-1.60" angle="90.00" type="ped" speed="3.62" pos="48.68" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="174.58" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.95" pos="25.42" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="174.58" y="1.60" angle="270.00" type="ped" speed="4.95" pos="25.42" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="157.00" y="-1.60" angle="90.00" type="bikeA" speed="4.38" pos="157.00" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="157.00" y="-1.60" angle="90.00" type="ped" speed="4.38" pos="157.00" edge="AB" slope="0.00"/>
+        <person id="pk1" x="125.19" y="-2.88" angle="270.00" type="ped" speed="1.40" pos="125.19" edge="AB" slope="0.00"/>
+        <person id="pk4" x="237.87" y="-0.32" angle="90.00" type="ped" speed="1.41" pos="37.87" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="pk0_0" x="252.30" y="-1.60" angle="90.00" type="bikeB" speed="3.62" pos="52.30" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="252.30" y="-1.60" angle="90.00" type="ped" speed="3.62" pos="52.30" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="169.45" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.13" pos="30.55" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="169.45" y="1.60" angle="270.00" type="ped" speed="5.13" pos="30.55" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="161.24" y="-1.60" angle="90.00" type="bikeA" speed="4.24" pos="161.24" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="161.24" y="-1.60" angle="90.00" type="ped" speed="4.24" pos="161.24" edge="AB" slope="0.00"/>
+        <person id="pk1" x="123.75" y="-2.88" angle="270.00" type="ped" speed="1.44" pos="123.75" edge="AB" slope="0.00"/>
+        <person id="pk4" x="239.42" y="-0.32" angle="90.00" type="ped" speed="1.55" pos="39.42" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="pk0_0" x="255.99" y="-1.60" angle="90.00" type="bikeB" speed="3.69" pos="55.99" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="255.99" y="-1.60" angle="90.00" type="ped" speed="3.69" pos="55.99" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="164.76" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.69" pos="35.24" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="164.76" y="1.60" angle="270.00" type="ped" speed="4.69" pos="35.24" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="165.57" y="-1.60" angle="90.00" type="bikeA" speed="4.33" pos="165.57" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="165.57" y="-1.60" angle="90.00" type="ped" speed="4.33" pos="165.57" edge="AB" slope="0.00"/>
+        <person id="pk1" x="122.38" y="-2.88" angle="270.00" type="ped" speed="1.37" pos="122.38" edge="AB" slope="0.00"/>
+        <person id="pk4" x="240.85" y="-0.32" angle="90.00" type="ped" speed="1.42" pos="40.85" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="pk0_0" x="259.81" y="-1.60" angle="90.00" type="bikeB" speed="3.82" pos="59.81" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="259.81" y="-1.60" angle="90.00" type="ped" speed="3.82" pos="59.81" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="160.12" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.64" pos="39.88" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="160.12" y="1.60" angle="270.00" type="ped" speed="4.64" pos="39.88" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="169.82" y="-1.60" angle="90.00" type="bikeA" speed="4.24" pos="169.82" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="169.82" y="-1.60" angle="90.00" type="ped" speed="4.24" pos="169.82" edge="AB" slope="0.00"/>
+        <person id="pk1" x="120.99" y="-2.88" angle="270.00" type="ped" speed="1.38" pos="120.99" edge="AB" slope="0.00"/>
+        <person id="pk4" x="242.29" y="-0.32" angle="90.00" type="ped" speed="1.45" pos="42.29" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="pk0_0" x="263.61" y="-1.60" angle="90.00" type="bikeB" speed="3.79" pos="63.61" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="263.61" y="-1.60" angle="90.00" type="ped" speed="3.79" pos="63.61" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="155.20" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.92" pos="44.80" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="155.20" y="1.60" angle="270.00" type="ped" speed="4.92" pos="44.80" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="174.25" y="-1.60" angle="90.00" type="bikeA" speed="4.43" pos="174.25" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="174.25" y="-1.60" angle="90.00" type="ped" speed="4.43" pos="174.25" edge="AB" slope="0.00"/>
+        <person id="pk1" x="119.74" y="-2.88" angle="270.00" type="ped" speed="1.25" pos="119.74" edge="AB" slope="0.00"/>
+        <person id="pk4" x="243.77" y="-0.32" angle="90.00" type="ped" speed="1.48" pos="43.77" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="pk0_0" x="267.32" y="-1.60" angle="90.00" type="bikeB" speed="3.71" pos="67.32" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="267.32" y="-1.60" angle="90.00" type="ped" speed="3.71" pos="67.32" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="150.57" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.63" pos="49.43" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="150.57" y="1.60" angle="270.00" type="ped" speed="4.63" pos="49.43" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="178.95" y="-1.60" angle="90.00" type="bikeA" speed="4.70" pos="178.95" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="178.95" y="-1.60" angle="90.00" type="ped" speed="4.70" pos="178.95" edge="AB" slope="0.00"/>
+        <person id="pk1" x="118.36" y="-2.88" angle="270.00" type="ped" speed="1.38" pos="118.36" edge="AB" slope="0.00"/>
+        <person id="pk4" x="245.23" y="-0.32" angle="90.00" type="ped" speed="1.46" pos="45.23" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="pk0_0" x="271.22" y="-1.60" angle="90.00" type="bikeB" speed="3.90" pos="71.22" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="271.22" y="-1.60" angle="90.00" type="ped" speed="3.90" pos="71.22" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="145.43" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.13" pos="54.57" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="145.43" y="1.60" angle="270.00" type="ped" speed="5.13" pos="54.57" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="183.25" y="-1.60" angle="90.00" type="bikeA" speed="4.31" pos="183.25" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="183.25" y="-1.60" angle="90.00" type="ped" speed="4.31" pos="183.25" edge="AB" slope="0.00"/>
+        <person id="pk1" x="117.15" y="-2.88" angle="270.00" type="ped" speed="1.21" pos="117.15" edge="AB" slope="0.00"/>
+        <person id="pk4" x="246.76" y="-0.32" angle="90.00" type="ped" speed="1.53" pos="46.76" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="pk0_0" x="274.99" y="-1.60" angle="90.00" type="bikeB" speed="3.77" pos="74.99" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="274.99" y="-1.60" angle="90.00" type="ped" speed="3.77" pos="74.99" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="140.52" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.92" pos="59.48" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="140.52" y="1.60" angle="270.00" type="ped" speed="4.92" pos="59.48" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="187.98" y="-1.60" angle="90.00" type="bikeA" speed="4.72" pos="187.98" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="187.98" y="-1.60" angle="90.00" type="ped" speed="4.72" pos="187.98" edge="AB" slope="0.00"/>
+        <person id="pk1" x="115.74" y="-2.88" angle="270.00" type="ped" speed="1.41" pos="115.74" edge="AB" slope="0.00"/>
+        <person id="pk4" x="248.40" y="-0.32" angle="90.00" type="ped" speed="1.64" pos="48.40" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="pk0_0" x="278.70" y="-1.60" angle="90.00" type="bikeB" speed="3.70" pos="78.70" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="278.70" y="-1.60" angle="90.00" type="ped" speed="3.70" pos="78.70" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="135.61" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.91" pos="64.39" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="135.61" y="1.60" angle="270.00" type="ped" speed="4.91" pos="64.39" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="192.68" y="-1.60" angle="90.00" type="bikeA" speed="4.71" pos="192.68" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="192.68" y="-1.60" angle="90.00" type="ped" speed="4.71" pos="192.68" edge="AB" slope="0.00"/>
+        <person id="pk1" x="114.51" y="-2.88" angle="270.00" type="ped" speed="1.24" pos="114.51" edge="AB" slope="0.00"/>
+        <person id="pk4" x="250.01" y="-0.32" angle="90.00" type="ped" speed="1.61" pos="50.01" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="pk0_0" x="282.33" y="-1.60" angle="90.00" type="bikeB" speed="3.64" pos="82.33" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="282.33" y="-1.60" angle="90.00" type="ped" speed="3.64" pos="82.33" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="130.78" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.83" pos="69.22" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="130.78" y="1.60" angle="270.00" type="ped" speed="4.83" pos="69.22" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="197.03" y="-1.60" angle="90.00" type="bikeA" speed="4.35" pos="197.03" lane="AB_0" slope="0.00"/>
+        <person id="pk3" x="197.03" y="-1.60" angle="90.00" type="ped" speed="4.35" pos="197.03" edge="AB" slope="0.00"/>
+        <person id="pk1" x="113.28" y="-2.88" angle="270.00" type="ped" speed="1.22" pos="113.28" edge="AB" slope="0.00"/>
+        <person id="pk4" x="251.45" y="-0.32" angle="90.00" type="ped" speed="1.44" pos="51.45" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="pk0_0" x="286.30" y="-1.60" angle="90.00" type="bikeB" speed="3.97" pos="86.30" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="286.30" y="-1.60" angle="90.00" type="ped" speed="3.97" pos="86.30" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="126.00" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.79" pos="74.00" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="126.00" y="1.60" angle="270.00" type="ped" speed="4.79" pos="74.00" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="201.30" y="-1.60" angle="90.00" type="bikeA" speed="4.37" pos="1.30" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="201.30" y="-1.60" angle="90.00" type="ped" speed="4.37" pos="1.30" edge="BC" slope="0.00"/>
+        <person id="pk1" x="111.91" y="-2.88" angle="270.00" type="ped" speed="1.37" pos="111.91" edge="AB" slope="0.00"/>
+        <person id="pk4" x="252.94" y="-0.32" angle="90.00" type="ped" speed="1.49" pos="52.94" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="pk0_0" x="289.98" y="-1.60" angle="90.00" type="bikeB" speed="3.69" pos="89.98" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="289.98" y="-1.60" angle="90.00" type="ped" speed="3.69" pos="89.98" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="120.80" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.19" pos="79.20" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="120.80" y="1.60" angle="270.00" type="ped" speed="5.19" pos="79.20" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="205.51" y="-1.60" angle="90.00" type="bikeA" speed="4.21" pos="5.51" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="205.51" y="-1.60" angle="90.00" type="ped" speed="4.21" pos="5.51" edge="BC" slope="0.00"/>
+        <person id="pk1" x="110.54" y="-2.88" angle="270.00" type="ped" speed="1.36" pos="110.54" edge="AB" slope="0.00"/>
+        <person id="pk4" x="254.35" y="-0.32" angle="90.00" type="ped" speed="1.41" pos="54.35" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="pk0_0" x="293.79" y="-1.60" angle="90.00" type="bikeB" speed="3.80" pos="93.79" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="293.79" y="-1.60" angle="90.00" type="ped" speed="3.80" pos="93.79" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="115.74" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="5.06" pos="84.26" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="115.74" y="1.60" angle="270.00" type="ped" speed="5.06" pos="84.26" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="210.04" y="-1.60" angle="90.00" type="bikeA" speed="4.53" pos="10.04" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="210.04" y="-1.60" angle="90.00" type="ped" speed="4.53" pos="10.04" edge="BC" slope="0.00"/>
+        <person id="pk1" x="109.21" y="-2.88" angle="270.00" type="ped" speed="1.33" pos="109.21" edge="AB" slope="0.00"/>
+        <person id="pk4" x="255.71" y="-0.32" angle="90.00" type="ped" speed="1.36" pos="55.71" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="pk0_0" x="297.52" y="-1.60" angle="90.00" type="bikeB" speed="3.73" pos="97.52" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="297.52" y="-1.60" angle="90.00" type="ped" speed="3.73" pos="97.52" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="110.92" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.82" pos="89.08" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="110.92" y="1.60" angle="270.00" type="ped" speed="4.82" pos="89.08" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="214.80" y="-1.60" angle="90.00" type="bikeA" speed="4.76" pos="14.80" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="214.80" y="-1.60" angle="90.00" type="ped" speed="4.76" pos="14.80" edge="BC" slope="0.00"/>
+        <person id="pk1" x="107.80" y="-2.88" angle="270.00" type="ped" speed="1.41" pos="107.80" edge="AB" slope="0.00"/>
+        <person id="pk4" x="257.04" y="-0.32" angle="90.00" type="ped" speed="1.33" pos="57.04" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="pk0_0" x="299.75" y="-1.60" angle="90.00" type="bikeB" speed="2.23" pos="99.75" lane="BC_0" slope="0.00"/>
+        <person id="pk0" x="299.75" y="-1.60" angle="90.00" type="ped" speed="2.23" pos="99.75" edge="BC" slope="0.00"/>
+        <vehicle id="pk2_b0" x="106.09" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.84" pos="93.91" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="106.09" y="1.60" angle="270.00" type="ped" speed="4.84" pos="93.91" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="219.12" y="-1.60" angle="90.00" type="bikeA" speed="4.32" pos="19.12" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="219.12" y="-1.60" angle="90.00" type="ped" speed="4.32" pos="19.12" edge="BC" slope="0.00"/>
+        <person id="pk1" x="106.40" y="-2.88" angle="270.00" type="ped" speed="1.40" pos="106.40" edge="AB" slope="0.00"/>
+        <person id="pk4" x="258.56" y="-0.32" angle="90.00" type="ped" speed="1.51" pos="58.56" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="pk2_b0" x="101.70" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="4.38" pos="98.30" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="101.70" y="1.60" angle="270.00" type="ped" speed="4.38" pos="98.30" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="223.68" y="-1.60" angle="90.00" type="bikeA" speed="4.56" pos="23.68" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="223.68" y="-1.60" angle="90.00" type="ped" speed="4.56" pos="23.68" edge="BC" slope="0.00"/>
+        <person id="pk1" x="104.93" y="-2.88" angle="270.00" type="ped" speed="1.47" pos="104.93" edge="AB" slope="0.00"/>
+        <person id="pk4" x="259.97" y="-0.32" angle="90.00" type="ped" speed="1.42" pos="59.97" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="pk2_b0" x="100.14" y="1.60" angle="270.00" type="DEFAULT_BIKETYPE" speed="1.57" pos="99.86" lane="BA_0" slope="0.00"/>
+        <person id="pk2" x="100.14" y="1.60" angle="270.00" type="ped" speed="1.57" pos="99.86" edge="BA" slope="0.00"/>
+        <vehicle id="pk3_0" x="228.29" y="-1.60" angle="90.00" type="bikeA" speed="4.61" pos="28.29" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="228.29" y="-1.60" angle="90.00" type="ped" speed="4.61" pos="28.29" edge="BC" slope="0.00"/>
+        <person id="pk1" x="103.63" y="-2.88" angle="270.00" type="ped" speed="1.30" pos="103.63" edge="AB" slope="0.00"/>
+        <person id="pk4" x="261.47" y="-0.32" angle="90.00" type="ped" speed="1.49" pos="61.47" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="pk3_0" x="233.00" y="-1.60" angle="90.00" type="bikeA" speed="4.71" pos="33.00" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="233.00" y="-1.60" angle="90.00" type="ped" speed="4.71" pos="33.00" edge="BC" slope="0.00"/>
+        <person id="pk1" x="102.21" y="-2.88" angle="270.00" type="ped" speed="1.42" pos="102.21" edge="AB" slope="0.00"/>
+        <person id="pk4" x="262.86" y="-0.32" angle="90.00" type="ped" speed="1.39" pos="62.86" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="pk3_0" x="237.59" y="-1.60" angle="90.00" type="bikeA" speed="4.59" pos="37.59" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="237.59" y="-1.60" angle="90.00" type="ped" speed="4.59" pos="37.59" edge="BC" slope="0.00"/>
+        <person id="pk1" x="100.75" y="-2.88" angle="270.00" type="ped" speed="1.46" pos="100.75" edge="AB" slope="0.00"/>
+        <person id="pk4" x="264.27" y="-0.32" angle="90.00" type="ped" speed="1.41" pos="64.27" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="pk3_0" x="242.18" y="-1.60" angle="90.00" type="bikeA" speed="4.59" pos="42.18" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="242.18" y="-1.60" angle="90.00" type="ped" speed="4.59" pos="42.18" edge="BC" slope="0.00"/>
+        <person id="pk4" x="265.69" y="-0.32" angle="90.00" type="ped" speed="1.41" pos="65.69" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="pk3_0" x="246.70" y="-1.60" angle="90.00" type="bikeA" speed="4.52" pos="46.70" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="246.70" y="-1.60" angle="90.00" type="ped" speed="4.52" pos="46.70" edge="BC" slope="0.00"/>
+        <person id="pk4" x="267.04" y="-0.32" angle="90.00" type="ped" speed="1.36" pos="67.04" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="pk3_0" x="251.09" y="-1.60" angle="90.00" type="bikeA" speed="4.40" pos="51.09" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="251.09" y="-1.60" angle="90.00" type="ped" speed="4.40" pos="51.09" edge="BC" slope="0.00"/>
+        <person id="pk4" x="268.57" y="-0.32" angle="90.00" type="ped" speed="1.53" pos="68.57" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="pk3_0" x="255.27" y="-1.60" angle="90.00" type="bikeA" speed="4.18" pos="55.27" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="255.27" y="-1.60" angle="90.00" type="ped" speed="4.18" pos="55.27" edge="BC" slope="0.00"/>
+        <person id="pk4" x="270.06" y="-0.32" angle="90.00" type="ped" speed="1.49" pos="70.06" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="pk3_0" x="259.70" y="-1.60" angle="90.00" type="bikeA" speed="4.43" pos="59.70" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="259.70" y="-1.60" angle="90.00" type="ped" speed="4.43" pos="59.70" edge="BC" slope="0.00"/>
+        <person id="pk4" x="271.69" y="-0.32" angle="90.00" type="ped" speed="1.63" pos="71.69" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="pk3_0" x="263.94" y="-1.60" angle="90.00" type="bikeA" speed="4.24" pos="63.94" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="263.94" y="-1.60" angle="90.00" type="ped" speed="4.24" pos="63.94" edge="BC" slope="0.00"/>
+        <person id="pk4" x="273.21" y="-0.32" angle="90.00" type="ped" speed="1.52" pos="73.21" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="pk3_0" x="268.34" y="-1.60" angle="90.00" type="bikeA" speed="4.40" pos="68.34" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="268.34" y="-1.60" angle="90.00" type="ped" speed="4.40" pos="68.34" edge="BC" slope="0.00"/>
+        <person id="pk4" x="274.64" y="-0.32" angle="90.00" type="ped" speed="1.43" pos="74.64" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="pk3_0" x="273.09" y="-1.60" angle="90.00" type="bikeA" speed="4.75" pos="73.09" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="273.09" y="-1.60" angle="90.00" type="ped" speed="4.75" pos="73.09" edge="BC" slope="0.00"/>
+        <person id="pk4" x="275.97" y="-0.32" angle="90.00" type="ped" speed="1.33" pos="75.97" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="pk3_0" x="277.51" y="-1.60" angle="90.00" type="bikeA" speed="4.43" pos="77.51" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="277.51" y="-1.60" angle="90.00" type="ped" speed="4.43" pos="77.51" edge="BC" slope="0.00"/>
+        <person id="pk4" x="277.34" y="-0.32" angle="90.00" type="ped" speed="1.37" pos="77.34" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="pk3_0" x="281.75" y="-1.60" angle="90.00" type="bikeA" speed="4.23" pos="81.75" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="281.75" y="-1.60" angle="90.00" type="ped" speed="4.23" pos="81.75" edge="BC" slope="0.00"/>
+        <person id="pk4" x="278.93" y="-0.32" angle="90.00" type="ped" speed="1.60" pos="78.93" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="pk3_0" x="285.95" y="-1.60" angle="90.00" type="bikeA" speed="4.20" pos="85.95" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="285.95" y="-1.60" angle="90.00" type="ped" speed="4.20" pos="85.95" edge="BC" slope="0.00"/>
+        <person id="pk4" x="280.28" y="-0.32" angle="90.00" type="ped" speed="1.35" pos="80.28" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="pk3_0" x="290.39" y="-1.60" angle="90.00" type="bikeA" speed="4.44" pos="90.39" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="290.39" y="-1.60" angle="90.00" type="ped" speed="4.44" pos="90.39" edge="BC" slope="0.00"/>
+        <person id="pk4" x="281.82" y="-0.32" angle="90.00" type="ped" speed="1.53" pos="81.82" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="pk3_0" x="294.88" y="-1.60" angle="90.00" type="bikeA" speed="4.49" pos="94.88" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="294.88" y="-1.60" angle="90.00" type="ped" speed="4.49" pos="94.88" edge="BC" slope="0.00"/>
+        <person id="pk4" x="283.25" y="-0.32" angle="90.00" type="ped" speed="1.43" pos="83.25" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="pk3_0" x="299.62" y="-1.60" angle="90.00" type="bikeA" speed="4.74" pos="99.62" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="299.62" y="-1.60" angle="90.00" type="ped" speed="4.74" pos="99.62" edge="BC" slope="0.00"/>
+        <person id="pk4" x="284.75" y="-0.32" angle="90.00" type="ped" speed="1.51" pos="84.75" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="pk3_0" x="304.20" y="-1.60" angle="90.00" type="bikeA" speed="4.58" pos="104.20" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="304.20" y="-1.60" angle="90.00" type="ped" speed="4.58" pos="104.20" edge="BC" slope="0.00"/>
+        <person id="pk4" x="286.21" y="-0.32" angle="90.00" type="ped" speed="1.45" pos="86.21" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="pk3_0" x="308.79" y="-1.60" angle="90.00" type="bikeA" speed="4.59" pos="108.79" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="308.79" y="-1.60" angle="90.00" type="ped" speed="4.59" pos="108.79" edge="BC" slope="0.00"/>
+        <person id="pk4" x="287.77" y="-0.32" angle="90.00" type="ped" speed="1.56" pos="87.77" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="pk3_0" x="313.05" y="-1.60" angle="90.00" type="bikeA" speed="4.26" pos="113.05" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="313.05" y="-1.60" angle="90.00" type="ped" speed="4.26" pos="113.05" edge="BC" slope="0.00"/>
+        <person id="pk4" x="289.29" y="-0.32" angle="90.00" type="ped" speed="1.52" pos="89.29" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="pk3_0" x="317.29" y="-1.60" angle="90.00" type="bikeA" speed="4.24" pos="117.29" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="317.29" y="-1.60" angle="90.00" type="ped" speed="4.24" pos="117.29" edge="BC" slope="0.00"/>
+        <person id="pk4" x="290.71" y="-0.32" angle="90.00" type="ped" speed="1.42" pos="90.71" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="pk3_0" x="321.69" y="-1.60" angle="90.00" type="bikeA" speed="4.41" pos="121.69" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="321.69" y="-1.60" angle="90.00" type="ped" speed="4.41" pos="121.69" edge="BC" slope="0.00"/>
+        <person id="pk4" x="292.17" y="-0.32" angle="90.00" type="ped" speed="1.45" pos="92.17" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="pk3_0" x="326.02" y="-1.60" angle="90.00" type="bikeA" speed="4.33" pos="126.02" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="326.02" y="-1.60" angle="90.00" type="ped" speed="4.33" pos="126.02" edge="BC" slope="0.00"/>
+        <person id="pk4" x="293.63" y="-0.32" angle="90.00" type="ped" speed="1.46" pos="93.63" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="pk3_0" x="330.73" y="-1.60" angle="90.00" type="bikeA" speed="4.70" pos="130.73" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="330.73" y="-1.60" angle="90.00" type="ped" speed="4.70" pos="130.73" edge="BC" slope="0.00"/>
+        <person id="pk4" x="295.24" y="-0.32" angle="90.00" type="ped" speed="1.61" pos="95.24" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="pk3_0" x="335.37" y="-1.60" angle="90.00" type="bikeA" speed="4.64" pos="135.37" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="335.37" y="-1.60" angle="90.00" type="ped" speed="4.64" pos="135.37" edge="BC" slope="0.00"/>
+        <person id="pk4" x="296.61" y="-0.32" angle="90.00" type="ped" speed="1.37" pos="96.61" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="pk3_0" x="339.82" y="-1.60" angle="90.00" type="bikeA" speed="4.46" pos="139.82" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="339.82" y="-1.60" angle="90.00" type="ped" speed="4.46" pos="139.82" edge="BC" slope="0.00"/>
+        <person id="pk4" x="298.04" y="-0.32" angle="90.00" type="ped" speed="1.44" pos="98.04" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="pk3_0" x="344.58" y="-1.60" angle="90.00" type="bikeA" speed="4.75" pos="144.58" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="344.58" y="-1.60" angle="90.00" type="ped" speed="4.75" pos="144.58" edge="BC" slope="0.00"/>
+        <person id="pk4" x="299.42" y="-0.32" angle="90.00" type="ped" speed="1.38" pos="99.42" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="pk3_0" x="348.84" y="-1.60" angle="90.00" type="bikeA" speed="4.27" pos="148.84" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="348.84" y="-1.60" angle="90.00" type="ped" speed="4.27" pos="148.84" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="pk3_0" x="353.13" y="-1.60" angle="90.00" type="bikeA" speed="4.28" pos="153.13" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="353.13" y="-1.60" angle="90.00" type="ped" speed="4.28" pos="153.13" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="pk3_0" x="357.62" y="-1.60" angle="90.00" type="bikeA" speed="4.50" pos="157.62" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="357.62" y="-1.60" angle="90.00" type="ped" speed="4.50" pos="157.62" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="pk3_0" x="362.26" y="-1.60" angle="90.00" type="bikeA" speed="4.64" pos="162.26" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="362.26" y="-1.60" angle="90.00" type="ped" speed="4.64" pos="162.26" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="pk3_0" x="366.54" y="-1.60" angle="90.00" type="bikeA" speed="4.27" pos="166.54" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="366.54" y="-1.60" angle="90.00" type="ped" speed="4.27" pos="166.54" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="pk3_0" x="371.12" y="-1.60" angle="90.00" type="bikeA" speed="4.58" pos="171.12" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="371.12" y="-1.60" angle="90.00" type="ped" speed="4.58" pos="171.12" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="pk3_0" x="375.30" y="-1.60" angle="90.00" type="bikeA" speed="4.18" pos="175.30" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="375.30" y="-1.60" angle="90.00" type="ped" speed="4.18" pos="175.30" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="pk3_0" x="379.80" y="-1.60" angle="90.00" type="bikeA" speed="4.50" pos="179.80" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="379.80" y="-1.60" angle="90.00" type="ped" speed="4.50" pos="179.80" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="pk3_0" x="384.44" y="-1.60" angle="90.00" type="bikeA" speed="4.63" pos="184.44" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="384.44" y="-1.60" angle="90.00" type="ped" speed="4.63" pos="184.44" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="pk3_0" x="388.70" y="-1.60" angle="90.00" type="bikeA" speed="4.26" pos="188.70" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="388.70" y="-1.60" angle="90.00" type="ped" speed="4.26" pos="188.70" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="pk3_0" x="393.28" y="-1.60" angle="90.00" type="bikeA" speed="4.58" pos="193.28" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="393.28" y="-1.60" angle="90.00" type="ped" speed="4.58" pos="193.28" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="pk3_0" x="397.52" y="-1.60" angle="90.00" type="bikeA" speed="4.24" pos="197.52" lane="BC_0" slope="0.00"/>
+        <person id="pk3" x="397.52" y="-1.60" angle="90.00" type="ped" speed="4.24" pos="197.52" edge="BC" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="pk3_0" x="400.06" y="-1.56" angle="88.68" type="bikeA" speed="2.56" pos="0.07" lane=":C_0_0" slope="0.00"/>
+        <person id="pk3" x="400.06" y="-1.56" angle="88.68" type="ped" speed="2.56" pos="0.07" edge=":C_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="pk3_0" x="401.27" y="0.67" angle="7.26" type="bikeA" speed="3.01" pos="3.08" lane=":C_0_0" slope="0.00"/>
+        <person id="pk3" x="401.27" y="0.67" angle="7.26" type="ped" speed="3.01" pos="3.08" edge=":C_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="pk3_0" x="399.00" y="1.60" angle="284.83" type="bikeA" speed="2.59" pos="1.00" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="399.00" y="1.60" angle="284.83" type="ped" speed="2.59" pos="1.00" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="pk3_0" x="395.41" y="1.60" angle="270.00" type="bikeA" speed="3.59" pos="4.59" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="395.41" y="1.60" angle="270.00" type="ped" speed="3.59" pos="4.59" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="pk3_0" x="390.88" y="1.60" angle="270.00" type="bikeA" speed="4.52" pos="9.12" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="390.88" y="1.60" angle="270.00" type="ped" speed="4.52" pos="9.12" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="pk3_0" x="386.48" y="1.60" angle="270.00" type="bikeA" speed="4.40" pos="13.52" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="386.48" y="1.60" angle="270.00" type="ped" speed="4.40" pos="13.52" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="pk3_0" x="382.16" y="1.60" angle="270.00" type="bikeA" speed="4.32" pos="17.84" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="382.16" y="1.60" angle="270.00" type="ped" speed="4.32" pos="17.84" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="pk3_0" x="377.76" y="1.60" angle="270.00" type="bikeA" speed="4.40" pos="22.24" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="377.76" y="1.60" angle="270.00" type="ped" speed="4.40" pos="22.24" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="pk3_0" x="373.28" y="1.60" angle="270.00" type="bikeA" speed="4.48" pos="26.72" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="373.28" y="1.60" angle="270.00" type="ped" speed="4.48" pos="26.72" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="pk3_0" x="369.04" y="1.60" angle="270.00" type="bikeA" speed="4.24" pos="30.96" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="369.04" y="1.60" angle="270.00" type="ped" speed="4.24" pos="30.96" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="pk3_0" x="364.55" y="1.60" angle="270.00" type="bikeA" speed="4.49" pos="35.45" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="364.55" y="1.60" angle="270.00" type="ped" speed="4.49" pos="35.45" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="pk3_0" x="359.87" y="1.60" angle="270.00" type="bikeA" speed="4.68" pos="40.13" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="359.87" y="1.60" angle="270.00" type="ped" speed="4.68" pos="40.13" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="pk3_0" x="355.49" y="1.60" angle="270.00" type="bikeA" speed="4.38" pos="44.51" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="355.49" y="1.60" angle="270.00" type="ped" speed="4.38" pos="44.51" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="pk3_0" x="351.26" y="1.60" angle="270.00" type="bikeA" speed="4.23" pos="48.74" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="351.26" y="1.60" angle="270.00" type="ped" speed="4.23" pos="48.74" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="pk3_0" x="346.85" y="1.60" angle="270.00" type="bikeA" speed="4.41" pos="53.15" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="346.85" y="1.60" angle="270.00" type="ped" speed="4.41" pos="53.15" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="pk3_0" x="342.67" y="1.60" angle="270.00" type="bikeA" speed="4.18" pos="57.33" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="342.67" y="1.60" angle="270.00" type="ped" speed="4.18" pos="57.33" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="pk3_0" x="338.23" y="1.60" angle="270.00" type="bikeA" speed="4.44" pos="61.77" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="338.23" y="1.60" angle="270.00" type="ped" speed="4.44" pos="61.77" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="pk3_0" x="333.56" y="1.60" angle="270.00" type="bikeA" speed="4.66" pos="66.44" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="333.56" y="1.60" angle="270.00" type="ped" speed="4.66" pos="66.44" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="pk3_0" x="329.21" y="1.60" angle="270.00" type="bikeA" speed="4.36" pos="70.79" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="329.21" y="1.60" angle="270.00" type="ped" speed="4.36" pos="70.79" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00">
+        <vehicle id="pk3_0" x="324.68" y="1.60" angle="270.00" type="bikeA" speed="4.53" pos="75.32" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="324.68" y="1.60" angle="270.00" type="ped" speed="4.53" pos="75.32" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="145.00">
+        <vehicle id="pk3_0" x="319.96" y="1.60" angle="270.00" type="bikeA" speed="4.72" pos="80.04" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="319.96" y="1.60" angle="270.00" type="ped" speed="4.72" pos="80.04" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="146.00">
+        <vehicle id="pk3_0" x="315.23" y="1.60" angle="270.00" type="bikeA" speed="4.73" pos="84.77" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="315.23" y="1.60" angle="270.00" type="ped" speed="4.73" pos="84.77" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="147.00">
+        <vehicle id="pk3_0" x="310.57" y="1.60" angle="270.00" type="bikeA" speed="4.66" pos="89.43" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="310.57" y="1.60" angle="270.00" type="ped" speed="4.66" pos="89.43" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="148.00">
+        <vehicle id="pk3_0" x="306.29" y="1.60" angle="270.00" type="bikeA" speed="4.27" pos="93.71" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="306.29" y="1.60" angle="270.00" type="ped" speed="4.27" pos="93.71" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="149.00">
+        <vehicle id="pk3_0" x="302.19" y="1.60" angle="270.00" type="bikeA" speed="4.10" pos="97.81" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="302.19" y="1.60" angle="270.00" type="ped" speed="4.10" pos="97.81" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="150.00">
+        <vehicle id="pk3_0" x="300.60" y="1.60" angle="270.00" type="bikeA" speed="1.59" pos="99.40" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="300.60" y="1.60" angle="270.00" type="ped" speed="1.59" pos="99.40" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="151.00">
+        <vehicle id="pk3_0" x="300.18" y="1.60" angle="270.00" type="bikeA" speed="0.42" pos="99.82" lane="CB_0" slope="0.00"/>
+        <person id="pk3" x="300.18" y="1.60" angle="270.00" type="ped" speed="0.42" pos="99.82" edge="CB" slope="0.00"/>
+    </timestep>
+    <timestep time="152.00"/>
+    <timestep time="153.00"/>
+    <timestep time="154.00"/>
+    <timestep time="155.00"/>
+    <timestep time="156.00"/>
+    <timestep time="157.00"/>
+    <timestep time="158.00"/>
+    <timestep time="159.00"/>
+    <timestep time="160.00"/>
+    <timestep time="161.00"/>
+    <timestep time="162.00"/>
+    <timestep time="163.00"/>
+    <timestep time="164.00"/>
+    <timestep time="165.00"/>
+    <timestep time="166.00"/>
+    <timestep time="167.00"/>
+    <timestep time="168.00"/>
+    <timestep time="169.00"/>
+    <timestep time="170.00"/>
+    <timestep time="171.00"/>
+    <timestep time="172.00"/>
+    <timestep time="173.00"/>
+    <timestep time="174.00"/>
+    <timestep time="175.00"/>
+    <timestep time="176.00"/>
+    <timestep time="177.00"/>
+    <timestep time="178.00"/>
+    <timestep time="179.00"/>
+    <timestep time="180.00"/>
+    <timestep time="181.00"/>
+    <timestep time="182.00"/>
+    <timestep time="183.00"/>
+    <timestep time="184.00"/>
+    <timestep time="185.00"/>
+    <timestep time="186.00"/>
+    <timestep time="187.00"/>
+    <timestep time="188.00"/>
+    <timestep time="189.00"/>
+    <timestep time="190.00"/>
+    <timestep time="191.00"/>
+    <timestep time="192.00"/>
+    <timestep time="193.00"/>
+    <timestep time="194.00"/>
+    <timestep time="195.00"/>
+    <timestep time="196.00"/>
+    <timestep time="197.00"/>
+    <timestep time="198.00"/>
+    <timestep time="199.00"/>
+    <timestep time="200.00"/>
+    <timestep time="201.00"/>
+    <timestep time="202.00"/>
+    <timestep time="203.00"/>
+    <timestep time="204.00"/>
+    <timestep time="205.00"/>
+    <timestep time="206.00"/>
+    <timestep time="207.00"/>
+    <timestep time="208.00"/>
+    <timestep time="209.00"/>
+    <timestep time="210.00"/>
+    <timestep time="211.00"/>
+    <timestep time="212.00"/>
+    <timestep time="213.00"/>
+    <timestep time="214.00"/>
+    <timestep time="215.00"/>
+    <timestep time="216.00"/>
+    <timestep time="217.00"/>
+    <timestep time="218.00"/>
+    <timestep time="219.00"/>
+    <timestep time="220.00"/>
+    <timestep time="221.00"/>
+    <timestep time="222.00"/>
+    <timestep time="223.00"/>
+    <timestep time="224.00"/>
+    <timestep time="225.00"/>
+    <timestep time="226.00"/>
+    <timestep time="227.00"/>
+    <timestep time="228.00"/>
+    <timestep time="229.00"/>
+    <timestep time="230.00"/>
+    <timestep time="231.00"/>
+    <timestep time="232.00"/>
+    <timestep time="233.00"/>
+    <timestep time="234.00"/>
+    <timestep time="235.00"/>
+    <timestep time="236.00"/>
+    <timestep time="237.00"/>
+    <timestep time="238.00"/>
+    <timestep time="239.00"/>
+    <timestep time="240.00"/>
+    <timestep time="241.00"/>
+    <timestep time="242.00"/>
+    <timestep time="243.00"/>
+    <timestep time="244.00"/>
+    <timestep time="245.00"/>
+    <timestep time="246.00"/>
+    <timestep time="247.00"/>
+    <timestep time="248.00"/>
+    <timestep time="249.00"/>
+    <timestep time="250.00"/>
+    <timestep time="251.00"/>
+    <timestep time="252.00"/>
+    <timestep time="253.00"/>
+    <timestep time="254.00"/>
+    <timestep time="255.00"/>
+    <timestep time="256.00"/>
+    <timestep time="257.00"/>
+    <timestep time="258.00"/>
+    <timestep time="259.00"/>
+    <timestep time="260.00"/>
+    <timestep time="261.00"/>
+    <timestep time="262.00"/>
+    <timestep time="263.00"/>
+    <timestep time="264.00"/>
+    <timestep time="265.00"/>
+    <timestep time="266.00"/>
+    <timestep time="267.00"/>
+    <timestep time="268.00"/>
+    <timestep time="269.00"/>
+    <timestep time="270.00"/>
+    <timestep time="271.00"/>
+    <timestep time="272.00"/>
+    <timestep time="273.00"/>
+    <timestep time="274.00"/>
+    <timestep time="275.00"/>
+    <timestep time="276.00"/>
+    <timestep time="277.00"/>
+    <timestep time="278.00"/>
+    <timestep time="279.00"/>
+    <timestep time="280.00"/>
+    <timestep time="281.00"/>
+    <timestep time="282.00"/>
+    <timestep time="283.00"/>
+    <timestep time="284.00"/>
+    <timestep time="285.00"/>
+    <timestep time="286.00"/>
+    <timestep time="287.00"/>
+    <timestep time="288.00"/>
+    <timestep time="289.00"/>
+    <timestep time="290.00"/>
+    <timestep time="291.00"/>
+    <timestep time="292.00"/>
+    <timestep time="293.00"/>
+    <timestep time="294.00"/>
+    <timestep time="295.00"/>
+    <timestep time="296.00"/>
+    <timestep time="297.00"/>
+    <timestep time="298.00"/>
+    <timestep time="299.00"/>
+</fcd-export>
