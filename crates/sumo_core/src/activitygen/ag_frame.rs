@@ -71,6 +71,10 @@ impl AGFrame {
             oc.add_description("net-file", "Input", "Use FILE as SUMO-network to create trips for");
             oc.do_register_abbr("stat-file", 's', SumoOption::file_name());
             oc.add_description("stat-file", "Input", "Loads the SUMO-statistics FILE");
+            // need to do this here to be able to check for network and route input options
+            utils::common::system_frame::add_report_options(oc);
+            utils::common::rand_helper::insert_rand_options(oc);
+
             oc.do_register_abbr("output-file", 'o', SumoOption::file_name());
             oc.add_synonyme("output-file", "output", true);
             oc.add_description("output-file", "Output", "Write generated trips to FILE");
@@ -83,8 +87,6 @@ impl AGFrame {
             oc.add_description("end", "Time", "Sets the time of ending of the simulation during the last day (in seconds)");
             oc.do_register("duration-d", SumoOption::integer(1));
             oc.add_description("duration-d", "Time", "Sets the duration of the simulation in days");
-            utils::common::system_frame::add_report_options(oc);
-            utils::common::rand_helper::insert_rand_options(oc);
         });
     }
 
