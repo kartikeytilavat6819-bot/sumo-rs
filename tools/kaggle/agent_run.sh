@@ -5,7 +5,7 @@ OURS=${OURS:-${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo}
 PRIS=${SUMO_PRISTINE_BIN:-/tmp/sumo_pkg/sumo/bin}/sumo
 OUT=/tmp/oc26
 mkdir -p $OUT
-CASES=${CASES:-"md_vtypes md_stop"}
+CASES=${CASES:-"md_vtypes md_stop md_midinterval"}
 for c in $CASES; do
   dir=tools/oracle/cases/$c
   sim=$(cat $dir/sim.args)
@@ -26,9 +26,16 @@ for c in $CASES; do
   for af in $files; do
     if [ -f "$OUT/$c.ours.$af" ] && [ -f "$OUT/$c.pris.$af" ]; then
       echo "  $af: $(python3 tools/oracle/compare_xml.py "$OUT/$c.pris.$af" "$OUT/$c.ours.$af" 2>&1 | head -1)"
-      sed -n '/<meandata/,$p' "$OUT/$c.pris.$af" > $OUT/p.xml
-      sed -n '/<meandata/,$p' "$OUT/$c.ours.$af" > $OUT/o.xml
-      diff -u $OUT/p.xml $OUT/o.xml
+      python3 - "$OUT/$c.pris.$af" "$OUT/$c.ours.$af" <<'PY'
+import sys, xml.etree.ElementTree as ET
+pris, ours = sys.argv[1], sys.argv[2]
+for label, path in (("REF", pris), ("CAND", ours)):
+    root = ET.parse(path).getroot()
+    for iv in root.findall("interval"):
+        print(f"  {label} interval {iv.get('begin')}-{iv.get('end')}")
+        for e in iv.findall("edge"):
+            print(f"    {e.get('id')}: ss={e.get('sampledSeconds')} entered={e.get('entered')} left={e.get('left')} speed={e.get('speed')}")
+PY
     fi
   done
 done
