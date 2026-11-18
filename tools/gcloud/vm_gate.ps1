@@ -33,7 +33,7 @@ $cdir = Join-Path $env:TEMP "vmgate_cache"
 New-Item -ItemType Directory -Force $cdir | Out-Null
 Get-ChildItem $cdir -File | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-2) } | Remove-Item -ErrorAction SilentlyContinue
 # the gate scripts are part of the key: fixing them must not hand back a result they produced
-$infra = [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([IO.File]::ReadAllBytes((Join-Path $PSScriptRoot "vm_gate_run.sh")) + [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot "..\oracle\run_all.sh")))).Replace('-', '').Substring(0, 8)
+$infra = [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([IO.File]::ReadAllBytes((Join-Path $PSScriptRoot "vm_gate_run.sh")) + [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot "..\oracle\run_all.sh")) + [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot "pristine_cache.sh")) + [IO.File]::ReadAllBytes($PSCommandPath))).Replace('-', '').Substring(0, 8)
 $cout = Join-Path $cdir "$full-$ttKey-$infra.out"; $clock = Join-Path $cdir "$full-$ttKey-$infra.lock"
 while ($true) {
     if (Test-Path $cout) { "vm_gate: reusing the result of an identical gate (same commit and case set)"; Get-Content $cout; exit 0 }
