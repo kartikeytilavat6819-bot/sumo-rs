@@ -8,7 +8,22 @@ if [ -z "$SUMO_PRISTINE_BIN" ] || [ ! -x "$SUMO_PRISTINE_BIN/sumo" ]; then
   echo "NO_PRISTINE - set SUMO_PRISTINE_BIN to the official SUMO bin dir"
   exit 2
 fi
-python3 -c 'import traci' >/dev/null 2>&1 || python3 -m pip install -q traci >/dev/null 2>&1
+if ! python3 -c 'import traci' >/dev/null 2>&1; then
+  # the pristine SUMO package often ships the matching traci module locally
+  for d in "$SUMO_PRISTINE_BIN/../tools" "$SUMO_PRISTINE_BIN/../lib" "$SUMO_PRISTINE_BIN/../../tools"; do
+    if [ -d "$d" ] && ls "$d"/*/traci "$d"/traci >/dev/null 2>&1; then
+      export PYTHONPATH="$d:$PYTHONPATH"
+      break
+    fi
+  done
+fi
+if ! python3 -c 'import traci' >/dev/null 2>&1; then
+  python3 -m pip install --disable-pip-version-check traci 2>&1 | tail -5
+fi
+if ! python3 -c 'import traci' >/dev/null 2>&1; then
+  echo "NO_TRACI (pip/network unavailable)"
+  exit 3
+fi
 export PYTHONUNBUFFERED=1
 export FUZZ_ROOT="$PWD/tools/oracle"
 FUZZ="$PWD/tools/oracle/fuzz_traci.py"
