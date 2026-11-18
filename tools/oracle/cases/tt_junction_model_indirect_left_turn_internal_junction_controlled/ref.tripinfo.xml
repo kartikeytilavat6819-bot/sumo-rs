@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:05:34.332247-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_junction_model_indirect_left_turn_internal_junction_controlled/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_junction_model_indirect_left_turn_internal_junction_controlled/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_indirect_left_turn_internal_junction_controlled/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_indirect_left_turn_internal_junction_controlled/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_indirect_left_turn_internal_junction_controlled/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="flow_2.0" depart="0.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="112.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="4.97" duration="112.00" routeLength="213.60" waitingTime="62.00" waitingCount="2" stopTime="0.00" timeLoss="73.06" rerouteNo="0" devices="tripinfo_flow_2.0 routing_flow_2.0 fcd_flow_2.0" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.1" depart="8.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="114.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.35" duration="106.00" routeLength="213.60" waitingTime="54.00" waitingCount="2" stopTime="0.00" timeLoss="67.11" rerouteNo="0" devices="tripinfo_flow_2.1 routing_flow_2.1 fcd_flow_2.1" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.2" depart="16.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="116.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.14" duration="100.00" routeLength="213.60" waitingTime="47.00" waitingCount="2" stopTime="0.00" timeLoss="60.93" rerouteNo="0" devices="tripinfo_flow_2.2 routing_flow_2.2 fcd_flow_2.2" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.3" depart="24.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="118.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.27" duration="94.00" routeLength="213.60" waitingTime="42.00" waitingCount="2" stopTime="0.00" timeLoss="54.75" rerouteNo="0" devices="tripinfo_flow_2.3 routing_flow_2.3 fcd_flow_2.3" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.4" depart="32.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="119.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.05" duration="87.00" routeLength="213.60" waitingTime="34.00" waitingCount="1" stopTime="0.00" timeLoss="48.33" rerouteNo="0" devices="tripinfo_flow_2.4 routing_flow_2.4 fcd_flow_2.4" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.5" depart="40.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="121.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.12" duration="81.00" routeLength="213.60" waitingTime="32.00" waitingCount="1" stopTime="0.00" timeLoss="42.01" rerouteNo="0" devices="tripinfo_flow_2.5 routing_flow_2.5 fcd_flow_2.5" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.6" depart="48.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="122.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.10" duration="74.00" routeLength="213.60" waitingTime="25.00" waitingCount="1" stopTime="0.00" timeLoss="35.56" rerouteNo="0" devices="tripinfo_flow_2.6 routing_flow_2.6 fcd_flow_2.6" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.7" depart="56.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="124.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.45" duration="68.00" routeLength="213.60" waitingTime="19.00" waitingCount="1" stopTime="0.00" timeLoss="29.12" rerouteNo="0" devices="tripinfo_flow_2.7 routing_flow_2.7 fcd_flow_2.7" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.8" depart="64.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="126.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.37" duration="62.00" routeLength="213.60" waitingTime="13.00" waitingCount="1" stopTime="0.00" timeLoss="22.70" rerouteNo="0" devices="tripinfo_flow_2.8 routing_flow_2.8 fcd_flow_2.8" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.9" depart="72.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="203.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="4.98" duration="131.00" routeLength="213.60" waitingTime="81.00" waitingCount="2" stopTime="0.00" timeLoss="92.06" rerouteNo="0" devices="tripinfo_flow_2.9 routing_flow_2.9 fcd_flow_2.9" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.10" depart="80.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="205.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.03" duration="125.00" routeLength="213.60" waitingTime="71.00" waitingCount="2" stopTime="0.00" timeLoss="85.69" rerouteNo="0" devices="tripinfo_flow_2.10 routing_flow_2.10 fcd_flow_2.10" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.11" depart="88.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="206.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.51" duration="118.00" routeLength="213.60" waitingTime="64.00" waitingCount="2" stopTime="0.00" timeLoss="79.08" rerouteNo="0" devices="tripinfo_flow_2.11 routing_flow_2.11 fcd_flow_2.11" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.12" depart="96.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="208.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.40" duration="112.00" routeLength="213.60" waitingTime="57.00" waitingCount="2" stopTime="0.00" timeLoss="72.68" rerouteNo="0" devices="tripinfo_flow_2.12 routing_flow_2.12 fcd_flow_2.12" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.13" depart="104.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="209.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.32" duration="105.00" routeLength="213.60" waitingTime="50.00" waitingCount="2" stopTime="0.00" timeLoss="66.49" rerouteNo="0" devices="tripinfo_flow_2.13 routing_flow_2.13 fcd_flow_2.13" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.14" depart="112.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="211.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.43" duration="99.00" routeLength="213.60" waitingTime="43.00" waitingCount="2" stopTime="0.00" timeLoss="60.03" rerouteNo="0" devices="tripinfo_flow_2.14 routing_flow_2.14 fcd_flow_2.14" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.15" depart="120.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="213.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.18" duration="93.00" routeLength="213.60" waitingTime="35.00" waitingCount="3" stopTime="0.00" timeLoss="54.00" rerouteNo="0" devices="tripinfo_flow_2.15 routing_flow_2.15 fcd_flow_2.15" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.16" depart="128.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="214.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.49" duration="86.00" routeLength="213.60" waitingTime="34.00" waitingCount="2" stopTime="0.00" timeLoss="47.46" rerouteNo="0" devices="tripinfo_flow_2.16 routing_flow_2.16 fcd_flow_2.16" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.17" depart="136.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="216.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.04" duration="80.00" routeLength="213.60" waitingTime="32.00" waitingCount="1" stopTime="0.00" timeLoss="41.17" rerouteNo="0" devices="tripinfo_flow_2.17 routing_flow_2.17 fcd_flow_2.17" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.18" depart="144.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="218.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.39" duration="74.00" routeLength="213.60" waitingTime="25.00" waitingCount="1" stopTime="0.00" timeLoss="34.64" rerouteNo="0" devices="tripinfo_flow_2.18 routing_flow_2.18 fcd_flow_2.18" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.19" depart="152.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="220.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.44" duration="68.00" routeLength="213.60" waitingTime="17.00" waitingCount="1" stopTime="0.00" timeLoss="28.69" rerouteNo="0" devices="tripinfo_flow_2.19 routing_flow_2.19 fcd_flow_2.19" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.20" depart="160.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="292.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.02" duration="132.00" routeLength="213.60" waitingTime="78.00" waitingCount="3" stopTime="0.00" timeLoss="93.57" rerouteNo="0" devices="tripinfo_flow_2.20 routing_flow_2.20 fcd_flow_2.20" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.21" depart="168.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="294.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.25" duration="126.00" routeLength="213.60" waitingTime="69.00" waitingCount="3" stopTime="0.00" timeLoss="87.44" rerouteNo="0" devices="tripinfo_flow_2.21 routing_flow_2.21 fcd_flow_2.21" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.22" depart="176.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="296.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.42" duration="120.00" routeLength="213.60" waitingTime="65.00" waitingCount="2" stopTime="0.00" timeLoss="81.11" rerouteNo="0" devices="tripinfo_flow_2.22 routing_flow_2.22 fcd_flow_2.22" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.23" depart="184.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="298.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.49" duration="114.00" routeLength="213.60" waitingTime="59.00" waitingCount="2" stopTime="0.00" timeLoss="74.97" rerouteNo="0" devices="tripinfo_flow_2.23 routing_flow_2.23 fcd_flow_2.23" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_2.24" depart="192.00" departLane="SC_2" departPos="1.70" departSpeed="0.00" departDelay="0.00" arrival="299.00" arrivalLane="CW_2" arrivalPos="86.60" arrivalSpeed="5.45" duration="107.00" routeLength="213.60" waitingTime="51.00" waitingCount="2" stopTime="0.00" timeLoss="68.48" rerouteNo="0" devices="tripinfo_flow_2.24 routing_flow_2.24 fcd_flow_2.24" vType="DEFAULT_BIKETYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

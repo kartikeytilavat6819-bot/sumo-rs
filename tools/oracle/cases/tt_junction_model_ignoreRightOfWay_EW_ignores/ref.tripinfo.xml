@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:05:23.783502-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_junction_model_ignoreRightOfWay_EW_ignores/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_junction_model_ignoreRightOfWay_EW_ignores/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_ignoreRightOfWay_EW_ignores/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_ignoreRightOfWay_EW_ignores/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_ignoreRightOfWay_EW_ignores/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="foe.0" depart="0.00" departLane="SC_0" departPos="10.00" departSpeed="14.72" departDelay="0.00" arrival="11.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.72" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.0 fcd_foe.0" vType="foeType" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="foe.1" depart="2.00" departLane="SC_0" departPos="10.00" departSpeed="13.03" departDelay="0.00" arrival="14.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="13.03" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.1 fcd_foe.1" vType="foeType" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="foe.2" depart="4.00" departLane="SC_0" departPos="10.00" departSpeed="14.03" departDelay="0.00" arrival="15.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.03" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.33" rerouteNo="0" devices="tripinfo_foe.2 fcd_foe.2" vType="foeType" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="foe.3" depart="6.00" departLane="SC_0" departPos="10.00" departSpeed="15.04" departDelay="0.00" arrival="17.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="15.04" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.50" rerouteNo="0" devices="tripinfo_foe.3 fcd_foe.3" vType="foeType" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="foe.4" depart="8.00" departLane="SC_0" departPos="10.00" departSpeed="14.31" departDelay="0.00" arrival="19.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.31" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.4 fcd_foe.4" vType="foeType" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="ego" depart="7.00" departLane="EC_0" departPos="10.00" departSpeed="0.00" departDelay="0.00" arrival="22.00" arrivalLane="CW_1" arrivalPos="50.00" arrivalSpeed="13.89" duration="15.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.94" rerouteNo="0" devices="tripinfo_ego fcd_ego" vType="egoType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="foe.5" depart="10.00" departLane="SC_0" departPos="10.00" departSpeed="11.54" departDelay="0.00" arrival="24.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="11.54" duration="14.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.81" rerouteNo="0" devices="tripinfo_foe.5 fcd_foe.5" vType="foeType" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="foe.6" depart="12.00" departLane="SC_0" departPos="10.00" departSpeed="12.89" departDelay="0.00" arrival="25.00" arrivalLane="CN_1" arrivalPos="50.00" arrivalSpeed="14.53" duration="13.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.25" rerouteNo="0" devices="tripinfo_foe.6 fcd_foe.6" vType="foeType" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="foe.7" depart="14.00" departLane="SC_0" departPos="10.00" departSpeed="12.31" departDelay="0.00" arrival="27.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="12.31" duration="13.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.7 fcd_foe.7" vType="foeType" speedFactor="0.89" vaporized=""/>
+    <tripinfo id="foe.8" depart="16.00" departLane="SC_0" departPos="10.00" departSpeed="13.03" departDelay="0.00" arrival="28.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="13.03" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.25" rerouteNo="0" devices="tripinfo_foe.8 fcd_foe.8" vType="foeType" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="foe.9" depart="18.00" departLane="SC_0" departPos="10.00" departSpeed="11.90" departDelay="0.00" arrival="31.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="11.90" duration="13.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.9 fcd_foe.9" vType="foeType" speedFactor="0.86" vaporized=""/>
+    <tripinfo id="foe.10" depart="20.00" departLane="SC_0" departPos="10.00" departSpeed="13.37" departDelay="0.00" arrival="32.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.53" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.11" rerouteNo="0" devices="tripinfo_foe.10 fcd_foe.10" vType="foeType" speedFactor="1.09" vaporized=""/>
+    <tripinfo id="foe.11" depart="22.00" departLane="SC_0" departPos="10.00" departSpeed="14.26" departDelay="0.00" arrival="34.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.26" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.05" rerouteNo="0" devices="tripinfo_foe.11 fcd_foe.11" vType="foeType" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="foe.12" depart="24.00" departLane="SC_0" departPos="10.00" departSpeed="14.54" departDelay="0.00" arrival="35.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.54" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.78" rerouteNo="0" devices="tripinfo_foe.12 fcd_foe.12" vType="foeType" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="foe.13" depart="26.00" departLane="SC_0" departPos="10.00" departSpeed="15.60" departDelay="0.00" arrival="37.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="15.60" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.90" rerouteNo="0" devices="tripinfo_foe.13 fcd_foe.13" vType="foeType" speedFactor="1.12" vaporized=""/>
+    <tripinfo id="foe.14" depart="28.00" departLane="SC_0" departPos="10.00" departSpeed="13.77" departDelay="0.00" arrival="39.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="13.77" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.14 fcd_foe.14" vType="foeType" speedFactor="0.99" vaporized=""/>
+    <tripinfo id="foe.15" depart="30.00" departLane="SC_0" departPos="10.00" departSpeed="12.87" departDelay="0.00" arrival="42.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="12.87" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.15 fcd_foe.15" vType="foeType" speedFactor="0.93" vaporized=""/>
+    <tripinfo id="foe.16" depart="32.00" departLane="SC_0" departPos="10.00" departSpeed="12.20" departDelay="0.00" arrival="45.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="12.20" duration="13.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.16 fcd_foe.16" vType="foeType" speedFactor="0.88" vaporized=""/>
+    <tripinfo id="foe.17" depart="34.00" departLane="SC_0" departPos="10.00" departSpeed="13.08" departDelay="0.00" arrival="46.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="13.08" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.38" rerouteNo="0" devices="tripinfo_foe.17 fcd_foe.17" vType="foeType" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="foe.18" depart="36.00" departLane="SC_0" departPos="10.00" departSpeed="13.00" departDelay="0.00" arrival="48.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="13.00" duration="12.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.01" rerouteNo="0" devices="tripinfo_foe.18 fcd_foe.18" vType="foeType" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="foe.19" depart="38.00" departLane="SC_0" departPos="10.00" departSpeed="14.50" departDelay="0.00" arrival="49.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="15.67" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.61" rerouteNo="0" devices="tripinfo_foe.19 fcd_foe.19" vType="foeType" speedFactor="1.16" vaporized=""/>
+    <tripinfo id="foe.20" depart="40.00" departLane="SC_0" departPos="10.00" departSpeed="14.14" departDelay="0.00" arrival="51.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.14" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.06" rerouteNo="0" devices="tripinfo_foe.20 fcd_foe.20" vType="foeType" speedFactor="1.02" vaporized=""/>
+    <tripinfo id="foe.21" depart="42.00" departLane="SC_0" departPos="10.00" departSpeed="14.03" departDelay="0.00" arrival="53.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="14.03" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.21 fcd_foe.21" vType="foeType" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="foe.22" depart="44.00" departLane="SC_0" departPos="10.00" departSpeed="13.54" departDelay="0.00" arrival="55.00" arrivalLane="CN_0" arrivalPos="50.00" arrivalSpeed="13.54" duration="11.00" routeLength="148.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_foe.22 fcd_foe.22" vType="foeType" speedFactor="0.97" vaporized=""/>
+</tripinfos>

@@ -1,0 +1,1 @@
+--write-license --default.departspeed 0 --default.departlane first --max-depart-delay 1 --default.speeddev 0.1 -t

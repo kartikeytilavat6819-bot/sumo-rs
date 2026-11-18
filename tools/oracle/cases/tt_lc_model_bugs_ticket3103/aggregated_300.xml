@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:07:03.453289-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_lc_model_bugs_ticket3103/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_lc_model_bugs_ticket3103/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_lc_model_bugs_ticket3103/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_bugs_ticket3103/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_bugs_ticket3103/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_bugs_ticket3103/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <max-depart-delay value="1"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="1211.00" id="laneData">
+        <edge id="beg2">
+            <lane id="beg2_0" sampledSeconds="84013.47" traveltime="266.44" overlapTraveltime="266.57" density="23.17" overlapDensity="23.19" laneDensity="23.17" occupancy="11.59" waitingTime="452.00" timeLoss="55410.25" speed="11.24" speedRelative="0.31" departed="358" arrived="365" entered="0" left="0" laneChangedFrom="411" laneChangedTo="418" flow="936.78" distance="942849.69"/>
+            <lane id="beg2_1" sampledSeconds="109328.81" traveltime="370.58" overlapTraveltime="370.81" density="30.16" overlapDensity="30.17" laneDensity="30.16" occupancy="15.08" waitingTime="780.00" timeLoss="84087.31" speed="8.08" speedRelative="0.22" departed="265" arrived="258" entered="0" left="0" laneChangedFrom="418" laneChangedTo="411" flow="876.75" distance="882425.83"/>
+        </edge>
+    </interval>
+</meandata>

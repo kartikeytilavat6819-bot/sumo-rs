@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --collision.check-junctions true --duration-log.statistics -a tools/oracle/cases/tt_junction_model_indirect_left_turn_internal_junction_controlled_moped/input_additional.add.xml
