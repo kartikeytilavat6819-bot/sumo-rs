@@ -47,7 +47,8 @@ PREFIX = {"netconvert": "itt_nc_", "duarouter": "duarouter_itt_"}
 VALUE_OPTS = {
     "-n", "-o", "-s", "-t", "-a", "-e", "-i", "-b", "-c", "-d", "-p", "-x", "-y",
     "--net-file", "--net", "--sumo-net-file", "--node-files", "--edge-files",
-    "--connection-files", "--type-files", "--tllogic-files", "--additional-files",
+    "--connection-files", "--type-files", "--tllogic-files", "--additional-files", "--additional",
+    "--alternatives-output", "--intermodal-network-output", "--intermodal-weight-output",
     "--edge-data-files", "--edge-permission-files", "--trip-files", "--route-files",
     "--flow-files", "--alternatives-files", "--weights", "--weight-files",
     "--taz-files", "--shapes", "--opendrive-files", "--osm-files", "--matsim-files",
@@ -74,7 +75,8 @@ NET_OUT_OPTS = {
     "--vehroute-output", "--statistic-output", "--summary-output",
 }
 DUA_OUT_OPTS = {
-    "-o", "--output-file", "--alt-output-file", "--vtype-output",
+    "-o", "--output-file", "--alt-output-file", "--alternatives-output", "--vtype-output",
+    "--intermodal-network-output", "--intermodal-weight-output",
     # --write-trips / --write-trips.geo are booleans, not output paths
     "--save-configuration", "--log",
 }
@@ -83,6 +85,8 @@ SKIP_TOKENS = (
     "java", "--gui", "--xdot", "--gdal", "xdot.py", "python",
     "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output",
 )
+# Leaves that crash the official 1.28.0 binary itself (there is no byte output to match).
+REF_CRASH_LEAVES = ("trips/rail/short_start_back_on_dest",)
 
 
 def tests_root(leaf: Path, app: str) -> Path:
@@ -325,6 +329,9 @@ def skip_test(leaf: Path, app: str, root: Path, tokens: list[str]) -> bool:
         if cur == root:
             break
         cur = cur.parent
+    rel = leaf.relative_to(root).as_posix()
+    if any(rel.endswith(r) for r in REF_CRASH_LEAVES):
+        return True
     joined = " ".join(tokens)
     if any(s in joined for s in SKIP_TOKENS):
         return True

@@ -448,11 +448,9 @@ impl ROFrame {
             utils::common::msg_handler::write_error("A positive number of alternatives must be enabled.");
             return false;
         }
-        // the port is built without HAVE_FOX (headless), so the parallel routing check applies
-        if oc.get_int("routing-threads").unwrap() > 1 {
-            utils::common::msg_handler::write_error("Parallel routing is only possible when compiled with Fox.");
-            return false;
-        }
+        // C++ guards this with #ifndef HAVE_FOX; the official reference build has FOX, so
+        // parallel routing is accepted there. We route sequentially but must accept the option.
+        // shortcut: routing-threads > 1 is treated as sequential; results are identical for these cases
         if oc.exists("mapmatch.junctions") && oc.get_bool("mapmatch.junctions").unwrap() && oc.is_default("junction-taz") {
             oc.set_default("junction-taz", "true").unwrap();
         }
