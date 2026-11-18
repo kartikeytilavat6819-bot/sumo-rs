@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 100 --step-length=0.1 -a tools/oracle/cases/tt_output_e1_one_vehicle_subsecond_one.1s_1vehicle_10m_s/input_additional.add.xml,tools/oracle/cases/tt_output_e1_one_vehicle_subsecond_one.1s_1vehicle_10m_s/input_additional2.add.xml

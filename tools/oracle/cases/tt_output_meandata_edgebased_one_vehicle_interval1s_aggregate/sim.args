@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 150 -a tools/oracle/cases/tt_output_meandata_edgebased_one_vehicle_interval1s_aggregate/input_additional.add.xml,tools/oracle/cases/tt_output_meandata_edgebased_one_vehicle_interval1s_aggregate/input_additional2.add.xml

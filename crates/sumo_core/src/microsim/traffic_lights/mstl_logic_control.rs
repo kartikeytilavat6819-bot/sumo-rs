@@ -708,7 +708,11 @@ impl MSTLLogicControl {
 
 /// Base class for things to execute if a tls switches to a new phase
 /// C++ class `MSTLLogicControl::OnSwitchAction` (microsim/traffic_lights/MSTLLogicControl.h)
+#[repr(C)]
 pub struct MSTLLogicControl_OnSwitchAction {
+    /// C++ virtual dispatch: concrete subclasses install their `execute` here so
+    /// calls through an `OnSwitchAction*` reach the override (Rust has no vtable).
+    pub execute_fn: Option<unsafe fn(Ptr<MSTLLogicControl_OnSwitchAction>)>,
 }
 
 impl MSTLLogicControl_OnSwitchAction {
@@ -725,7 +729,11 @@ impl MSTLLogicControl_OnSwitchAction {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn execute(&mut self) {
-        panic!("OnSwitchAction::execute is pure virtual; call it on a concrete action")
+        let f = self.execute_fn;
+        match f {
+            Some(f) => unsafe { f(Ptr::from_mut(self)) },
+            None => panic!("OnSwitchAction::execute is pure virtual; call it on a concrete action"),
+        }
     }
 
 }

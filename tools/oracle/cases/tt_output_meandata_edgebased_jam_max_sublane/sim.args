@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --time-to-teleport -1 --no-duration-log -b 0 -e 200 --tls.all-off --lateral-resolution 0.8 -a tools/oracle/cases/tt_output_meandata_edgebased_jam_max_sublane/input_additional.add.xml

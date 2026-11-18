@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -v --end 400 --collision.check-junctions --step-length 0.5 -a tools/oracle/cases/tt_output_collisions_junction/input_additional.add.xml

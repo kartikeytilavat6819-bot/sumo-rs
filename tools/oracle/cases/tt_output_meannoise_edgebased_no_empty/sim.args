@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 150 -a tools/oracle/cases/tt_output_meannoise_edgebased_no_empty/input_additional.add.xml

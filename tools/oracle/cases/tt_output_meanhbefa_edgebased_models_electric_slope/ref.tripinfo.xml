@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T13:43:37.025577-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_meanhbefa_edgebased_models_electric_slope\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_meanhbefa_edgebased_models_electric_slope\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_output_meanhbefa_edgebased_models_electric_slope/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools\oracle\cases\tt_output_meanhbefa_edgebased_models_electric_slope\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_meanhbefa_edgebased_models_electric_slope\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_meanhbefa_edgebased_models_electric_slope\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <battery>
+        <device.battery.probability value="1"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="v1.0" depart="0.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="303.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="303.00" routeLength="1597.14" waitingTime="117.00" waitingCount="3" stopTime="0.00" timeLoss="143.16" rerouteNo="0" devices="tripinfo_v1.0 battery_v1.0 fcd_v1.0" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.49" totalEnergyConsumed="234.51" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.1" depart="10.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="305.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="295.00" routeLength="1597.14" waitingTime="108.00" waitingCount="3" stopTime="0.00" timeLoss="134.66" rerouteNo="0" devices="tripinfo_v1.1 battery_v1.1 fcd_v1.1" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.00" totalEnergyConsumed="234.86" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.2" depart="20.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="306.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="286.00" routeLength="1597.14" waitingTime="100.00" waitingCount="3" stopTime="0.00" timeLoss="126.16" rerouteNo="0" devices="tripinfo_v1.2 battery_v1.2 fcd_v1.2" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.12" totalEnergyConsumed="234.43" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.3" depart="30.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="308.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="278.00" routeLength="1597.14" waitingTime="91.00" waitingCount="3" stopTime="0.00" timeLoss="117.66" rerouteNo="0" devices="tripinfo_v1.3 battery_v1.3 fcd_v1.3" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.66" totalEnergyConsumed="234.75" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.4" depart="40.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="309.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="269.00" routeLength="1597.14" waitingTime="83.00" waitingCount="3" stopTime="0.00" timeLoss="109.16" rerouteNo="0" devices="tripinfo_v1.4 battery_v1.4 fcd_v1.4" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.61" totalEnergyConsumed="234.47" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.5" depart="50.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="311.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="261.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="100.66" rerouteNo="0" devices="tripinfo_v1.5 battery_v1.5 fcd_v1.5" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.35" totalEnergyConsumed="227.64" totalEnergyRegenerated="84.99"/>
+    </tripinfo>
+    <tripinfo id="v1.6" depart="60.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="312.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="252.00" routeLength="1597.14" waitingTime="73.00" waitingCount="2" stopTime="0.00" timeLoss="92.16" rerouteNo="0" devices="tripinfo_v1.6 battery_v1.6 fcd_v1.6" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.13" totalEnergyConsumed="209.05" totalEnergyRegenerated="67.18"/>
+    </tripinfo>
+    <tripinfo id="v1.7" depart="70.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="314.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="244.00" routeLength="1597.14" waitingTime="64.00" waitingCount="2" stopTime="0.00" timeLoss="83.66" rerouteNo="0" devices="tripinfo_v1.7 battery_v1.7 fcd_v1.7" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.33" totalEnergyConsumed="209.71" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.8" depart="80.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="389.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="309.00" routeLength="1597.14" waitingTime="123.00" waitingCount="3" stopTime="0.00" timeLoss="149.16" rerouteNo="0" devices="tripinfo_v1.8 battery_v1.8 fcd_v1.8" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.32" totalEnergyConsumed="234.68" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.9" depart="90.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="391.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="301.00" routeLength="1597.14" waitingTime="114.00" waitingCount="3" stopTime="0.00" timeLoss="140.66" rerouteNo="0" devices="tripinfo_v1.9 battery_v1.9 fcd_v1.9" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.84" totalEnergyConsumed="235.02" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.10" depart="100.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="392.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="292.00" routeLength="1597.14" waitingTime="106.00" waitingCount="3" stopTime="0.00" timeLoss="132.16" rerouteNo="0" devices="tripinfo_v1.10 battery_v1.10 fcd_v1.10" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.95" totalEnergyConsumed="234.59" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.11" depart="110.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="394.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="284.00" routeLength="1597.14" waitingTime="97.00" waitingCount="3" stopTime="0.00" timeLoss="123.66" rerouteNo="0" devices="tripinfo_v1.11 battery_v1.11 fcd_v1.11" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.49" totalEnergyConsumed="234.91" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.12" depart="120.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="395.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="275.00" routeLength="1597.14" waitingTime="89.00" waitingCount="3" stopTime="0.00" timeLoss="115.16" rerouteNo="0" devices="tripinfo_v1.12 battery_v1.12 fcd_v1.12" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.45" totalEnergyConsumed="234.64" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.13" depart="130.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="397.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="267.00" routeLength="1597.14" waitingTime="80.00" waitingCount="3" stopTime="0.00" timeLoss="106.66" rerouteNo="0" devices="tripinfo_v1.13 battery_v1.13 fcd_v1.13" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.86" totalEnergyConsumed="235.09" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.14" depart="140.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="398.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="258.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="98.16" rerouteNo="0" devices="tripinfo_v1.14 battery_v1.14 fcd_v1.14" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.76" totalEnergyConsumed="214.57" totalEnergyRegenerated="72.33"/>
+    </tripinfo>
+    <tripinfo id="v1.15" depart="150.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="400.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="250.00" routeLength="1597.14" waitingTime="70.00" waitingCount="2" stopTime="0.00" timeLoss="89.66" rerouteNo="0" devices="tripinfo_v1.15 battery_v1.15 fcd_v1.15" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.16" totalEnergyConsumed="209.88" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.16" depart="160.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="475.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="315.00" routeLength="1597.14" waitingTime="129.00" waitingCount="3" stopTime="0.00" timeLoss="155.16" rerouteNo="0" devices="tripinfo_v1.16 battery_v1.16 fcd_v1.16" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.16" totalEnergyConsumed="234.84" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.17" depart="170.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="477.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="307.00" routeLength="1597.14" waitingTime="120.00" waitingCount="3" stopTime="0.00" timeLoss="146.66" rerouteNo="0" devices="tripinfo_v1.17 battery_v1.17 fcd_v1.17" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.67" totalEnergyConsumed="235.19" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.18" depart="180.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="478.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="298.00" routeLength="1597.14" waitingTime="112.00" waitingCount="3" stopTime="0.00" timeLoss="138.16" rerouteNo="0" devices="tripinfo_v1.18 battery_v1.18 fcd_v1.18" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.78" totalEnergyConsumed="234.76" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.19" depart="190.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="480.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="290.00" routeLength="1597.14" waitingTime="103.00" waitingCount="3" stopTime="0.00" timeLoss="129.66" rerouteNo="0" devices="tripinfo_v1.19 battery_v1.19 fcd_v1.19" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.33" totalEnergyConsumed="235.08" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.20" depart="200.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="481.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="281.00" routeLength="1597.14" waitingTime="95.00" waitingCount="3" stopTime="0.00" timeLoss="121.16" rerouteNo="0" devices="tripinfo_v1.20 battery_v1.20 fcd_v1.20" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.28" totalEnergyConsumed="234.81" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.21" depart="210.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="483.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="273.00" routeLength="1597.14" waitingTime="86.00" waitingCount="3" stopTime="0.00" timeLoss="112.66" rerouteNo="0" devices="tripinfo_v1.21 battery_v1.21 fcd_v1.21" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.69" totalEnergyConsumed="235.26" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.22" depart="220.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="484.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="264.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="104.16" rerouteNo="0" devices="tripinfo_v1.22 battery_v1.22 fcd_v1.22" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.84" totalEnergyConsumed="234.60" totalEnergyRegenerated="91.43"/>
+    </tripinfo>
+    <tripinfo id="v1.23" depart="230.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="486.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="256.00" routeLength="1597.14" waitingTime="76.00" waitingCount="2" stopTime="0.00" timeLoss="95.66" rerouteNo="0" devices="tripinfo_v1.23 battery_v1.23 fcd_v1.23" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.99" totalEnergyConsumed="210.04" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.24" depart="240.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="487.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="247.00" routeLength="1597.14" waitingTime="68.00" waitingCount="2" stopTime="0.00" timeLoss="87.16" rerouteNo="0" devices="tripinfo_v1.24 battery_v1.24 fcd_v1.24" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.17" totalEnergyConsumed="209.55" totalEnergyRegenerated="67.72"/>
+    </tripinfo>
+    <tripinfo id="v1.25" depart="250.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="561.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="311.00" routeLength="1597.14" waitingTime="125.00" waitingCount="3" stopTime="0.00" timeLoss="151.16" rerouteNo="0" devices="tripinfo_v1.25 battery_v1.25 fcd_v1.25" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.27" totalEnergyConsumed="234.73" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.26" depart="260.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="563.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="303.00" routeLength="1597.14" waitingTime="116.00" waitingCount="3" stopTime="0.00" timeLoss="142.66" rerouteNo="0" devices="tripinfo_v1.26 battery_v1.26 fcd_v1.26" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.78" totalEnergyConsumed="235.08" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.27" depart="270.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="564.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="294.00" routeLength="1597.14" waitingTime="108.00" waitingCount="3" stopTime="0.00" timeLoss="134.16" rerouteNo="0" devices="tripinfo_v1.27 battery_v1.27 fcd_v1.27" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.89" totalEnergyConsumed="234.65" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.28" depart="280.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="566.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="286.00" routeLength="1597.14" waitingTime="99.00" waitingCount="3" stopTime="0.00" timeLoss="125.66" rerouteNo="0" devices="tripinfo_v1.28 battery_v1.28 fcd_v1.28" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.44" totalEnergyConsumed="234.97" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.29" depart="290.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="567.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="277.00" routeLength="1597.14" waitingTime="91.00" waitingCount="3" stopTime="0.00" timeLoss="117.16" rerouteNo="0" devices="tripinfo_v1.29 battery_v1.29 fcd_v1.29" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.39" totalEnergyConsumed="234.70" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.30" depart="300.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="569.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="269.00" routeLength="1597.14" waitingTime="82.00" waitingCount="3" stopTime="0.00" timeLoss="108.66" rerouteNo="0" devices="tripinfo_v1.30 battery_v1.30 fcd_v1.30" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.80" totalEnergyConsumed="235.15" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.31" depart="310.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="570.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="260.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="100.16" rerouteNo="0" devices="tripinfo_v1.31 battery_v1.31 fcd_v1.31" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.29" totalEnergyConsumed="226.36" totalEnergyRegenerated="83.65"/>
+    </tripinfo>
+    <tripinfo id="v1.32" depart="320.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="572.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="252.00" routeLength="1597.14" waitingTime="72.00" waitingCount="2" stopTime="0.00" timeLoss="91.66" rerouteNo="0" devices="tripinfo_v1.32 battery_v1.32 fcd_v1.32" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.11" totalEnergyConsumed="209.93" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.33" depart="330.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="647.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="317.00" routeLength="1597.14" waitingTime="131.00" waitingCount="3" stopTime="0.00" timeLoss="157.16" rerouteNo="0" devices="tripinfo_v1.33 battery_v1.33 fcd_v1.33" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.10" totalEnergyConsumed="234.90" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.34" depart="340.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="649.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="309.00" routeLength="1597.14" waitingTime="122.00" waitingCount="3" stopTime="0.00" timeLoss="148.66" rerouteNo="0" devices="tripinfo_v1.34 battery_v1.34 fcd_v1.34" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.61" totalEnergyConsumed="235.25" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.35" depart="350.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="650.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="300.00" routeLength="1597.14" waitingTime="114.00" waitingCount="3" stopTime="0.00" timeLoss="140.16" rerouteNo="0" devices="tripinfo_v1.35 battery_v1.35 fcd_v1.35" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.73" totalEnergyConsumed="234.82" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.36" depart="360.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="652.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="292.00" routeLength="1597.14" waitingTime="105.00" waitingCount="3" stopTime="0.00" timeLoss="131.66" rerouteNo="0" devices="tripinfo_v1.36 battery_v1.36 fcd_v1.36" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.27" totalEnergyConsumed="235.13" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.37" depart="370.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="653.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="283.00" routeLength="1597.14" waitingTime="97.00" waitingCount="3" stopTime="0.00" timeLoss="123.16" rerouteNo="0" devices="tripinfo_v1.37 battery_v1.37 fcd_v1.37" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.23" totalEnergyConsumed="234.86" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.38" depart="380.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="655.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="275.00" routeLength="1597.14" waitingTime="88.00" waitingCount="3" stopTime="0.00" timeLoss="114.66" rerouteNo="0" devices="tripinfo_v1.38 battery_v1.38 fcd_v1.38" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.64" totalEnergyConsumed="235.31" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.39" depart="390.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="656.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="266.00" routeLength="1597.14" waitingTime="80.00" waitingCount="3" stopTime="0.00" timeLoss="106.16" rerouteNo="0" devices="tripinfo_v1.39 battery_v1.39 fcd_v1.39" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.77" totalEnergyConsumed="234.86" totalEnergyRegenerated="91.63"/>
+    </tripinfo>
+    <tripinfo id="v1.40" depart="400.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="658.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="258.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="97.66" rerouteNo="0" devices="tripinfo_v1.40 battery_v1.40 fcd_v1.40" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.94" totalEnergyConsumed="210.27" totalEnergyRegenerated="68.21"/>
+    </tripinfo>
+    <tripinfo id="v1.41" depart="410.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="659.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="249.00" routeLength="1597.14" waitingTime="70.00" waitingCount="2" stopTime="0.00" timeLoss="89.16" rerouteNo="0" devices="tripinfo_v1.41 battery_v1.41 fcd_v1.41" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.11" totalEnergyConsumed="209.61" totalEnergyRegenerated="67.72"/>
+    </tripinfo>
+    <tripinfo id="v1.42" depart="420.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="733.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="313.00" routeLength="1597.14" waitingTime="127.00" waitingCount="3" stopTime="0.00" timeLoss="153.16" rerouteNo="0" devices="tripinfo_v1.42 battery_v1.42 fcd_v1.42" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.21" totalEnergyConsumed="234.79" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.43" depart="430.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="735.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="305.00" routeLength="1597.14" waitingTime="118.00" waitingCount="3" stopTime="0.00" timeLoss="144.66" rerouteNo="0" devices="tripinfo_v1.43 battery_v1.43 fcd_v1.43" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.73" totalEnergyConsumed="235.14" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.44" depart="440.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="736.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="296.00" routeLength="1597.14" waitingTime="110.00" waitingCount="3" stopTime="0.00" timeLoss="136.16" rerouteNo="0" devices="tripinfo_v1.44 battery_v1.44 fcd_v1.44" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.84" totalEnergyConsumed="234.70" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.45" depart="450.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="738.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="288.00" routeLength="1597.14" waitingTime="101.00" waitingCount="3" stopTime="0.00" timeLoss="127.66" rerouteNo="0" devices="tripinfo_v1.45 battery_v1.45 fcd_v1.45" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.38" totalEnergyConsumed="235.02" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.46" depart="460.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="739.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="279.00" routeLength="1597.14" waitingTime="93.00" waitingCount="3" stopTime="0.00" timeLoss="119.16" rerouteNo="0" devices="tripinfo_v1.46 battery_v1.46 fcd_v1.46" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.34" totalEnergyConsumed="234.75" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.47" depart="470.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="741.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="271.00" routeLength="1597.14" waitingTime="84.00" waitingCount="3" stopTime="0.00" timeLoss="110.66" rerouteNo="0" devices="tripinfo_v1.47 battery_v1.47 fcd_v1.47" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.75" totalEnergyConsumed="235.20" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.48" depart="480.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="742.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="262.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="102.16" rerouteNo="0" devices="tripinfo_v1.48 battery_v1.48 fcd_v1.48" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.04" totalEnergyConsumed="231.60" totalEnergyRegenerated="88.63"/>
+    </tripinfo>
+    <tripinfo id="v1.49" depart="490.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="744.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="254.00" routeLength="1597.14" waitingTime="74.00" waitingCount="2" stopTime="0.00" timeLoss="93.66" rerouteNo="0" devices="tripinfo_v1.49 battery_v1.49 fcd_v1.49" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.05" totalEnergyConsumed="209.99" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.50" depart="500.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="745.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="245.00" routeLength="1597.14" waitingTime="66.00" waitingCount="2" stopTime="0.00" timeLoss="85.16" rerouteNo="0" devices="tripinfo_v1.50 battery_v1.50 fcd_v1.50" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.22" totalEnergyConsumed="209.50" totalEnergyRegenerated="67.72"/>
+    </tripinfo>
+    <tripinfo id="v1.51" depart="510.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="819.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="309.00" routeLength="1597.14" waitingTime="123.00" waitingCount="3" stopTime="0.00" timeLoss="149.16" rerouteNo="0" devices="tripinfo_v1.51 battery_v1.51 fcd_v1.51" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.32" totalEnergyConsumed="234.68" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.52" depart="520.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="821.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="301.00" routeLength="1597.14" waitingTime="114.00" waitingCount="3" stopTime="0.00" timeLoss="140.66" rerouteNo="0" devices="tripinfo_v1.52 battery_v1.52 fcd_v1.52" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.84" totalEnergyConsumed="235.02" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.53" depart="530.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="822.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="292.00" routeLength="1597.14" waitingTime="106.00" waitingCount="3" stopTime="0.00" timeLoss="132.16" rerouteNo="0" devices="tripinfo_v1.53 battery_v1.53 fcd_v1.53" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.95" totalEnergyConsumed="234.59" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.54" depart="540.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="824.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="284.00" routeLength="1597.14" waitingTime="97.00" waitingCount="3" stopTime="0.00" timeLoss="123.66" rerouteNo="0" devices="tripinfo_v1.54 battery_v1.54 fcd_v1.54" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.49" totalEnergyConsumed="234.91" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.55" depart="550.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="825.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="275.00" routeLength="1597.14" waitingTime="89.00" waitingCount="3" stopTime="0.00" timeLoss="115.16" rerouteNo="0" devices="tripinfo_v1.55 battery_v1.55 fcd_v1.55" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.45" totalEnergyConsumed="234.64" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.56" depart="560.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="827.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="267.00" routeLength="1597.14" waitingTime="80.00" waitingCount="3" stopTime="0.00" timeLoss="106.66" rerouteNo="0" devices="tripinfo_v1.56 battery_v1.56 fcd_v1.56" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.86" totalEnergyConsumed="235.09" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.57" depart="570.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="828.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="258.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="98.16" rerouteNo="0" devices="tripinfo_v1.57 battery_v1.57 fcd_v1.57" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.76" totalEnergyConsumed="214.57" totalEnergyRegenerated="72.33"/>
+    </tripinfo>
+    <tripinfo id="v1.58" depart="580.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="830.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="250.00" routeLength="1597.14" waitingTime="70.00" waitingCount="2" stopTime="0.00" timeLoss="89.66" rerouteNo="0" devices="tripinfo_v1.58 battery_v1.58 fcd_v1.58" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.16" totalEnergyConsumed="209.88" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.59" depart="590.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="905.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="315.00" routeLength="1597.14" waitingTime="129.00" waitingCount="3" stopTime="0.00" timeLoss="155.16" rerouteNo="0" devices="tripinfo_v1.59 battery_v1.59 fcd_v1.59" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.16" totalEnergyConsumed="234.84" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.60" depart="600.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="907.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="307.00" routeLength="1597.14" waitingTime="120.00" waitingCount="3" stopTime="0.00" timeLoss="146.66" rerouteNo="0" devices="tripinfo_v1.60 battery_v1.60 fcd_v1.60" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.67" totalEnergyConsumed="235.19" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.61" depart="610.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="908.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="298.00" routeLength="1597.14" waitingTime="112.00" waitingCount="3" stopTime="0.00" timeLoss="138.16" rerouteNo="0" devices="tripinfo_v1.61 battery_v1.61 fcd_v1.61" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.78" totalEnergyConsumed="234.76" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.62" depart="620.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="910.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="290.00" routeLength="1597.14" waitingTime="103.00" waitingCount="3" stopTime="0.00" timeLoss="129.66" rerouteNo="0" devices="tripinfo_v1.62 battery_v1.62 fcd_v1.62" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.33" totalEnergyConsumed="235.08" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.63" depart="630.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="911.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="281.00" routeLength="1597.14" waitingTime="95.00" waitingCount="3" stopTime="0.00" timeLoss="121.16" rerouteNo="0" devices="tripinfo_v1.63 battery_v1.63 fcd_v1.63" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.28" totalEnergyConsumed="234.81" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.64" depart="640.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="913.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="273.00" routeLength="1597.14" waitingTime="86.00" waitingCount="3" stopTime="0.00" timeLoss="112.66" rerouteNo="0" devices="tripinfo_v1.64 battery_v1.64 fcd_v1.64" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.69" totalEnergyConsumed="235.26" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.65" depart="650.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="914.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="264.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="104.16" rerouteNo="0" devices="tripinfo_v1.65 battery_v1.65 fcd_v1.65" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.84" totalEnergyConsumed="234.60" totalEnergyRegenerated="91.43"/>
+    </tripinfo>
+    <tripinfo id="v1.66" depart="660.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="916.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="256.00" routeLength="1597.14" waitingTime="76.00" waitingCount="2" stopTime="0.00" timeLoss="95.66" rerouteNo="0" devices="tripinfo_v1.66 battery_v1.66 fcd_v1.66" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.99" totalEnergyConsumed="210.04" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.67" depart="670.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="917.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="247.00" routeLength="1597.14" waitingTime="68.00" waitingCount="2" stopTime="0.00" timeLoss="87.16" rerouteNo="0" devices="tripinfo_v1.67 battery_v1.67 fcd_v1.67" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.17" totalEnergyConsumed="209.55" totalEnergyRegenerated="67.72"/>
+    </tripinfo>
+    <tripinfo id="v1.68" depart="680.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="991.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="311.00" routeLength="1597.14" waitingTime="125.00" waitingCount="3" stopTime="0.00" timeLoss="151.16" rerouteNo="0" devices="tripinfo_v1.68 battery_v1.68 fcd_v1.68" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.27" totalEnergyConsumed="234.73" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.69" depart="690.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="993.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="303.00" routeLength="1597.14" waitingTime="116.00" waitingCount="3" stopTime="0.00" timeLoss="142.66" rerouteNo="0" devices="tripinfo_v1.69 battery_v1.69 fcd_v1.69" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.78" totalEnergyConsumed="235.08" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.70" depart="700.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="994.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="294.00" routeLength="1597.14" waitingTime="108.00" waitingCount="3" stopTime="0.00" timeLoss="134.16" rerouteNo="0" devices="tripinfo_v1.70 battery_v1.70 fcd_v1.70" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.89" totalEnergyConsumed="234.65" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.71" depart="710.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="996.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="286.00" routeLength="1597.14" waitingTime="99.00" waitingCount="3" stopTime="0.00" timeLoss="125.66" rerouteNo="0" devices="tripinfo_v1.71 battery_v1.71 fcd_v1.71" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.44" totalEnergyConsumed="234.97" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.72" depart="720.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="997.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="277.00" routeLength="1597.14" waitingTime="91.00" waitingCount="3" stopTime="0.00" timeLoss="117.16" rerouteNo="0" devices="tripinfo_v1.72 battery_v1.72 fcd_v1.72" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.39" totalEnergyConsumed="234.70" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.73" depart="730.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="999.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="269.00" routeLength="1597.14" waitingTime="82.00" waitingCount="3" stopTime="0.00" timeLoss="108.66" rerouteNo="0" devices="tripinfo_v1.73 battery_v1.73 fcd_v1.73" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.80" totalEnergyConsumed="235.15" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.74" depart="740.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1000.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="260.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="100.16" rerouteNo="0" devices="tripinfo_v1.74 battery_v1.74 fcd_v1.74" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.29" totalEnergyConsumed="226.36" totalEnergyRegenerated="83.65"/>
+    </tripinfo>
+    <tripinfo id="v1.75" depart="750.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1002.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="252.00" routeLength="1597.14" waitingTime="72.00" waitingCount="2" stopTime="0.00" timeLoss="91.66" rerouteNo="0" devices="tripinfo_v1.75 battery_v1.75 fcd_v1.75" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.11" totalEnergyConsumed="209.93" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.76" depart="760.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1077.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="317.00" routeLength="1597.14" waitingTime="131.00" waitingCount="3" stopTime="0.00" timeLoss="157.16" rerouteNo="0" devices="tripinfo_v1.76 battery_v1.76 fcd_v1.76" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.10" totalEnergyConsumed="234.90" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.77" depart="770.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1079.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="309.00" routeLength="1597.14" waitingTime="122.00" waitingCount="3" stopTime="0.00" timeLoss="148.66" rerouteNo="0" devices="tripinfo_v1.77 battery_v1.77 fcd_v1.77" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.61" totalEnergyConsumed="235.25" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.78" depart="780.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1080.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="300.00" routeLength="1597.14" waitingTime="114.00" waitingCount="3" stopTime="0.00" timeLoss="140.16" rerouteNo="0" devices="tripinfo_v1.78 battery_v1.78 fcd_v1.78" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.73" totalEnergyConsumed="234.82" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.79" depart="790.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1082.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="292.00" routeLength="1597.14" waitingTime="105.00" waitingCount="3" stopTime="0.00" timeLoss="131.66" rerouteNo="0" devices="tripinfo_v1.79 battery_v1.79 fcd_v1.79" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.27" totalEnergyConsumed="235.13" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.80" depart="800.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1083.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="283.00" routeLength="1597.14" waitingTime="97.00" waitingCount="3" stopTime="0.00" timeLoss="123.16" rerouteNo="0" devices="tripinfo_v1.80 battery_v1.80 fcd_v1.80" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.23" totalEnergyConsumed="234.86" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.81" depart="810.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1085.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="275.00" routeLength="1597.14" waitingTime="88.00" waitingCount="3" stopTime="0.00" timeLoss="114.66" rerouteNo="0" devices="tripinfo_v1.81 battery_v1.81 fcd_v1.81" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.64" totalEnergyConsumed="235.31" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.82" depart="820.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1086.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="266.00" routeLength="1597.14" waitingTime="80.00" waitingCount="3" stopTime="0.00" timeLoss="106.16" rerouteNo="0" devices="tripinfo_v1.82 battery_v1.82 fcd_v1.82" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.77" totalEnergyConsumed="234.86" totalEnergyRegenerated="91.63"/>
+    </tripinfo>
+    <tripinfo id="v1.83" depart="830.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1088.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="258.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="97.66" rerouteNo="0" devices="tripinfo_v1.83 battery_v1.83 fcd_v1.83" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.94" totalEnergyConsumed="210.27" totalEnergyRegenerated="68.21"/>
+    </tripinfo>
+    <tripinfo id="v1.84" depart="840.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1089.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="249.00" routeLength="1597.14" waitingTime="70.00" waitingCount="2" stopTime="0.00" timeLoss="89.16" rerouteNo="0" devices="tripinfo_v1.84 battery_v1.84 fcd_v1.84" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.11" totalEnergyConsumed="209.61" totalEnergyRegenerated="67.72"/>
+    </tripinfo>
+    <tripinfo id="v1.85" depart="850.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1163.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="313.00" routeLength="1597.14" waitingTime="127.00" waitingCount="3" stopTime="0.00" timeLoss="153.16" rerouteNo="0" devices="tripinfo_v1.85 battery_v1.85 fcd_v1.85" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.21" totalEnergyConsumed="234.79" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.86" depart="860.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1165.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="305.00" routeLength="1597.14" waitingTime="118.00" waitingCount="3" stopTime="0.00" timeLoss="144.66" rerouteNo="0" devices="tripinfo_v1.86 battery_v1.86 fcd_v1.86" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.73" totalEnergyConsumed="235.14" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.87" depart="870.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1166.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="296.00" routeLength="1597.14" waitingTime="110.00" waitingCount="3" stopTime="0.00" timeLoss="136.16" rerouteNo="0" devices="tripinfo_v1.87 battery_v1.87 fcd_v1.87" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.84" totalEnergyConsumed="234.70" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.88" depart="880.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1168.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="288.00" routeLength="1597.14" waitingTime="101.00" waitingCount="3" stopTime="0.00" timeLoss="127.66" rerouteNo="0" devices="tripinfo_v1.88 battery_v1.88 fcd_v1.88" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.38" totalEnergyConsumed="235.02" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.89" depart="890.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1169.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="279.00" routeLength="1597.14" waitingTime="93.00" waitingCount="3" stopTime="0.00" timeLoss="119.16" rerouteNo="0" devices="tripinfo_v1.89 battery_v1.89 fcd_v1.89" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.34" totalEnergyConsumed="234.75" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.90" depart="900.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1171.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="271.00" routeLength="1597.14" waitingTime="84.00" waitingCount="3" stopTime="0.00" timeLoss="110.66" rerouteNo="0" devices="tripinfo_v1.90 battery_v1.90 fcd_v1.90" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.75" totalEnergyConsumed="235.20" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+    <tripinfo id="v1.91" depart="910.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1172.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="262.00" routeLength="1597.14" waitingTime="78.00" waitingCount="2" stopTime="0.00" timeLoss="102.16" rerouteNo="0" devices="tripinfo_v1.91 battery_v1.91 fcd_v1.91" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17357.04" totalEnergyConsumed="231.60" totalEnergyRegenerated="88.63"/>
+    </tripinfo>
+    <tripinfo id="v1.92" depart="920.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1174.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="254.00" routeLength="1597.14" waitingTime="74.00" waitingCount="2" stopTime="0.00" timeLoss="93.66" rerouteNo="0" devices="tripinfo_v1.92 battery_v1.92 fcd_v1.92" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.05" totalEnergyConsumed="209.99" totalEnergyRegenerated="68.04"/>
+    </tripinfo>
+    <tripinfo id="v1.93" depart="930.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1175.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="245.00" routeLength="1597.14" waitingTime="66.00" waitingCount="2" stopTime="0.00" timeLoss="85.16" rerouteNo="0" devices="tripinfo_v1.93 battery_v1.93 fcd_v1.93" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17358.22" totalEnergyConsumed="209.50" totalEnergyRegenerated="67.72"/>
+    </tripinfo>
+    <tripinfo id="v1.94" depart="940.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1249.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="309.00" routeLength="1597.14" waitingTime="123.00" waitingCount="3" stopTime="0.00" timeLoss="149.16" rerouteNo="0" devices="tripinfo_v1.94 battery_v1.94 fcd_v1.94" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.32" totalEnergyConsumed="234.68" totalEnergyRegenerated="90.00"/>
+    </tripinfo>
+    <tripinfo id="v1.95" depart="950.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1251.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="301.00" routeLength="1597.14" waitingTime="114.00" waitingCount="3" stopTime="0.00" timeLoss="140.66" rerouteNo="0" devices="tripinfo_v1.95 battery_v1.95 fcd_v1.95" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.84" totalEnergyConsumed="235.02" totalEnergyRegenerated="90.86"/>
+    </tripinfo>
+    <tripinfo id="v1.96" depart="960.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1252.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="292.00" routeLength="1597.14" waitingTime="106.00" waitingCount="3" stopTime="0.00" timeLoss="132.16" rerouteNo="0" devices="tripinfo_v1.96 battery_v1.96 fcd_v1.96" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17355.95" totalEnergyConsumed="234.59" totalEnergyRegenerated="90.54"/>
+    </tripinfo>
+    <tripinfo id="v1.97" depart="970.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1254.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="284.00" routeLength="1597.14" waitingTime="97.00" waitingCount="3" stopTime="0.00" timeLoss="123.66" rerouteNo="0" devices="tripinfo_v1.97 battery_v1.97 fcd_v1.97" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.49" totalEnergyConsumed="234.91" totalEnergyRegenerated="91.40"/>
+    </tripinfo>
+    <tripinfo id="v1.98" depart="980.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1255.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="275.00" routeLength="1597.14" waitingTime="89.00" waitingCount="3" stopTime="0.00" timeLoss="115.16" rerouteNo="0" devices="tripinfo_v1.98 battery_v1.98 fcd_v1.98" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.45" totalEnergyConsumed="234.64" totalEnergyRegenerated="91.09"/>
+    </tripinfo>
+    <tripinfo id="v1.99" depart="990.00" departLane="4/1to3/1_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1257.00" arrivalLane="1/1to0/1_0" arrivalPos="400.12" arrivalSpeed="10.00" duration="267.00" routeLength="1597.14" waitingTime="80.00" waitingCount="3" stopTime="0.00" timeLoss="106.66" rerouteNo="0" devices="tripinfo_v1.99 battery_v1.99 fcd_v1.99" vType="SUMO_DEFAULT_TYPE" speedFactor="1.00" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="17356.86" totalEnergyConsumed="235.09" totalEnergyRegenerated="91.95"/>
+    </tripinfo>
+</tripinfos>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T13:43:46.875447-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_meanhbefa_edgebased_slope\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_meanhbefa_edgebased_slope\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_output_meanhbefa_edgebased_slope/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools\oracle\cases\tt_output_meanhbefa_edgebased_slope\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_meanhbefa_edgebased_slope\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_meanhbefa_edgebased_slope\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="DEFAULT_VEHTYPE" depart="0.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="217.00" arrivalLane="E2_0" arrivalPos="1004.99" arrivalSpeed="13.89" duration="217.00" routeLength="3005.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_DEFAULT_VEHTYPE fcd_DEFAULT_VEHTYPE" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="PHEMlight_PC_G_EU4" depart="600.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="817.00" arrivalLane="E2_0" arrivalPos="1004.99" arrivalSpeed="13.89" duration="217.00" routeLength="3005.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_PHEMlight_PC_G_EU4 fcd_PHEMlight_PC_G_EU4" vType="PHEMlight_PC_G_EU4" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="HBEFA3_PC_G_EU4" depart="1200.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="1417.00" arrivalLane="E2_0" arrivalPos="1004.99" arrivalSpeed="13.89" duration="217.00" routeLength="3005.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_HBEFA3_PC_G_EU4 fcd_HBEFA3_PC_G_EU4" vType="HBEFA3_PC_G_EU4" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="HBEFA4_PC_petrol_EU4" depart="1800.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="2017.00" arrivalLane="E2_0" arrivalPos="1004.99" arrivalSpeed="13.89" duration="217.00" routeLength="3005.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_HBEFA4_PC_petrol_EU4 fcd_HBEFA4_PC_petrol_EU4" vType="HBEFA4_PC_petrol_EU4" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="Energy" depart="2400.00" departLane="E0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="2617.00" arrivalLane="E2_0" arrivalPos="1004.99" arrivalSpeed="13.89" duration="217.00" routeLength="3005.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_Energy fcd_Energy" vType="Energy" speedFactor="1.00" vaporized=""/>
+</tripinfos>

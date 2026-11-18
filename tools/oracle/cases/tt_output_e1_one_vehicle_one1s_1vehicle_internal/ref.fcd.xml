@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:40:29.119949-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_e1_one_vehicle_one1s_1vehicle_internal\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_e1_one_vehicle_one1s_1vehicle_internal\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_output_e1_one_vehicle_one1s_1vehicle_internal/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools\oracle\cases\tt_output_e1_one_vehicle_one1s_1vehicle_internal\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_e1_one_vehicle_one1s_1vehicle_internal\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_e1_one_vehicle_one1s_1vehicle_internal\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="0" x="104.95" y="81.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="81.95" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="0" x="104.95" y="91.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="91.95" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="0" x="104.95" y="101.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="10.00" lane=":C_11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="0" x="104.95" y="111.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="3.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="0" x="104.95" y="121.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="13.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="0" x="104.95" y="131.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="23.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="0" x="104.95" y="141.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="33.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="0" x="104.95" y="151.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="43.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="0" x="104.95" y="161.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="53.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="0" x="104.95" y="171.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="63.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="0" x="104.95" y="181.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="73.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="0" x="104.95" y="191.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.00" pos="83.90" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00"/>
+</fcd-export>

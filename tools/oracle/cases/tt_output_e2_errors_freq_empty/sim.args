@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 1000 -a tools/oracle/cases/tt_output_e2_errors_freq_empty/input_additional.add.xml

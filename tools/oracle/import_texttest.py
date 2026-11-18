@@ -142,6 +142,22 @@ def collect_files_and_config(source: str, tests_sumo: str):
     return option_files, config_files, potentials
 
 
+def config_copy_names(config_files):
+    """File names listed as copy_test_path in the config files (TextTest copies these)."""
+    names = set()
+    for paths in config_files.values():
+        for p in paths:
+            try:
+                with open(p, encoding="utf-8", errors="replace") as fh:
+                    for line in fh:
+                        m = re.match(r"\s*copy_test_path(?:_merge)?\s*:\s*(\S+)", line)
+                        if m:
+                            names.add(os.path.basename(m.group(1).strip()))
+            except OSError:
+                pass
+    return names
+
+
 def collate_options(option_files, app="sumo"):
     """Concatenate options.<app> parent-first with extractTest's dedup rules."""
     files = sorted(option_files.get(app, []), key=lambda p: p.count(os.sep))
@@ -410,6 +426,13 @@ def import_one(source, tests_sumo, force=False):
     chosen += extra_inputs
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
+    # TextTest copies every copy_test_path file present in the test dir; additional files
+    # often reference these by name (input_definition*.def.xml, input_selection.txt, ...).
+    for cfname in sorted(config_copy_names(config_files)):
+        hit = resolve(cfname, potentials)
+        if hit and os.path.dirname(realpath(hit)) == realpath(source):
+            chosen.append(os.path.basename(hit))
+    chosen = list(dict.fromkeys(chosen))
 
     # Rewrite extra input-file options in sim and collect their files.
     new_sim = []
