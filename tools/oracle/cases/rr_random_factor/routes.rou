@@ -1,0 +1,17 @@
+<routes>
+    <vType id="car" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5"/>
+    <route id="via_top" edges="10 11 13"/>
+    <route id="via_bottom" edges="10 12 13"/>
+    <vehicle id="t0" route="via_top" depart="0"/>
+    <vehicle id="b0" route="via_bottom" depart="1"/>
+    <vehicle id="t1" route="via_top" depart="2"/>
+    <vehicle id="b1" route="via_bottom" depart="3"/>
+    <vehicle id="t2" route="via_top" depart="4"/>
+    <vehicle id="b2" route="via_bottom" depart="5"/>
+    <vehicle id="t3" route="via_top" depart="6"/>
+    <vehicle id="b3" route="via_bottom" depart="7"/>
+    <vehicle id="t4" route="via_top" depart="8"/>
+    <vehicle id="b4" route="via_bottom" depart="9"/>
+    <vehicle id="t5" route="via_top" depart="10"/>
+    <vehicle id="b5" route="via_bottom" depart="11"/>
+</routes>
