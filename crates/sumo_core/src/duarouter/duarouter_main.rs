@@ -272,11 +272,13 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
         } else if routingAlgorithm == "arcflag" {
             // constexpr auto NUMBER_OF_LEVELS = 5
             let numberOfLevels = 5;
+            // KDTreePartition and AFBuilder store a pointer to the edges Vec, so it must outlive the router.
+            let edges: &'static Vec<Ptr<ROEdge>> = Box::leak(Box::new(ROEdge::get_all_edges()));
             let defaultVehicle: Ptr<ROVehicle> = Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), net.get_vehicle_type_secure(DEFAULT_VTYPE_ID), Ptr::from_mut(&mut *net), Ptr::null()))));
-            let partition: Ptr<KDTreePartition<ROEdge, RONode, ROVehicle>> = Ptr::from_raw(Box::into_raw(Box::new(KDTreePartition::new(numberOfLevels, &ROEdge::get_all_edges(), net.has_permissions(), restrictionParams))));
+            let partition: Ptr<KDTreePartition<ROEdge, RONode, ROVehicle>> = Ptr::from_raw(Box::into_raw(Box::new(KDTreePartition::new(numberOfLevels, edges, net.has_permissions(), restrictionParams))));
             partition.m().init(defaultVehicle);
             let reversedTtFunction: crate::utils::router::af_build::AFBuild_FlippedOperation<ROEdge, RONode, ROVehicle> = if randomFactor > 1. { FlippedEdge::get_travel_time_static_randomized } else { FlippedEdge::get_travel_time_static };
-            leak_router(AFRouter::<ROEdge, RONode, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), partition, ignoreErrors, Some(op), reversedTtFunction, weightPeriod, None, std::rc::Rc::new(()), net.has_permissions(), restrictionParams).with_compute())
+            leak_router(AFRouter::<ROEdge, RONode, ROVehicle, ROMapMatcher>::new(edges, partition, ignoreErrors, Some(ttFunction), reversedTtFunction, weightPeriod, None, std::rc::Rc::new(()), net.has_permissions(), restrictionParams).with_compute())
         } else {
             panic!("{}", ProcessError::Process(format!("Unknown routing algorithm '{}'!", routingAlgorithm)));
         }
