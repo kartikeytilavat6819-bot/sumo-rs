@@ -1,0 +1,7 @@
+<routes>
+    <!-- Edge "10" of a geo-referenced net; fcd geo output writes lon/lat instead of x/y. -->
+    <vType id="car" length="5.00" maxSpeed="8.33" accel="2.60" decel="4.50" sigma="0"/>
+    <route id="r" edges="10"/>
+    <vehicle id="v0" type="car" route="r" depart="0" departSpeed="max"/>
+    <flow id="f" type="car" route="r" begin="5.00" end="50.00" period="8.00" departSpeed="max"/>
+</routes>
