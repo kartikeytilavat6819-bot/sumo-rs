@@ -608,8 +608,10 @@ impl NWWriter_SUMO {
     #[allow(unused_variables)]
     pub fn write_traffic_lights(into: &mut OutputDevice, tllCont: &NBTrafficLightLogicCont, style: NWWriter_SUMO_ConnectionStyle) {
         let logics = tllCont.get_computed();
+        eprintln!("OC68 write_traffic_lights: compKeys={:?} defKeys={:?}", tllCont.myComputed.keys().collect::<Vec<_>>(), tllCont.myDefinitions.keys().collect::<Vec<_>>());
         for logic in logics.iter() {
             let def = tllCont.get_definition(logic.base.get_id(), logic.get_program_id());
+            eprintln!("OC68 logic id={} prog={} defNull={}", logic.base.get_id(), logic.get_program_id(), def.is_null());
             Self::write_traffic_light(into, *logic, def, style);
             // only raise warnings on write instead of on compute (to avoid cluttering netedit)
             def.m().final_checks();

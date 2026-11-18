@@ -3436,6 +3436,8 @@ impl NBNodeCont {
             }
             let newID = idSupplier.get_next();
             node.m().base.set_id(&newID);
+            let ctls: Vec<String> = node.m().get_controlling_tls().iter().map(|t| t.get_id().to_string()).collect();
+            eprintln!("OC68 remap node {} -> {} ctls={:?}", id, newID, ctls);
             for tlDef in node.m().get_controlling_tls().clone() {
                 tlc.rename(tlDef, &newID);
             }
