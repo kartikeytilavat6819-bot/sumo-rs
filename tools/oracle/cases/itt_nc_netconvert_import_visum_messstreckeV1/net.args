@@ -1,0 +1,1 @@
+--write-license --geometry.junction-mismatch-threshold 100 -v --visum-file tools/oracle/cases/itt_nc_netconvert_import_visum_messstreckeV1/visum.net

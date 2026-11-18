@@ -1,0 +1,1 @@
+--write-license --opendrive-files tools/oracle/cases/itt_nc_netconvert_import_openDRIVE_ticket9448/opendrive.xodr --offset.disable-normalization --geometry.min-dist 10 --junctions.join --default.junctions.radius 0
