@@ -6,6 +6,8 @@ export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/target}
 export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 export COMPLEX_FILTER="${COMPLEX_FILTER:-person/remove_crossing}"
 export COMPLEX_LIMIT="${COMPLEX_LIMIT:-1}"
-python3 tools/oracle/complex_suite.py "$@" 2>&1 | tail -20
-echo "=====DIFF====="
-find /tmp/complex_oracle -name diff.txt -path "*${COMPLEX_FILTER}*" -exec cat {} \; 2>/dev/null | head -120
+python3 tools/oracle/complex_suite.py "$@" 2>&1 | tail -5
+echo "=====OFFICIAL tripinfo====="
+find /tmp/complex_oracle -path "*person/remove_crossing/official*" -name tripinfo.xml -exec cat {} \;
+echo "=====OURS tripinfo====="
+find /tmp/complex_oracle -path "*person/remove_crossing/ours*" -name tripinfo.xml -exec cat {} \;
