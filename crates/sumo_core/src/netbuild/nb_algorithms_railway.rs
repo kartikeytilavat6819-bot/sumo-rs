@@ -480,7 +480,7 @@ impl NBRailwaySignalGuesser {
                         if ec.split_at_2(dc, stopEdge, n, &stopEdgeID, &edgeID, stopEdge.get_num_lanes(), stopEdge.get_num_lanes(), -1.0, 1.0, 0) {
                             if !bidi.is_null() {
                                 let edgeID2 = ec.create_unused_id(&format!("{}.{}", bidi.get_id(), splitPos as i32), "#");
-                                ec.split_at_2(dc, bidi, n, bidi.get_id(), &edgeID2, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
+                                ec.split_at_2(dc, bidi, n, &edgeID2, bidi.get_id(), bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
                             }
                             addedSignals += 1;
                             item.m().find_lane_and_compute_bus_stop_extent_2(stopEdge);
