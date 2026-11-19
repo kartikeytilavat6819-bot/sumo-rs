@@ -65,7 +65,8 @@ fi
 for t in dfrouter activitygen netgenerate polyconvert; do
   if [ -f tools/oracle/run_dfag.sh ] && [ -x "$CARGO_TARGET_DIR/debug/$t" ]; then
     TOOL=$t OUT=/tmp/${t}_o$slot timeout 600 bash tools/oracle/run_dfag.sh >/dev/null 2>&1
-    echo "$t oracle: PASS=$(grep -c $'	PASS	' /tmp/${t}_o$slot/results.tsv) of $(($(wc -l < /tmp/${t}_o$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/${t}_o$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
+    lbl=$t; case $t in netgenerate|polyconvert) lbl="$t itt";; esac  # run_gen_poly.sh prints the plain "<tool> oracle" line
+    echo "$lbl oracle: PASS=$(grep -c $'	PASS	' /tmp/${t}_o$slot/results.tsv) of $(($(wc -l < /tmp/${t}_o$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/${t}_o$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
   fi
 done
 for t in od2trips marouter; do
