@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --ignore-route-errors -a tools/oracle/cases/tt_extended_stops_busstop_customPos/input_additional.add.xml

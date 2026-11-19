@@ -310,9 +310,14 @@ impl MSTransportable {
     // virtual bool isJammed() const {
     //         return false;
     //     }
-    #[allow(unused_variables)]
     pub fn is_jammed(&self) -> bool {
-        false
+        // C++ MSTransportable::isJammed is virtual; MSPerson delegates to its
+        // walking stage PState, containers keep the base (false) behaviour.
+        if self.is_person() {
+            Ptr::new(self).cast::<crate::microsim::transportables::ms_person::MSPerson>().is_jammed()
+        } else {
+            false
+        }
     }
 
     /// C++: `double MSTransportable::getMaxSpeed() const` [const, virtual]

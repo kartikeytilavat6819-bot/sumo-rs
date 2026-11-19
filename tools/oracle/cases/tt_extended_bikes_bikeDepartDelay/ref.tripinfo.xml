@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:39:06.191045-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_bikes_bikeDepartDelay/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_bikes_bikeDepartDelay/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_bikes_bikeDepartDelay/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_bikes_bikeDepartDelay/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_bikes_bikeDepartDelay/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <lateral-resolution value="0.3"/>
+        <collision.action value="warn"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="bike11" depart="134.80" departLane="a_0" departPos="31.15" departPosLat="-0.67" departSpeed="4.35" departDelay="0.80" arrival="156.40" arrivalLane="b_0" arrivalPos="73.35" arrivalPosLat="-0.67" arrivalSpeed="7.00" duration="21.60" routeLength="93.36" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.24" rerouteNo="0" devices="tripinfo_bike11 fcd_bike11" vType="bike_bicycle" speedFactor="1.26" vaporized=""/>
+    <personinfo id="ped13" depart="134.00" type="ped_pedestrian" speedFactor="1.14" duration="32.90" waitingTime="0.00" timeLoss="3.26" traveltime="32.90">
+        <walk depart="134.00" departPos="40.97" arrival="166.90" arrivalPos="36.67" duration="32.90" routeLength="46.86" timeLoss="3.26" maxSpeed="1.58" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

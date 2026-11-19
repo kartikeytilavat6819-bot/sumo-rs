@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 2:0:0:0 -a tools/oracle/cases/tt_extended_calibrator_2day_sim/input_additional.add.xml

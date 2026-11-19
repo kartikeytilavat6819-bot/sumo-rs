@@ -1,0 +1,1 @@
+parked: official sumo exit 1 (intentional error-exit test): Error: stop for vehicle 'veh0' on lane ':C_9_0' is not downstream the current route.

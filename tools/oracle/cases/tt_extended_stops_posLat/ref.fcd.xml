@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T15:54:18.407256-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_stops_posLat/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_stops_posLat/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_stops_posLat/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_stops_posLat/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_stops_posLat/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="veh0" x="104.95" y="5.10" angle="0.00" type="Car" speed="0.00" pos="5.10" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="veh0" x="104.95" y="7.70" angle="0.00" type="Car" speed="2.60" pos="7.70" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="veh0" x="104.95" y="12.90" angle="0.00" type="Car" speed="5.20" pos="12.90" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="veh0" x="104.95" y="20.70" angle="0.00" type="Car" speed="7.80" pos="20.70" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="veh0" x="104.95" y="27.60" angle="0.00" type="Car" speed="6.90" pos="27.60" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="veh0" x="104.95" y="30.00" angle="0.00" type="Car" speed="2.40" pos="30.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="veh0" x="106.95" y="30.00" angle="0.00" type="Car" speed="0.00" pos="30.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="veh0" x="106.95" y="30.00" angle="0.00" type="Car" speed="0.00" pos="30.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="veh0" x="106.95" y="30.00" angle="0.00" type="Car" speed="0.00" pos="30.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="veh0" x="106.95" y="30.00" angle="0.00" type="Car" speed="0.00" pos="30.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="veh0" x="106.95" y="30.00" angle="0.00" type="Car" speed="0.00" pos="30.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="veh0" x="104.95" y="32.60" angle="0.00" type="Car" speed="2.60" pos="32.60" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="veh0" x="104.95" y="37.80" angle="0.00" type="Car" speed="5.20" pos="37.80" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="veh0" x="104.95" y="45.60" angle="0.00" type="Car" speed="7.80" pos="45.60" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="veh0" x="104.95" y="56.00" angle="0.00" type="Car" speed="10.40" pos="56.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="veh0" x="104.95" y="69.00" angle="0.00" type="Car" speed="13.00" pos="69.00" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="veh0" x="104.95" y="82.89" angle="0.00" type="Car" speed="13.89" pos="82.89" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="veh0" x="104.95" y="96.78" angle="0.00" type="Car" speed="13.89" pos="4.83" lane=":C_11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="veh0" x="104.95" y="110.67" angle="0.00" type="Car" speed="13.89" pos="2.62" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="veh0" x="104.95" y="124.56" angle="0.00" type="Car" speed="13.89" pos="16.51" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="veh0" x="104.95" y="138.45" angle="0.00" type="Car" speed="13.89" pos="30.40" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="veh0" x="104.95" y="152.34" angle="0.00" type="Car" speed="13.89" pos="44.29" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="veh0" x="104.95" y="166.23" angle="0.00" type="Car" speed="13.89" pos="58.18" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="veh0" x="104.95" y="180.12" angle="0.00" type="Car" speed="13.89" pos="72.07" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="veh0" x="104.95" y="194.01" angle="0.00" type="Car" speed="13.89" pos="85.96" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00"/>
+</fcd-export>

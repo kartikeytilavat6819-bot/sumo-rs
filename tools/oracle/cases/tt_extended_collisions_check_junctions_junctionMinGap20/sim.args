@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --default.emergencydecel decel -v --end 400 --collision.check-junctions --collision.check-junctions.mingap 20 --collision.action warn -a tools/oracle/cases/tt_extended_collisions_check_junctions_junctionMinGap20/input_additional.add.xml

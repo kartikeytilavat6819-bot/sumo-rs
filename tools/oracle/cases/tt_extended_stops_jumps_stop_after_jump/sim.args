@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -a tools/oracle/cases/tt_extended_stops_jumps_stop_after_jump/input_additional.add.xml

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:28:25.138446-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_collisions_intermodal_stoptime_remove/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_collisions_intermodal_stoptime_remove/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_collisions_intermodal_stoptime_remove/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_collisions_intermodal_stoptime_remove/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_collisions_intermodal_stoptime_remove/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <intermodal-collision.action value="remove"/>
+        <intermodal-collision.stoptime value="30"/>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+        <default.emergencydecel value="decel"/>
+        <pedestrian.striping.dawdling value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="NE.0" depart="0.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="19.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.82" duration="19.00" routeLength="194.66" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.14" rerouteNo="0" devices="tripinfo_NE.0 routing_NE.0 fcd_NE.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="NE.1" depart="10.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="29.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.69" duration="19.00" routeLength="194.66" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.43" rerouteNo="0" devices="tripinfo_NE.1 routing_NE.1 fcd_NE.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedSN.0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="0.00" departPos="71.80" arrival="39.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="0.00" departPos="75.00" arrival="39.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="NE.2" depart="20.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="40.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.36" duration="20.00" routeLength="194.66" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.59" rerouteNo="0" devices="tripinfo_NE.2 routing_NE.2 fcd_NE.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedSN.1" depart="12.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="12.00" departPos="71.80" arrival="51.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.1" depart="12.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="12.00" departPos="75.00" arrival="51.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.2" depart="24.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="24.00" departPos="75.00" arrival="63.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedSN.2" depart="24.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="40.00" waitingTime="1.00" timeLoss="1.70" traveltime="40.00">
+        <walk depart="24.00" departPos="71.80" arrival="64.00" arrivalPos="20.00" duration="40.00" routeLength="53.20" timeLoss="1.70" maxSpeed="1.39" waitingTime="1.00"/>
+    </personinfo>
+    <personinfo id="pedSN.3" depart="36.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="36.00" departPos="71.80" arrival="75.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="NE.3" depart="30.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="82.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.65" duration="52.00" routeLength="194.66" waitingTime="1.00" waitingCount="1" stopTime="31.00" timeLoss="5.75" rerouteNo="0" devices="tripinfo_NE.3 routing_NE.3 fcd_NE.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.0" depart="0.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="86.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.48" duration="86.00" routeLength="194.90" waitingTime="58.00" waitingCount="2" stopTime="0.00" timeLoss="71.25" rerouteNo="0" devices="tripinfo_WE.0 routing_WE.0 fcd_WE.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedSN.4" depart="48.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="48.00" departPos="71.80" arrival="87.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="WE.1" depart="10.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="88.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.88" duration="78.00" routeLength="194.90" waitingTime="49.00" waitingCount="2" stopTime="0.00" timeLoss="63.34" rerouteNo="0" devices="tripinfo_WE.1 routing_WE.1 fcd_WE.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.2" depart="20.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="90.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.03" duration="70.00" routeLength="194.90" waitingTime="42.00" waitingCount="2" stopTime="0.00" timeLoss="55.13" rerouteNo="0" devices="tripinfo_WE.2 routing_WE.2 fcd_WE.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.3" depart="30.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="91.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.63" duration="61.00" routeLength="194.90" waitingTime="33.00" waitingCount="2" stopTime="0.00" timeLoss="46.88" rerouteNo="0" devices="tripinfo_WE.3 routing_WE.3 fcd_WE.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedNS.3" depart="36.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="57.00" waitingTime="11.00" timeLoss="18.70" traveltime="57.00">
+        <walk depart="36.00" departPos="75.00" arrival="93.00" arrivalPos="20.00" duration="57.00" routeLength="53.20" timeLoss="18.70" maxSpeed="1.39" waitingTime="11.00"/>
+    </personinfo>
+    <tripinfo id="WE.4" depart="40.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="93.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.61" duration="53.00" routeLength="194.90" waitingTime="23.00" waitingCount="1" stopTime="0.00" timeLoss="38.84" rerouteNo="0" devices="tripinfo_WE.4 routing_WE.4 fcd_WE.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.5" depart="50.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="95.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.80" duration="45.00" routeLength="194.90" waitingTime="20.00" waitingCount="1" stopTime="0.00" timeLoss="30.47" rerouteNo="0" devices="tripinfo_WE.5 routing_WE.5 fcd_WE.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedNS.5" depart="60.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="40.00" waitingTime="1.00" timeLoss="1.70" traveltime="40.00">
+        <walk depart="60.00" departPos="75.00" arrival="100.00" arrivalPos="20.00" duration="40.00" routeLength="53.20" timeLoss="1.70" maxSpeed="1.39" waitingTime="1.00"/>
+    </personinfo>
+    <personinfo id="pedSN.5" depart="60.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="42.00" waitingTime="2.00" timeLoss="3.70" traveltime="42.00">
+        <walk depart="60.00" departPos="71.80" arrival="102.00" arrivalPos="20.00" duration="42.00" routeLength="53.20" timeLoss="3.70" maxSpeed="1.39" waitingTime="2.00"/>
+    </personinfo>
+    <personinfo id="pedNS.4" depart="48.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="55.00" waitingTime="15.00" timeLoss="16.70" traveltime="55.00">
+        <walk depart="48.00" departPos="75.00" arrival="103.00" arrivalPos="20.00" duration="55.00" routeLength="53.20" timeLoss="16.70" maxSpeed="1.39" waitingTime="15.00"/>
+    </personinfo>
+    <personinfo id="pedNS.6" depart="72.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="72.00" departPos="75.00" arrival="111.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.7" depart="84.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="84.00" departPos="75.00" arrival="123.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="NE.4" depart="40.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="131.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.26" duration="91.00" routeLength="194.66" waitingTime="37.00" waitingCount="1" stopTime="31.00" timeLoss="45.00" rerouteNo="0" devices="tripinfo_NE.4 routing_NE.4 fcd_NE.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedNS.8" depart="96.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="96.00" departPos="75.00" arrival="135.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedSN.6" depart="72.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="71.00" waitingTime="32.00" timeLoss="32.70" traveltime="71.00">
+        <walk depart="72.00" departPos="71.80" arrival="143.00" arrivalPos="20.00" duration="71.00" routeLength="53.20" timeLoss="32.70" maxSpeed="1.39" waitingTime="32.00"/>
+    </personinfo>
+    <personinfo id="pedNS.9" depart="108.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="108.00" departPos="75.00" arrival="147.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.10" depart="120.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="120.00" departPos="75.00" arrival="159.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="NE.5" depart="50.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="164.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.00" duration="114.00" routeLength="194.66" waitingTime="58.00" waitingCount="2" stopTime="31.00" timeLoss="69.07" rerouteNo="0" devices="tripinfo_NE.5 routing_NE.5 fcd_NE.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="NE.6" depart="60.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="168.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.93" duration="108.00" routeLength="194.66" waitingTime="76.00" waitingCount="3" stopTime="0.00" timeLoss="93.78" rerouteNo="0" devices="tripinfo_NE.6 routing_NE.6 fcd_NE.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.6" depart="60.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="170.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.08" duration="110.00" routeLength="194.90" waitingTime="76.00" waitingCount="3" stopTime="0.00" timeLoss="95.60" rerouteNo="0" devices="tripinfo_WE.6 routing_WE.6 fcd_WE.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedNS.11" depart="132.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="132.00" departPos="75.00" arrival="171.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedSN.7" depart="84.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="91.00" waitingTime="52.00" timeLoss="52.70" traveltime="91.00">
+        <walk depart="84.00" departPos="71.80" arrival="175.00" arrivalPos="20.00" duration="91.00" routeLength="53.20" timeLoss="52.70" maxSpeed="1.39" waitingTime="52.00"/>
+    </personinfo>
+    <personinfo id="pedSN.8" depart="96.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="80.00" waitingTime="41.00" timeLoss="41.70" traveltime="80.00">
+        <walk depart="96.00" departPos="71.80" arrival="176.00" arrivalPos="20.00" duration="80.00" routeLength="53.20" timeLoss="41.70" maxSpeed="1.39" waitingTime="41.00"/>
+    </personinfo>
+    <personinfo id="pedSN.11" depart="132.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="45.00" waitingTime="6.00" timeLoss="6.70" traveltime="45.00">
+        <walk depart="132.00" departPos="71.80" arrival="177.00" arrivalPos="20.00" duration="45.00" routeLength="53.20" timeLoss="6.70" maxSpeed="1.39" waitingTime="6.00"/>
+    </personinfo>
+    <personinfo id="pedSN.9" depart="108.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="70.00" waitingTime="30.00" timeLoss="31.70" traveltime="70.00">
+        <walk depart="108.00" departPos="71.80" arrival="178.00" arrivalPos="20.00" duration="70.00" routeLength="53.20" timeLoss="31.70" maxSpeed="1.39" waitingTime="30.00"/>
+    </personinfo>
+    <personinfo id="pedSN.10" depart="120.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="60.00" waitingTime="21.00" timeLoss="21.70" traveltime="60.00">
+        <walk depart="120.00" departPos="71.80" arrival="180.00" arrivalPos="20.00" duration="60.00" routeLength="53.20" timeLoss="21.70" maxSpeed="1.39" waitingTime="21.00"/>
+    </personinfo>
+    <personinfo id="pedNS.12" depart="144.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="43.00" waitingTime="3.00" timeLoss="4.70" traveltime="43.00">
+        <walk depart="144.00" departPos="75.00" arrival="187.00" arrivalPos="20.00" duration="43.00" routeLength="53.20" timeLoss="4.70" maxSpeed="1.39" waitingTime="3.00"/>
+    </personinfo>
+    <personinfo id="pedNS.13" depart="156.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="156.00" departPos="75.00" arrival="195.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="WE.7" depart="70.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="203.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.25" duration="133.00" routeLength="194.90" waitingTime="68.00" waitingCount="3" stopTime="31.00" timeLoss="87.09" rerouteNo="0" devices="tripinfo_WE.7 routing_WE.7 fcd_WE.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedNS.14" depart="168.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="168.00" departPos="75.00" arrival="207.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="WE.8" depart="80.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="207.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.72" duration="127.00" routeLength="194.90" waitingTime="92.00" waitingCount="3" stopTime="0.00" timeLoss="112.31" rerouteNo="0" devices="tripinfo_WE.8 routing_WE.8 fcd_WE.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.9" depart="90.00" departLane="WC_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="209.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.36" duration="119.00" routeLength="194.90" waitingTime="82.00" waitingCount="3" stopTime="0.00" timeLoss="104.09" rerouteNo="0" devices="tripinfo_WE.9 routing_WE.9 fcd_WE.9" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="NE.7" depart="70.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="212.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.12" duration="142.00" routeLength="194.66" waitingTime="106.00" waitingCount="5" stopTime="0.00" timeLoss="127.64" rerouteNo="0" devices="tripinfo_NE.7 routing_NE.7 fcd_NE.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="NE.8" depart="80.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="214.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="13.14" duration="134.00" routeLength="194.66" waitingTime="93.00" waitingCount="5" stopTime="0.00" timeLoss="119.46" rerouteNo="0" devices="tripinfo_NE.8 routing_NE.8 fcd_NE.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedSN.12" depart="144.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="72.00" waitingTime="32.00" timeLoss="33.70" traveltime="72.00">
+        <walk depart="144.00" departPos="71.80" arrival="216.00" arrivalPos="20.00" duration="72.00" routeLength="53.20" timeLoss="33.70" maxSpeed="1.39" waitingTime="32.00"/>
+    </personinfo>
+    <tripinfo id="NE.9" depart="90.00" departLane="NC_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="216.00" arrivalLane="CE_0" arrivalPos="88.80" arrivalSpeed="12.88" duration="126.00" routeLength="194.66" waitingTime="87.00" waitingCount="4" stopTime="0.00" timeLoss="111.50" rerouteNo="0" devices="tripinfo_NE.9 routing_NE.9 fcd_NE.9" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="pedSN.14" depart="168.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="50.00" waitingTime="10.00" timeLoss="11.70" traveltime="50.00">
+        <walk depart="168.00" departPos="71.80" arrival="218.00" arrivalPos="20.00" duration="50.00" routeLength="53.20" timeLoss="11.70" maxSpeed="1.39" waitingTime="10.00"/>
+    </personinfo>
+    <personinfo id="pedSN.13" depart="156.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="63.00" waitingTime="23.00" timeLoss="24.70" traveltime="63.00">
+        <walk depart="156.00" departPos="71.80" arrival="219.00" arrivalPos="20.00" duration="63.00" routeLength="53.20" timeLoss="24.70" maxSpeed="1.39" waitingTime="23.00"/>
+    </personinfo>
+    <personinfo id="pedSN.15" depart="180.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="40.00" waitingTime="0.00" timeLoss="1.70" traveltime="40.00">
+        <walk depart="180.00" departPos="71.80" arrival="220.00" arrivalPos="20.00" duration="40.00" routeLength="53.20" timeLoss="1.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.15" depart="180.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="41.00" waitingTime="1.00" timeLoss="2.70" traveltime="41.00">
+        <walk depart="180.00" departPos="75.00" arrival="221.00" arrivalPos="20.00" duration="41.00" routeLength="53.20" timeLoss="2.70" maxSpeed="1.39" waitingTime="1.00"/>
+    </personinfo>
+    <personinfo id="pedSN.16" depart="192.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="192.00" departPos="71.80" arrival="231.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pedNS.16" depart="192.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="39.00" waitingTime="0.00" timeLoss="0.70" traveltime="39.00">
+        <walk depart="192.00" departPos="75.00" arrival="231.00" arrivalPos="20.00" duration="39.00" routeLength="53.20" timeLoss="0.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

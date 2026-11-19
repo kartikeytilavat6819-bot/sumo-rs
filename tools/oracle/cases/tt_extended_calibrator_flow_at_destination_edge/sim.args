@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --end 1000 -a tools/oracle/cases/tt_extended_calibrator_flow_at_destination_edge/input_additional.add.xml

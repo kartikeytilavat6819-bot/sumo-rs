@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T14:46:44.632618-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_calibrator_departLane_given/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_calibrator_departLane_given/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_calibrator_departLane_given/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_calibrator_departLane_given/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_calibrator_departLane_given/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_calibrator_departLane_given/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="100"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="c1.0.0" depart="5.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="23.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.0 fcd_c1.0.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.1" depart="9.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="27.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.1 fcd_c1.0.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.2" depart="13.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="31.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.2 fcd_c1.0.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.3" depart="16.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="34.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.3 fcd_c1.0.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.4" depart="19.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="37.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.4 fcd_c1.0.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.5" depart="22.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="40.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.5 fcd_c1.0.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.6" depart="25.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="43.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="33.40" duration="18.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.97" rerouteNo="0" devices="tripinfo_c1.0.6 fcd_c1.0.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.7" depart="29.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="46.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="36.00" duration="17.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.25" rerouteNo="0" devices="tripinfo_c1.0.7 fcd_c1.0.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="c1.0.8" depart="33.00" departLane="merge_2" departPos="5.10" departSpeed="10.00" departDelay="0.00" arrival="47.00" arrivalLane="end_1" arrivalPos="192.00" arrivalSpeed="36.00" duration="14.00" routeLength="286.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.47" rerouteNo="0" devices="tripinfo_c1.0.8 fcd_c1.0.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>
