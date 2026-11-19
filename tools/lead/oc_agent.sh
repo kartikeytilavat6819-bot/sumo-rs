@@ -70,7 +70,7 @@ for r in $(seq 1 "$ROUNDS"); do
     tried="${tried:-} $MODEL"; next=$(next_model "$MODEL")
     if [ -z "$next" ] || [[ " $tried " == *" $next "* ]]; then
       # user: when beam is limited the work must not stop: hand the worktree to a Claude Haiku agent (the lead watches for this file)
-      echo "$TASK $round" > $REPO/.claude/oc-$ID.handoff
+      echo "$TASK $r" > $REPO/.claude/oc-$ID.handoff
       say "free usage limit on every model ($tried): HANDOFF to haiku"; break
     fi
     say "free usage limit on $MODEL: switching to $next"; MODEL=$next; continue
