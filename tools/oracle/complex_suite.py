@@ -70,7 +70,7 @@ def snapshot(sandbox: pathlib.Path, paths: list[str]) -> dict[str, bytes]:
             continue
         rel = str(f.relative_to(sandbox))
         data = f.read_bytes()
-        if f.suffix.lower() in TEXT_EXT or f.name == "console.txt":
+        if f.suffix.lower() in TEXT_EXT or f.name == "console.txt" or f.name.startswith("log"):
             data = normalize(data, paths)
         out[rel] = data
     return out
