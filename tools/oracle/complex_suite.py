@@ -55,7 +55,7 @@ def normalize(data: bytes, paths: list[str]) -> bytes:
     s = re.sub(r"Duration: [0-9.]+s", "Duration: <TIME>", s)
     s = re.sub(r"logfile at last step: .*", "logfile at last step: <LOG>", s)
     s = re.sub(r"logfile after load: .*", "logfile after load: <LOG>", s)
-    s = re.sub(r"logfile2 at last step: .*", "logfile2 at last step: <LOG>", s)
+    s = re.sub(r"logfile2 at last step: [^\n]*\n?", "", s)
     s = re.sub(r"logfile2 after close: .*", "logfile2 after close: <LOG>", s)
     s = re.sub(r"DijkstraRouter[^\n]*\n?", "", s)
     s = re.sub(r"Loading state from '([^']*)' failed, check whether SUMO versions match\. .*", r"Loading state from '\1' failed, check whether SUMO versions match. <ERR>", s, flags=re.S)
