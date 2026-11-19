@@ -7248,7 +7248,7 @@ impl NBEdge {
                         // compute the crossing point
                         if (needsCont || (bothPrio && oppositeLeftIntersect && !utils::common::sumo_vehicle_class::is_railway(conPermissions))) && (!con.indirectLeft || dir2 == LinkDirection::STRAIGHT) && !isBicycleLeftTurn {
                             crossingPositions.1.push(index);
-                            if n.get_id() == "gneJ8" { eprintln!("DEBUG needsCont fromE={} toE={} otherFrom={} otherTo={} minDV candidate", self.get_id(), con.toEdge.get_id(), i2.get_id(), k2.toEdge.get_id()); }
+                            if n.get_id() == "gneJ8" { eprintln!("DEBUG needsCont fromE={} toE={} otherFrom={} otherTo={} needsCont={} bothPrio={} oppLeft={} isBikeLeft={} minDV cand", self.get_id(), con.toEdge.get_id(), i2.get_id(), k2.toEdge.get_id(), needsCont, bothPrio, oppositeLeftIntersect, isBicycleLeftTurn); }
                             let otherShape = n.compute_internal_lane_shape(i2, k2, numPoints, Ptr::null(), shapeFlag);
                             otherShapes.push(otherShape.clone());
                             let secondIntersection = con.indirectLeft && this == i2 && con.fromLane == k2.fromLane;
