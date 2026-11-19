@@ -7389,6 +7389,7 @@ impl NBEdge {
             assert!(shape.len() >= 2);
             // get internal splits if any
             con.id = format!("{}_{}", innerID, edgeIndex);
+            eprintln!("DEBUG buildInnerEdges node={} fromE={} toE={} conIdx={} cp0={} shapeLen={}", n.get_id(), self.get_id(), con.toEdge.get_id(), i, crossingPositions.0, shape.length());
             let shapeLength = shape.length();
             let mut firstLength = shapeLength;
             con.internalViaLaneIndex = 0; // reset to default for netedit
