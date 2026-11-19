@@ -569,10 +569,13 @@ impl MSNet {
             delete_ptr(crate::microsim::ms_globals::meso_net());
             crate::microsim::ms_globals::set_meso_net(Ptr::null());
         }
+        // C++ `delete router` runs ~SUMOAbstractRouter, which prints the per-router query statistics
         for (_, router) in self.myRouterTT.take() {
+            router.m().drop_();
             delete_ptr(router);
         }
         for (_, router) in self.myRouterEffort.take() {
+            router.m().drop_();
             delete_ptr(router);
         }
         for (_, router) in self.myPedestrianRouter.take() {
@@ -1792,13 +1795,6 @@ impl MSNet {
         }
         // maybe write a final line of output if reporting is periodic
         self.write_summary_output(true);
-        // C++ ~SUMOAbstractRouter prints per-router query statistics on destruction.
-        for r in self.myRouterTT.borrow().values() {
-            r.m().drop_();
-        }
-        for r in self.myRouterEffort.borrow().values() {
-            r.m().drop_();
-        }
         // C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate
         // (final pass + bt-output for vehicles still running) before OutputDevice::closeAll.
         crate::microsim::devices::ms_device_b_treceiver::finish();
