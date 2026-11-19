@@ -481,7 +481,7 @@ impl ROLoader {
                     if utils::options::options_cont::get_bool("ignore-errors") {
                         write_warning(error);
                     } else {
-                        panic!("{}", error);
+                        std::panic::panic_any(ProcessError::new(error.to_string()));
                     }
                 }
             }
