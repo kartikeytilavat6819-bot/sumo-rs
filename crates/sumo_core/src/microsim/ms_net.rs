@@ -1792,6 +1792,13 @@ impl MSNet {
         }
         // maybe write a final line of output if reporting is periodic
         self.write_summary_output(true);
+        // C++ ~SUMOAbstractRouter prints per-router query statistics on destruction.
+        for r in self.myRouterTT.borrow().values() {
+            r.m().drop_();
+        }
+        for r in self.myRouterEffort.borrow().values() {
+            r.m().drop_();
+        }
         // C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate
         // (final pass + bt-output for vehicles still running) before OutputDevice::closeAll.
         crate::microsim::devices::ms_device_b_treceiver::finish();

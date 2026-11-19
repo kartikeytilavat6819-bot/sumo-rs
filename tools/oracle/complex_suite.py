@@ -39,12 +39,26 @@ def normalize(data: bytes, paths: list[str]) -> bytes:
     for p in paths:
         s = s.replace(p, "<PATH>")
     s = re.sub(r"Starting server on port \d+", "Starting server on port <PORT>", s)
+    s = re.sub(r"[^\n]*Starting server on port <PORT>[^\n]*\n?", "", s)
+    s = re.sub(r"DepartDelay: [0-9.]+\n?", "", s)
+    s = re.sub(r"tripinfos2 at last step: [^\n]*\n?", "", s)
+    s = re.sub(r"\*\*\*Starting server on port [^\n]*\n?", "", s)
+    s = re.sub(r"Loading net-file from [^\n]*\n?", "", s)
     s = re.sub(r"<remote-port value=\"\d+\"/>", '<remote-port value="<PORT>"/>', s)
     s = re.sub(r"\b\d+\s?ms\b", "<TIME> ms", s)
     s = re.sub(r"Real time factor: [0-9.]+", "Real time factor: <RATE>", s)
-    s = re.sub(r"Duration: [0-9.]+s", "Duration: <TIME>", s)
     s = re.sub(r"<!--\s*generated on .*?-->", "<!-- generated on <DATE> -->", s, flags=re.S)
     s = re.sub(r"<performance\s+[^>]*/>", "<performance/>", s)
+    s = re.sub(r"UPS: [0-9.]+", "UPS: <RATE>", s)
+    s = re.sub(r"UPS-Persons: [0-9.]+", "UPS-Persons: <RATE>", s)
+    s = re.sub(r'vehicleUpdatesPerSecond="[^"]*"', 'vehicleUpdatesPerSecond="<RATE>"', s)
+    s = re.sub(r"Duration: [0-9.]+s", "Duration: <TIME>", s)
+    s = re.sub(r"logfile at last step: .*", "logfile at last step: <LOG>", s)
+    s = re.sub(r"logfile after load: .*", "logfile after load: <LOG>", s)
+    s = re.sub(r"logfile2 at last step: [^\n]*\n?", "", s)
+    s = re.sub(r"logfile2 after close: .*", "logfile2 after close: <LOG>", s)
+    s = re.sub(r"DijkstraRouter[^\n]*\n?", "", s)
+    s = re.sub(r"Loading state from '([^']*)' failed, check whether SUMO versions match\. .*", r"Loading state from '\1' failed, check whether SUMO versions match. <ERR>", s, flags=re.S)
     s = re.sub(r'(\bversion=")[^"]*(")', r"\1<VERSION>\2", s)
     return s.encode("utf-8")
 
@@ -56,7 +70,7 @@ def snapshot(sandbox: pathlib.Path, paths: list[str]) -> dict[str, bytes]:
             continue
         rel = str(f.relative_to(sandbox))
         data = f.read_bytes()
-        if f.suffix.lower() in TEXT_EXT or f.name == "console.txt":
+        if f.suffix.lower() in TEXT_EXT or f.name == "console.txt" or f.name.startswith("log"):
             data = normalize(data, paths)
         out[rel] = data
     return out

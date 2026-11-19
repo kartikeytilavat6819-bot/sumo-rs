@@ -273,6 +273,18 @@ fn striping_vt_get_active_number(m: &mut MSPModel) -> i32 {
 }
 
 impl MSPModel_Striping {
+    /// C++: `void MSPModel_Interacting::remove(MSTransportableStateAdapter *)` [virtual, overridden via striping state]
+    pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
+        let p: Ptr<MSPModel_Striping_PState> = state.cast::<MSPModel_Striping_PState>();
+        let pedestrians = self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(p.get_lane())).or_default();
+        if let Some(idx) = pedestrians.iter().position(|x| *x == p.cast::<MSPModel_InteractingState>()) {
+            if !p.get_next_crossing().is_null() {
+                MSPModel_Interacting::unregister_crossing_approach(&*p, p.get_next_crossing());
+            }
+            pedestrians.remove(idx);
+            self.myNumActivePedestrians -= 1;
+        }
+    }
     /// C++: `void MSPModel_Striping::MSPModel_Striping(const OptionsCont &, MSNet *)`
     /// Constructor (it should not be necessary to construct more than one instance)
     // MSPModel_Striping::MSPModel_Striping(const OptionsCont& oc, MSNet* net) {
