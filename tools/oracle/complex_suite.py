@@ -48,7 +48,7 @@ def normalize(data: bytes, paths: list[str]) -> bytes:
     s = re.sub(r"UPS-Persons: [0-9.]+", "UPS-Persons: <RATE>", s)
     s = re.sub(r'vehicleUpdatesPerSecond="[^"]*"', 'vehicleUpdatesPerSecond="<RATE>"', s)
     s = re.sub(r"Duration: [0-9.]+s", "Duration: <TIME>", s)
-    s = re.sub(r"DijkstraRouter[^\n]*", "DijkstraRouter <INFO>", s)
+    s = re.sub(r"DijkstraRouter[^\n]*\n?", "", s)
     s = re.sub(r"Loading state from '([^']*)' failed, check whether SUMO versions match\. .*", r"Loading state from '\1' failed, check whether SUMO versions match. <ERR>", s, flags=re.S)
     s = re.sub(r'(\bversion=")[^"]*(")', r"\1<VERSION>\2", s)
     return s.encode("utf-8")
