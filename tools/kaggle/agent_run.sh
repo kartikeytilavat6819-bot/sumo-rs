@@ -9,6 +9,8 @@ echo "===== RE70 additional.xml cpp ====="
 cat /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/cpp_out/additional.xml 2>/dev/null
 echo "===== RE70 additional.xml rust ====="
 cat /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/rust_out/additional.xml 2>/dev/null
+echo "===== RE70 rust.log tail ====="
+tail -30 /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/rust.log 2>/dev/null
 echo "===== signal_dir lane shape ====="
 grep -o '43595467_0"[^>]*' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_signal_dir_override_repair/cpp.net.xml 2>/dev/null
 grep -o '43595467_0"[^>]*' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_signal_dir_override_repair/rust.net.xml 2>/dev/null
