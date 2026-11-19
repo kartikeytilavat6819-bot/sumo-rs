@@ -1,0 +1,1 @@
+--write-license -v --keep-edges.in-boundary -10,-10,-10,210,210,-10 -s tools/oracle/cases/itt_nc_netconvert_function_keep_edges_boundary_polygon/input_net.net.xml

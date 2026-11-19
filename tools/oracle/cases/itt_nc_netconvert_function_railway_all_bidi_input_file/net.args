@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_railway_all_bidi_input_file/input_net.net.xml -v --railway.topology.all-bidi.input-file tools/oracle/cases/itt_nc_netconvert_function_railway_all_bidi_input_file/edge_ids.txt

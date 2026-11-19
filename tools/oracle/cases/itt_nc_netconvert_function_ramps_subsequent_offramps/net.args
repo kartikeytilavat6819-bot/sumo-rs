@@ -1,0 +1,1 @@
+--write-license --no-internal-links --ramps.guess --edge-files=tools/oracle/cases/itt_nc_netconvert_function_ramps_subsequent_offramps/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_ramps_subsequent_offramps/input_plain.nod.xml --ignore-errors.edge-type

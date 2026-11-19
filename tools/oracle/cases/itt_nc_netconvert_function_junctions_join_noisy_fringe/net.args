@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_junctions_join_noisy_fringe/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_junctions_join_noisy_fringe/input_plain.nod.xml --junctions.join --no-turnarounds --no-internal-links

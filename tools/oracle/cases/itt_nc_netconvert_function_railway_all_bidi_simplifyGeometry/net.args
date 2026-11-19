@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_railway_all_bidi_simplifyGeometry/input_net.net.xml --railway.topology.all-bidi --geometry.min-dist 20

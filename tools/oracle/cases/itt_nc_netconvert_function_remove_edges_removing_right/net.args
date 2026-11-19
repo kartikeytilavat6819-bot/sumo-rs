@@ -1,0 +1,1 @@
+--write-license --no-internal-links -v --remove-edges.explicit 2fi,2si,2o --edge-files=tools/oracle/cases/itt_nc_netconvert_function_remove_edges_removing_right/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_remove_edges_removing_right/input_nodes.nod.xml

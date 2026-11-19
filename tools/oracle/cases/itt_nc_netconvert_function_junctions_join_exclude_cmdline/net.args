@@ -1,0 +1,1 @@
+--write-license --edge-files tools/oracle/cases/itt_nc_netconvert_function_junctions_join_exclude_cmdline/input_edges.edg.xml --node-files tools/oracle/cases/itt_nc_netconvert_function_junctions_join_exclude_cmdline/input_nodes.nod.xml --junctions.join --junctions.join-exclude 38919945,59993001

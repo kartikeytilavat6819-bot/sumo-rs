@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_function_tls_programs_multimodal_actuated_tram/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_tls_programs_multimodal_actuated_tram/input_plain.nod.xml --ignore-errors.edge-type --tls.default-type actuated

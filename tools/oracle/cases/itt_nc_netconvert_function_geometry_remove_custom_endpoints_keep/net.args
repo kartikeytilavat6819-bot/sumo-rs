@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_geometry_remove_custom_endpoints_keep/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_geometry_remove_custom_endpoints_keep/input_plain.nod.xml --no-turnarounds --no-internal-links -R --geometry.remove.max-junction-size 1

@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_crossings_specified_patch_joined_tls_from_sumonet/input_net.net.xml -x tools/oracle/cases/itt_nc_netconvert_function_crossings_specified_patch_joined_tls_from_sumonet/input_plain.con.xml

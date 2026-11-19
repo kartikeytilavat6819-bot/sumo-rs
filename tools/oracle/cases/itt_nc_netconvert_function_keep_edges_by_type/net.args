@@ -1,0 +1,1 @@
+--write-license --verbose --sumo-net-file tools/oracle/cases/itt_nc_netconvert_function_keep_edges_by_type/input_net.net.xml --keep-edges.by-type highway.primary

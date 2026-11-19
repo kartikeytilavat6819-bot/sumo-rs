@@ -1,0 +1,1 @@
+--write-license --no-internal-links --edge-files=tools/oracle/cases/itt_nc_netconvert_function_ramps_on_overlapping/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_ramps_on_overlapping/input_plain.nod.xml --ignore-errors.edge-type --ramps.guess

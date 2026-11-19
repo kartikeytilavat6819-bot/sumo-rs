@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_tls_programs_bike_edges_4arm_rw_ignoreJam/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_tls_programs_bike_edges_4arm_rw_ignoreJam/input_plain.nod.xml --ignore-errors.edge-type --tls.ignore-internal-junction-jam

@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_bikeLanes_guess_sumonet/input_net.net.xml --no-turnarounds --bikelanes.guess true --default.sidewalk-width 1.5

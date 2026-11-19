@@ -1,0 +1,1 @@
+--write-license --no-internal-links --ramps.guess --edge-files=tools/oracle/cases/itt_nc_netconvert_function_ramps_3in_3main_2off/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_ramps_3in_3main_2off/input_nodes.nod.xml

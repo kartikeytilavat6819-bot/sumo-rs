@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_crossings_specified_3_arm_prioritized/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_crossings_specified_3_arm_prioritized/input_plain.nod.xml -x tools/oracle/cases/itt_nc_netconvert_function_crossings_specified_3_arm_prioritized/input_plain.con.xml

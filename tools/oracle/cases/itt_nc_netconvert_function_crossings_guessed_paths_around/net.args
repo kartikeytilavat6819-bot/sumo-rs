@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_function_crossings_guessed_paths_around/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_function_crossings_guessed_paths_around/input_plain.edg.xml --ignore-errors.edge-type --crossings.guess

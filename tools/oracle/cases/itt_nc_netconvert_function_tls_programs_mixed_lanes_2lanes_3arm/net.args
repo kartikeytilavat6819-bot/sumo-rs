@@ -1,0 +1,1 @@
+--write-license --tls.no-mixed -e tools/oracle/cases/itt_nc_netconvert_function_tls_programs_mixed_lanes_2lanes_3arm/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_tls_programs_mixed_lanes_2lanes_3arm/input_plain.nod.xml --no-turnarounds

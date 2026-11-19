@@ -94,11 +94,13 @@ static MY_DEFAULT_CONNECTION_LENGTH: std::sync::atomic::AtomicU64 = std::sync::a
 pub fn my_default_connection_length() -> f64 {
     f64::from_bits(MY_DEFAULT_CONNECTION_LENGTH.load(std::sync::atomic::Ordering::Relaxed))
 }
-// C++ `static ConstRouterEdgePairVector Connection::myViaSuccessors` (always empty)
-struct ViaSuccessorsStatic(ConstRouterEdgePairVector);
-// determinism: the static is never mutated, so sharing it across threads is safe
+// C++ `NBEdge::Connection::myViaSuccessors`: a single (nullptr, nullptr) pair. The header
+// comment says "always empty" but NBEdge.cpp initializes it with one null pair so that
+// updateViaEdgeCost's `.front().second` yields nullptr and terminates the internal-edge walk.
+struct ViaSuccessorsStatic(std::sync::OnceLock<ConstRouterEdgePairVector>);
+// determinism: the static is never mutated after init, so sharing it across threads is safe
 unsafe impl Sync for ViaSuccessorsStatic {}
-static MY_VIA_SUCCESSORS: ViaSuccessorsStatic = ViaSuccessorsStatic(Vec::new());
+static MY_VIA_SUCCESSORS: ViaSuccessorsStatic = ViaSuccessorsStatic(std::sync::OnceLock::new());
 
 /// A structure which describes a connection between edges or lanes
 /// C++ class `NBEdge::Connection` (netbuild/NBEdge.h)
@@ -346,7 +348,7 @@ impl NBEdge_Connection {
     //         }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ConstRouterEdgePairVector {
-        &MY_VIA_SUCCESSORS.0
+        MY_VIA_SUCCESSORS.0.get_or_init(|| vec![(Ptr::null(), Ptr::null())])
     }
 
 }

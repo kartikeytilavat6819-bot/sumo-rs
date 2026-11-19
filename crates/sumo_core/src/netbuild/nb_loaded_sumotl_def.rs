@@ -40,6 +40,9 @@ fn sumo_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
 fn sumo_tl_def_set_program_id(d: &mut NBTrafficLightDefinition, programID: &str) {
     sumo_tl_def_of_mut(d).set_program_id(programID)
 }
+fn sumo_tl_def_set_id(d: &mut NBTrafficLightDefinition, newID: &str) {
+    sumo_tl_def_of_mut(d).set_id(newID)
+}
 fn sumo_tl_def_shift_tl_connection_lane_index(d: &mut NBTrafficLightDefinition, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
     sumo_tl_def_of_mut(d).shift_tl_connection_lane_index(edge, offset, threshold)
 }
@@ -78,6 +81,7 @@ pub static NB_LOADED_SUMOTL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightD
     my_compute: sumo_tl_def_my_compute,
     get_max_index: sumo_tl_def_get_max_index,
     set_program_id: sumo_tl_def_set_program_id,
+    set_id: sumo_tl_def_set_id,
     shift_tl_connection_lane_index: sumo_tl_def_shift_tl_connection_lane_index,
     remove_connection: sumo_tl_def_remove_connection,
     set_type: sumo_tl_def_set_type,

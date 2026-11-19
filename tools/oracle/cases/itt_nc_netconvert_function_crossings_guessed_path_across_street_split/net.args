@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_function_crossings_guessed_path_across_street_split/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_function_crossings_guessed_path_across_street_split/input_plain.edg.xml --crossings.guess --no-turnarounds

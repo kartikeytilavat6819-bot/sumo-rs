@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_function_bikeLanes_connections_mixed_merge_right/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_function_bikeLanes_connections_mixed_merge_right/input_plain.edg.xml --no-turnarounds

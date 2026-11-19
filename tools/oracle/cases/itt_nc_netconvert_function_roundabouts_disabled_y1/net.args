@@ -1,0 +1,1 @@
+--write-license --no-internal-links --edge-files=tools/oracle/cases/itt_nc_netconvert_function_roundabouts_disabled_y1/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_roundabouts_disabled_y1/input_nodes.nod.xml --roundabouts.guess false

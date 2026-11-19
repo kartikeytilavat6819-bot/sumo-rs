@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_function_max_segment_length_4arms/input_net.net.xml --geometry.max-segment-length 25

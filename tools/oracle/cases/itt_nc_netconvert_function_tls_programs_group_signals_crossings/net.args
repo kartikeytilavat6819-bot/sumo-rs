@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_tls_programs_group_signals_crossings/input_net.net.xml --tls.group-signals

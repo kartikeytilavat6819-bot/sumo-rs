@@ -38,6 +38,7 @@ pub struct NBTrafficLightDefinitionVt {
     pub collect_edges: fn(&mut NBTrafficLightDefinition),
     pub am_invalid: fn(&NBTrafficLightDefinition) -> bool,
     pub init_needs_cont_relation: fn(&NBTrafficLightDefinition),
+    pub set_id: fn(&mut NBTrafficLightDefinition, &str),
     pub get_max_valid_index: fn(&mut NBTrafficLightDefinition) -> i32,
     pub set_participants_information: fn(&mut NBTrafficLightDefinition),
     pub get_layout: fn(&NBTrafficLightDefinition) -> TrafficLightLayout,
@@ -69,6 +70,10 @@ fn default_get_max_index(_: &mut NBTrafficLightDefinition) -> i32 {
 
 fn default_set_program_id(d: &mut NBTrafficLightDefinition, programID: &str) {
     d.set_program_id_base(programID)
+}
+fn default_set_id(d: &mut NBTrafficLightDefinition, newID: &str) {
+    /// C++ Named::setID: only the name changes; NBLoadedSUMOTLDef overrides this (see its vtable).
+    d.base.set_id(newID)
 }
 fn default_shift_tl_connection_lane_index(d: &mut NBTrafficLightDefinition, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
     d.shift_tl_connection_lane_index_base(edge, offset, threshold)
@@ -124,6 +129,7 @@ pub(crate) static DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT: NBTrafficLightDefiniti
     collect_edges: default_collect_edges,
     am_invalid: default_am_invalid,
     init_needs_cont_relation: default_init_needs_cont_relation,
+    set_id: default_set_id,
     get_max_valid_index: default_get_max_valid_index,
     set_participants_information: default_set_participants_information,
     get_layout: default_get_layout,
@@ -892,6 +898,11 @@ impl NBTrafficLightDefinition {
     #[allow(unused_variables)]
     pub fn set_program_id(&mut self, programID: &str) {
         (self.vt.set_program_id)(self, programID)
+    }
+
+    /// C++: `Named::setID` is virtual; NBLoadedSUMOTLDef overrides it to also rename myTLLogic.
+    pub fn set_id(&mut self, newID: &str) {
+        (self.vt.set_id)(self, newID)
     }
 
     pub fn set_program_id_base(&mut self, programID: &str) {

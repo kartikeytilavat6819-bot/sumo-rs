@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_function_sidewalks_guess_from_permissions/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_function_sidewalks_guess_from_permissions/input_plain.edg.xml --no-turnarounds --sidewalks.guess.from-permissions

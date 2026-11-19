@@ -1658,8 +1658,7 @@ impl NBEdgeCont {
                 let to = edge.get_turn_destination(true);
                 assert!(!to.is_null());
                 edge.m().set_connection(edge.get_num_lanes() - 1, to, to.get_num_lanes() - 1, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
-                // finalize connections to prevent removal during recheck
-                edge.m().declare_connections_as_loaded(NBEdge_EdgeBuildingStep::LANES2LANES_USER);
+                // C++ NBEdgeCont::appendRailwayTurnarounds does not call declareConnectionsAsLoaded here.
             }
         }
     }

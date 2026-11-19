@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_function_roundabouts_2lanes/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_roundabouts_2lanes/input_plain.nod.xml
