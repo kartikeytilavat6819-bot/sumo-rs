@@ -1665,9 +1665,20 @@ impl SUMOVehicleParameter {
             if self.repetitionOffset >= 0 {
                 self.repetitionTotalOffset += (self.repetitionOffset as f64 / scale) as SUMOTime;
             } else {
-                // C++ assert(poissonRate > 0) is compiled out of release builds
-                // we need to cache this do avoid double generation of the rng in the TIME2STEPS macro
-                let r = rng.m().rand_exp(self.poissonRate);
+                // C++ RandHelper::randExp(poissonRate, rng): rng may be null -> use global RNG
+                let mut r = if rng.is_null() {
+                    utils::common::rand_helper::rand()
+                } else {
+                    rng.m().rand()
+                };
+                while r == 0. {
+                    r = if rng.is_null() {
+                        utils::common::rand_helper::rand()
+                    } else {
+                        rng.m().rand()
+                    };
+                }
+                let r = -r.ln() / self.poissonRate;
                 self.repetitionTotalOffset += time2steps(r / scale);
             }
         }

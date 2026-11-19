@@ -337,7 +337,7 @@ where
             let dType = if stopID != "" { "stop" } else { "edge" };
             let dID = if stopID != "" { stopID.to_string() } else { to.id().to_string() };
             let vClass = if vehicle.is_null() { String::new() } else { format!(" with vClass {}", utils::common::sumo_vehicle_class::get_vehicle_class_names(vehicle.v_class(), false)) };
-            utils::common::msg_handler::write_error(&format!("No connection between {} '{}' and {} '{}' found{}.", oType, oID, dType, dID, vClass));
+            utils::common::msg_handler::write_warning(&format!("No connection between {} '{}' and {} '{}' found{}.", oType, oID, dType, dID, vClass));
         }
         if !into.is_empty() {
             into.last_mut().unwrap().arrivalPos = arrivalPos;

@@ -1,16 +1,18 @@
 #!/bin/bash
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-export RUST_BACKTRACE=1
-BIN=${CARGO_TARGET_DIR:-/tmp/target}/debug/duarouter
-c=duarouter_itt_duarouter_personFlow_walk_poisson
-cdir=tools/oracle/cases/$c
-OUT=${TMPDIR:-/tmp}/duarouter_oracle
-sub=$OUT/$c
-rm -rf "$sub"; mkdir -p "$sub/cand"
-net=$(cat "$cdir/net")
-args=$(cat "$cdir/args")
-cargs=${args//@CASE@/$cdir}; cargs=${cargs//@DIR@/$sub/cand}
-echo "=== running candidate ==="
-"$BIN" -n "$net" $cargs --no-step-log true
-echo "exit=$?"
+CASES="duarouter_itt_duarouter_filter_files duarouter_itt_duarouter_personFlow_edges duarouter_itt_duarouter_personFlow_walk_poisson duarouter_itt_duarouter_person_edges duarouter_itt_duarouter_person_routeID duarouter_itt_duarouter_person_unconnected_ignored"
+bash tools/oracle/run_duarouter.sh $CASES
+echo "===== results.tsv ====="
+cat ${TMPDIR:-/tmp}/duarouter_oracle/results.tsv
+echo "===== diffs ====="
+for c in $CASES; do
+  d=${TMPDIR:-/tmp}/duarouter_oracle/$c
+  for f in "$d"/*.diff; do
+    [ -f "$f" ] || continue
+    echo "--- $c $(basename $f) ---"
+    head -40 "$f"
+  done
+  echo "--- $c cand.log (head) ---"
+  head -20 "$d/cand.log"
+done
