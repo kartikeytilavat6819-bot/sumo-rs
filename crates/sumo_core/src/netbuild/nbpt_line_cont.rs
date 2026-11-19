@@ -814,6 +814,7 @@ impl NBPTLineCont {
                     minDist = dist;
                 }
             }
+            eprintln!("DEBUG find_way stop={} minDist={} best={} matchdist={}", stop.get_id(), minDist, if best.is_null() { "".to_string() } else { best.get_id().to_string() }, get_float("ptline.match-dist"));
             if minDist < get_float("ptline.match-dist") {
                 let wayID = Self::get_way_id(best.get_id());
                 if stop.get_edge_id().is_empty() {
