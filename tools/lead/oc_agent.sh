@@ -68,10 +68,15 @@ for r in $(seq 1 "$ROUNDS"); do
   if grep -q 'Free usage limit reached' <<<"$out"; then
     # switch to the next free model and resend the same message; stop only when every model is limited
     tried="${tried:-} $MODEL"; next=$(next_model "$MODEL")
-    if [ -z "$next" ] || [[ " $tried " == *" $next "* ]]; then say "free usage limit reached on every model ($tried): stopping"; break; fi
+    if [ -z "$next" ] || [[ " $tried " == *" $next "* ]]; then
+      # every free beam copy is limited: the limits reset, so wait and retry instead of stopping (user: keep agents going)
+      waits=$(( ${waits:-0} + 1 )); [ "$waits" -gt 8 ] && { say "free usage limit on every model for 4h: stopping"; break; }
+      say "free usage limit on every model ($tried): waiting 30 min (wait $waits)"; sleep 1800
+      tried=""; MODEL=${MODELS# }; MODEL=${MODEL%% *}; continue
+    fi
     say "free usage limit on $MODEL: switching to $next"; MODEL=$next; continue
   fi
-  tried=""
+  tried=""; waits=0
   say "reply: $(last_text <<<"$out" | tr '\n' ' ' | cut -c1-600)"
   if [ -n "$(git -C "$WT" status --porcelain)" ]; then
     msg="You left uncommitted changes. Commit them (git add -A && git commit) and reply with your summary."; continue
