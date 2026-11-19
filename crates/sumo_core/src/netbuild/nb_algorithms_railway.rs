@@ -2009,9 +2009,6 @@ impl NBRailwayTopologyAnalyzer {
                     if lineEdges.contains(&start) {
                         // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
                         break;
-                    } else if start.base2.has_parameter(OSM_DIRECTION) {
-                        // do not reverse edges where direction was explicitly set in OSM (including via signal direction)
-                        break;
                     }
                     seq.push(start);
                     //std::cout << " seq=" << toString(seq) << "\n";
