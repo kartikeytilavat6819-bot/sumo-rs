@@ -49,11 +49,12 @@ PREFIX = {"netconvert": "itt_nc_", "duarouter": "duarouter_itt_",
 
 # Options whose value is a file name.  Used only to tell "value" from "next flag".
 VALUE_OPTS = {
-    "-n", "-o", "-s", "-t", "-a", "-e", "-i", "-b", "-c", "-d", "-p", "-x", "-y",
+    "-n", "-o", "-s", "-t", "-a", "-e", "-i", "-b", "-c", "-d", "-p", "-x", "-y", "-m",
     "--net-file", "--net", "--sumo-net-file", "--node-files", "--edge-files",
     "--connection-files", "--type-files", "--tllogic-files", "--additional-files",
     "--additional", "--districts",
     "--edge-data-files", "--edge-permission-files", "--trip-files", "--route-files",
+    "--od-matrix-files", "--od-files", "--od-amitran-files", "--taz-files",
     "--flow-files", "--alternatives-files", "--weights", "--weight-files",
     "--taz-files", "--shapes", "--opendrive-files", "--osm-files", "--matsim-files",
     "--dlr-navteq-files", "--visum-file", "--vissim-file", "--itsumo-files",
