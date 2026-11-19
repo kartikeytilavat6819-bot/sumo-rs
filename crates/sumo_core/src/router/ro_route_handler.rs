@@ -1996,6 +1996,7 @@ impl RORouteHandler {
         // let's check whether vehicles had to depart before the simulation starts
         self.myVehicleParameter.m().repetitionsDone = 0;
         let offsetToBegin = self.myBegin - self.myVehicleParameter.depart;
+        eprintln!("DEBUG close_flow myBegin={} depart={} offsetToBegin={} repNum={} repOffset={} repTotalOffset={}", self.myBegin, self.myVehicleParameter.depart, offsetToBegin, self.myVehicleParameter.repetitionNumber, self.myVehicleParameter.repetitionOffset, self.myVehicleParameter.repetitionTotalOffset);
         while self.myVehicleParameter.repetitionTotalOffset < offsetToBegin {
             self.myVehicleParameter.m().increment_flow(1., Ptr::null());
             if self.myVehicleParameter.repetitionsDone == self.myVehicleParameter.repetitionNumber {
