@@ -69,10 +69,9 @@ for r in $(seq 1 "$ROUNDS"); do
     # switch to the next free model and resend the same message; stop only when every model is limited
     tried="${tried:-} $MODEL"; next=$(next_model "$MODEL")
     if [ -z "$next" ] || [[ " $tried " == *" $next "* ]]; then
-      # every free beam copy is limited: the limits reset, so wait and retry instead of stopping (user: keep agents going)
-      waits=$(( ${waits:-0} + 1 )); [ "$waits" -gt 8 ] && { say "free usage limit on every model for 4h: stopping"; break; }
-      say "free usage limit on every model ($tried): waiting 30 min (wait $waits)"; sleep 1800
-      tried=""; MODEL=${MODELS# }; MODEL=${MODEL%% *}; continue
+      # user: when beam is limited the work must not stop: hand the worktree to a Claude Haiku agent (the lead watches for this file)
+      echo "$TASK $round" > $REPO/.claude/oc-$ID.handoff
+      say "free usage limit on every model ($tried): HANDOFF to haiku"; break
     fi
     say "free usage limit on $MODEL: switching to $next"; MODEL=$next; continue
   fi
