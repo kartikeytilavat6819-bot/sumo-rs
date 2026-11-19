@@ -1,8 +1,6 @@
 #!/bin/bash
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-export CARGO_TARGET_DIR=/c/Users/karti/sumo-rs-target
-export CARGO_BUILD_JOBS=8
 CASES="duarouter_itt_duarouter_filter_files duarouter_itt_duarouter_personFlow_edges duarouter_itt_duarouter_personFlow_walk_poisson duarouter_itt_duarouter_person_edges duarouter_itt_duarouter_person_routeID duarouter_itt_duarouter_person_unconnected_ignored"
 bash tools/oracle/run_duarouter.sh $CASES
 echo "===== results.tsv ====="
