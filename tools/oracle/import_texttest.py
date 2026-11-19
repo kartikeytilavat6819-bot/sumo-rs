@@ -56,6 +56,9 @@ EXTRA_INPUT_OPTS = {
     "--taz-files", "--taz",
     "--detector-files", "--detectors",
     "--device.fcd-replay.file", "--device.fcd-replay.files",
+    "--device.ssm.filter-edges.input-file",
+    "--fcd-output.filter-edges.input-file",
+    "--astar.landmark-distances",
 }
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
@@ -379,16 +382,14 @@ def import_one(source, tests_sumo, force=False):
         p = resolve(a, potentials)
         if not p:
             continue
-        if route_path is None and is_route_file(p):
-            route_path = p
-        # A file may be both a route and an additional; keep it in the
-        # additional list as the official test does.
+        # Only an explicit -r/--route-files option becomes the harness route
+        # file. A route-shaped file passed via -a stays an additional, exactly
+        # as the official test has it; the harness's required -r is then an
+        # empty route file (see empty_route below).
         kept_additions.append(os.path.relpath(
             join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
     empty_route = False
     if not route_path:
-        # Some tests define their vehicles only inside an additional file. The
-        # harness always passes -r, so give it an empty route file in that case.
         if kept_additions:
             empty_route = True
         else:
@@ -492,9 +493,11 @@ def import_one(source, tests_sumo, force=False):
                 base = os.path.basename(rp)
                 if base not in chosen:
                     chosen.append(base)
-                repo_rel = os.path.relpath(join(case_dir, base), REPO).replace(os.sep, "/")
-                ref_map[val] = repo_rel
-                ref_map[os.path.basename(val)] = repo_rel
+                # SUMO resolves paths inside an additional file relative to that
+                # file's own directory (the case dir), so keep the bare basename
+                # here; repo-relative paths would be doubled at runtime.
+                ref_map[val] = base
+                ref_map[os.path.basename(val)] = base
 
     if os.path.isdir(case_dir):
         shutil.rmtree(case_dir)
@@ -543,7 +546,10 @@ def import_one(source, tests_sumo, force=False):
         any(t.startswith(o + ".") for o in OUTPUT_OPTS)
         and not any(t.startswith(p) for p in HARNESS_OUTPUT_PREFIXES))]
     if kept_additions:
-        sim_args += ["-a", ",".join(sorted(set(kept_additions)))]
+        # Preserve the original order of additional files: a later file may
+        # reference routes/vTypes defined in an earlier one, and sorting would
+        # break that dependency order.
+        sim_args += ["-a", ",".join(dict.fromkeys(kept_additions))]
 
     with open(join(case_dir, "sim.args"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write(" ".join(sim_args) + "\n")
