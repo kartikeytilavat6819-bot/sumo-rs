@@ -1,0 +1,1 @@
+--xml-validation never --write-license --net-file=tools/oracle/cases/marouter_itt_marouter_restrictionParams_load_taz/input_net.net.xml --route-files=tools/oracle/cases/marouter_itt_marouter_restrictionParams_load_taz/input_trips.trips.xml -o @DIR@/routes.rou.xml -a tools/oracle/cases/marouter_itt_marouter_restrictionParams_load_taz/input_taz.taz.xml --restriction-params draught

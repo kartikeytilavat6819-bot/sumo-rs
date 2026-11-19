@@ -1,0 +1,1 @@
+--xml-validation never --write-license -m tools/oracle/cases/marouter_itt_marouter_sue_warn_CH/input_od_vm.fma -n tools/oracle/cases/marouter_itt_marouter_sue_warn_CH/input_net.net.xml -a tools/oracle/cases/marouter_itt_marouter_sue_warn_CH/input_taz.taz.xml --output routes.rou.xml --assignment-method SUE --paths 3 --routing-algorithm CH

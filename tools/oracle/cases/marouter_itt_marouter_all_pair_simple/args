@@ -1,0 +1,1 @@
+--xml-validation never --write-license -n tools/oracle/cases/marouter_itt_marouter_all_pair_simple/input_net.net.xml --all-pairs-output allpairs.bin

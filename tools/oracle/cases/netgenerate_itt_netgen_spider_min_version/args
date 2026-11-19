@@ -1,0 +1,1 @@
+--xml-validation never --write-license --spider --circles=1 --radius=20 --arms=3 -o @DIR@/routes.rou.xml

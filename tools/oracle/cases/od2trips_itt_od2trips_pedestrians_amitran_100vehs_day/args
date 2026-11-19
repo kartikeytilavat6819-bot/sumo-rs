@@ -1,0 +1,1 @@
+--xml-validation never --write-license --pedestrians -n tools/oracle/cases/od2trips_itt_od2trips_pedestrians_amitran_100vehs_day/input_taz.taz.xml --amitran tools/oracle/cases/od2trips_itt_od2trips_pedestrians_amitran_100vehs_day/input_od.xml -o @DIR@/routes.rou.xml

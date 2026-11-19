@@ -1,0 +1,1 @@
+--route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_meta_with_log/input_flows.flows.xml --output-file=@DIR@/routes.rou.xml --turn-defaults=50,50,0,0 --ignore-errors --log-file log.txt -v

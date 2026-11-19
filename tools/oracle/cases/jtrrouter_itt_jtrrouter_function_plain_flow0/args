@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_plain_flow0/input_flows.flows.xml --output-file=@DIR@/routes.rou.xml --turn-defaults=50,50,0,0 --sinks=end,left2end,right2end -b 20

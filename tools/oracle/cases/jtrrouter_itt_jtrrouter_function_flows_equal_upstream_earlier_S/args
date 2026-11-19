@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_flows_equal_upstream_earlier_S/input_flows.flows.xml --output-file=@DIR@/routes.rou.xml --turn-defaults=0,100,0,0 --sink-edges end --sources-are-sinks

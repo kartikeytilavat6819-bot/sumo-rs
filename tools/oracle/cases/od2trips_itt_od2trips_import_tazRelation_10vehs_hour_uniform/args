@@ -1,0 +1,1 @@
+--xml-validation never --write-license -n tools/oracle/cases/od2trips_itt_od2trips_import_tazRelation_10vehs_hour_uniform/input_taz.taz.xml --tazrelation-files tools/oracle/cases/od2trips_itt_od2trips_import_tazRelation_10vehs_hour_uniform/input_od.xml -o @DIR@/routes.rou.xml --spread.uniform

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --sinks=end --turns=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_defaults_override_arrivallane/input_turns.turns.xml --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_defaults_override_arrivallane/input_flows.flows.xml -o @DIR@/routes.rou.xml --arrivallane 0 --defaults-override

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --net-file=tools/oracle/cases/dfrouter_itt_dfrouter_meta_with_log/input_messstrecke.net.xml --detector-files=tools/oracle/cases/dfrouter_itt_dfrouter_meta_with_log/input_messstrecke.det.xml --detectors-poi-output detectors.poi.xml --log-file log.txt -v

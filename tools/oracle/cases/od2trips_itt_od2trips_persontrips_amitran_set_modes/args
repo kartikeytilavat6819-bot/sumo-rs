@@ -1,0 +1,1 @@
+--xml-validation never --write-license --persontrips -n tools/oracle/cases/od2trips_itt_od2trips_persontrips_amitran_set_modes/input_taz.taz.xml --amitran tools/oracle/cases/od2trips_itt_od2trips_persontrips_amitran_set_modes/input_od.xml -o @DIR@/routes.rou.xml --persontrips.modes public,taxi

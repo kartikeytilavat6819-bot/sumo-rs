@@ -476,12 +476,12 @@ impl ROLoader {
             if !net.further_stored() {
                 if error_informed() {
                     panic!("{}", ProcessError::default_msg());
-                } else if !net.have_skipped_routes() {
+                } else {
                     let error = "No route input specified or all routes were invalid.";
                     if utils::options::options_cont::get_bool("ignore-errors") {
                         write_warning(error);
                     } else {
-                        panic!("{}", error);
+                        std::panic::panic_any(ProcessError::new(error.to_string()));
                     }
                 }
             }

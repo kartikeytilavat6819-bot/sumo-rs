@@ -1,0 +1,1 @@
+--xml-validation never --write-license --grid --grid.number 3 --output=net.net.xml --type-files tools/oracle/cases/netgenerate_itt_netgen_grid_default_type2/input_types.typ.xml --default.type a

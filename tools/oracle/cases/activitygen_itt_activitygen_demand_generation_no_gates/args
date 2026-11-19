@@ -1,0 +1,1 @@
+--xml-validation never --write-license -v --net-file tools/oracle/cases/activitygen_itt_activitygen_demand_generation_no_gates/activitygen-example.net.xml --stat-file tools/oracle/cases/activitygen_itt_activitygen_demand_generation_no_gates/activitygen-example.stat.xml --output-file @DIR@/routes.rou.xml --seed 1

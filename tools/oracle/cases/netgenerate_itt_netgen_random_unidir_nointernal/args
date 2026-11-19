@@ -1,0 +1,1 @@
+--xml-validation never --write-license --rand.bidi-probability 0 --rand -o @DIR@/routes.rou.xml --rand.iterations=200 --no-internal-links

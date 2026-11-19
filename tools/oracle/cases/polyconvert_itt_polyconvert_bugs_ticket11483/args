@@ -1,0 +1,1 @@
+--xml-validation never --write-license -v --osm tools/oracle/cases/polyconvert_itt_polyconvert_bugs_ticket11483/osm.xml -o @DIR@/routes.rou.xml --net tools/oracle/cases/polyconvert_itt_polyconvert_bugs_ticket11483/input_net.net.xml --prune.in-net --prune.in-net.offsets 0,-300,0,-300
