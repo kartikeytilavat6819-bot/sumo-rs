@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T14:45:39.132931-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_rail_rail_signal_several_incoming_lanes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_rail_rail_signal_several_incoming_lanes/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_rail_rail_signal_several_incoming_lanes/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rail_signal_several_incoming_lanes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rail_signal_several_incoming_lanes/ref.tripinfo.xml"/>
+        <railsignal-block-output value="railsignal_blocks.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rail_signal_several_incoming_lanes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <processing>
+        <time-to-teleport.railsignal-deadlock value="200"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="rail1" x="134.56" y="159.08" angle="88.92" type="rail" speed="0.00" pos="135.10" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="rail1" x="134.81" y="159.09" angle="88.92" type="rail" speed="0.25" pos="135.35" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="rail1" x="135.31" y="159.10" angle="88.92" type="rail" speed="0.50" pos="135.85" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="rail1" x="136.05" y="159.11" angle="88.92" type="rail" speed="0.75" pos="136.60" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="rail1" x="137.04" y="159.13" angle="88.92" type="rail" speed="1.00" pos="137.60" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="rail1" x="138.27" y="159.15" angle="88.92" type="rail" speed="1.25" pos="138.85" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="rail1" x="139.75" y="159.18" angle="88.92" type="rail" speed="1.50" pos="140.35" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="rail1" x="141.48" y="159.21" angle="88.92" type="rail" speed="1.75" pos="142.10" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="rail1" x="143.46" y="159.25" angle="88.92" type="rail" speed="2.00" pos="144.10" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="rail1" x="145.69" y="159.29" angle="88.92" type="rail" speed="2.25" pos="146.35" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="rail1" x="148.16" y="159.34" angle="88.92" type="rail" speed="2.50" pos="148.85" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="rail1" x="150.87" y="159.39" angle="88.92" type="rail" speed="2.75" pos="151.60" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="rail1" x="153.84" y="159.45" angle="88.92" type="rail" speed="3.00" pos="154.60" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="rail1" x="157.05" y="159.51" angle="88.92" type="rail" speed="3.25" pos="157.85" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="rail1" x="160.51" y="159.57" angle="88.92" type="rail" speed="3.50" pos="161.35" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="rail1" x="164.22" y="159.64" angle="88.92" type="rail" speed="3.75" pos="165.10" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="rail1" x="168.17" y="159.72" angle="88.92" type="rail" speed="4.00" pos="169.10" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="rail1" x="172.37" y="159.80" angle="88.92" type="rail" speed="4.25" pos="173.35" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="rail1" x="176.82" y="159.88" angle="88.92" type="rail" speed="4.50" pos="177.85" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="rail1" x="181.52" y="159.97" angle="88.92" type="rail" speed="4.75" pos="182.60" lane="gneE6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="rail1" x="186.97" y="159.12" angle="92.18" type="rail" speed="5.00" pos="1.70" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="rail1" x="191.39" y="156.84" angle="100.72" type="rail" speed="5.25" pos="6.95" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="rail1" x="196.01" y="154.44" angle="110.02" type="rail" speed="5.50" pos="12.45" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="rail1" x="200.85" y="151.94" angle="117.36" type="rail" speed="5.75" pos="18.20" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="rail1" x="205.90" y="149.33" angle="117.36" type="rail" speed="6.00" pos="24.20" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="rail1" x="211.16" y="146.61" angle="117.36" type="rail" speed="6.25" pos="30.45" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="rail1" x="216.62" y="143.78" angle="117.36" type="rail" speed="6.50" pos="36.95" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="rail1" x="222.30" y="140.84" angle="117.36" type="rail" speed="6.75" pos="43.70" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="rail1" x="228.19" y="137.79" angle="117.36" type="rail" speed="7.00" pos="50.70" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="rail1" x="234.29" y="134.64" angle="117.36" type="rail" speed="7.25" pos="57.95" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="rail1" x="240.60" y="131.37" angle="117.36" type="rail" speed="7.50" pos="65.45" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="rail1" x="247.12" y="128.00" angle="117.36" type="rail" speed="7.75" pos="73.20" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="rail1" x="253.85" y="124.52" angle="117.36" type="rail" speed="8.00" pos="81.20" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="rail1" x="260.79" y="120.93" angle="117.36" type="rail" speed="8.25" pos="89.45" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="rail1" x="267.94" y="117.23" angle="117.36" type="rail" speed="8.50" pos="97.95" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="rail1" x="275.30" y="113.42" angle="117.36" type="rail" speed="8.75" pos="106.70" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="rail1" x="282.87" y="109.50" angle="117.36" type="rail" speed="9.00" pos="115.70" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="rail1" x="290.65" y="105.48" angle="117.36" type="rail" speed="9.25" pos="124.95" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="rail1" x="298.64" y="101.34" angle="117.36" type="rail" speed="9.50" pos="134.45" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="rail1" x="306.85" y="97.10" angle="117.36" type="rail" speed="9.75" pos="144.20" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="rail1" x="315.26" y="92.75" angle="117.36" type="rail" speed="10.00" pos="154.20" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="rail1" x="323.88" y="88.29" angle="117.36" type="rail" speed="10.25" pos="164.45" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="rail1" x="332.71" y="83.72" angle="117.36" type="rail" speed="10.50" pos="174.95" lane="gneE7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="rail1" x="351.17" y="76.78" angle="112.03" type="rail" speed="10.75" pos="3.36" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="rail1" x="362.08" y="76.60" angle="100.90" type="rail" speed="11.00" pos="14.36" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="rail1" x="373.24" y="76.41" angle="90.97" type="rail" speed="11.25" pos="25.61" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="rail1" x="384.65" y="76.22" angle="90.97" type="rail" speed="11.50" pos="37.11" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="rail1" x="396.30" y="76.02" angle="90.97" type="rail" speed="11.75" pos="48.86" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="rail1" x="408.20" y="75.82" angle="90.97" type="rail" speed="12.00" pos="60.86" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="rail1" x="420.35" y="75.62" angle="90.97" type="rail" speed="12.25" pos="73.11" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="rail1" x="432.75" y="75.41" angle="90.97" type="rail" speed="12.50" pos="85.61" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="rail1" x="445.40" y="75.19" angle="90.97" type="rail" speed="12.75" pos="98.36" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="rail1" x="458.29" y="74.98" angle="90.97" type="rail" speed="13.00" pos="111.36" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="rail1" x="471.43" y="74.76" angle="90.97" type="rail" speed="13.25" pos="124.61" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="rail1" x="484.82" y="74.53" angle="90.97" type="rail" speed="13.50" pos="138.11" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="rail1" x="498.46" y="74.30" angle="90.97" type="rail" speed="13.75" pos="151.86" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="rail1" x="512.23" y="74.07" angle="90.97" type="rail" speed="13.89" pos="165.75" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="rail1" x="526.01" y="73.83" angle="90.97" type="rail" speed="13.89" pos="179.64" lane="gneE2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="rail1" x="539.86" y="73.68" angle="90.69" type="rail" speed="13.89" pos="8.84" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="rail1" x="553.75" y="73.57" angle="90.46" type="rail" speed="13.89" pos="22.73" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="rail1" x="567.64" y="73.46" angle="90.46" type="rail" speed="13.89" pos="36.62" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="rail1" x="581.53" y="73.34" angle="90.46" type="rail" speed="13.89" pos="50.51" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="rail1" x="595.42" y="73.23" angle="90.46" type="rail" speed="13.89" pos="64.40" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="rail1" x="609.31" y="73.12" angle="90.46" type="rail" speed="13.89" pos="78.29" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="rail1" x="623.20" y="73.01" angle="90.46" type="rail" speed="13.89" pos="92.18" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="rail1" x="637.09" y="72.90" angle="90.46" type="rail" speed="13.89" pos="106.07" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="rail1" x="650.98" y="72.78" angle="90.46" type="rail" speed="13.89" pos="119.96" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="rail1" x="664.87" y="72.67" angle="90.46" type="rail" speed="13.89" pos="133.85" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="rail1" x="678.76" y="72.56" angle="90.46" type="rail" speed="13.89" pos="147.74" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="rail1" x="692.65" y="72.45" angle="90.46" type="rail" speed="13.89" pos="161.63" lane="gneE3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00"/>
+    <timestep time="91.00"/>
+    <timestep time="92.00"/>
+    <timestep time="93.00"/>
+    <timestep time="94.00"/>
+    <timestep time="95.00"/>
+    <timestep time="96.00"/>
+    <timestep time="97.00"/>
+    <timestep time="98.00"/>
+    <timestep time="99.00"/>
+    <timestep time="100.00"/>
+    <timestep time="101.00"/>
+    <timestep time="102.00"/>
+    <timestep time="103.00"/>
+    <timestep time="104.00"/>
+    <timestep time="105.00"/>
+    <timestep time="106.00"/>
+    <timestep time="107.00"/>
+    <timestep time="108.00"/>
+    <timestep time="109.00"/>
+    <timestep time="110.00"/>
+    <timestep time="111.00"/>
+    <timestep time="112.00"/>
+    <timestep time="113.00"/>
+    <timestep time="114.00"/>
+    <timestep time="115.00"/>
+    <timestep time="116.00"/>
+    <timestep time="117.00"/>
+    <timestep time="118.00"/>
+    <timestep time="119.00"/>
+    <timestep time="120.00"/>
+    <timestep time="121.00"/>
+    <timestep time="122.00"/>
+    <timestep time="123.00"/>
+    <timestep time="124.00"/>
+    <timestep time="125.00"/>
+    <timestep time="126.00"/>
+    <timestep time="127.00"/>
+    <timestep time="128.00"/>
+    <timestep time="129.00"/>
+    <timestep time="130.00"/>
+    <timestep time="131.00"/>
+    <timestep time="132.00"/>
+    <timestep time="133.00"/>
+    <timestep time="134.00"/>
+    <timestep time="135.00"/>
+    <timestep time="136.00"/>
+    <timestep time="137.00"/>
+    <timestep time="138.00"/>
+    <timestep time="139.00"/>
+    <timestep time="140.00"/>
+    <timestep time="141.00"/>
+    <timestep time="142.00"/>
+    <timestep time="143.00"/>
+    <timestep time="144.00"/>
+    <timestep time="145.00"/>
+    <timestep time="146.00"/>
+    <timestep time="147.00"/>
+    <timestep time="148.00"/>
+    <timestep time="149.00"/>
+    <timestep time="150.00"/>
+    <timestep time="151.00"/>
+    <timestep time="152.00"/>
+    <timestep time="153.00"/>
+    <timestep time="154.00"/>
+    <timestep time="155.00"/>
+    <timestep time="156.00"/>
+    <timestep time="157.00"/>
+    <timestep time="158.00"/>
+    <timestep time="159.00"/>
+    <timestep time="160.00"/>
+    <timestep time="161.00"/>
+    <timestep time="162.00"/>
+    <timestep time="163.00"/>
+    <timestep time="164.00"/>
+    <timestep time="165.00"/>
+    <timestep time="166.00"/>
+    <timestep time="167.00"/>
+    <timestep time="168.00"/>
+    <timestep time="169.00"/>
+    <timestep time="170.00"/>
+    <timestep time="171.00"/>
+    <timestep time="172.00"/>
+    <timestep time="173.00"/>
+    <timestep time="174.00"/>
+    <timestep time="175.00"/>
+    <timestep time="176.00"/>
+    <timestep time="177.00"/>
+    <timestep time="178.00"/>
+    <timestep time="179.00"/>
+    <timestep time="180.00"/>
+    <timestep time="181.00"/>
+    <timestep time="182.00"/>
+    <timestep time="183.00"/>
+    <timestep time="184.00"/>
+    <timestep time="185.00"/>
+    <timestep time="186.00"/>
+    <timestep time="187.00"/>
+    <timestep time="188.00"/>
+    <timestep time="189.00"/>
+    <timestep time="190.00"/>
+    <timestep time="191.00"/>
+    <timestep time="192.00"/>
+    <timestep time="193.00"/>
+    <timestep time="194.00"/>
+    <timestep time="195.00"/>
+    <timestep time="196.00"/>
+    <timestep time="197.00"/>
+    <timestep time="198.00"/>
+    <timestep time="199.00"/>
+</fcd-export>

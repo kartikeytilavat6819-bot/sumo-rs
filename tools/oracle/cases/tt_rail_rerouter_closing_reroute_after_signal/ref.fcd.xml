@@ -1,0 +1,543 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T13:52:19.021956-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_rail_rerouter_closing_reroute_after_signal/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_rail_rerouter_closing_reroute_after_signal/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_rail_rerouter_closing_reroute_after_signal/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rerouter_closing_reroute_after_signal/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rerouter_closing_reroute_after_signal/ref.tripinfo.xml"/>
+        <railsignal-block-output value="railsignal_blocks.xml"/>
+        <railsignal-vehicle-output value="railsignal_vehicles.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rerouter_closing_reroute_after_signal/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport.railsignal-deadlock value="200"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="t0" x="50.10" y="0.00" angle="90.00" type="train" speed="0.00" pos="50.10" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="t0" x="50.35" y="0.00" angle="90.00" type="train" speed="0.25" pos="50.35" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="t0" x="50.85" y="0.00" angle="90.00" type="train" speed="0.50" pos="50.85" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="t0" x="51.60" y="0.00" angle="90.00" type="train" speed="0.75" pos="51.60" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="t0" x="52.60" y="0.00" angle="90.00" type="train" speed="1.00" pos="52.60" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="t0" x="53.85" y="0.00" angle="90.00" type="train" speed="1.25" pos="53.85" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="t0" x="55.35" y="0.00" angle="90.00" type="train" speed="1.50" pos="55.35" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="t0" x="57.10" y="0.00" angle="90.00" type="train" speed="1.75" pos="57.10" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="t0" x="59.10" y="0.00" angle="90.00" type="train" speed="2.00" pos="59.10" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="t0" x="61.35" y="0.00" angle="90.00" type="train" speed="2.25" pos="61.35" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="t0" x="63.85" y="0.00" angle="90.00" type="train" speed="2.50" pos="63.85" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="t0" x="66.60" y="0.00" angle="90.00" type="train" speed="2.75" pos="66.60" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="t0" x="69.60" y="0.00" angle="90.00" type="train" speed="3.00" pos="69.60" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="t0" x="72.85" y="0.00" angle="90.00" type="train" speed="3.25" pos="72.85" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="t0" x="76.35" y="0.00" angle="90.00" type="train" speed="3.50" pos="76.35" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="t0" x="80.10" y="0.00" angle="90.00" type="train" speed="3.75" pos="80.10" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="t0" x="84.10" y="0.00" angle="90.00" type="train" speed="4.00" pos="84.10" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="t0" x="88.35" y="0.00" angle="90.00" type="train" speed="4.25" pos="88.35" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="t0" x="92.85" y="0.00" angle="90.00" type="train" speed="4.50" pos="92.85" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="t0" x="97.60" y="0.00" angle="90.00" type="train" speed="4.75" pos="97.60" lane="E1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="t0" x="102.50" y="0.00" angle="90.00" type="train" speed="5.00" pos="2.50" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="t0" x="107.75" y="0.00" angle="90.00" type="train" speed="5.25" pos="7.75" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="t0" x="113.25" y="0.00" angle="90.00" type="train" speed="5.50" pos="13.25" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="t0" x="119.00" y="0.00" angle="90.00" type="train" speed="5.75" pos="19.00" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="t0" x="125.00" y="0.00" angle="90.00" type="train" speed="6.00" pos="25.00" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="t0" x="131.25" y="0.00" angle="90.00" type="train" speed="6.25" pos="31.25" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="t0" x="137.75" y="0.00" angle="90.00" type="train" speed="6.50" pos="37.75" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="t0" x="144.50" y="0.00" angle="90.00" type="train" speed="6.75" pos="44.50" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="t0" x="151.50" y="0.00" angle="90.00" type="train" speed="7.00" pos="51.50" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="t0" x="158.75" y="0.00" angle="90.00" type="train" speed="7.25" pos="58.75" lane="E2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="t0" x="166.25" y="0.00" angle="90.00" type="train" speed="7.50" pos="66.25" lane="E2_0" slope="0.00"/>
+        <vehicle id="t1" x="249.91" y="50.00" angle="90.00" type="train" speed="0.00" pos="50.10" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="t0" x="174.00" y="0.00" angle="90.00" type="train" speed="7.75" pos="74.00" lane="E2_0" slope="0.00"/>
+        <vehicle id="t1" x="250.16" y="50.00" angle="90.00" type="train" speed="0.25" pos="50.35" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="t0" x="182.00" y="0.00" angle="90.00" type="train" speed="8.00" pos="82.00" lane="E2_0" slope="0.00"/>
+        <vehicle id="t1" x="250.66" y="50.00" angle="90.00" type="train" speed="0.50" pos="50.85" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="t0" x="190.25" y="0.00" angle="90.00" type="train" speed="8.25" pos="90.25" lane="E2_0" slope="0.00"/>
+        <vehicle id="t1" x="251.40" y="50.00" angle="90.00" type="train" speed="0.75" pos="51.60" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="t0" x="198.75" y="0.00" angle="90.00" type="train" speed="8.50" pos="98.75" lane="E2_0" slope="0.00"/>
+        <vehicle id="t1" x="252.40" y="50.00" angle="90.00" type="train" speed="1.00" pos="52.60" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="t0" x="207.40" y="0.00" angle="90.00" type="train" speed="8.75" pos="7.40" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="253.65" y="50.00" angle="90.00" type="train" speed="1.25" pos="53.85" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="t0" x="216.40" y="0.00" angle="90.00" type="train" speed="9.00" pos="16.40" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="255.14" y="50.00" angle="90.00" type="train" speed="1.50" pos="55.35" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="t0" x="225.65" y="0.00" angle="90.00" type="train" speed="9.25" pos="25.65" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="256.88" y="50.00" angle="90.00" type="train" speed="1.75" pos="57.10" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="t0" x="235.15" y="0.00" angle="90.00" type="train" speed="9.50" pos="35.15" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="258.88" y="50.00" angle="90.00" type="train" speed="2.00" pos="59.10" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="t0" x="244.90" y="0.00" angle="90.00" type="train" speed="9.75" pos="44.90" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="261.12" y="50.00" angle="90.00" type="train" speed="2.25" pos="61.35" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="t0" x="254.90" y="0.00" angle="90.00" type="train" speed="10.00" pos="54.90" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="263.61" y="50.00" angle="90.00" type="train" speed="2.50" pos="63.85" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="t0" x="265.15" y="0.00" angle="90.00" type="train" speed="10.25" pos="65.15" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="266.35" y="50.00" angle="90.00" type="train" speed="2.75" pos="66.60" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="t0" x="275.65" y="0.00" angle="90.00" type="train" speed="10.50" pos="75.65" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="269.34" y="50.00" angle="90.00" type="train" speed="3.00" pos="69.60" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="t0" x="286.40" y="0.00" angle="90.00" type="train" speed="10.75" pos="86.40" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="272.57" y="50.00" angle="90.00" type="train" speed="3.25" pos="72.85" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="t0" x="297.40" y="0.00" angle="90.00" type="train" speed="11.00" pos="97.40" lane="E3_0" slope="0.00"/>
+        <vehicle id="t1" x="276.06" y="50.00" angle="90.00" type="train" speed="3.50" pos="76.35" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="t0" x="307.70" y="-3.85" angle="104.00" type="train" speed="11.25" pos="0.34" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="279.80" y="50.00" angle="90.00" type="train" speed="3.75" pos="80.10" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="t0" x="317.99" y="-8.99" angle="117.79" type="train" speed="11.50" pos="11.84" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="283.78" y="50.00" angle="90.00" type="train" speed="4.00" pos="84.10" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="t0" x="328.50" y="-14.25" angle="116.57" type="train" speed="11.75" pos="23.59" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="288.01" y="50.00" angle="90.00" type="train" speed="4.25" pos="88.35" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="t0" x="339.23" y="-19.62" angle="116.57" type="train" speed="12.00" pos="35.59" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="292.50" y="50.00" angle="90.00" type="train" speed="4.50" pos="92.85" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="t0" x="350.19" y="-25.09" angle="116.57" type="train" speed="12.25" pos="47.84" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="297.23" y="50.00" angle="90.00" type="train" speed="4.75" pos="97.60" lane="E3c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="t0" x="361.37" y="-30.68" angle="116.57" type="train" speed="12.50" pos="60.34" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="301.99" y="49.00" angle="93.54" type="train" speed="5.00" pos="1.85" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="t0" x="372.77" y="-36.39" angle="116.57" type="train" speed="12.75" pos="73.09" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="306.69" y="46.65" angle="102.11" type="train" speed="5.25" pos="7.10" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="t0" x="384.40" y="-42.20" angle="116.57" type="train" speed="13.00" pos="86.09" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="311.61" y="44.20" angle="111.12" type="train" speed="5.50" pos="12.60" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="t0" x="396.25" y="-48.13" angle="116.57" type="train" speed="13.25" pos="99.34" lane="E4b_0" slope="0.00"/>
+        <vehicle id="t1" x="316.75" y="41.62" angle="116.57" type="train" speed="5.75" pos="18.35" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="t0" x="400.82" y="-50.00" angle="113.87" type="train" speed="13.50" pos="8.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="322.12" y="38.94" angle="116.57" type="train" speed="6.00" pos="24.35" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="t0" x="401.51" y="-50.00" angle="90.00" type="train" speed="13.75" pos="22.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="327.71" y="36.15" angle="116.57" type="train" speed="6.25" pos="30.60" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="t0" x="402.20" y="-50.00" angle="90.00" type="train" speed="14.00" pos="36.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="333.52" y="33.24" angle="116.57" type="train" speed="6.50" pos="37.10" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="t0" x="402.91" y="-50.00" angle="90.00" type="train" speed="14.25" pos="50.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="339.56" y="30.22" angle="116.57" type="train" speed="6.75" pos="43.85" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="t0" x="403.63" y="-50.00" angle="90.00" type="train" speed="14.50" pos="65.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="345.82" y="27.09" angle="116.57" type="train" speed="7.00" pos="50.85" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="t0" x="404.36" y="-50.00" angle="90.00" type="train" speed="14.75" pos="80.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="352.31" y="23.85" angle="116.57" type="train" speed="7.25" pos="58.10" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="t0" x="405.10" y="-50.00" angle="90.00" type="train" speed="15.00" pos="95.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="359.01" y="20.49" angle="116.57" type="train" speed="7.50" pos="65.60" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="t0" x="405.86" y="-50.00" angle="90.00" type="train" speed="15.25" pos="110.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="365.95" y="17.03" angle="116.57" type="train" speed="7.75" pos="73.35" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="t0" x="406.63" y="-50.00" angle="90.00" type="train" speed="15.50" pos="125.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="373.10" y="13.45" angle="116.57" type="train" speed="8.00" pos="81.35" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="t0" x="407.41" y="-50.00" angle="90.00" type="train" speed="15.75" pos="141.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="380.48" y="9.76" angle="116.57" type="train" speed="8.25" pos="89.60" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="t0" x="408.20" y="-50.00" angle="90.00" type="train" speed="16.00" pos="157.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="388.08" y="5.96" angle="116.57" type="train" speed="8.50" pos="98.10" lane="E4c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="t0" x="409.01" y="-50.00" angle="90.00" type="train" speed="16.25" pos="173.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="395.79" y="1.82" angle="117.46" type="train" speed="8.75" pos="3.70" lane=":J5_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="t0" x="409.83" y="-50.00" angle="90.00" type="train" speed="16.50" pos="190.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="404.39" y="0.00" angle="109.53" type="train" speed="9.00" pos="2.51" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="t0" x="410.66" y="-50.00" angle="90.00" type="train" speed="16.75" pos="207.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="413.64" y="0.00" angle="93.10" type="train" speed="9.25" pos="11.76" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="t0" x="411.50" y="-50.00" angle="90.00" type="train" speed="17.00" pos="224.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="423.14" y="0.00" angle="90.00" type="train" speed="9.50" pos="21.26" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="t0" x="412.36" y="-50.00" angle="90.00" type="train" speed="17.25" pos="241.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="432.89" y="0.00" angle="90.00" type="train" speed="9.75" pos="31.01" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="t0" x="413.23" y="-50.00" angle="90.00" type="train" speed="17.50" pos="258.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="442.89" y="0.00" angle="90.00" type="train" speed="10.00" pos="41.01" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="t0" x="414.11" y="-50.00" angle="90.00" type="train" speed="17.75" pos="276.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="453.14" y="0.00" angle="90.00" type="train" speed="10.25" pos="51.26" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="t0" x="415.00" y="-50.00" angle="90.00" type="train" speed="18.00" pos="294.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="463.64" y="0.00" angle="90.00" type="train" speed="10.50" pos="61.76" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="t0" x="415.91" y="-50.00" angle="90.00" type="train" speed="18.25" pos="312.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="474.39" y="0.00" angle="90.00" type="train" speed="10.75" pos="72.51" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="t0" x="416.83" y="-50.00" angle="90.00" type="train" speed="18.50" pos="331.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="485.39" y="0.00" angle="90.00" type="train" speed="11.00" pos="83.51" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="t0" x="417.76" y="-50.00" angle="90.00" type="train" speed="18.75" pos="350.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="496.64" y="0.00" angle="90.00" type="train" speed="11.25" pos="94.76" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="t0" x="418.70" y="-50.00" angle="90.00" type="train" speed="19.00" pos="369.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="507.25" y="3.61" angle="76.88" type="train" speed="11.50" pos="10.02" lane=":J6_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="t0" x="419.65" y="-50.00" angle="90.00" type="train" speed="19.25" pos="388.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="517.76" y="8.88" angle="62.11" type="train" speed="11.75" pos="11.58" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="t0" x="420.62" y="-50.00" angle="90.00" type="train" speed="19.50" pos="407.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="528.49" y="14.25" angle="63.43" type="train" speed="12.00" pos="23.58" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="t0" x="421.60" y="-50.00" angle="90.00" type="train" speed="19.75" pos="427.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="539.45" y="19.72" angle="63.43" type="train" speed="12.25" pos="35.83" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="t0" x="422.59" y="-50.00" angle="90.00" type="train" speed="20.00" pos="447.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="550.63" y="25.31" angle="63.43" type="train" speed="12.50" pos="48.33" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="t0" x="423.60" y="-50.00" angle="90.00" type="train" speed="20.25" pos="467.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="562.03" y="31.02" angle="63.43" type="train" speed="12.75" pos="61.08" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="t0" x="424.62" y="-50.00" angle="90.00" type="train" speed="20.50" pos="488.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="573.66" y="36.83" angle="63.43" type="train" speed="13.00" pos="74.08" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="t0" x="425.65" y="-50.00" angle="90.00" type="train" speed="20.75" pos="509.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="585.51" y="42.76" angle="63.43" type="train" speed="13.25" pos="87.33" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="t0" x="426.69" y="-50.00" angle="90.00" type="train" speed="21.00" pos="530.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="597.58" y="48.79" angle="63.43" type="train" speed="13.50" pos="100.83" lane="E6c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="t0" x="427.74" y="-50.00" angle="90.00" type="train" speed="21.25" pos="551.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="611.06" y="50.00" angle="81.41" type="train" speed="13.75" pos="10.68" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="t0" x="428.81" y="-50.00" angle="90.00" type="train" speed="21.50" pos="572.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="625.06" y="50.00" angle="90.00" type="train" speed="14.00" pos="24.68" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="t0" x="429.89" y="-50.00" angle="90.00" type="train" speed="21.75" pos="594.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="639.31" y="50.00" angle="90.00" type="train" speed="14.25" pos="38.93" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="t0" x="430.98" y="-50.00" angle="90.00" type="train" speed="22.00" pos="616.69" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="653.81" y="50.00" angle="90.00" type="train" speed="14.50" pos="53.43" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="t0" x="432.08" y="-50.00" angle="90.00" type="train" speed="22.25" pos="638.94" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="668.56" y="50.00" angle="90.00" type="train" speed="14.75" pos="68.18" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="t0" x="433.20" y="-50.00" angle="90.00" type="train" speed="22.50" pos="661.44" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="683.56" y="50.00" angle="90.00" type="train" speed="15.00" pos="83.18" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="t0" x="434.33" y="-50.00" angle="90.00" type="train" speed="22.75" pos="684.19" lane="E5b_0" slope="0.00"/>
+        <vehicle id="t1" x="698.81" y="50.00" angle="90.00" type="train" speed="15.25" pos="98.43" lane="E7c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="t0" x="435.47" y="-50.00" angle="90.00" type="train" speed="23.00" pos="707.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="t0" x="436.62" y="-50.00" angle="90.00" type="train" speed="23.25" pos="730.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="t0" x="437.79" y="-50.00" angle="90.00" type="train" speed="23.50" pos="753.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="t0" x="438.97" y="-50.00" angle="90.00" type="train" speed="23.75" pos="777.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="t0" x="440.16" y="-50.00" angle="90.00" type="train" speed="24.00" pos="801.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="t0" x="441.36" y="-50.00" angle="90.00" type="train" speed="24.25" pos="825.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="t0" x="442.58" y="-50.00" angle="90.00" type="train" speed="24.50" pos="850.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="t0" x="443.81" y="-50.00" angle="90.00" type="train" speed="24.75" pos="875.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="t0" x="445.05" y="-50.00" angle="90.00" type="train" speed="25.00" pos="900.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="t0" x="446.30" y="-50.00" angle="90.00" type="train" speed="25.25" pos="925.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="t0" x="447.57" y="-50.00" angle="90.00" type="train" speed="25.50" pos="950.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="t0" x="448.84" y="-50.00" angle="90.00" type="train" speed="25.75" pos="976.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="t0" x="450.13" y="-50.00" angle="90.00" type="train" speed="26.00" pos="1002.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="t0" x="451.44" y="-50.00" angle="90.00" type="train" speed="26.25" pos="1028.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="t0" x="452.75" y="-50.00" angle="90.00" type="train" speed="26.50" pos="1055.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="t0" x="454.08" y="-50.00" angle="90.00" type="train" speed="26.75" pos="1082.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="t0" x="455.42" y="-50.00" angle="90.00" type="train" speed="27.00" pos="1109.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="t0" x="456.77" y="-50.00" angle="90.00" type="train" speed="27.25" pos="1136.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="t0" x="458.13" y="-50.00" angle="90.00" type="train" speed="27.50" pos="1163.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="t0" x="459.51" y="-50.00" angle="90.00" type="train" speed="27.75" pos="1191.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="t0" x="460.90" y="-50.00" angle="90.00" type="train" speed="28.00" pos="1219.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="t0" x="462.30" y="-50.00" angle="90.00" type="train" speed="28.25" pos="1247.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="t0" x="463.72" y="-50.00" angle="90.00" type="train" speed="28.50" pos="1276.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="t0" x="465.14" y="-50.00" angle="90.00" type="train" speed="28.75" pos="1305.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="t0" x="466.58" y="-50.00" angle="90.00" type="train" speed="29.00" pos="1334.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="t0" x="468.03" y="-50.00" angle="90.00" type="train" speed="29.25" pos="1363.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="t0" x="469.50" y="-50.00" angle="90.00" type="train" speed="29.50" pos="1392.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="t0" x="470.97" y="-50.00" angle="90.00" type="train" speed="29.75" pos="1422.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="t0" x="472.46" y="-50.00" angle="90.00" type="train" speed="30.00" pos="1452.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="t0" x="473.96" y="-50.00" angle="90.00" type="train" speed="30.25" pos="1482.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="t0" x="475.48" y="-50.00" angle="90.00" type="train" speed="30.50" pos="1513.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="t0" x="477.00" y="-50.00" angle="90.00" type="train" speed="30.75" pos="1544.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="t0" x="478.54" y="-50.00" angle="90.00" type="train" speed="31.00" pos="1575.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="t0" x="480.09" y="-50.00" angle="90.00" type="train" speed="31.25" pos="1606.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="t0" x="481.65" y="-50.00" angle="90.00" type="train" speed="31.50" pos="1637.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="t0" x="483.23" y="-50.00" angle="90.00" type="train" speed="31.75" pos="1669.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="t0" x="484.82" y="-50.00" angle="90.00" type="train" speed="32.00" pos="1701.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="t0" x="486.42" y="-50.00" angle="90.00" type="train" speed="32.25" pos="1733.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="t0" x="488.03" y="-50.00" angle="90.00" type="train" speed="32.50" pos="1766.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="t0" x="489.66" y="-50.00" angle="90.00" type="train" speed="32.75" pos="1799.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="t0" x="491.29" y="-50.00" angle="90.00" type="train" speed="33.00" pos="1832.19" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="t0" x="492.94" y="-50.00" angle="90.00" type="train" speed="33.25" pos="1865.44" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="t0" x="494.61" y="-50.00" angle="90.00" type="train" speed="33.50" pos="1898.94" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="t0" x="496.28" y="-50.00" angle="90.00" type="train" speed="33.75" pos="1932.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="t0" x="497.97" y="-50.00" angle="90.00" type="train" speed="34.00" pos="1966.69" lane="E5b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="t0" x="500.51" y="-49.75" angle="81.25" type="train" speed="34.25" pos="0.19" lane="E6b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="t0" x="531.37" y="-34.32" angle="63.43" type="train" speed="34.50" pos="34.69" lane="E6b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="t0" x="562.45" y="-18.78" angle="63.43" type="train" speed="34.75" pos="69.44" lane="E6b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="t0" x="593.72" y="-3.05" angle="63.16" type="train" speed="35.00" pos="1.29" lane=":J7_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="t0" x="628.23" y="0.00" angle="90.00" type="train" speed="35.25" pos="26.35" lane="E7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="t0" x="663.73" y="0.00" angle="90.00" type="train" speed="35.50" pos="61.85" lane="E7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="t0" x="699.48" y="0.00" angle="90.00" type="train" speed="35.75" pos="97.60" lane="E7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00"/>
+</fcd-export>

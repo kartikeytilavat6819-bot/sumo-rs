@@ -120,12 +120,18 @@ pub fn railway_recompute_costs<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAb
     p.cast::<RailwayRouter<E, V>>().m().recompute_costs(edges, v, msTime, lengthp)
 }
 
+/// The `RailwayRouter::prohibit` reached from the base router's prohibit slot (C++ virtual dispatch)
+pub fn railway_prohibit<E: RouterEdge<V>, V>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
+    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().prohibit(toProhibit)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
-    /// Installs this router's compute and setBulkMode into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
+    /// Installs this router's compute, setBulkMode and prohibit into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(railway_compute::<E, V>);
         self.base.mySetBulkMode = Some(railway_set_bulk_mode::<E, V>);
         self.base.myRecomputeCosts = Some(railway_recompute_costs::<E, V>);
+        self.base.myProhibit = Some(railway_prohibit::<E, V>);
         self
     }
 

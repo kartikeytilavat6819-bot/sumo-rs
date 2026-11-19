@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:30:44.044514-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_rail_collision_noInsertionChecks_frontal_collision_reverseRoles/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_rail_collision_noInsertionChecks_frontal_collision_reverseRoles/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_collision_noInsertionChecks_frontal_collision_reverseRoles/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_collision_noInsertionChecks_frontal_collision_reverseRoles/ref.tripinfo.xml"/>
+        <railsignal-block-output value="railsignal_blocks.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_collision_noInsertionChecks_frontal_collision_reverseRoles/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport.railsignal-deadlock value="200"/>
+        <insertion-checks value="none"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="RE1" x="-792.90" y="0.00" angle="90.00" type="REDosto7" speed="0.00" pos="207.10" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4792.90" y="0.00" angle="270.00" type="REDosto7" speed="0.00" pos="207.10" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="RE1" x="-792.28" y="0.00" angle="90.00" type="REDosto7" speed="0.62" pos="207.72" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4792.28" y="0.00" angle="270.00" type="REDosto7" speed="0.62" pos="207.72" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="RE1" x="-791.03" y="0.00" angle="90.00" type="REDosto7" speed="1.25" pos="208.97" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4791.03" y="0.00" angle="270.00" type="REDosto7" speed="1.25" pos="208.97" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="RE1" x="-789.16" y="0.00" angle="90.00" type="REDosto7" speed="1.87" pos="210.84" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4789.16" y="0.00" angle="270.00" type="REDosto7" speed="1.87" pos="210.84" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="RE1" x="-786.67" y="0.00" angle="90.00" type="REDosto7" speed="2.49" pos="213.33" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4786.67" y="0.00" angle="270.00" type="REDosto7" speed="2.49" pos="213.33" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="RE1" x="-783.56" y="0.00" angle="90.00" type="REDosto7" speed="3.11" pos="216.44" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4783.56" y="0.00" angle="270.00" type="REDosto7" speed="3.11" pos="216.44" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="RE1" x="-779.83" y="0.00" angle="90.00" type="REDosto7" speed="3.73" pos="220.17" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4779.83" y="0.00" angle="270.00" type="REDosto7" speed="3.73" pos="220.17" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="RE1" x="-775.47" y="0.00" angle="90.00" type="REDosto7" speed="4.36" pos="224.53" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4775.47" y="0.00" angle="270.00" type="REDosto7" speed="4.36" pos="224.53" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="RE1" x="-770.50" y="0.00" angle="90.00" type="REDosto7" speed="4.98" pos="229.50" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4770.50" y="0.00" angle="270.00" type="REDosto7" speed="4.98" pos="229.50" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="RE1" x="-764.90" y="0.00" angle="90.00" type="REDosto7" speed="5.60" pos="235.10" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4764.90" y="0.00" angle="270.00" type="REDosto7" speed="5.60" pos="235.10" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="RE1" x="-758.68" y="0.00" angle="90.00" type="REDosto7" speed="6.22" pos="241.32" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4758.68" y="0.00" angle="270.00" type="REDosto7" speed="6.22" pos="241.32" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="RE1" x="-751.84" y="0.00" angle="90.00" type="REDosto7" speed="6.84" pos="248.16" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4751.84" y="0.00" angle="270.00" type="REDosto7" speed="6.84" pos="248.16" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="RE1" x="-744.38" y="0.00" angle="90.00" type="REDosto7" speed="7.46" pos="255.62" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4744.38" y="0.00" angle="270.00" type="REDosto7" speed="7.46" pos="255.62" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="RE1" x="-736.31" y="0.00" angle="90.00" type="REDosto7" speed="8.08" pos="263.69" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4736.31" y="0.00" angle="270.00" type="REDosto7" speed="8.08" pos="263.69" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="RE1" x="-727.61" y="0.00" angle="90.00" type="REDosto7" speed="8.70" pos="272.39" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4727.61" y="0.00" angle="270.00" type="REDosto7" speed="8.70" pos="272.39" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="RE1" x="-718.30" y="0.00" angle="90.00" type="REDosto7" speed="9.31" pos="281.70" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4718.30" y="0.00" angle="270.00" type="REDosto7" speed="9.31" pos="281.70" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="RE1" x="-708.36" y="0.00" angle="90.00" type="REDosto7" speed="9.93" pos="291.64" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4708.36" y="0.00" angle="270.00" type="REDosto7" speed="9.93" pos="291.64" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="RE1" x="-697.81" y="0.00" angle="90.00" type="REDosto7" speed="10.55" pos="302.19" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4697.81" y="0.00" angle="270.00" type="REDosto7" speed="10.55" pos="302.19" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="RE1" x="-686.64" y="0.00" angle="90.00" type="REDosto7" speed="11.17" pos="313.36" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4686.64" y="0.00" angle="270.00" type="REDosto7" speed="11.17" pos="313.36" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="RE1" x="-674.86" y="0.00" angle="90.00" type="REDosto7" speed="11.78" pos="325.14" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4674.86" y="0.00" angle="270.00" type="REDosto7" speed="11.78" pos="325.14" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="RE1" x="-662.46" y="0.00" angle="90.00" type="REDosto7" speed="12.40" pos="337.54" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4662.46" y="0.00" angle="270.00" type="REDosto7" speed="12.40" pos="337.54" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="RE1" x="-649.45" y="0.00" angle="90.00" type="REDosto7" speed="13.02" pos="350.55" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4649.45" y="0.00" angle="270.00" type="REDosto7" speed="13.02" pos="350.55" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="RE1" x="-635.82" y="0.00" angle="90.00" type="REDosto7" speed="13.63" pos="364.18" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4635.82" y="0.00" angle="270.00" type="REDosto7" speed="13.63" pos="364.18" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="RE1" x="-621.57" y="0.00" angle="90.00" type="REDosto7" speed="14.24" pos="378.43" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4621.57" y="0.00" angle="270.00" type="REDosto7" speed="14.24" pos="378.43" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="RE1" x="-606.72" y="0.00" angle="90.00" type="REDosto7" speed="14.86" pos="393.28" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4606.72" y="0.00" angle="270.00" type="REDosto7" speed="14.86" pos="393.28" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="RE1" x="-591.24" y="0.00" angle="90.00" type="REDosto7" speed="15.47" pos="408.76" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4591.24" y="0.00" angle="270.00" type="REDosto7" speed="15.47" pos="408.76" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="RE1" x="-575.16" y="0.00" angle="90.00" type="REDosto7" speed="16.08" pos="424.84" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4575.16" y="0.00" angle="270.00" type="REDosto7" speed="16.08" pos="424.84" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="RE1" x="-558.47" y="0.00" angle="90.00" type="REDosto7" speed="16.69" pos="441.53" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4558.47" y="0.00" angle="270.00" type="REDosto7" speed="16.69" pos="441.53" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="RE1" x="-541.16" y="0.00" angle="90.00" type="REDosto7" speed="17.30" pos="458.84" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4541.16" y="0.00" angle="270.00" type="REDosto7" speed="17.30" pos="458.84" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="RE1" x="-523.26" y="0.00" angle="90.00" type="REDosto7" speed="17.91" pos="476.74" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4523.26" y="0.00" angle="270.00" type="REDosto7" speed="17.91" pos="476.74" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="RE1" x="-504.75" y="0.00" angle="90.00" type="REDosto7" speed="18.51" pos="495.25" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4504.75" y="0.00" angle="270.00" type="REDosto7" speed="18.51" pos="495.25" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="RE1" x="-485.65" y="0.00" angle="90.00" type="REDosto7" speed="19.10" pos="514.35" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4485.65" y="0.00" angle="270.00" type="REDosto7" speed="19.10" pos="514.35" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="RE1" x="-465.96" y="0.00" angle="90.00" type="REDosto7" speed="19.69" pos="534.04" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4465.96" y="0.00" angle="270.00" type="REDosto7" speed="19.69" pos="534.04" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="RE1" x="-445.70" y="0.00" angle="90.00" type="REDosto7" speed="20.26" pos="554.30" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4445.70" y="0.00" angle="270.00" type="REDosto7" speed="20.26" pos="554.30" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="RE1" x="-424.87" y="0.00" angle="90.00" type="REDosto7" speed="20.82" pos="575.13" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4424.87" y="0.00" angle="270.00" type="REDosto7" speed="20.82" pos="575.13" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="RE1" x="-403.50" y="0.00" angle="90.00" type="REDosto7" speed="21.37" pos="596.50" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4403.50" y="0.00" angle="270.00" type="REDosto7" speed="21.37" pos="596.50" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="RE1" x="-381.61" y="0.00" angle="90.00" type="REDosto7" speed="21.90" pos="618.39" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4381.61" y="0.00" angle="270.00" type="REDosto7" speed="21.90" pos="618.39" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="RE1" x="-359.20" y="0.00" angle="90.00" type="REDosto7" speed="22.41" pos="640.80" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4359.20" y="0.00" angle="270.00" type="REDosto7" speed="22.41" pos="640.80" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="RE1" x="-336.30" y="0.00" angle="90.00" type="REDosto7" speed="22.91" pos="663.70" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4336.30" y="0.00" angle="270.00" type="REDosto7" speed="22.91" pos="663.70" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="RE1" x="-312.91" y="0.00" angle="90.00" type="REDosto7" speed="23.39" pos="687.09" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4312.91" y="0.00" angle="270.00" type="REDosto7" speed="23.39" pos="687.09" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="RE1" x="-289.04" y="0.00" angle="90.00" type="REDosto7" speed="23.87" pos="710.96" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4289.04" y="0.00" angle="270.00" type="REDosto7" speed="23.87" pos="710.96" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="RE1" x="-264.71" y="0.00" angle="90.00" type="REDosto7" speed="24.33" pos="735.29" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4264.71" y="0.00" angle="270.00" type="REDosto7" speed="24.33" pos="735.29" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="RE1" x="-239.93" y="0.00" angle="90.00" type="REDosto7" speed="24.78" pos="760.07" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4239.93" y="0.00" angle="270.00" type="REDosto7" speed="24.78" pos="760.07" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="RE1" x="-214.70" y="0.00" angle="90.00" type="REDosto7" speed="25.22" pos="785.30" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4214.70" y="0.00" angle="270.00" type="REDosto7" speed="25.22" pos="785.30" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="RE1" x="-189.05" y="0.00" angle="90.00" type="REDosto7" speed="25.66" pos="810.95" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4189.05" y="0.00" angle="270.00" type="REDosto7" speed="25.66" pos="810.95" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="RE1" x="-162.97" y="0.00" angle="90.00" type="REDosto7" speed="26.08" pos="837.03" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4162.97" y="0.00" angle="270.00" type="REDosto7" speed="26.08" pos="837.03" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="RE1" x="-136.47" y="0.00" angle="90.00" type="REDosto7" speed="26.50" pos="863.53" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4136.47" y="0.00" angle="270.00" type="REDosto7" speed="26.50" pos="863.53" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="RE1" x="-109.57" y="0.00" angle="90.00" type="REDosto7" speed="26.90" pos="890.43" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4109.57" y="0.00" angle="270.00" type="REDosto7" speed="26.90" pos="890.43" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="RE1" x="-82.26" y="0.00" angle="90.00" type="REDosto7" speed="27.30" pos="917.74" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4082.26" y="0.00" angle="270.00" type="REDosto7" speed="27.30" pos="917.74" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="RE1" x="-54.57" y="0.00" angle="90.00" type="REDosto7" speed="27.70" pos="945.43" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4054.57" y="0.00" angle="270.00" type="REDosto7" speed="27.70" pos="945.43" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="RE1" x="-26.49" y="0.00" angle="90.00" type="REDosto7" speed="28.08" pos="973.51" lane="a_0" slope="0.00"/>
+        <vehicle id="RE2" x="4026.49" y="0.00" angle="270.00" type="REDosto7" speed="28.08" pos="973.51" lane="-f_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="RE1" x="1.87" y="0.00" angle="90.00" type="REDosto7" speed="28.46" pos="1.87" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3998.13" y="0.00" angle="270.00" type="REDosto7" speed="28.46" pos="1.87" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="RE1" x="30.70" y="0.00" angle="90.00" type="REDosto7" speed="28.83" pos="30.70" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3969.30" y="0.00" angle="270.00" type="REDosto7" speed="28.83" pos="30.70" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="RE1" x="59.90" y="0.00" angle="90.00" type="REDosto7" speed="29.20" pos="59.90" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3940.10" y="0.00" angle="270.00" type="REDosto7" speed="29.20" pos="59.90" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="RE1" x="89.46" y="0.00" angle="90.00" type="REDosto7" speed="29.56" pos="89.46" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3910.54" y="0.00" angle="270.00" type="REDosto7" speed="29.56" pos="89.46" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="RE1" x="119.37" y="0.00" angle="90.00" type="REDosto7" speed="29.91" pos="119.37" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3880.63" y="0.00" angle="270.00" type="REDosto7" speed="29.91" pos="119.37" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="RE1" x="149.63" y="0.00" angle="90.00" type="REDosto7" speed="30.26" pos="149.63" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3850.37" y="0.00" angle="270.00" type="REDosto7" speed="30.26" pos="149.63" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="RE1" x="180.23" y="0.00" angle="90.00" type="REDosto7" speed="30.60" pos="180.23" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3819.77" y="0.00" angle="270.00" type="REDosto7" speed="30.60" pos="180.23" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="RE1" x="211.17" y="0.00" angle="90.00" type="REDosto7" speed="30.94" pos="211.17" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3788.83" y="0.00" angle="270.00" type="REDosto7" speed="30.94" pos="211.17" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="RE1" x="242.45" y="0.00" angle="90.00" type="REDosto7" speed="31.28" pos="242.45" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3757.55" y="0.00" angle="270.00" type="REDosto7" speed="31.28" pos="242.45" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="RE1" x="274.05" y="0.00" angle="90.00" type="REDosto7" speed="31.60" pos="274.05" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3725.95" y="0.00" angle="270.00" type="REDosto7" speed="31.60" pos="274.05" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="RE1" x="305.98" y="0.00" angle="90.00" type="REDosto7" speed="31.93" pos="305.98" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3694.02" y="0.00" angle="270.00" type="REDosto7" speed="31.93" pos="305.98" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="RE1" x="338.23" y="0.00" angle="90.00" type="REDosto7" speed="32.25" pos="338.23" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3661.77" y="0.00" angle="270.00" type="REDosto7" speed="32.25" pos="338.23" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="RE1" x="370.79" y="0.00" angle="90.00" type="REDosto7" speed="32.56" pos="370.79" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3629.21" y="0.00" angle="270.00" type="REDosto7" speed="32.56" pos="370.79" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="RE1" x="403.67" y="0.00" angle="90.00" type="REDosto7" speed="32.87" pos="403.67" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3596.33" y="0.00" angle="270.00" type="REDosto7" speed="32.87" pos="403.67" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="RE1" x="436.85" y="0.00" angle="90.00" type="REDosto7" speed="33.18" pos="436.85" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3563.15" y="0.00" angle="270.00" type="REDosto7" speed="33.18" pos="436.85" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="RE1" x="470.33" y="0.00" angle="90.00" type="REDosto7" speed="33.48" pos="470.33" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3529.67" y="0.00" angle="270.00" type="REDosto7" speed="33.48" pos="470.33" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="RE1" x="504.11" y="0.00" angle="90.00" type="REDosto7" speed="33.78" pos="504.11" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3495.89" y="0.00" angle="270.00" type="REDosto7" speed="33.78" pos="504.11" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="RE1" x="538.19" y="0.00" angle="90.00" type="REDosto7" speed="34.08" pos="538.19" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3461.81" y="0.00" angle="270.00" type="REDosto7" speed="34.08" pos="538.19" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="RE1" x="572.56" y="0.00" angle="90.00" type="REDosto7" speed="34.37" pos="572.56" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3427.44" y="0.00" angle="270.00" type="REDosto7" speed="34.37" pos="572.56" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="RE1" x="607.22" y="0.00" angle="90.00" type="REDosto7" speed="34.66" pos="607.22" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3392.78" y="0.00" angle="270.00" type="REDosto7" speed="34.66" pos="607.22" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="RE1" x="642.16" y="0.00" angle="90.00" type="REDosto7" speed="34.94" pos="642.16" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3357.84" y="0.00" angle="270.00" type="REDosto7" speed="34.94" pos="642.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="RE1" x="677.38" y="0.00" angle="90.00" type="REDosto7" speed="35.22" pos="677.38" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3322.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="677.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="RE1" x="712.88" y="0.00" angle="90.00" type="REDosto7" speed="35.50" pos="712.88" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3287.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="712.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="RE1" x="748.65" y="0.00" angle="90.00" type="REDosto7" speed="35.77" pos="748.65" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3252.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="747.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="RE1" x="784.70" y="0.00" angle="90.00" type="REDosto7" speed="36.04" pos="784.70" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3217.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="782.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="RE1" x="821.01" y="0.00" angle="90.00" type="REDosto7" speed="36.31" pos="821.01" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3182.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="817.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="RE1" x="857.59" y="0.00" angle="90.00" type="REDosto7" speed="36.58" pos="857.59" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3147.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="852.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="RE1" x="894.43" y="0.00" angle="90.00" type="REDosto7" speed="36.84" pos="894.43" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3112.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="887.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="RE1" x="931.52" y="0.00" angle="90.00" type="REDosto7" speed="37.10" pos="931.52" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3077.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="922.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="RE1" x="968.88" y="0.00" angle="90.00" type="REDosto7" speed="37.35" pos="968.88" lane="b_0" slope="0.00"/>
+        <vehicle id="RE2" x="3042.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="957.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="RE1" x="1006.38" y="0.00" angle="90.00" type="REDosto7" speed="37.61" pos="6.38" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="3007.84" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="992.16" lane="-e_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="RE1" x="1044.24" y="0.00" angle="90.00" type="REDosto7" speed="37.86" pos="44.24" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2972.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="27.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="RE1" x="1082.34" y="0.00" angle="90.00" type="REDosto7" speed="38.10" pos="82.34" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2937.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="62.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="RE1" x="1120.69" y="0.00" angle="90.00" type="REDosto7" speed="38.35" pos="120.69" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2902.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="97.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="RE1" x="1159.28" y="0.00" angle="90.00" type="REDosto7" speed="38.59" pos="159.28" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2867.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="132.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="RE1" x="1198.12" y="0.00" angle="90.00" type="REDosto7" speed="38.83" pos="198.12" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2832.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="167.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="RE1" x="1237.18" y="0.00" angle="90.00" type="REDosto7" speed="39.07" pos="237.18" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2797.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="202.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="RE1" x="1276.49" y="0.00" angle="90.00" type="REDosto7" speed="39.30" pos="276.49" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2762.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="237.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="RE1" x="1316.02" y="0.00" angle="90.00" type="REDosto7" speed="39.54" pos="316.02" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2727.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="272.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="RE1" x="1355.79" y="0.00" angle="90.00" type="REDosto7" speed="39.77" pos="355.79" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2692.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="307.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="RE1" x="1395.78" y="0.00" angle="90.00" type="REDosto7" speed="39.99" pos="395.78" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2657.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="342.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="RE1" x="1436.00" y="0.00" angle="90.00" type="REDosto7" speed="40.22" pos="436.00" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2622.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="377.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="RE1" x="1476.44" y="0.00" angle="90.00" type="REDosto7" speed="40.44" pos="476.44" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2587.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="412.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="RE1" x="1517.10" y="0.00" angle="90.00" type="REDosto7" speed="40.66" pos="517.10" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2552.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="447.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="RE1" x="1557.98" y="0.00" angle="90.00" type="REDosto7" speed="40.88" pos="557.98" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2517.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="482.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="RE1" x="1599.08" y="0.00" angle="90.00" type="REDosto7" speed="41.10" pos="599.08" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2482.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="517.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="RE1" x="1640.39" y="0.00" angle="90.00" type="REDosto7" speed="41.31" pos="640.39" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2447.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="552.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="RE1" x="1681.91" y="0.00" angle="90.00" type="REDosto7" speed="41.52" pos="681.91" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2412.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="587.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="RE1" x="1723.64" y="0.00" angle="90.00" type="REDosto7" speed="41.73" pos="723.64" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2377.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="622.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="RE1" x="1765.58" y="0.00" angle="90.00" type="REDosto7" speed="41.94" pos="765.58" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2342.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="657.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="RE1" x="1807.72" y="0.00" angle="90.00" type="REDosto7" speed="42.14" pos="807.72" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2307.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="692.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="RE1" x="1850.07" y="0.00" angle="90.00" type="REDosto7" speed="42.35" pos="850.07" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2272.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="727.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="RE1" x="1892.62" y="0.00" angle="90.00" type="REDosto7" speed="42.55" pos="892.62" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2237.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="762.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="RE1" x="1935.37" y="0.00" angle="90.00" type="REDosto7" speed="42.75" pos="935.37" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2202.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="797.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="RE1" x="1978.32" y="0.00" angle="90.00" type="REDosto7" speed="42.95" pos="978.32" lane="c_0" slope="0.00"/>
+        <vehicle id="RE2" x="2167.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="832.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="RE1" x="2021.36" y="0.00" angle="90.00" type="REDosto7" speed="43.14" pos="21.36" lane="d_0" slope="0.00"/>
+        <vehicle id="RE2" x="2132.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="867.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="RE1" x="2064.70" y="0.00" angle="90.00" type="REDosto7" speed="43.34" pos="64.70" lane="d_0" slope="0.00"/>
+        <vehicle id="RE2" x="2097.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="902.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="RE1" x="3207.00" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="207.00" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="2062.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="937.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="RE1" x="3251.44" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="251.44" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="2027.94" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="972.06" lane="-d_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="RE1" x="3295.89" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="295.89" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1993.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="6.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="RE1" x="3340.33" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="340.33" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1958.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="41.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="RE1" x="3384.78" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="384.78" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1923.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="76.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="RE1" x="3429.22" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="429.22" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1888.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="111.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="RE1" x="3473.67" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="473.67" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1853.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="146.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="RE1" x="3518.11" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="518.11" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1818.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="181.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="RE1" x="3562.56" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="562.56" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1783.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="216.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="RE1" x="3607.00" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="607.00" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1748.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="251.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="RE1" x="3651.44" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="651.44" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1713.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="286.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="RE1" x="3695.89" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="695.89" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1678.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="321.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="RE1" x="3740.33" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="740.33" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1643.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="356.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="RE1" x="3784.78" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="784.78" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1608.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="391.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="RE1" x="3829.22" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="829.22" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1573.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="426.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="RE1" x="3873.67" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="873.67" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1538.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="461.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="RE1" x="3918.11" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="918.11" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1503.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="496.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="RE1" x="3962.56" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="962.56" lane="e_0" slope="0.00"/>
+        <vehicle id="RE2" x="1468.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="531.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="RE1" x="4006.90" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="6.90" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1433.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="566.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="RE1" x="4051.34" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="51.34" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1398.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="601.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="RE1" x="4095.79" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="95.79" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1363.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="636.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="RE1" x="4140.23" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="140.23" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1328.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="671.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="RE1" x="4184.68" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="184.68" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1293.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="706.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="RE1" x="4229.12" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="229.12" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1258.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="741.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="RE1" x="4273.57" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="273.57" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1223.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="776.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="RE1" x="4318.01" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="318.01" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1188.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="811.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="RE1" x="4362.46" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="362.46" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1153.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="846.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="RE1" x="4406.90" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="406.90" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1118.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="881.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="RE1" x="4451.34" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="451.34" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1083.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="916.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="RE1" x="4495.79" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="495.79" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1048.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="951.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="RE1" x="4540.23" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="540.23" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="1013.04" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="986.96" lane="-c_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="RE1" x="4584.68" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="584.68" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="978.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="21.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="RE1" x="4629.12" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="629.12" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="943.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="56.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="RE1" x="4673.57" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="673.57" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="908.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="91.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="RE1" x="4718.01" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="718.01" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="873.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="126.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="RE1" x="4762.46" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="762.46" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="838.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="161.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00">
+        <vehicle id="RE1" x="4806.90" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="806.90" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="803.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="196.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="145.00">
+        <vehicle id="RE1" x="4851.34" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="851.34" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="768.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="231.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="146.00">
+        <vehicle id="RE1" x="4895.79" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="895.79" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="733.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="266.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="147.00">
+        <vehicle id="RE1" x="4940.23" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="940.23" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="698.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="301.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="148.00">
+        <vehicle id="RE1" x="4984.68" y="0.00" angle="90.00" type="REDosto7" speed="44.44" pos="984.68" lane="f_0" slope="0.00"/>
+        <vehicle id="RE2" x="663.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="336.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="149.00">
+        <vehicle id="RE2" x="628.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="371.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="150.00">
+        <vehicle id="RE2" x="593.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="406.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="151.00">
+        <vehicle id="RE2" x="558.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="441.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="152.00">
+        <vehicle id="RE2" x="523.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="476.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="153.00">
+        <vehicle id="RE2" x="488.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="511.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="154.00">
+        <vehicle id="RE2" x="453.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="546.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="155.00">
+        <vehicle id="RE2" x="418.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="581.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="156.00">
+        <vehicle id="RE2" x="383.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="616.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="157.00">
+        <vehicle id="RE2" x="348.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="651.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="158.00">
+        <vehicle id="RE2" x="313.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="686.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="159.00">
+        <vehicle id="RE2" x="278.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="721.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="160.00">
+        <vehicle id="RE2" x="243.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="756.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="161.00">
+        <vehicle id="RE2" x="208.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="791.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="162.00">
+        <vehicle id="RE2" x="173.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="826.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="163.00">
+        <vehicle id="RE2" x="138.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="861.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="164.00">
+        <vehicle id="RE2" x="103.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="896.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="165.00">
+        <vehicle id="RE2" x="68.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="931.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="166.00">
+        <vehicle id="RE2" x="33.14" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="966.86" lane="-b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="167.00">
+        <vehicle id="RE2" x="-1.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="1.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="168.00">
+        <vehicle id="RE2" x="-36.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="36.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="169.00">
+        <vehicle id="RE2" x="-71.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="71.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="170.00">
+        <vehicle id="RE2" x="-106.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="106.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="171.00">
+        <vehicle id="RE2" x="-141.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="141.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="172.00">
+        <vehicle id="RE2" x="-176.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="176.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="173.00">
+        <vehicle id="RE2" x="-211.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="211.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="174.00">
+        <vehicle id="RE2" x="-246.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="246.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="175.00">
+        <vehicle id="RE2" x="-281.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="281.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="176.00">
+        <vehicle id="RE2" x="-316.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="316.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="177.00">
+        <vehicle id="RE2" x="-351.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="351.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="178.00">
+        <vehicle id="RE2" x="-386.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="386.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="179.00">
+        <vehicle id="RE2" x="-421.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="421.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="180.00">
+        <vehicle id="RE2" x="-456.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="456.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="181.00">
+        <vehicle id="RE2" x="-491.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="491.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="182.00">
+        <vehicle id="RE2" x="-526.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="526.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="183.00">
+        <vehicle id="RE2" x="-561.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="561.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="184.00">
+        <vehicle id="RE2" x="-596.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="596.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="185.00">
+        <vehicle id="RE2" x="-631.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="631.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="186.00">
+        <vehicle id="RE2" x="-666.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="666.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="187.00">
+        <vehicle id="RE2" x="-701.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="701.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="188.00">
+        <vehicle id="RE2" x="-736.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="736.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="189.00">
+        <vehicle id="RE2" x="-771.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="771.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="190.00">
+        <vehicle id="RE2" x="-806.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="806.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="191.00">
+        <vehicle id="RE2" x="-841.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="841.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="192.00">
+        <vehicle id="RE2" x="-876.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="876.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="193.00">
+        <vehicle id="RE2" x="-911.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="911.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="194.00">
+        <vehicle id="RE2" x="-946.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="946.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="195.00">
+        <vehicle id="RE2" x="-981.76" y="0.00" angle="270.00" type="REDosto7" speed="35.00" pos="981.76" lane="-a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="196.00"/>
+</fcd-export>

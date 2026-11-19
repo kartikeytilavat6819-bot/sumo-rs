@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T13:24:53.428262-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_rail_bugs_delayed_insertion_parallel_routing/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_rail_bugs_delayed_insertion_parallel_routing/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_rail_bugs_delayed_insertion_parallel_routing/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_bugs_delayed_insertion_parallel_routing/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_bugs_delayed_insertion_parallel_routing/ref.tripinfo.xml"/>
+        <railsignal-block-output value="railsignal_blocks.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_bugs_delayed_insertion_parallel_routing/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport.railsignal-deadlock value="200"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <device.rerouting.threads value="2"/>
+    </routing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="blocker" depart="0.00" departLane="beg_0" departPos="100.00" departSpeed="0.00" departDelay="0.00" arrival="120.00" arrivalLane="end_0" arrivalPos="100.00" arrivalSpeed="4.00" duration="120.00" routeLength="300.20" waitingTime="0.00" waitingCount="0" stopTime="89.00" timeLoss="0.03" rerouteNo="1" devices="tripinfo_blocker routing_blocker fcd_blocker" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="train" depart="120.00" departLane="beg_0" departPos="100.00" departSpeed="0.00" departDelay="110.00" arrival="182.00" arrivalLane="end_0" arrivalPos="100.00" arrivalSpeed="4.00" duration="62.00" routeLength="300.20" waitingTime="1.00" waitingCount="1" stopTime="30.00" timeLoss="1.03" rerouteNo="1" devices="tripinfo_train routing_train fcd_train" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>
