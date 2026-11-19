@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 -e 1000 --no-duration-log --device.rerouting.threads 4 -a tools/oracle/cases/tt_output_vehroutes_circle_reroute_intended_depart_sorted/input_additional.add.xml
