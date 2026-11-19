@@ -2,12 +2,18 @@
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}
-run() { echo "===== $1 ====="; eval "$2" >/tmp/_r.txt 2>&1; tail -3 /tmp/_r.txt; echo "-- failing (max 25) --"; grep -iE 'FAIL|ERROR|PANIC|REFERR' /tmp/_r.txt | head -25; }
-run "od2trips" "bash tools/oracle/run_odtool.sh od2trips"
-run "marouter" "bash tools/oracle/run_odtool.sh marouter"
-run "jtrrouter" "bash tools/oracle/run_jtrrouter.sh"
-run "dfrouter" "TOOL=dfrouter bash tools/oracle/run_dfag.sh"
-run "activitygen" "TOOL=activitygen bash tools/oracle/run_dfag.sh"
-# polyconvert/netgenerate imported cases via odtool
-run "polyconvert" "bash tools/oracle/run_odtool.sh polyconvert"
-run "netgenerate" "bash tools/oracle/run_odtool.sh netgenerate"
+C=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_time_window_before_begin
+sub=/tmp/jtr_before
+rm -rf "$sub"; mkdir -p "$sub/ref" "$sub/cand"
+net=$(tr -d '[:cntrl:]' < "$C/net")
+args=$(tr -d '[:cntrl:]' < "$C/args")
+rargs=${args//@CASE@/$C}; rargs=${rargs//@DIR@/$sub/ref}
+cargs=${args//@CASE@/$C}; cargs=${cargs//@DIR@/$sub/cand}
+echo "=== CAND LOG ==="
+"$CARGO_TARGET_DIR/debug/jtrrouter" -n "$net" $cargs --no-step-log true >"$sub/cand.log" 2>&1
+echo "exit=$?"
+cat "$sub/cand.log"
+echo "=== files ==="
+ls "$sub/cand"
+echo "=== output head ==="
+head -20 "$sub/cand"/*.rou.xml 2>/dev/null
