@@ -1,0 +1,1 @@
+--write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_person_personTrip_car/input_routes.rou.xml -o @DIR@/routes.rou.xml

@@ -1,0 +1,1 @@
+--write-license -a tools/oracle/cases/duarouter_itt_duarouter_trips_preference_detour_vclass/input_additional.add.xml -r tools/oracle/cases/duarouter_itt_duarouter_trips_preference_detour_vclass/input_routes.rou.xml -o @DIR@/routes.rou.xml

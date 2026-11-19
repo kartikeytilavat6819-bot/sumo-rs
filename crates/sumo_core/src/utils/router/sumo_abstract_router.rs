@@ -19,6 +19,8 @@ pub type SUMOAbstractRouter_ResetFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Pt
 pub type SUMOAbstractRouter_SetBulkModeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, bool);
 pub type SUMOAbstractRouter_SetMsgHandlerFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<MsgHandler>);
 pub type SUMOAbstractRouter_CloneFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>) -> Ptr<SUMOAbstractRouter<E, V>>;
+/// The concrete router's `recomputeCosts` (C++ virtual), installed by subclasses that override it.
+pub type SUMOAbstractRouter_RecomputeCostsFn<E, V> = fn(&SUMOAbstractRouter<E, V>, &Vec<Ptr<E>>, Ptr<V>, SUMOTime, Ptr<f64>) -> f64;
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -109,6 +111,8 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myTTOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
     /// the concrete `compute` the pure-virtual base dispatches to (None: the base has no implementation)
     pub myCompute: Option<SUMOAbstractRouter_ComputeFn<E, V>>,
+    /// the subclass `recomputeCosts` override (C++ virtual), None for the base behaviour
+    pub myRecomputeCosts: Option<SUMOAbstractRouter_RecomputeCostsFn<E, V>>,
     /// the subclass prohibit override (C++ virtual `prohibit`), None for the base behaviour
     pub myProhibit: Option<SUMOAbstractRouter_ProhibitFn<E, V>>,
     /// the subclass supportsProhibitions override (C++ virtual), None for the base behaviour (true)
@@ -175,6 +179,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myOperation: operation,
             myTTOperation: ttOperation,
             myCompute: None,
+            myRecomputeCosts: None,
             myProhibit: None,
             mySupportsProhibitions: None,
             myReset: None,
@@ -221,6 +226,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myOperation: other.myOperation,
             myTTOperation: other.myTTOperation,
             myCompute: other.myCompute,
+            myRecomputeCosts: other.myRecomputeCosts,
             myProhibit: other.myProhibit,
             mySupportsProhibitions: other.mySupportsProhibitions,
             myReset: other.myReset,
@@ -605,6 +611,16 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn recompute_costs(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 where E: RouterEdge<V>, V: RouterVehicle {
+        // C++ `recomputeCosts` is virtual: a RailwayRouter overrides it with reversal corrections.
+        if let Some(f) = self.myRecomputeCosts {
+            return f(self, edges, v, msTime, lengthp);
+        }
+        self.recompute_costs_base(edges, v, msTime, lengthp)
+    }
+
+    /// The non-virtual base implementation (C++ `SUMOAbstractRouter::recomputeCosts` body).
+    /// Subclass overrides call this directly rather than re-entering the virtual slot.
+    pub fn recompute_costs_base(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 where E: RouterEdge<V>, V: RouterVehicle {
         let mut time = steps2time(msTime);
         let mut effort = 0.;
         let mut length = 0.;
