@@ -43,7 +43,7 @@ for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
   fi
   for f in "$R"/x.*.xml; do
     [ -f "$f" ] || continue
-    suf=${f##*x.}
+    suf=${f##*x.}; suf=${suf%.xml}
     [ -f "$D/ref.$suf.xml" ] || continue
     echo "... $suf"
     python tools/oracle/compare_xml.py "$D/ref.$suf.xml" "$f" 2>&1 | head -12

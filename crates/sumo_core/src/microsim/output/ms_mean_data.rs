@@ -521,7 +521,7 @@ impl MSMeanData {
                 for t in list.iter() {
                     let tp = as_tracker(*t);
                     let tr = tp.m();
-                    let entries: Vec<(i32, i32, f64)> = tr.myCurrentData.iter().map(|x| (x.myNumVehicleEntered.get(), x.myNumVehicleLeft.get(), x.myValues.get_samples())).collect();
+                    let entries: Vec<(i32, i32)> = tr.myCurrentData.iter().map(|x| (x.myNumVehicleEntered.get(), x.myNumVehicleLeft.get())).collect();
                     eprintln!("OC95   edge[{ei}] ready={} entries={:?}", tr.get_num_ready(), entries);
                 }
             }
@@ -1521,7 +1521,8 @@ impl MSMeanData_MeanDataValueTracker {
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         let key = Ptr::from_mut(&mut *veh);
         if oc95_trace() {
-            eprintln!("OC95 leave veh={} reason={:?} tracked={} front={:?}", veh.get_id(), reason, self.myTrackedData.contains_key(&key), self.myCurrentData.front().map(|e| (e.myNumVehicleEntered.get(), e.myNumVehicleLeft.get())));
+            let own = self.myTrackedData.get(&key).map(|e| (e.myNumVehicleEntered.get(), e.myNumVehicleLeft.get()));
+            eprintln!("OC95 leave rem={} reason={:?} own={:?} front={:?} key={}", self.base.base.myDescription, reason, own, self.myCurrentData.front().map(|e| (e.myNumVehicleEntered.get(), e.myNumVehicleLeft.get())), key.as_raw() as usize);
         }
         if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
             let entry = self.myTrackedData[&key].clone();
@@ -1562,7 +1563,7 @@ impl MSMeanData_MeanDataValueTracker {
         }
         let key = Ptr::from_mut(&mut *veh);
         if oc95_trace() {
-            eprintln!("OC95 enter veh={} reason={:?} applies={} tracked={} steps={}", veh.get_id(), reason, self.myParent.base.vehicle_applies(veh), self.myTrackedData.contains_key(&key), self.myCurrentData.len());
+            eprintln!("OC95 enter rem={} reason={:?} tracked={} steps={} key={}", self.base.base.myDescription, reason, self.myTrackedData.contains_key(&key), self.myCurrentData.len(), key.as_raw() as usize);
         }
         if self.myParent.base.vehicle_applies(veh) && !self.myTrackedData.contains_key(&key) {
             let entry = self.myCurrentData.back().unwrap().clone();
