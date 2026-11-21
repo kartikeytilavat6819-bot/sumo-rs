@@ -1999,6 +1999,10 @@ impl NBRailwayTopologyAnalyzer {
             let mut outRail = EdgeVector::new();
             Self::get_rail_edges(*n, &mut inRail, &mut outRail);
             for mut start in outRail.clone() {
+                if lineEdges.contains(&start) {
+                    // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
+                    continue;
+                }
                 // only reverse edges where the node would be unbroken afterwards
                 if !Self::all_broken(*n, start, &inRail, &outRail) || (inRail.len() == 1 && outRail.len() == 1) {
                     continue;
@@ -2006,10 +2010,6 @@ impl NBRailwayTopologyAnalyzer {
                 let mut forward = true;
                 let mut seq: EdgeVector = EdgeVector::new();
                 while forward {
-                    if lineEdges.contains(&start) {
-                        // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
-                        break;
-                    }
                     seq.push(start);
                     //std::cout << " seq=" << toString(seq) << "\n";
                     let n2 = start.get_to_node();
