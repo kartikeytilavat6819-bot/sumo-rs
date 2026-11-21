@@ -519,7 +519,8 @@ impl MSMeanData {
             eprintln!("OC95 write start={startTime} stop={stopTime} numReady={numReady} pending={} partial={partialInterval} track={}", self.myPendingIntervals.len(), self.myTrackVehicles);
             for (ei, list) in self.myMeasures.iter().enumerate() {
                 for t in list.iter() {
-                    let tr = as_tracker(*t).m();
+                    let tp = as_tracker(*t);
+                    let tr = tp.m();
                     let entries: Vec<(i32, i32, f64)> = tr.myCurrentData.iter().map(|x| (x.myNumVehicleEntered.get(), x.myNumVehicleLeft.get(), x.myValues.get_samples())).collect();
                     eprintln!("OC95   edge[{ei}] ready={} entries={:?}", tr.get_num_ready(), entries);
                 }
