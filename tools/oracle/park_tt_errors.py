@@ -119,8 +119,10 @@ def normalise(line):
 
 
 def normalised_lines(path):
+    # keep file order: texttest diffs the normalised lines in order, so a wrong
+    # message order is a real difference and must not be masked by sorting.
     with open(path, encoding="utf-8", errors="replace") as fh:
-        return sorted(x for x in (normalise(ln) for ln in fh) if x is not None)
+        return [x for x in (normalise(ln) for ln in fh) if x is not None]
 
 
 def compare(ref, log):
