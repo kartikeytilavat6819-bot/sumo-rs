@@ -266,7 +266,9 @@ impl NWWriter_SUMO {
             attrs.insert(SUMO_ATTR_SPREADTYPE, oc.get_string("default.spreadtype").unwrap());
         }
         if oc.exists("geometry.avoid-overlap") && !oc.get_bool("geometry.avoid-overlap").unwrap() {
-            attrs.insert(SUMO_ATTR_AVOID_OVERLAP, oc.get_bool("geometry.avoid-overlap").unwrap().to_string());
+            // C++ toString(bool) uses ostringstream without boolalpha -> "0"/"1"
+            let v = oc.get_bool("geometry.avoid-overlap").unwrap();
+            attrs.insert(SUMO_ATTR_AVOID_OVERLAP, if v { "1" } else { "0" }.to_string());
         }
         if oc.exists("junctions.higher-speed") && oc.get_bool("junctions.higher-speed").unwrap() {
             attrs.insert(SUMO_ATTR_HIGHER_SPEED, oc.get_bool("junctions.higher-speed").unwrap().to_string());
