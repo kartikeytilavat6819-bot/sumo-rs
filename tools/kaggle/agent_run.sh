@@ -1,15 +1,28 @@
 #!/bin/bash
-# Measure the no_permitted_route_lane TraCI test on both binaries.
+# Probe the no_permitted_route_lane row: run the official sumo via a wrapper
+# that records its own stdout/stderr and exit code, then replay the runner.
 set -u
 TEST=tools/oracle/complex_bundle/vehicle/moveToXY/no_permitted_route_lane
+D=/tmp/oc100
+rm -rf "$D"
+mkdir -p "$D"
+cat > "$D/sumo_wrapper.sh" <<'EOF'
+#!/bin/bash
+"${SUMO_PRISTINE_BIN}/sumo" "$@" > /tmp/oc100/sumo.stdout 2> /tmp/oc100/sumo.stderr
+rc=$?
+echo "$rc" > /tmp/oc100/sumo.exit
+exit $rc
+EOF
+chmod +x "$D/sumo_wrapper.sh"
+cp -r "$TEST" "$D/run"
 NC="${SUMO_PRISTINE_BIN}/netconvert"
 [ -x "$NC" ] || NC="${CARGO_TARGET_DIR}/debug/netconvert"
-for side in official ours; do
-  d="/tmp/oc100_$side"
-  rm -rf "$d"
-  cp -r "$TEST" "$d"
-  if [ "$side" = official ]; then bin="${SUMO_PRISTINE_BIN}/sumo"; else bin="${CARGO_TARGET_DIR}/debug/sumo"; fi
-  (cd "$d" && SUMO_BINARY="$bin" NETCONVERT_BINARY="$NC" PYTHONPATH="${SUMO_HOME}/tools:${PYTHONPATH:-}" python3 runner.py > console.txt 2>&1)
-  echo "===== $side console ====="
-  cat "$d/console.txt"
-done
+(cd "$D/run" && SUMO_BINARY="$D/sumo_wrapper.sh" NETCONVERT_BINARY="$NC" PYTHONPATH="${SUMO_HOME}/tools:${PYTHONPATH:-}" python3 runner.py > console.txt 2>&1)
+echo "===== runner console ====="
+cat "$D/run/console.txt"
+echo "===== official sumo exit code ====="
+cat "$D/sumo.exit" 2>/dev/null || echo "(no exit recorded)"
+echo "===== official sumo stdout ====="
+cat "$D/sumo.stdout" 2>/dev/null || true
+echo "===== official sumo stderr ====="
+cat "$D/sumo.stderr" 2>/dev/null || true
