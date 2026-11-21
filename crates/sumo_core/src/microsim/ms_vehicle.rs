@@ -11,9 +11,13 @@ use utils::geom::POSITION_EPS;
 fn oc97_trace_v(veh_id: &str, tag: &str, msg: impl std::fmt::Display) {
     if std::env::var_os("OC97_TRACE").is_none() { return; }
     if veh_id != "flow_0.15" && veh_id != "flow_0.16" && veh_id != "flow_0.52" { return; }
-    let t = crate::microsim::ms_net::MSNet::get_instance().get_current_time_step();
-    if !((t >= 140 && t <= 147) || (t >= 411 && t <= 417)) { return; }
-    eprintln!("OC97 t={} {} {} {}", t, veh_id, tag, msg);
+    static SEEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !SEEN.swap(true, std::sync::atomic::Ordering::Relaxed) {
+        eprintln!("OC97 reached linkLeader veh={}", veh_id);
+    }
+    let t = utils::common::time::steps2time(crate::microsim::ms_net::MSNet::get_instance().get_current_time_step());
+    if !((t >= 139.0 && t <= 148.0) || (t >= 410.0 && t <= 418.0)) { return; }
+    eprintln!("OC97 t={:.2} {} {} {}", t, veh_id, tag, msg);
 }
 
 // C++ MIN2/MAX2 macros: `(a < b ? a : b)` / `(a > b ? a : b)` (NaN-equivalent to the C++ form).

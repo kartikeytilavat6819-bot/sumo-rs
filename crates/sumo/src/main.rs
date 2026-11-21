@@ -38,6 +38,10 @@ fn panic_text(payload: &(dyn Any + Send)) -> Option<String> {
 
 /// C++ `main`: returns the process exit code
 fn sumo_main(args: Vec<String>) -> i32 {
+    // oc97: temporary trace-enable marker (removed with the tracing code)
+    if std::env::var_os("OC97_TRACE").is_some() {
+        eprintln!("OC97 trace active");
+    }
     // Panics stand in for C++ exceptions and are caught/converted to error
     // status or written by the handlers below. The default hook would print
     // "thread panicked at ..." for every caught one, which C++ never does.

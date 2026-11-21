@@ -50,7 +50,7 @@ trace() {
   if [ ! -x "$BIN/sumo" ]; then echo "  no $BIN/sumo"; return; fi
   EXTRA=""
   [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
-  timeout 240 "$BIN/sumo" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+  OC97_TRACE=1 timeout 240 "$BIN/sumo" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
       --fcd-output "$OUT/$c.fcd.xml" --no-step-log true $EXTRA \
       >"$OUT/$c.sumo.log" 2>&1
   rc=$?
