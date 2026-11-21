@@ -654,6 +654,12 @@ impl MSTriggeredRerouter {
         // check whether the vehicle shall be rerouted
         let now = net.get_current_time_step();
         let rerouteDef = self.get_current_reroute(now, tObject);
+        if std::env::var("OC98DBG").is_ok() && !rerouteDef.is_null() {
+            for (e, s) in rerouteDef.closed.iter() {
+                eprintln!("OC98DBG interval id={} begin={} end={} closed={} perm={} until={}", rerouteDef.id, rerouteDef.begin, rerouteDef.end, e.get_id(), s.0, s.1);
+            }
+            eprintln!("OC98DBG getClosed={:?}", rerouteDef.get_closed().iter().map(|(e, p)| (e.get_id().to_string(), p.begin, p.end, p.permissions)).collect::<Vec<_>>());
+        }
         if rerouteDef.is_null() {
             return true; // an active interval could appear later
         }

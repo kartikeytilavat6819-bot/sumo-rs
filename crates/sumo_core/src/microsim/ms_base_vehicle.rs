@@ -1654,6 +1654,11 @@ impl MSBaseVehicle {
                 }
             }
         }
+        if std::env::var("OC98DBG").is_ok() {
+            let ids: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
+            eprintln!("OC98DBG reroute info={} onInit={} t={} source={} sink={} edges={:?} cost={} prevCost={} savingsOk={} skipped={}",
+                info, onInit, t, source.get_id(), sink.get_id(), ids, routeCost, previousCost, savingsOk, hasSkipped);
+        }
         if savingsOk {
             self.replace_route_edges(&mut edges, routeCost, savings, info, onInit, false, hasSkipped, Ptr::default());
         }

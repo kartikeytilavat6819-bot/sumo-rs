@@ -14,13 +14,16 @@ for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_shor
   echo "################ $case"
   for side in ours pristine; do
     if [ "$side" = ours ]; then BIN=$OURS; else BIN=$REF; fi
-    timeout 300 "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
+    if [ "$side" = ours ]; then DBG=OC98DBG=1; else DBG=; fi
+    timeout 300 env $DBG "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
       $(cat "$C/sim.args") --no-step-log true \
       --tripinfo-output "$OUT/$case.$side.ti.xml" \
       --vehroute-output "$OUT/$case.$side.vr.xml" \
       --fcd-output "$OUT/$case.$side.fcd.xml" \
       >"$OUT/$case.$side.log" 2>&1
     echo "== $side exit=$?"
+    echo "-- OC98DBG (our side only):"
+    grep 'OC98DBG' "$OUT/$case.$side.log" | head -40
     echo "-- warnings/first log lines:"
     grep -E 'Warning|Error|skips stop|Terminating|no valid route|could not' "$OUT/$case.$side.log" | head -10
     echo "-- vehroutes (route elements):"

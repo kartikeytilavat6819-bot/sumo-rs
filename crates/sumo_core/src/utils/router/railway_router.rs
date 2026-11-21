@@ -249,6 +249,11 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
             // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped>, cast the address until that typedef is generic
             toProhibitRE.insert(edge.railway_routing_edge().cast(), *prohibition);
         }
+        if std::env::var("OC98DBG").is_ok() {
+            for (edge, p) in toProhibitRE.iter() {
+                eprintln!("OC98DBG prohibit railEdge={} begin={} end={} perms={}", edge.id(), p.begin, p.end, p.permissions);
+            }
+        }
         self.myInternalRouter.m().prohibit(&toProhibitRE);
         self.base.myProhibited = toProhibit.clone();
     }
