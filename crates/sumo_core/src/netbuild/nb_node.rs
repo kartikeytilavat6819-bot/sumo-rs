@@ -2765,9 +2765,17 @@ impl NBNode {
         // C++ fmod(x, 360.0) is Rust's float % (both truncate toward zero)
         let toAngleAtNode = (to.get_start_angle() + 180.) % 360.0;
         let prohibitorToAngleAtNode = (prohibitorTo.get_start_angle() + 180.) % 360.0;
-        flip
-            != (utils::geom::geom_helper::get_cw_angle_diff(from.get_end_angle(), toAngleAtNode)
-                < utils::geom::geom_helper::get_cw_angle_diff(from.get_end_angle(), prohibitorToAngleAtNode))
+        let cwTo = utils::geom::geom_helper::get_cw_angle_diff(from.get_end_angle(), toAngleAtNode);
+        let cwP = utils::geom::geom_helper::get_cw_angle_diff(from.get_end_angle(), prohibitorToAngleAtNode);
+        let res = flip != (cwTo < cwP);
+        if from.get_id() == "gneE6" && to.get_id() == "-gneE3" && prohibitorTo.get_id() == "gneE8" && fromLane == 1 && prohibitorFromLane == 0 {
+            eprintln!("RTC-TRACE d1R={} d1PR={} d1L={} d2S={} d2R={} d2T={} flip={} startTo={:?} startP={:?} endFrom={:?} toAngle={:?} pAngle={:?} cwTo={:?} cwP={:?} res={}",
+                d1 == LinkDirection::RIGHT, d1 == LinkDirection::PARTRIGHT, d1 == LinkDirection::LEFT,
+                d2 == LinkDirection::STRAIGHT, d2 == LinkDirection::RIGHT, d2 == LinkDirection::TURN,
+                flip, to.get_start_angle(), prohibitorTo.get_start_angle(), from.get_end_angle(),
+                toAngleAtNode, prohibitorToAngleAtNode, cwTo, cwP, res);
+        }
+        res
     }
 
     /// C++: `bool NBNode::mergeConflictYields(const NBEdge *, int, int, NBEdge *, int) const` [const]
