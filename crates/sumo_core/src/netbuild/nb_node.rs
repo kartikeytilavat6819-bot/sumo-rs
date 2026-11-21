@@ -3760,6 +3760,11 @@ impl NBNode {
     pub fn needs_cont(&self, fromE: Ptr<NBEdge>, otherFromE: Ptr<NBEdge>, c: &NBEdge_Connection, otherC: &NBEdge_Connection, checkOnlyTLS: bool) -> bool {
         let toE = c.toEdge;
         let otherToE = otherC.toEdge;
+        let trace = self.get_id() == "gneJ8" && fromE.get_id() == "gneE6" && otherFromE.get_id() == "gneE6";
+        if trace {
+            eprintln!("NC-TRACE enter to={} otherTo={} reqNull={} tlID=[{}] indL={} cLane={} oLane={}",
+                toE.get_id(), otherToE.get_id(), self.myRequest.is_null(), c.tlID, c.indirectLeft, c.fromLane, otherC.fromLane);
+        }
 
         if !checkOnlyTLS {
             if self.myType == SumoXMLNodeType::RIGHT_BEFORE_LEFT
@@ -3767,31 +3772,50 @@ impl NBNode {
                 || self.myType == SumoXMLNodeType::ALLWAY_STOP
                 || self.myType == SumoXMLNodeType::ZIPPER
             {
+                if trace { eprintln!("NC-TRACE ret nodeType"); }
                 return false;
             }
             let d1 = self.get_direction(fromE, toE, false);
             let thisRight = d1 == LinkDirection::RIGHT || d1 == LinkDirection::PARTRIGHT;
             let rightTurnConflict = thisRight
                 && NBNode::right_turn_conflict(fromE, toE, c.fromLane, otherFromE, otherToE, otherC.fromLane);
+            if trace {
+                eprintln!("NC-TRACE d1(S={} R={} PR={} L={} PL={} T={}) thisRight={} rtc={} d2S={} d2T={}",
+                    d1 == LinkDirection::STRAIGHT, d1 == LinkDirection::RIGHT, d1 == LinkDirection::PARTRIGHT,
+                    d1 == LinkDirection::LEFT, d1 == LinkDirection::PARTLEFT, d1 == LinkDirection::TURN,
+                    thisRight, rightTurnConflict,
+                    self.get_direction(otherFromE, otherToE, false) == LinkDirection::STRAIGHT,
+                    self.get_direction(otherFromE, otherToE, false) == LinkDirection::TURN);
+            }
             if thisRight && !rightTurnConflict {
+                if trace { eprintln!("NC-TRACE ret thisRight&&!rtc"); }
                 return false;
             }
-            if !self.myRequest.is_null() && self.myRequest.indirect_left_turn_conflict(fromE, c, otherFromE, otherC, false) {
+            let itc = !self.myRequest.is_null() && self.myRequest.indirect_left_turn_conflict(fromE, c, otherFromE, otherC, false);
+            if trace { eprintln!("NC-TRACE itc={}", itc); }
+            if itc {
+                if trace { eprintln!("NC-TRACE ret itc"); }
                 return true;
             }
-            if !(self.foes(otherFromE, otherToE, fromE, toE) || self.myRequest.is_null() || rightTurnConflict) {
+            let fo = self.foes(otherFromE, otherToE, fromE, toE);
+            if trace { eprintln!("NC-TRACE foes={}", fo); }
+            if !(fo || self.myRequest.is_null() || rightTurnConflict) {
                 // if they do not cross, no waiting place is needed
+                if trace { eprintln!("NC-TRACE ret nofoes"); }
                 return false;
             }
             let d2 = self.get_direction(otherFromE, otherToE, false);
             if d2 == LinkDirection::TURN {
+                if trace { eprintln!("NC-TRACE ret d2TURN"); }
                 return false;
             }
             if fromE == otherFromE && !thisRight {
                 // ignore same edge links except for right-turns
+                if trace { eprintln!("NC-TRACE ret sameEdge&&!thisRight"); }
                 return false;
             }
             if thisRight && d2 != LinkDirection::STRAIGHT {
+                if trace { eprintln!("NC-TRACE ret thisRight&&d2!S"); }
                 return false;
             }
         }
@@ -3803,14 +3827,19 @@ impl NBNode {
             );
             for it in self.myTrafficLights.iter() {
                 if it.needs_cont(fromE, toE, otherFromE, otherToE) {
+                    if trace { eprintln!("NC-TRACE ret tl true"); }
                     return true;
                 }
             }
+            if trace { eprintln!("NC-TRACE ret tl false"); }
             return false;
         }
         if fromE.get_junction_priority(Ptr::new(self)) > 0 && otherFromE.get_junction_priority(Ptr::new(self)) > 0 {
-            return self.must_brake(fromE, toE, c.fromLane, c.toLane, false);
+            let mb = self.must_brake(fromE, toE, c.fromLane, c.toLane, false);
+            if trace { eprintln!("NC-TRACE p1={} p2={} mustBrake={}", fromE.get_junction_priority(Ptr::new(self)), otherFromE.get_junction_priority(Ptr::new(self)), mb); }
+            return mb;
         }
+        if trace { eprintln!("NC-TRACE ret false"); }
         false
     }
 
