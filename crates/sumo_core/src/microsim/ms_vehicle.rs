@@ -6,6 +6,16 @@ use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 use utils::common::to_string::to_string;
 use utils::geom::POSITION_EPS;
 
+// oc97: temporary, env-gated trace of indirect-left link-leader decisions
+#[inline]
+fn oc97_trace_v(veh_id: &str, tag: &str, msg: impl std::fmt::Display) {
+    if std::env::var_os("OC97_TRACE").is_none() { return; }
+    if veh_id != "flow_0.15" && veh_id != "flow_0.16" && veh_id != "flow_0.52" { return; }
+    let t = crate::microsim::ms_net::MSNet::get_instance().get_current_time_step();
+    if !((t >= 140 && t <= 147) || (t >= 411 && t <= 417)) { return; }
+    eprintln!("OC97 t={} {} {} {}", t, veh_id, tag, msg);
+}
+
 // C++ MIN2/MAX2 macros: `(a < b ? a : b)` / `(a > b ? a : b)` (NaN-equivalent to the C++ form).
 #[allow(dead_code)]
 fn min2(a: f64, b: f64) -> f64 {
@@ -15349,9 +15359,11 @@ impl MSVehicle {
     pub fn check_link_leader(&self, link: Ptr<MSLink>, lane: Ptr<MSLane>, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64, vLinkWait: &mut f64, setRequest: &mut bool, isShadowLink: bool) {
         let me: Ptr<MSVehicle> = Ptr::new(self);
         let linkLeaders = link.get_leader_info(me, seen, Ptr::null(), isShadowLink);
+        oc97_trace_v(self.get_id(), "link", format!("via={} seen={} v={} nLeaders={} shadow={}", link.get_via_lane_or_lane().get_id(), seen, *v, linkLeaders.len(), isShadowLink));
         for it in linkLeaders.iter() {
             // the vehicle to enter the junction first has priority
             let leader: Ptr<MSVehicle> = it.vehAndGap.0;
+            oc97_trace_v(self.get_id(), "foe", format!("leader={} gap={} dCross={} isLeader={} inWay={} v={}", if leader.is_null() { "ped" } else { leader.get_id() }, it.vehAndGap.1, it.distToCrossing, if leader.is_null() { false } else { self.is_leader(link, leader, it.vehAndGap.1) }, it.in_the_way(), *v));
             if leader.is_null() {
                 // leader is a pedestrian. Passing 'this' as a dummy.
                 let ignoreProb = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB, 0.0);

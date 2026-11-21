@@ -3,6 +3,16 @@
 use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 
+// oc97: temporary, env-gated trace of indirect-left lateral decisions
+#[inline]
+fn oc97_trace(veh_id: &str, tag: &str, msg: impl std::fmt::Display) {
+    if std::env::var_os("OC97_TRACE").is_none() { return; }
+    if veh_id != "flow_0.15" && veh_id != "flow_0.16" && veh_id != "flow_0.52" { return; }
+    let t = crate::microsim::ms_net::MSNet::get_instance().get_current_time_step();
+    if !((t >= 140 && t <= 147) || (t >= 411 && t <= 417)) { return; }
+    eprintln!("OC97 t={} {} {} {}", t, veh_id, tag, msg);
+}
+
 /// C++ typedef `MSAbstractLaneChangeModel::StateAndDist MSLaneChangerSublane::StateAndDist`
 pub type MSLaneChangerSublane_StateAndDist = MSAbstractLaneChangeModel_StateAndDist;
 
@@ -1106,12 +1116,15 @@ impl MSLaneChangerSublane {
         //      - shadow vehicle must be created/moved to the other lane if the vehicle intersects it
         // 3) updated dens of all lanes that hold the vehicle or its shadow
         let sign: f64 = if vehicle.get_lane_change_model_2().is_opposite() { -1.0 } else { 1.0 };
+        let oldPosLat = vehicle.get_lateral_position_on_lane();
+        oc97_trace(vehicle.get_id(), "lat", format!("latDist={} maneuverDist={} oldPosLat={} dir={}", latDist, maneuverDist, oldPosLat, direction));
         vehicle.m().myState.myPosLat += latDist * sign;
         for p in vehicle.m().myFurtherLanesPosLat.iter_mut() {
             *p += latDist * sign;
         }
         vehicle.m().myCachedPosition.set(Position::INVALID);
         vehicle.m().get_lane_change_model().set_speed_lat(dist2speed(latDist));
+        oc97_trace(vehicle.get_id(), "latDone", format!("newPosLat={} speedLat={}", vehicle.get_lateral_position_on_lane(), dist2speed(latDist)));
 
         let completedPriorManeuver = vehicle.get_lane_change_model_2().get_previous_maneuver_dist().abs() < utils::geom::NUMERICAL_EPS;
         let completedManeuver = (maneuverDist - latDist).abs() < utils::geom::NUMERICAL_EPS;

@@ -8,6 +8,7 @@ cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/tmp/sumo-rs-target}/debug"
 OUT="/tmp/oc97-fcd-$$"
 mkdir -p "$OUT"
+export OC97_TRACE=1
 
 # Emit, for one vehicle id, a map timestep -> stripped <vehicle> line, then the
 # first timestep where the two maps differ (including presence/absence).
@@ -58,6 +59,9 @@ trace() {
     return
   fi
   if [ ! -s "$OUT/$c.fcd.xml" ]; then echo "  EMPTY/MISSING our fcd"; return; fi
+  echo "  --- trace ---"
+  grep '^OC97 ' "$OUT/$c.sumo.log" || true
+  echo "  --- first diff ---"
   first_diff "$dir/ref.fcd.xml" "$OUT/$c.fcd.xml" "$vid"
 }
 

@@ -29,6 +29,16 @@ const SPEEDGAIN_DECAY_FACTOR: f64 = 0.5;
 const SPEEDGAIN_MEMORY_FACTOR: f64 = 0.5;
 const REACT_TO_STOPPED_DISTANCE: f64 = 100.0;
 
+// oc97: temporary, env-gated trace of indirect-left lateral decisions
+#[inline]
+fn oc97_trace(veh_id: &str, tag: &str, msg: impl std::fmt::Display) {
+    if std::env::var_os("OC97_TRACE").is_none() { return; }
+    if veh_id != "flow_0.15" && veh_id != "flow_0.16" && veh_id != "flow_0.52" { return; }
+    let t = crate::microsim::ms_net::MSNet::get_instance().get_current_time_step();
+    if !((t >= 140 && t <= 147) || (t >= 411 && t <= 417)) { return; }
+    eprintln!("OC97 t={} {} {} {}", t, veh_id, tag, msg);
+}
+
 // MIN3/MAX3 from StdDefs.h
 #[inline]
 fn min3(a: f64, b: f64, c: f64) -> f64 {
@@ -1596,6 +1606,7 @@ impl MSLCM_SL2015 {
             let (turnDist, turnLink) = *self.myVehicle.m().get_next_turn();
             let turnDir = if turnLink.is_null() { LinkDirection::NODIR } else { turnLink.get_direction() };
             let indirect = if turnLink.is_null() { false } else { turnLink.is_indirect() };
+            oc97_trace(self.myVehicle.get_id(), "align", format!("tAlignDist={} turnDist={} dir={:?} indirect={} base={:?}", self.myTurnAlignmentDist, turnDist, turnDir, indirect, align));
             if turnDist < self.myTurnAlignmentDist {
                 // Vehicle is close enough to the link to change its default alignment
                 match turnDir {
@@ -1610,6 +1621,7 @@ impl MSLCM_SL2015 {
                     }
                     _ => {}
                 }
+                oc97_trace(self.myVehicle.get_id(), "alignSet", format!("dir={:?} indirect={} align={:?} posLat={}", turnDir, indirect, align, self.myVehicle.get_lateral_position_on_lane()));
             }
         }
         align
