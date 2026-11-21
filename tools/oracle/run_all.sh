@@ -116,12 +116,13 @@ for dir in tools/oracle/cases/*/; do
     done < "$dir/net_outputs.txt"
   fi
   # --- expected-error stage: the official SUMO exits non-zero for this TextTest row. Score the
-  # exit code and the error/warning lines against the committed ref.errors (from errors.sumo /
-  # output.sumo), not against tripinfo/fcd/statistic. Cases without EXPECT_EXIT are unaffected.
+  # exit code and the error/warning lines against the committed ref.errors / ref.output (from
+  # errors.sumo / output.sumo), not against tripinfo/fcd/statistic. Streams are compared
+  # separately, each in order, exactly like texttest. Cases without EXPECT_EXIT are unaffected.
   if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ]; then
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --no-step-log true $EXTRA >"$OUT/$c.err.log" 2>&1
+        --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
     rc=$?
     if [ $rc -eq 124 ]; then
       line "$c" err-TIMEOUT "no exit after ${SIM_TIMEOUT:-600}s"; FAIL=$((FAIL+1)); continue
@@ -129,16 +130,21 @@ for dir in tools/oracle/cases/*/; do
     if [ $rc -eq 0 ]; then
       line "$c" err-NOEXIT "official exits non-zero, ours exited 0"; FAIL=$((FAIL+1)); continue
     fi
+    r="PASS"; detail=""
     if [ -s "$dir/ref.errors" ]; then
-      python tools/oracle/park_tt_errors.py --compare "$dir/ref.errors" "$OUT/$c.err.log" >"$OUT/$c.err.diff" 2>&1
-      if [ $? -eq 0 ]; then
-        line "$c" err PASS; PASS=$((PASS+1))
-      else
-        line "$c" err FAIL "$(head -2 "$OUT/$c.err.diff" | tr '\n' ' ' | cut -c1-150)"; FAIL=$((FAIL+1))
+      if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.errors" "$OUT/$c.err.log" >"$OUT/$c.err.diff" 2>&1; then
+        r="FAIL"; detail="stderr: $(head -2 "$OUT/$c.err.diff" | tr '\n' ' ' | cut -c1-150)"
       fi
-    else
-      # official emits no error text: the non-zero exit is the whole check
+    fi
+    if [ -s "$dir/ref.output" ]; then
+      if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.output" "$OUT/$c.err.out" >"$OUT/$c.out.diff" 2>&1; then
+        r="FAIL"; [ -z "$detail" ] && detail="stdout: $(head -2 "$OUT/$c.out.diff" | tr '\n' ' ' | cut -c1-150)"
+      fi
+    fi
+    if [ "$r" = "PASS" ]; then
       line "$c" err PASS; PASS=$((PASS+1))
+    else
+      line "$c" err FAIL "$detail"; FAIL=$((FAIL+1))
     fi
     continue
   fi

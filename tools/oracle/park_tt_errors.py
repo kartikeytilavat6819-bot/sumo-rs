@@ -61,16 +61,20 @@ def unpark(case, tests_sumo):
         print("UNPARK SKIP (no Source:):", case)
         return False
     srdir = os.path.join(tests_sumo, src.replace("/", os.sep))
-    lines = []
+    # texttest compares the two streams separately, each in order: errors.sumo against
+    # stderr, output.sumo against stdout. Keep them in separate reference files.
+    expectation = {}
     for name in ("errors.sumo", "output.sumo"):
         p = os.path.join(srdir, name)
-        if os.path.isfile(p):
-            with open(p, encoding="utf-8", errors="replace") as fh:
-                lines.extend(fh.read().splitlines())
-    # verbatim official expectation (no normalisation here - it is applied at compare time)
-    with open(os.path.join(d, "ref.errors"), "w", encoding="utf-8", newline="\n") as fh:
-        for ln in lines:
-            fh.write(ln.rstrip("\r") + "\n")
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            expectation[name] = fh.read().splitlines()
+    def _write(fname, lines):
+        with open(os.path.join(d, fname), "w", encoding="utf-8", newline="\n") as fh:
+            for ln in lines:
+                fh.write(ln.rstrip("\r") + "\n")
+    _write("ref.errors", expectation["errors.sumo"])
+    if expectation["output.sumo"]:
+        _write("ref.output", expectation["output.sumo"])
     with open(os.path.join(d, "EXPECT_EXIT"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write("official SUMO 1.28.0 exits non-zero (expected-error TextTest row)\n")
         fh.write("Official expectation: " + src.replace(os.sep, "/") + "/{errors,output}.sumo\n")
@@ -78,7 +82,8 @@ def unpark(case, tests_sumo):
         os.remove(os.path.join(d, "PENDING"))
     except OSError:
         pass
-    print("UNPARKED", case, "(%d official lines)" % len(lines))
+    print("UNPARKED", case, "(%d stderr, %d stdout official lines)" %
+          (len(expectation["errors.sumo"]), len(expectation["output.sumo"])))
     return True
 
 
@@ -115,6 +120,9 @@ def normalise(line):
             return "'" + q.replace("\\", "/").rstrip("/").split("/")[-1] + "'"
         return m.group(0)
     s = re.sub(r"'([^']*)'", shorten, s)
+    # the harness renames inputs (net.net.xml -> ref_simple.net.xml, routes -> routes.rou),
+    # so the file named by a "Loading ... from '...'" line is a path, not a semantic value.
+    s = re.sub(r"(Loading [^']*? from )'[^']*'", r"\1'(FILE)'", s)
     return s
 
 
