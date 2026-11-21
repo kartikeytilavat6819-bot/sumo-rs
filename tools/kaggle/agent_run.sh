@@ -5,9 +5,8 @@
 # Prints, per case, the first differing timestep and both full vehicle lines.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-export PATH="/c/Users/karti/.cargo/bin:$PATH"
-BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target-main}/debug"
-OUT="/c/Users/karti/AppData/Local/Temp/oc97-fcd-$$"
+BIN="${CARGO_TARGET_DIR:-/tmp/sumo-rs-target}/debug"
+OUT="/tmp/oc97-fcd-$$"
 mkdir -p "$OUT"
 
 # Emit, for one vehicle id, a map timestep -> stripped <vehicle> line, then the
@@ -47,10 +46,10 @@ trace() {
   dir="tools/oracle/cases/$c/"
   echo "=== $c (vehicle $vid) ==="
   if [ ! -f "$dir/ref.fcd.xml" ]; then echo "  no ref.fcd.xml"; return; fi
-  if [ ! -x "$BIN/sumo.exe" ]; then echo "  no $BIN/sumo.exe"; return; fi
+  if [ ! -x "$BIN/sumo" ]; then echo "  no $BIN/sumo"; return; fi
   EXTRA=""
   [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
-  timeout 240 "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+  timeout 240 "$BIN/sumo" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
       --fcd-output "$OUT/$c.fcd.xml" --no-step-log true $EXTRA \
       >"$OUT/$c.sumo.log" 2>&1
   rc=$?
