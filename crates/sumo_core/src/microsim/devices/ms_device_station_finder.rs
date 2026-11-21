@@ -1469,7 +1469,8 @@ impl MSDevice_StationFinder {
             let now = MSNet::get_instance().m().get_current_time_step();
             self.myLastSearch = now;
             let mut scores: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t = Default::default();
-            let cs = self.find_charging_station(MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default()), expectedConsumption, &mut scores, true, true, true, true);
+            // C++ findChargingStation defaults here: skipOccupied=false, visible=false
+            let cs = self.find_charging_station(MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default()), expectedConsumption, &mut scores, true, true, false, false);
             if !cs.is_null() {
                 // integrate previously planned stops which do not have charging facilities
                 self.myChargingStation = Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace);
