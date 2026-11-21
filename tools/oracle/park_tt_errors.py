@@ -1,21 +1,166 @@
 #!/usr/bin/env python3
-"""Park imported TextTest rows whose official SUMO run exits non-zero (error-message tests)."""
-import os, sys
+"""Manage TextTest rows on which the official SUMO exits non-zero (expected-error tests).
+
+Three modes:
+
+  python park_tt_errors.py <case>...          legacy: park a case (kept for provenance)
+  python park_tt_errors.py --unpark <case>...  generate ref.errors + EXPECT_EXIT from the
+      official TextTest expectation (errors.sumo / output.sumo at the case's Source: path)
+      and remove the PENDING marker so run_all.sh scores the case.
+  python park_tt_errors.py --compare <ref.errors> <our-log>
+      compare normalised error lines; exit 0 on match, 1 on first difference.
+
+The expectation is never derived from our binary: ref.errors holds the verbatim official
+error/warning lines; normalisation (times, paths, SUMO banners, Rust panic noise) is applied
+identically to both sides by --compare.
+"""
+import os
+import re
+import sys
+
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CASES = os.path.join(REPO, "tools", "oracle", "cases")
-reason = ("PARKED: official SUMO 1.28.0 exits non-zero for this TextTest row "
-          "(it validates an erroneous additional-file attribute and checks the error message).\n"
-          "The run_all harness compares tripinfo/fcd/statistic outputs only, so this row cannot be\n"
-          "scored meaningfully. Parked rather than deleted to keep the import provenance.\n")
-for case in sys.argv[1:]:
+DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
+PARK_REASON = ("PARKED: official SUMO 1.28.0 exits non-zero for this TextTest row "
+               "(it validates an erroneous additional-file attribute and checks the error message).\n"
+               "The run_all harness compares tripinfo/fcd/statistic outputs only, so this row cannot be\n"
+               "scored meaningfully. Parked rather than deleted to keep the import provenance.\n")
+PENDING_TEXT = "error-message test: official SUMO exits non-zero; harness compares sim outputs only\n"
+
+
+def source_of(case):
+    path = os.path.join(CASES, case, "CASE.md")
+    if not os.path.isfile(path):
+        return None
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            m = re.match(r"Source: `([^`]+)`", line)
+            if m:
+                return m.group(1).strip()
+    return None
+
+
+def park(case):
     d = os.path.join(CASES, case)
     with open(os.path.join(d, "CASE.md"), "a", encoding="utf-8", newline="\n") as fh:
-        fh.write("\n" + reason)
+        fh.write("\n" + PARK_REASON)
     with open(os.path.join(d, "PENDING"), "w", encoding="utf-8", newline="\n") as fh:
-        fh.write("error-message test: official SUMO exits non-zero; harness compares sim outputs only\n")
+        fh.write(PENDING_TEXT)
     for f in ("NEW_CASE", "ref.tripinfo.xml", "ref.fcd.xml", "ref.stat.xml"):
         try:
             os.remove(os.path.join(d, f))
         except OSError:
             pass
     print("PARKED", case)
+
+
+def unpark(case, tests_sumo):
+    d = os.path.join(CASES, case)
+    src = source_of(case)
+    if not src:
+        print("UNPARK SKIP (no Source:):", case)
+        return False
+    srdir = os.path.join(tests_sumo, src.replace("/", os.sep))
+    lines = []
+    for name in ("errors.sumo", "output.sumo"):
+        p = os.path.join(srdir, name)
+        if os.path.isfile(p):
+            with open(p, encoding="utf-8", errors="replace") as fh:
+                lines.extend(fh.read().splitlines())
+    # verbatim official expectation (no normalisation here - it is applied at compare time)
+    with open(os.path.join(d, "ref.errors"), "w", encoding="utf-8", newline="\n") as fh:
+        for ln in lines:
+            fh.write(ln.rstrip("\r") + "\n")
+    with open(os.path.join(d, "EXPECT_EXIT"), "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("official SUMO 1.28.0 exits non-zero (expected-error TextTest row)\n")
+        fh.write("Official expectation: " + src.replace(os.sep, "/") + "/{errors,output}.sumo\n")
+    try:
+        os.remove(os.path.join(d, "PENDING"))
+    except OSError:
+        pass
+    print("UNPARKED", case, "(%d official lines)" % len(lines))
+    return True
+
+
+def normalise(line):
+    """Apply the same texttest normalisation to the official text and to our output."""
+    s = line.rstrip("\r\n")
+    if not s.strip():
+        return None
+    # local-only / Rust-only noise that the official binary never emits
+    if s.startswith("Warning: Environment variable SUMO_HOME is not set properly"):
+        return None
+    if s.startswith("thread '") and " panicked at " in s:
+        return None
+    if s.startswith("note: run with `RUST_BACKTRACE=1`"):
+        return None
+    if s.startswith("Eclipse SUMO ") or s.startswith("Build features"):
+        return None
+    # times (texttest config_all: [0-9.]+ms / spent Xs / Duration Xs)
+    s = re.sub(r"[0-9.]+ms", "(TIME)", s)
+    s = re.sub(r"spent [0-9.]+s", "spent (TIME)", s)
+    s = re.sub(r"Duration [0-9.]+s", "Duration (TIME)", s)
+    # version-dependent banner (texttest config.sumo: Simulation.*started with)
+    s = re.sub(r"Simulation.*?started with", "Simulation started with", s)
+    # texttest error normalisations (config.sumo / config_all)
+    s = re.sub(r"Cannot find local schema '[^']*'", "Cannot find local schema", s)
+    s = re.sub(r"Cannot read local schema '[^']*'", "Cannot find local schema", s)
+    s = re.sub(r"primary document entity.*", "primary document entity <path_to_file>", s)
+    s = s.replace("(Datei oder Verzeichnis nicht gefunden)", "(No such file or directory)")
+    # paths: a quoted path (slash + dot) becomes its basename, so 'tools/oracle/cases/.../x.net.xml'
+    # matches the official 'x.net.xml'; quoted edge/lane ids such as '4/1to3/1' are left alone.
+    def shorten(m):
+        q = m.group(1)
+        if "/" in q and "." in q:
+            return "'" + q.replace("\\", "/").rstrip("/").split("/")[-1] + "'"
+        return m.group(0)
+    s = re.sub(r"'([^']*)'", shorten, s)
+    return s
+
+
+def normalised_lines(path):
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        return sorted(x for x in (normalise(ln) for ln in fh) if x is not None)
+
+
+def compare(ref, log):
+    want = normalised_lines(ref)
+    got = normalised_lines(log)
+    if want == got:
+        return 0
+    # report the first difference for run_all.sh's FAIL detail
+    for i in range(max(len(want), len(got))):
+        a = want[i] if i < len(want) else "<none>"
+        b = got[i] if i < len(got) else "<none>"
+        if a != b:
+            print("ref: " + a[:150])
+            print("got: " + b[:150])
+            break
+    return 1
+
+
+def main(argv):
+    if argv and argv[0] == "--compare":
+        if len(argv) != 3:
+            print("usage: park_tt_errors.py --compare <ref.errors> <our-log>", file=sys.stderr)
+            return 2
+        return compare(argv[1], argv[2])
+    if argv and argv[0] == "--unpark":
+        tests_sumo = os.path.realpath(os.environ.get("SUMO_TESTS", DEFAULT_TESTS_SUMO))
+        ok = True
+        for case in argv[1:]:
+            ok = unpark(case, tests_sumo) and ok
+        return 0 if ok else 2
+    if not argv:
+        print(__doc__)
+        return 2
+    for case in argv:
+        if case.startswith("-"):
+            print("unknown option: " + case, file=sys.stderr)
+            return 2
+        park(case)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
