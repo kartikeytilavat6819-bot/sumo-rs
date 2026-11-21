@@ -1,53 +1,30 @@
 #!/bin/bash
-# oc93 probe 2: our binary hangs inside a simulation step. Attach a stack
-# twice, 5s apart, to the stuck process, then show the last fcd timesteps.
+# oc93 probe 3: run our sumo UNDER gdb (ptrace_scope=1 -> only descendants),
+# interrupt inside the stuck step, and print the backtrace twice.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 OUR="$CARGO_TARGET_DIR/debug/sumo"
 OUT=/tmp/oc93
 mkdir -p "$OUT"
+echo "gdb: $(command -v gdb 2>/dev/null || echo none)"
 
-echo "gdb: $(command -v gdb 2>/dev/null || echo none)  eu-stack: $(command -v eu-stack 2>/dev/null || echo none)"
-
-stack_of() {
-  pid=$1; dst=$2
-  if command -v gdb >/dev/null 2>&1; then
-    gdb -p "$pid" -batch -ex 'thread apply all bt 40' >"$dst" 2>&1
-    if grep -qi 'ptrace: Operation not permitted' "$dst"; then :; fi
-  fi
-  if [ ! -s "$dst" ] || grep -qi 'ptrace: Operation not permitted\|No such process' "$dst"; then
-    if command -v eu-stack >/dev/null 2>&1; then
-      eu-stack -p "$pid" >"$dst" 2>&1
-    else
-      cat "/proc/$pid/stack" >"$dst" 2>&1
-    fi
-  fi
+gdb_bt() {
+  c=$1; secs=$2; tag=$3
+  dir="tools/oracle/cases/$c"
+  args=$(cat "$dir/sim.args" | tr -d '\r')
+  dst="$OUT/bt_$c.$tag.txt"
+  timeout -s INT "$secs" gdb -q -batch \
+      -ex 'set pagination off' -ex 'set confirm off' \
+      -ex 'run' -ex 'thread apply all bt 50' -ex 'kill' \
+      --args "$OUR" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+        --fcd-output "$OUT/$c.$tag.fcd.xml" --no-step-log true $args \
+      >"$dst" 2>&1
+  echo "===== $c bt $tag (${secs}s) ====="
+  grep -aE '^#[0-9]+|^Thread|SIGINT|Program received' "$dst" | head -34
+  echo "      last fcd time: $(grep -a '<timestep' "$OUT/$c.$tag.fcd.xml" 2>/dev/null | tail -1 | grep -ao 'time="[0-9.]*"' | tail -1)"
 }
 
 for c in tt_rail_siding_loop_3veh tt_rail_collision_frontal_collision; do
-  dir="tools/oracle/cases/$c"
-  args=$(cat "$dir/sim.args" | tr -d '\r')
-  fcd="$OUT/$c.fcd.xml"
-  log="$OUT/$c.log"
-  rm -f "$fcd" "$log"
-  "$OUR" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-      --fcd-output "$fcd" --no-step-log true $args >"$log" 2>&1 &
-  pid=$!
-  sleep 15
-  alive=no; kill -0 "$pid" 2>/dev/null && alive=yes
-  echo "===== $c pid=$pid alive=$alive ====="
-  s1="$OUT/$c.stack1.txt"; s2="$OUT/$c.stack2.txt"
-  stack_of "$pid" "$s1"
-  echo "--- stack 1 ---"
-  head -70 "$s1"
-  sleep 5
-  stack_of "$pid" "$s2"
-  echo "--- stack 2 ---"
-  head -70 "$s2"
-  echo "--- frames common to both (loop signature) ---"
-  grep -aoE '=>? ?\(.*\)|[A-Za-z_][A-Za-z0-9_:]*::[A-Za-z0-9_]+' "$s1" 2>/dev/null | sort | uniq -c | sort -rn | head -12
-  kill -9 "$pid" 2>/dev/null
-  wait "$pid" 2>/dev/null
-  echo "--- last fcd timesteps + vehicles ---"
-  grep -aE '<timestep|<vehicle' "$fcd" 2>/dev/null | tail -40
+  gdb_bt "$c" 20 a
+  gdb_bt "$c" 35 b
 done
