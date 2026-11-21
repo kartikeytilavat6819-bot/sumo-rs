@@ -5,12 +5,10 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 export PATH="/c/Users/karti/.cargo/bin:$PATH"
 
-OUR="$CARGO_TARGET_DIR/debug/sumo.exe"
-[ -x "$OUR" ] || OUR="$CARGO_TARGET_DIR/debug/sumo"
-CPP="$SUMO_PRISTINE_BIN/sumo.exe"
-[ -x "$CPP" ] || CPP="$SUMO_PRISTINE_BIN/sumo"
+OUR="$CARGO_TARGET_DIR/debug/sumo"
+CPP="$SUMO_PRISTINE_BIN/sumo"
 
-OUT=${OC93_OUT:-/c/Users/karti/Temp/oc93-measure}
+OUT=${OC93_OUT:-/tmp/oc93}
 mkdir -p "$OUT"
 
 CASES="tt_rail_siding_loop_3veh tt_rail_siding_siding_deadlock tt_rail_collision_frontal_collision tt_rail_bugs_double_stop"
