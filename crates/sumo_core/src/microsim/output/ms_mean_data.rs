@@ -5,6 +5,8 @@ use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetect
 use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
+fn oc95_trace() -> bool { std::env::var("OC95_TRACE").is_ok() }
+
 fn g_use_meso_sim() -> bool {
     crate::microsim::ms_globals::use_meso_sim()
 }
@@ -513,6 +515,16 @@ impl MSMeanData {
             }
         }
         let partialInterval = startTime < self.myInitTime;
+        if oc95_trace() {
+            eprintln!("OC95 write start={startTime} stop={stopTime} numReady={numReady} pending={} partial={partialInterval} track={}", self.myPendingIntervals.len(), self.myTrackVehicles);
+            for (ei, list) in self.myMeasures.iter().enumerate() {
+                for t in list.iter() {
+                    let tr = as_tracker(*t).m();
+                    let entries: Vec<(i32, i32, f64)> = tr.myCurrentData.iter().map(|x| (x.myNumVehicleEntered.get(), x.myNumVehicleLeft.get(), x.myValues.get_samples())).collect();
+                    eprintln!("OC95   edge[{ei}] ready={} entries={:?}", tr.get_num_ready(), entries);
+                }
+            }
+        }
         if numReady == 0 || self.myTrackVehicles || partialInterval {
             self.reset_only(stopTime);
         }
@@ -1507,6 +1519,9 @@ impl MSMeanData_MeanDataValueTracker {
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         let key = Ptr::from_mut(&mut *veh);
+        if oc95_trace() {
+            eprintln!("OC95 leave veh={} reason={:?} tracked={} front={:?}", veh.get_id(), reason, self.myTrackedData.contains_key(&key), self.myCurrentData.front().map(|e| (e.myNumVehicleEntered.get(), e.myNumVehicleLeft.get())));
+        }
         if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
             let entry = self.myTrackedData[&key].clone();
             entry.myNumVehicleLeft.set(entry.myNumVehicleLeft.get() + 1);
@@ -1545,6 +1560,9 @@ impl MSMeanData_MeanDataValueTracker {
             return true;
         }
         let key = Ptr::from_mut(&mut *veh);
+        if oc95_trace() {
+            eprintln!("OC95 enter veh={} reason={:?} applies={} tracked={} steps={}", veh.get_id(), reason, self.myParent.base.vehicle_applies(veh), self.myTrackedData.contains_key(&key), self.myCurrentData.len());
+        }
         if self.myParent.base.vehicle_applies(veh) && !self.myTrackedData.contains_key(&key) {
             let entry = self.myCurrentData.back().unwrap().clone();
             self.myTrackedData.insert(key, entry.clone());
