@@ -537,6 +537,9 @@ impl NBPTLine {
         let mut it: usize = 0;
         while it < self.myPTStops.len() {
             let stop = self.myPTStops[it].clone();
+            if self.get_line_id() == "13058433" {
+                eprintln!("DBGDEL line={} stop={} edge={} inSc={} edgeExists={}", self.get_line_id(), stop.get_id(), stop.get_edge_id(), sc.myPTStops.contains_key(&stop.get_id()), !ec.get_by_id(stop.get_edge_id()).is_null());
+            }
             // same lookup as NBPTStopCont::get(id) == nullptr
             if sc.myPTStops.get(&stop.get_id()).is_none() || ec.get_by_id(stop.get_edge_id()).is_null() {
                 write_warning(&format!("Removed invalid stop '{}' from line '{}'.", stop.get_id(), self.get_line_id()));

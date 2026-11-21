@@ -603,6 +603,12 @@ impl NBPTLineCont {
             return;
         }
         let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
+        if line.get_line_id() == "13058433" {
+            eprintln!("DBGREV line={} ways={} route={} stops={}", line.get_line_id(), waysIds.len(), line.get_route().len(), stops.len());
+            for s in stops.iter() {
+                eprintln!("DBGREV stop={} edge={} orig={} loose={}", s.get_id(), s.get_edge_id(), s.get_orig_edge_id(), s.is_loose());
+            }
+        }
         let mut stopsRevised: Vec<bool> = Vec::new();
         for stop0 in stops {
             stopsRevised.push(false);

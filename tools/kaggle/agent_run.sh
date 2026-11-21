@@ -13,10 +13,10 @@ echo "===== RE70 ptlines cpp ====="
 grep 'ptLine\|route\|busStop' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/cpp_out/ptlines.xml 2>/dev/null
 echo "===== RE70 ptlines rust ====="
 grep 'ptLine\|route\|busStop' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/rust_out/ptlines.xml 2>/dev/null
-echo "===== RE70 cpp.log relevant ====="
-grep -i '6753165050\|45876296\|Oberstaufen\|Removing pt stop\|invalid stop\|bidi\|Could not\|compatibility\|spreadType' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/cpp.log 2>/dev/null
+echo "===== RE70 cpp.log all warnings ====="
+grep -iE 'stop|line|bidi|route|revise' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/cpp.log 2>/dev/null
 echo "===== RE70 rust.log relevant ====="
-grep -i '6753165050\|45876296\|Oberstaufen\|Removing pt stop\|invalid stop\|bidi\|Could not\|compatibility\|spreadType\|DEBUG' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/rust.log 2>/dev/null
+grep -iE 'stop|line|bidi|route|revise|DBG|DEBUG' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_RE70/rust.log 2>/dev/null
 echo "===== signal_dir lane shape ====="
 grep -o '43595467_0"[^>]*' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_signal_dir_override_repair/cpp.net.xml 2>/dev/null
 grep -o '43595467_0"[^>]*' /tmp/netopts2/itt_nc_netconvert_import_OSM_railway_signal_dir_override_repair/rust.net.xml 2>/dev/null
