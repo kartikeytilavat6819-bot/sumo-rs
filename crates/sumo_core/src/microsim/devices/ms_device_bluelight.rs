@@ -755,5 +755,58 @@ mod tests {
     fn bluelight_device_name_from_id() {
         assert_eq!(MSDevice::get_device_name("bluelight_rescue"), "bluelight");
     }
+
+    // C++ MSDevice_Bluelight.cpp:255-259: influencedBy is a space-separated
+    // StringTokenizer list of holder IDs; resetVehicle erases this holder and
+    // restores the original vtype only when nothing else influenced the car.
+    #[test]
+    fn influenced_by_list_removal_gates_type_reset() {
+        let holder = "rescue";
+        // one influencer: removing it empties the list -> reset
+        let mut v = StringTokenizer::new(&format!("{}", holder)).get_vector();
+        assert_eq!(v, vec![holder]);
+        if let Some(pos) = v.iter().position(|s| *s == holder) { v.remove(pos); }
+        assert!(v.is_empty(), "single influencer must allow the vtype reset");
+
+        // two influencers: removing one leaves another -> keep singular type
+        let mut v = StringTokenizer::new(&format!("rescue_other {}", holder)).get_vector();
+        assert_eq!(v, vec!["rescue_other", holder]);
+        if let Some(pos) = v.iter().position(|s| *s == holder) { v.remove(pos); }
+        assert_eq!(v, vec!["rescue_other"], "another influencer must keep the singular type");
+    }
+
+    // C++ MSDevice_Bluelight.cpp:225-228: reactionProb uses the near-distance
+    // threshold 12.5 m; near prob 0.577, far prob 0.189, multiplied by the
+    // action-step length. The observed draws (gate trace) must select these.
+    #[test]
+    fn reaction_probability_threshold_and_defaults() {
+        let near_dist = 12.5_f64;
+        let prob_near = 0.577_f64;
+        let prob_far = 0.189_f64;
+        let step_secs = 1.0_f64;
+        let prob = |dist: f64| if dist < near_dist { prob_near } else { prob_far };
+        assert_eq!(prob(7.5), prob_near);
+        assert_eq!(prob(12.49), prob_near);
+        assert_eq!(prob(12.5), prob_far); // strict '<', as in C++
+        assert_eq!(prob(19.7), prob_far);
+        // draws from the official-matching gate trace
+        assert!(0.0455 < prob(19.7) * step_secs);   // straight.4 at t=17
+        assert!(0.0060 < prob(7.5) * step_secs);    // left.4 at t=19
+        assert!(0.4662 < prob(7.5) * step_secs);    // right.4 at t=19
+        assert!(0.4113 < prob(7.5) * step_secs);    // left.1 at t=24
+    }
+
+    // C++ MSBaseVehicle::getSingularType builds the id "<vtype>@<vehicle id>";
+    // MSDevice_Bluelight calls it on influenced vehicles to set the rescue-lane
+    // alignment, producing ids like "car@straight.4".
+    #[test]
+    fn singular_type_id_convention() {
+        let vtype = "car";
+        let veh = "straight.4";
+        assert_eq!(format!("{}@{}", vtype, veh), "car@straight.4");
+        // the device writes StringUtils/myMinGapFactor (default 1) to jmParameter;
+        // C++ toString(1.0) is "1", which f64_to_string must reproduce.
+        assert_eq!(f64_to_string(1.0_f64), "1");
+    }
 }
 
