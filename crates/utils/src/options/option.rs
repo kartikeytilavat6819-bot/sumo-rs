@@ -342,10 +342,8 @@ impl SumoOption {
     }
 
     pub fn reset_default(&mut self) {
+        // v1.28.0 release only sets the default flag; the snapshot's extra `if value_string.is_empty() { am_set = false }` is gone.
         self.have_the_default_value = true;
-        if self.value_string.is_empty() {
-            self.am_set = false;
-        }
     }
 
     pub fn get_description(&self) -> &str {
@@ -456,6 +454,7 @@ mod tests {
         let mut o = SumoOption::string();
         o.set("", "", false).unwrap();
         o.reset_default();
-        assert!(!o.is_set() && o.is_default());
+        // v1.28.0: resetDefault only restores the default flag; isSet stays true (snapshot cleared it for empty value strings).
+        assert!(o.is_set() && o.is_default());
     }
 }
