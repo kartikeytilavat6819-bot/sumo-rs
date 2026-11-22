@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_osm_parser/osm.xml -v --proj.utm --ignore-errors --output.street-names

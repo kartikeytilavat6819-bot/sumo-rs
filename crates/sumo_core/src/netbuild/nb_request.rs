@@ -14,8 +14,17 @@ fn all_connections(e: Ptr<NBEdge>) -> &'static Vec<NBEdge_Connection> {
 fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
     e.get_connections_from_lane(lane, Ptr::default(), -1)
 }
+fn find_connection<'a>(connections: &'a [NBEdge_Connection], fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> Option<&'a NBEdge_Connection> {
+    connections.iter().find(|c| c.fromLane == fromLane && c.toEdge == to && c.toLane == toLane)
+}
+
 fn edge_connection(e: Ptr<NBEdge>, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> NBEdge_Connection {
-    NBEdge_Connection::new(fromLane, to, toLane, false)
+    // C++ `from->getConnection(fromLane, to, toLane)` returns the *stored* connection, including
+    // mayDefinitelyPass (set by pass="1" in an input connections file). Fabricating a fresh one
+    // drops that flag and makes rightTurnConflict/mergeConflict yield wrongly (ticket6497).
+    find_connection(e.get_connections(), fromLane, to, toLane)
+        .cloned()
+        .unwrap_or_else(|| NBEdge_Connection::new(fromLane, to, toLane, false))
 }
 // shortcut: C++ Edge::getNumLanes-based vectors are copied into leaked boxes so the Ptr-typed fields outlive the call, upgrade: store the vectors by value
 fn leak_vec<T>(v: T) -> Ptr<T> {
@@ -26,6 +35,23 @@ fn next_cw(n: usize, i: usize) -> usize {
 }
 fn next_ccw(n: usize, i: usize) -> usize {
     if i == 0 { n - 1 } else { i - 1 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edge_connection_preserves_may_definitely_pass() {
+        // C++ netbuild/NBEdge.cpp getConnection(int,int,int) returns the stored Connection;
+        // NBRequest.cpp:1097/845/818 use mayDefinitelyPass to suppress right/merge conflicts.
+        // ticket6497: the input plain connection sets pass="1" on gneE6 lane 1 -> -gneE3 lane 1.
+        let to = Ptr::null();
+        let conns = vec![NBEdge_Connection::new(1, to, 1, true)];
+        let found = find_connection(&conns, 1, to, 1).unwrap();
+        assert!(found.mayDefinitelyPass);
+        assert!(find_connection(&conns, 0, to, 1).is_none());
+    }
 }
 
 /// C++ typedef `std::vector<LinkInfoCont> NBRequest::CombinationsCont`

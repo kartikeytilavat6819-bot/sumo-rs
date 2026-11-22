@@ -1,0 +1,1 @@
+--write-license -n tools/oracle/cases/itt_nc_netconvert_import_XML_alter_tls_program_no_plain_conns/input_nodes.nod.xml -e tools/oracle/cases/itt_nc_netconvert_import_XML_alter_tls_program_no_plain_conns/input_edges.edg.xml --tllogic-files=tools/oracle/cases/itt_nc_netconvert_import_XML_alter_tls_program_no_plain_conns/input_plain.tll.xml --no-turnarounds
