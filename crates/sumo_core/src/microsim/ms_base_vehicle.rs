@@ -1673,6 +1673,11 @@ impl MSBaseVehicle {
                 self.get_id(), info, onInit, t, source.get_id(), sink.get_id(), ids, routeCost, previousCost, savingsOk, hasSkipped,
                 self.myParameter.departEdge, self.myCurrEdge, self.myRoute.size(), oldStart,
                 oldEdgesRemaining.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
+            if std::env::var("OC98DBG").is_ok() && self.get_id() == "v.25" {
+                eprintln!("OC98DBG 17583 v25 route id={} allEdges={:?}",
+                    self.myRoute.get_id(),
+                    self.myRoute.get_edges().iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
+            }
         }
         if savingsOk {
             self.replace_route_edges(&mut edges, routeCost, savings, info, onInit, false, hasSkipped, Ptr::default());
