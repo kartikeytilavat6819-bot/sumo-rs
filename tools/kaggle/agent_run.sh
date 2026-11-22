@@ -28,6 +28,6 @@ python tools/oracle/compare_sim.py --tripinfo "$T/ref.tripinfo.xml" "$OUT/taxi.t
 echo "--- fcd diff ---"
 python tools/oracle/compare_sim.py --fcd "$T/ref.fcd.xml" "$OUT/taxi.fcd.xml" 2>&1 | head -30
 echo "--- stat diff ---"
-python tools/oracle/compare_sim.py --stat "$T/ref.stat.xml" "$OUT/taxi.stat.xml" 2>&1 | head -20
+python tools/oracle/compare_stat.py "$T/ref.stat.xml" "$OUT/taxi.stat.xml" 2>&1 | head -20
 
 echo "=== AGENT RUN DONE ==="
