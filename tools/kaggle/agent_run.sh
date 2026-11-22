@@ -17,10 +17,11 @@ for c in OSM_buildings_from_relation OSM_inner_shape OSM_water_incomplete XML_la
 done
 for t in duarouter jtrrouter; do
   echo "== $t oracle"
-  OUT=$OUT/$t bash tools/oracle/run_$t.sh >$OUT/$t.stdout 2>&1
-  awk -F'\t' 'NR>1 && $2!="PASS" {print $1"\t"$2"\t"$5}' $OUT/$t/results.tsv | cut -c1-240 | head -20
-  awk -F'\t' 'NR>1 && $2=="FAIL" {print $1}' $OUT/$t/results.tsv | head -4 | while read c; do
-    echo "-- $t $c"; diff -r $OUT/$t/$c/ref $OUT/$t/$c/cand | head -8 | cut -c1-200
+  R=$OUT/$t
+  OUT=$R bash tools/oracle/run_$t.sh >$R.stdout 2>&1
+  awk -F'\t' 'NR>1 && $2!="PASS" {print $1"\t"$2"\t"$5}' $R/results.tsv | cut -c1-240 | head -20
+  awk -F'\t' 'NR>1 && $2=="FAIL" {print $1}' $R/results.tsv | head -4 | while read c; do
+    echo "-- $t $c"; diff -r $R/$c/ref $R/$c/cand | head -8 | cut -c1-200
   done
 done
 echo "== depart"
