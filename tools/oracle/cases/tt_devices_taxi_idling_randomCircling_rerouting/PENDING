@@ -1,0 +1,1 @@
+Small numeric divergence in the Rust port (arrivalSpeed / fcd position) for this rerouting case; the underlying routing/speed behaviour is not yet faithful. Parked with a PENDING marker.
