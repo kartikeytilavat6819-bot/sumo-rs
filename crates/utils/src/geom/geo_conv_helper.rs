@@ -501,17 +501,22 @@ impl GeoConvHelper {
     }
 }
 
-/// Transverse Mercator as PROJ's default `etmerc` (Poder/Engsager; here the Kruger series of order 6)
+/// Transverse Mercator, Poder/Engsager "exact" algorithm (PROJ 9.4 src/projections/tmerc.cpp).
+/// Field names mirror PROJ's `PoderEngsager`: Qn has no `a` factor, Zb is the origin northing,
+/// x0/y0 are the false easting/northing applied by PROJ's fwd_finalize/inv_prepare.
 #[derive(Clone, Copy, Debug)]
 struct Etmerc {
     lon0: f64,
     x0: f64,
     y0: f64,
-    /// k0 times the rectifying radius
+    a: f64,
+    ra: f64,
     qn: f64,
-    e: f64,
-    alpha: [f64; 6],
-    beta: [f64; 6],
+    zb: f64,
+    cgb: [f64; 6],
+    cbg: [f64; 6],
+    utg: [f64; 6],
+    gtu: [f64; 6],
 }
 
 /// PROJ `adjlon`: wraps a longitude difference into [-pi, pi]
@@ -519,37 +524,110 @@ fn adjlon(lon: f64) -> f64 {
     if lon.abs() <= PI { lon } else { (lon + PI).rem_euclid(2. * PI) - PI }
 }
 
+/// PROJ `gatg`: real Clenshaw summation of `sum p[i] * sin(2(i+1) B)`, plus B.
+fn gatg(p: &[f64; 6], b: f64, cos_2b: f64, sin_2b: f64) -> f64 {
+    let two_cos_2b = 2. * cos_2b;
+    let mut h = 0.;
+    let mut h2 = 0.;
+    let mut h1 = p[5];
+    for i in (0..5).rev() {
+        h = -h2 + two_cos_2b * h1 + p[i];
+        h2 = h1;
+        h1 = h;
+    }
+    b + h * sin_2b
+}
+
+/// PROJ complex Clenshaw summation; returns (R, I).
+fn clen_s(a: &[f64; 6], sin_arg_r: f64, cos_arg_r: f64, sinh_arg_i: f64, cosh_arg_i: f64) -> (f64, f64) {
+    let mut r = 2. * cos_arg_r * cosh_arg_i;
+    let mut i = -2. * sin_arg_r * sinh_arg_i;
+    let mut hi1 = 0.;
+    let mut hr1 = 0.;
+    let mut hi = 0.;
+    let mut hr = a[5];
+    for j in (0..5).rev() {
+        let hr2 = hr1;
+        let hi2 = hi1;
+        hr1 = hr;
+        hi1 = hi;
+        hr = -hr2 + r * hr1 - i * hi1 + a[j];
+        hi = -hi2 + i * hr1 + r * hi1;
+    }
+    r = sin_arg_r * cosh_arg_i;
+    i = cos_arg_r * sinh_arg_i;
+    (r * hr - i * hi, r * hi + i * hr)
+}
+
+/// PROJ `clens`: real Clenshaw summation of `sum a[i] * sin(2(i+1) arg)`.
+fn clens(a: &[f64; 6], arg_r: f64) -> f64 {
+    let cos_arg_r = arg_r.cos();
+    let r = 2. * cos_arg_r;
+    let mut hr1 = 0.;
+    let mut hr = a[5];
+    for j in (0..5).rev() {
+        let hr2 = hr1;
+        hr1 = hr;
+        hr = -hr2 + r * hr1 + a[j];
+    }
+    arg_r.sin() * hr
+}
+
 impl Etmerc {
-    fn new(a: f64, rf: f64, k0: f64, lon0: f64, x0: f64, y0: f64) -> Etmerc {
+    /// PROJ `setup_exact`: all six coefficient series, Qn (no `a`), Zb.
+    fn new(a: f64, rf: f64, k0: f64, lon0: f64, x0: f64, y0: f64, lat0: f64) -> Etmerc {
         let f = 1. / rf;
         let n = f / (2. - f);
-        let e = (f * (2. - f)).sqrt();
-        let n2 = n * n;
-        let n3 = n2 * n;
-        let n4 = n3 * n;
-        let n5 = n4 * n;
-        let n6 = n5 * n;
-        let big_a = a / (1. + n) * (1. + n2 / 4. + n4 / 64. + n6 / 256.);
-        let alpha = [
-            n / 2. - 2. * n2 / 3. + 5. * n3 / 16. + 41. * n4 / 180. - 127. * n5 / 288. + 7891. * n6 / 37800.,
-            13. * n2 / 48. - 3. * n3 / 5. + 557. * n4 / 1440. + 281. * n5 / 630. - 1983433. * n6 / 1935360.,
-            61. * n3 / 240. - 103. * n4 / 140. + 15061. * n5 / 26880. + 167603. * n6 / 181440.,
-            49561. * n4 / 161280. - 179. * n5 / 168. + 6601661. * n6 / 7257600.,
-            34729. * n5 / 80640. - 3418889. * n6 / 1995840.,
-            212378941. * n6 / 319334400.,
-        ];
-        let beta = [
-            n / 2. - 2. * n2 / 3. + 37. * n3 / 96. - n4 / 360. - 81. * n5 / 512. + 96199. * n6 / 604800.,
-            n2 / 48. + n3 / 15. - 437. * n4 / 1440. + 46. * n5 / 105. - 1118711. * n6 / 3870720.,
-            17. * n3 / 480. - 37. * n4 / 840. - 209. * n5 / 4480. + 5569. * n6 / 9676800.,
-            4397. * n4 / 161280. - 11. * n5 / 504. - 830251. * n6 / 7257600.,
-            4583. * n5 / 161280. - 108847. * n6 / 3991680.,
-            20648693. * n6 / 638668800.,
-        ];
-        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
+        let mut np = n;
+        let mut cgb = [0.; 6];
+        let mut cbg = [0.; 6];
+        cgb[0] = n * (2. + n * (-2. / 3. + n * (-2. + n * (116. / 45. + n * (26. / 45. + n * (-2854. / 675.))))));
+        cbg[0] = n * (-2. + n * (2. / 3. + n * (4. / 3. + n * (-82. / 45. + n * (32. / 45. + n * (4642. / 4725.))))));
+        np *= n;
+        cgb[1] = np * (7. / 3. + n * (-8. / 5. + n * (-227. / 45. + n * (2704. / 315. + n * (2323. / 945.)))));
+        cbg[1] = np * (5. / 3. + n * (-16. / 15. + n * (-13. / 9. + n * (904. / 315. + n * (-1522. / 945.)))));
+        np *= n;
+        cgb[2] = np * (56. / 15. + n * (-136. / 35. + n * (-1262. / 105. + n * (73814. / 2835.))));
+        cbg[2] = np * (-26. / 15. + n * (34. / 21. + n * (8. / 5. + n * (-12686. / 2835.))));
+        np *= n;
+        cgb[3] = np * (4279. / 630. + n * (-332. / 35. + n * (-399572. / 14175.)));
+        cbg[3] = np * (1237. / 630. + n * (-12. / 5. + n * (-24832. / 14175.)));
+        np *= n;
+        cgb[4] = np * (4174. / 315. + n * (-144838. / 6237.));
+        cbg[4] = np * (-734. / 315. + n * (109598. / 31185.));
+        np *= n;
+        cgb[5] = np * (601676. / 22275.);
+        cbg[5] = np * (444337. / 155925.);
+
+        np = n * n;
+        let qn = k0 / (1. + n) * (1. + np * (1. / 4. + np * (1. / 64. + np / 256.)));
+
+        let mut utg = [0.; 6];
+        let mut gtu = [0.; 6];
+        utg[0] = n * (-0.5 + n * (2. / 3. + n * (-37. / 96. + n * (1. / 360. + n * (81. / 512. + n * (-96199. / 604800.))))));
+        gtu[0] = n * (0.5 + n * (-2. / 3. + n * (5. / 16. + n * (41. / 180. + n * (-127. / 288. + n * (7891. / 37800.))))));
+        utg[1] = np * (-1. / 48. + n * (-1. / 15. + n * (437. / 1440. + n * (-46. / 105. + n * (1118711. / 3870720.)))));
+        gtu[1] = np * (13. / 48. + n * (-3. / 5. + n * (557. / 1440. + n * (281. / 630. + n * (-1983433. / 1935360.)))));
+        np *= n;
+        utg[2] = np * (-17. / 480. + n * (37. / 840. + n * (209. / 4480. + n * (-5569. / 90720.))));
+        gtu[2] = np * (61. / 240. + n * (-103. / 140. + n * (15061. / 26880. + n * (167603. / 181440.))));
+        np *= n;
+        utg[3] = np * (-4397. / 161280. + n * (11. / 504. + n * (830251. / 7257600.)));
+        gtu[3] = np * (49561. / 161280. + n * (-179. / 168. + n * (6601661. / 7257600.)));
+        np *= n;
+        utg[4] = np * (-4583. / 161280. + n * (108847. / 3991680.));
+        gtu[4] = np * (34729. / 80640. + n * (-3418889. / 1995840.));
+        np *= n;
+        utg[5] = np * (-20648693. / 638668800.);
+        gtu[5] = np * (212378941. / 319334400.);
+
+        let lat0 = deg2rad(lat0);
+        let z = gatg(&cbg, lat0, (2. * lat0).cos(), (2. * lat0).sin());
+        let zb = -qn * (z + clens(&gtu, 2. * z));
+        Etmerc { lon0: deg2rad(lon0), x0, y0, a, ra: 1. / a, qn, zb, cgb, cbg, utg, gtu }
     }
 
-    /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
+    /// Parses the `+proj=utm` and `+proj=tmerc` strings this port projects; None for anything else.
     fn from_proj(proj: &str) -> Option<Etmerc> {
         let mut kind = None;
         let mut zone = None;
@@ -590,53 +668,69 @@ impl Etmerc {
                 if !(1..=60).contains(&zone) {
                     return None;
                 }
-                Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }))
+                Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }, 0.))
             }
-            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0, x0, y0)),
+            "tmerc" => Some(Etmerc::new(a, rf, k0, lon0, x0, y0, lat0)),
             _ => None,
         }
     }
 
-    /// forward: lon/lat in radians to easting/northing
+    /// PROJ `exact_e_fwd` followed by `fwd_finalize`: lon/lat (radians) -> easting/northing (metres).
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
         let lam = adjlon(lon - self.lon0);
-        let s = lat.sin();
-        let psi = s.atanh() - self.e * (self.e * s).atanh();
-        let t = psi.sinh();
-        let xi0 = t.atan2(lam.cos());
-        let eta0 = (lam.sin() / (1. + t * t).sqrt()).atanh();
-        let (mut xi, mut eta) = (xi0, eta0);
-        for (j, a) in self.alpha.iter().enumerate() {
-            let k = 2. * (j + 1) as f64;
-            xi += a * (k * xi0).sin() * (k * eta0).cosh();
-            eta += a * (k * xi0).cos() * (k * eta0).sinh();
-        }
-        (self.x0 + self.qn * eta, self.y0 + self.qn * xi)
+        let mut cn = gatg(&self.cbg, lat, (2. * lat).cos(), (2. * lat).sin());
+        let sin_cn = cn.sin();
+        let cos_cn = cn.cos();
+        let sin_ce = lam.sin();
+        let cos_ce = lam.cos();
+        let cos_cn_cos_ce = cos_cn * cos_ce;
+        cn = sin_cn.atan2(cos_cn_cos_ce);
+        let inv_denom_tan_ce = 1. / sin_cn.hypot(cos_cn_cos_ce);
+        let tan_ce = sin_ce * cos_cn * inv_denom_tan_ce;
+        let mut ce = tan_ce.asinh();
+        let two_inv_denom_tan_ce = 2. * inv_denom_tan_ce;
+        let two_inv_denom_tan_ce_square = two_inv_denom_tan_ce * inv_denom_tan_ce;
+        let tmp_r = cos_cn_cos_ce * two_inv_denom_tan_ce_square;
+        let sin_arg_r = sin_cn * tmp_r;
+        let cos_arg_r = cos_cn_cos_ce * tmp_r - 1.;
+        let sinh_arg_i = tan_ce * two_inv_denom_tan_ce;
+        let cosh_arg_i = two_inv_denom_tan_ce_square - 1.;
+        let (_d_cn, d_ce) = clen_s(&self.gtu, sin_arg_r, cos_arg_r, sinh_arg_i, cosh_arg_i);
+        cn += _d_cn;
+        ce += d_ce;
+        let ry = self.qn * cn + self.zb;
+        let rx = self.qn * ce;
+        // PROJ fwd_finalize (fr_meter = 1): x = a * rx + x0, y = a * ry + y0
+        (self.a * rx + self.x0, self.a * ry + self.y0)
     }
 
-    /// inverse: easting/northing to lon/lat in radians
+    /// PROJ `inv_prepare` + `exact_e_inv` + `inv_finalize`: easting/northing (metres) -> lon/lat (radians).
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
-        let xi = (y - self.y0) / self.qn;
-        let eta = (x - self.x0) / self.qn;
-        let (mut xi0, mut eta0) = (xi, eta);
-        for (j, b) in self.beta.iter().enumerate() {
-            let k = 2. * (j + 1) as f64;
-            xi0 -= b * (k * xi).sin() * (k * eta).cosh();
-            eta0 -= b * (k * xi).cos() * (k * eta).sinh();
-        }
-        let tau = xi0.sin() / (eta0.sinh().powi(2) + xi0.cos().powi(2)).sqrt();
-        let lam = eta0.sinh().atan2(xi0.cos());
-        let psi = tau.asinh();
-        let mut phi = tau.atan();
-        for _ in 0..50 {
-            let next = (psi + self.e * (self.e * phi.sin()).atanh()).tanh().asin();
-            let done = (next - phi).abs() < 1e-15;
-            phi = next;
-            if done {
-                break;
-            }
-        }
-        (adjlon(self.lon0 + lam), phi)
+        // PROJ inv_prepare (CLASSIC, to_meter = 1): de-offset then multiply by ra = 1/a
+        let cx = (x - self.x0) * self.ra;
+        let cy = (y - self.y0) * self.ra;
+        let mut cn = (cy - self.zb) / self.qn;
+        let mut ce = cx / self.qn;
+        let sin_arg_r = (2. * cn).sin();
+        let cos_arg_r = (2. * cn).cos();
+        let exp_2_ce = (2. * ce).exp();
+        let half_inv_exp_2_ce = 0.5 / exp_2_ce;
+        let sinh_arg_i = 0.5 * exp_2_ce - half_inv_exp_2_ce;
+        let cosh_arg_i = 0.5 * exp_2_ce + half_inv_exp_2_ce;
+        let (_d_cn, d_ce) = clen_s(&self.utg, sin_arg_r, cos_arg_r, sinh_arg_i, cosh_arg_i);
+        cn += _d_cn;
+        ce += d_ce;
+        let sin_cn = cn.sin();
+        let cos_cn = cn.cos();
+        let sinh_ce = ce.sinh();
+        ce = sinh_ce.atan2(cos_cn);
+        let modulus_ce = sinh_ce.hypot(cos_cn);
+        cn = sin_cn.atan2(modulus_ce);
+        let tmp = 2. * modulus_ce / (sinh_ce * sinh_ce + 1.);
+        let sin_2_cn = sin_cn * tmp;
+        let cos_2_cn = tmp * modulus_ce - 1.;
+        let phi = gatg(&self.cgb, cn, cos_2_cn, sin_2_cn);
+        (adjlon(ce + self.lon0), phi)
     }
 }
 
