@@ -8,6 +8,11 @@ use utils::common::util_exceptions::ProcessError;
 use crate::utils::router::router_edge::RouterEdge;
 use crate::utils::map_matcher::{MapEdge, MapLane, MapMatcher, MapMatcherHost, MapNode};
 
+/// C++ strict_fstream (zstr.hpp) message on a failed open in LandmarkLookupTable's constructor.
+fn strict_fstream_open_error(filename: &str, reason: &str) -> String {
+    format!("strict_fstream: open('{}',in|binary): open failed: {}", filename, reason)
+}
+
 /// Computes the shortest path through a network using the A* algorithm.
 /// C++ class `AbstractLookupTable` (utils/router/AStarLookupTable.h)
 pub struct AbstractLookupTable<E, V> {
@@ -436,7 +441,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
             Err(e) => {
                 let msg = e.to_string();
                 let reason = msg.split(" (os error").next().unwrap_or(&msg);
-                panic!("{}", ProcessError::new(format!("strict_fstream: open('{}',in|binary): open failed: {}", filename, reason)));
+                panic!("{}", ProcessError::new(strict_fstream_open_error(filename, reason)));
             }
         };
         let mut landmarks: Vec<Ptr<E>> = Vec::new();
@@ -752,6 +757,21 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarLookupTableKind<E, V, M> {
 }
 
 pub const UNREACHABLE: f64 = f64::MAX / 1000.0;
+
+#[cfg(test)]
+mod tests {
+    use super::strict_fstream_open_error;
+
+    // C++ zstr::ifstream/strict_fstream (AStarLookupTable.h:126-132) throws this exact text
+    // when the landmark file cannot be opened; measured from the official 1.28.0 binary.
+    #[test]
+    fn strict_fstream_open_error_matches_official() {
+        assert_eq!(
+            strict_fstream_open_error("lookuptable", "No such file or directory"),
+            "strict_fstream: open('lookuptable',in|binary): open failed: No such file or directory"
+        );
+    }
+}
 
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
