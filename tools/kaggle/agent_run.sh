@@ -3,6 +3,7 @@
 # Runs from repo root. Outputs under /tmp/oc104. Prints exit codes, first stderr lines,
 # and the first differing lines against the committed refs.
 OUT=/tmp/oc104; mkdir -p "$OUT"
+ROOT=$(pwd)
 OFF="${SUMO_PRISTINE_BIN:?}/sumo"
 OURS="${CARGO_TARGET_DIR:-target}/debug/sumo"
 for c in $(cat .oc_haiku_rows.txt); do
@@ -12,7 +13,6 @@ for c in $(cat .oc_haiku_rows.txt); do
   for side in off ours; do
     bin=$OFF; [ $side = ours ] && bin=$OURS
     rdir="$OUT/$c.$side"; rm -rf "$rdir"; mkdir -p "$rdir"
-    # shellcheck disable=SC2086
     (cd "$rdir" && timeout 600 "$bin" -n "$ROOT/$d/ref_simple.net.xml" -r "$ROOT/$d/routes.rou" \
         --no-step-log true $EXTRA >out.txt 2>err.txt; echo $? > rc.txt)
   done
