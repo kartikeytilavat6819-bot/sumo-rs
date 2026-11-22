@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -t -e 300 --no-duration-log -a tools/oracle/cases/tt_tls_actuated_coordination_noTraffic_earliestEnd/input_additional.add.xml,tools/oracle/cases/tt_tls_actuated_coordination_noTraffic_earliestEnd/input_additional2.add.xml
