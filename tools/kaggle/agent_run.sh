@@ -32,6 +32,23 @@ echo "-- tripinfo diff --"
 python tools/oracle/compare_sim.py --tripinfo "$T/ref.tripinfo.xml" "$OUT/taxi.ti.xml" 2>&1 | head -20
 echo "-- fcd diff --"
 python tools/oracle/compare_sim.py --fcd "$T/ref.fcd.xml" "$OUT/taxi.fcd.xml" 2>&1 | head -20
+echo "-- all fcd x diffs --"
+python - "$T/ref.fcd.xml" "$OUT/taxi.fcd.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+a = ET.parse(sys.argv[1]).getroot(); b = ET.parse(sys.argv[2]).getroot()
+sa = {tim.attrib['time']: tim for tim in a.iter('timestep')}
+sb = {tim.attrib['time']: tim for tim in b.iter('timestep')}
+n = 0
+for t in sorted(set(sa) & set(sb)):
+    va = {v.attrib['id']: v.attrib for v in sa[t].iter('vehicle')}
+    vb = {v.attrib['id']: v.attrib for v in sb[t].iter('vehicle')}
+    for vid in set(va) & set(vb):
+        for k in ('x','y','angle','speed','pos','lane'):
+            if va[vid].get(k) != vb[vid].get(k):
+                print(t, vid, k, 'ref=' + str(va[vid].get(k)), 'cand=' + str(vb[vid].get(k)))
+                n += 1
+                if n >= 30: sys.exit(0)
+PY
 echo "-- stat diff --"
 python tools/oracle/compare_stat.py "$T/ref.stat.xml" "$OUT/taxi.stat.xml" 2>&1 | head -20
 echo "=== AGENT RUN DONE ==="
