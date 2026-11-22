@@ -285,52 +285,6 @@ impl NWWriter_DlrNavteq {
         device.write_attr("vehicleTypeCode", &Self::get_allowed_types(c.permissions));
     }
 
-    /// C++: `void NWWriter_DlrNavteq::writeProhibitedManoeuvresAttrs(OutputDevice &, const NBNodeCont &)` [static]
-    // void
-    // NWWriter_DlrNavteq::writeProhibitedManoeuvresAttrs(OutputDevice& device, const NBNodeCont& nc) {
-    //     // similar to writeProhibitedManoeuvres but as xml/csv/parquet
-    //     for (std::map<std::string, NBNode*>::const_iterator i = nc.begin(); i != nc.end(); ++i) {
-    //         NBNode* n = (*i).second;
-    //         const EdgeVector& incoming = n->getIncomingEdges();
-    //         const EdgeVector& outgoing = n->getOutgoingEdges();
-    //         for (EdgeVector::const_iterator j = incoming.begin(); j != incoming.end(); ++j) {
-    //             NBEdge* inEdge = *j;
-    //             const SVCPermissions inPerm = inEdge->getPermissions();
-    //             for (EdgeVector::const_iterator k = outgoing.begin(); k != outgoing.end(); ++k) {
-    //                 NBEdge* outEdge = *k;
-    //                 const SVCPermissions outPerm = outEdge->getPermissions();
-    //                 const SVCPermissions commonPerm = inPerm & outPerm;
-    //                 if (commonPerm != 0 && commonPerm != SVC_PEDESTRIAN && !inEdge->isConnectedTo(outEdge)) {
-    //                     device.openTag(SUMO_TAG_PROHIBITED_CONNECTION);
-    //                     device.writeAttr(SUMO_ATTR_FROM, inEdge->getID());
-    //                     device.writeAttr(SUMO_ATTR_TO, outEdge->getID());
-    //                     device.closeTag();
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn write_prohibited_manoeuvres_attrs(device: &mut OutputDevice, nc: &NBNodeCont) {
-        for n in nc.myNodes.values() {
-            let incoming = n.get_incoming_edges();
-            let outgoing = n.get_outgoing_edges();
-            for in_edge in incoming {
-                let in_perm = in_edge.get_permissions(-1);
-                for out_edge in outgoing {
-                    let out_perm = out_edge.get_permissions(-1);
-                    let common_perm = in_perm & out_perm;
-                    if common_perm != 0 && common_perm != SVC_PEDESTRIAN && !in_edge.is_connected_to(*out_edge, false) {
-                        device.open_tag_id(SUMO_TAG_PROHIBITED_CONNECTION);
-                        device.write_attr(SUMO_ATTR_FROM, in_edge.get_id());
-                        device.write_attr(SUMO_ATTR_TO, out_edge.get_id());
-                        device.close_tag("");
-                    }
-                }
-            }
-        }
-    }
-
     /// C++: `void NWWriter_DlrNavteq::writeNodesUnsplitted(const OptionsCont &, const NBNodeCont &, const NBEdgeCont &, std::map<const NBEdge *, std::string> &)` [static, private]
     /// Writes the nodes_unsplitted file
     // void

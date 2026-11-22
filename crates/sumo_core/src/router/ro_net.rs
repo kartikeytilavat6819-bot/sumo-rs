@@ -74,9 +74,6 @@ pub struct RONet {
     pub myDiscardedRouteNo: i32,
     /// The number of written routes
     pub myWrittenRouteNo: i32,
-    /// Whether traffic was excluded by the begin time or processed for output.
-    pub myHaveSkippedRoutes: bool,
-    pub myHaveProcessedRoutes: bool,
     /// Whether the network contains edges which not all vehicles may pass
     pub myHavePermissions: bool,
     /// The vehicle class specific speed restrictions
@@ -436,8 +433,6 @@ impl RONet {
             myReadRouteNo: 0,
             myDiscardedRouteNo: 0,
             myWrittenRouteNo: 0,
-            myHaveSkippedRoutes: false,
-            myHaveProcessedRoutes: false,
             myHavePermissions: false,
             mySpeedRestrictions: BTreeMap::new(),
             myHaveParamRestrictions: false,
@@ -1590,34 +1585,6 @@ impl RONet {
     #[allow(unused_variables)]
     pub fn further_stored(&mut self) -> bool {
         !self.myRoutables.is_empty() || (!self.myFlows.is_empty() && self.myHaveActiveFlows) || !self.myContainers.is_empty()
-    }
-
-    /// C++: `void RONet::routeSkipped()`
-    /// Record routes excluded by the begin time.
-    // void routeSkipped() {
-    //         myHaveSkippedRoutes = true;
-    //     }
-    #[allow(unused_variables)]
-    pub fn route_skipped(&mut self) {
-        self.myHaveSkippedRoutes = true;
-    }
-
-    /// C++: `bool RONet::haveSkippedRoutes() const` [const]
-    // bool haveSkippedRoutes() const {
-    //         return myHaveSkippedRoutes;
-    //     }
-    #[allow(unused_variables)]
-    pub fn have_skipped_routes(&self) -> bool {
-        self.myHaveSkippedRoutes
-    }
-
-    /// C++: `bool RONet::haveProcessedRoutes() const` [const]
-    // bool haveProcessedRoutes() const {
-    //         return myHaveProcessedRoutes;
-    //     }
-    #[allow(unused_variables)]
-    pub fn have_processed_routes(&self) -> bool {
-        self.myHaveProcessedRoutes
     }
 
     /// C++: `void RONet::openOutput(const OptionsCont &)`
