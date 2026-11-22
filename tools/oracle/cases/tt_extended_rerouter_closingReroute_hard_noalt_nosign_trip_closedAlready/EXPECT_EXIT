@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: extended/rerouter/closingReroute/hard_noalt_nosign/trip_closedAlready/{errors,output}.sumo

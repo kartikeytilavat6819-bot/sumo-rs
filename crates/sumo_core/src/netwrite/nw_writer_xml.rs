@@ -6,7 +6,7 @@ use utils::common::std_defs::{g_precision, g_precision_geo, NETWORK_VERSION};
 use utils::common::string_utils::escape_xml;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, write_permissions, SVCPermissions, SVC_ALL, SVC_IGNORING, SVC_PEDESTRIAN, SVC_UNSPECIFIED};
 use utils::common::to_string::{join_to_string, mm_version_to_string};
-use utils::iodevices::output_device::OutputDeviceRef;
+use utils::iodevices::output_device::{OutputDevice, OutputDeviceRef};
 use utils::xml::sumo_xml_definitions::{LaneSpreadFunctions, TrafficLightTypes};
 
 // NBNode::UNSPECIFIED_RADIUS and NBEdge::UNSPECIFIED_* (C++ static members, NBNode.cpp / NBEdge.cpp)
@@ -30,7 +30,13 @@ fn opt_str(oc: &OptionsCont, name: &str) -> String {
 
 /// OutputDevice::getDevice(name)
 fn get_device(name: &str) -> OutputDeviceRef {
-    or_panic(OutputDevice::get_device(name, true))
+    match OutputDevice::get_device(name, true) {
+        Ok(d) => d,
+        Err(e) => {
+            // C++ throws ProcessError here; main's catch reports it and exits 1.
+            std::panic::panic_any(e);
+        }
+    }
 }
 
 /// GeoConvHelper::getFinal() (copied; the closure form cannot be held across the writers)
@@ -226,7 +232,12 @@ impl NWWriter_XML {
         or_panic(tmp.set_default("plain-output-prefix", ""));
 
         let configPath = format!("{prefix}.netccfg");
-        let mut out = std::fs::File::create(&configPath).unwrap_or_else(|_| panic!("Could not save configuration to '{configPath}'"));
+        // v1_28_0 NWWriter_XML.cpp:213 throws ProcessError when the config file cannot be
+        // created; main's catch reports it and exits 1.
+        let mut out = match std::fs::File::create(&configPath) {
+            Ok(f) => f,
+            Err(_) => std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Could not save configuration to '{configPath}'"))),
+        };
         let mut os = String::new();
         or_panic(tmp.write_configuration(&mut os, true, false, false, "", false, false, ""));
         std::io::Write::write_all(&mut out, os.as_bytes()).unwrap_or_else(|e| panic!("{e}"));
@@ -727,14 +738,7 @@ impl NWWriter_XML {
 
         or_panic(edevice.close());
         or_panic(cdevice.close());
-
-        if dlrNavteq {
-            let cdevice2_ref = get_device(&format!("{prefix}.cpr.{ext}"));
-            let mut cdevice2 = cdevice2_ref.borrow_mut();
-            cdevice2.write_xml_header("connections", "connections_file.xsd", BTreeMap::new(), true);
-            NWWriter_DlrNavteq::write_prohibited_manoeuvres_attrs(&mut cdevice2, nc);
-            or_panic(cdevice2.close());
-        }
+        // v1_28_0 NWWriter_XML.cpp:347-349 ends here; the *.cpr.* output was added later.
     }
 
     /// C++: `void NWWriter_XML::writeTrafficLights(const std::string &, NBTrafficLightLogicCont &, NBEdgeCont &)` [static, private]

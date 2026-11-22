@@ -1671,7 +1671,8 @@ impl NBFrame {
             oc.set_default("railway.topology.all-bidi", "true").unwrap();
         }
         // restore legacy behavior after making the option effective during general import
-        if oc.is_default("railway.topology.repair.stop-turn") && !oc.is_default("railway.topology.repair") && oc.exists("sumo-net-file") && oc.is_set("sumo-net-file", true).unwrap() {
+        // v1_28_0 NBFrame.cpp:857-858 sets the default without requiring --sumo-net-file.
+        if oc.is_default("railway.topology.repair.stop-turn") && !oc.is_default("railway.topology.repair") {
             oc.set_default("railway.topology.repair.stop-turn", "true").unwrap();
         }
         if !oc.is_default("railway.signal.permit-unsignalized") {
