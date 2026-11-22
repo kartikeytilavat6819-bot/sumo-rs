@@ -1,2 +1,0 @@
-official netconvert 1.28.0 exits non-zero (expected-error TextTest row)
-Official expectation: netconvert/function/opposites/different_loadedLengths_nofix/{errors,output}.netconvert
