@@ -1,0 +1,5 @@
+help | DIFF: ['output.sumo'] | only-src: [] | only-rel: []
+space | DIFF: [] | only-src: ['config.cfg'] | only-rel: []
+write_schema | DIFF: ['cfg.sumo'] | only-src: [] | only-rel: []
+write_template_commented_full | DIFF: ['cfg.sumo'] | only-src: [] | only-rel: []
+write_template_full | DIFF: ['cfg.sumo'] | only-src: [] | only-rel: []
