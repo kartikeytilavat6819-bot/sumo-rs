@@ -5343,7 +5343,7 @@ let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_LATE
             VAR_ROUTE_INDEX => wrapper.m().wrap_int(objID, variable, Self::get_route_index(objID)),
             VAR_COLOR => wrapper.m().wrap_color(objID, variable, &Self::get_color(objID)),
             VAR_LANEPOSITION => wrapper.m().wrap_double(objID, variable, Self::get_lane_position(objID)),
-            // VAR_ARRIVALPOS is snapshot-only; release 1.28.0 does not handle it.
+            VAR_ARRIVALPOS => wrapper.m().wrap_double(objID, variable, Self::get_arrival_pos(objID)),
             VAR_LANEPOSITION_LAT => wrapper.m().wrap_double(objID, variable, Self::get_lateral_lane_position(objID)),
             VAR_CO2EMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co2_emission(objID)),
             VAR_COEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co_emission(objID)),

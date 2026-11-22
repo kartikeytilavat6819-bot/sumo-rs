@@ -1010,9 +1010,10 @@ impl TraCIServerAPI_Vehicle {
                 Vehicle::add(&id, &routeID, &vTypeID, &depart, &departLane, &departPos, &departSpeed, "current", "max", "current", "", "", "", 4, 0, "", "", -1.0, "");
             }
             ADD_FULL => {
-                // Release 1.28.0 requires exactly fourteen parameters. The
-                // fourteen-to-eighteen extension is snapshot-only.
-                let _numElements = StoHelp::read_compound(inputStorage, 14, "Adding a fully specified vehicle needs fourteen parameters.");
+                let numElements = StoHelp::read_compound(inputStorage, -1, "Adding a fully specified vehicle needs fourteen to eighteen parameters.");
+                if numElements < 14 || numElements > 18 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Adding a fully specified vehicle needs fourteen to eighteen parameters.", outputStorage);
+                }
                 let routeID = StoHelp::read_typed_string(inputStorage, "First parameter (route) requires a string.");
                 let vTypeID = StoHelp::read_typed_string(inputStorage, "Second parameter (type) requires a string.");
                 let depart = StoHelp::read_typed_string(inputStorage, "Third parameter (depart) requires an string.");
@@ -1027,6 +1028,22 @@ impl TraCIServerAPI_Vehicle {
                 let line = StoHelp::read_typed_string(inputStorage, "Twelth parameter (line) requires a string.");
                 let personCapacity = StoHelp::read_typed_int(inputStorage, "13th parameter (person capacity) requires an int.");
                 let personNumber = StoHelp::read_typed_int(inputStorage, "14th parameter (person number) requires an int.");
+                let mut departPosLat = String::new();
+                let mut arrivalPosLat = String::new();
+                let mut speedFactor: f64 = -1.0;
+                let mut insertionChecks = String::new();
+                if numElements >= 15 {
+                    departPosLat = StoHelp::read_typed_string(inputStorage, "15th parameter (depart position lat) requires a string.");
+                }
+                if numElements >= 16 {
+                    arrivalPosLat = StoHelp::read_typed_string(inputStorage, "16th parameter (arrival position lat) requires a string.");
+                }
+                if numElements >= 17 {
+                    speedFactor = StoHelp::read_typed_double(inputStorage, "17th parameter (speed factor) requires a double.");
+                }
+                if numElements >= 18 {
+                    insertionChecks = StoHelp::read_typed_string(inputStorage, "18th parameter (insertion checks) requires a string.");
+                }
                 Vehicle::add(
                     &id,
                     &routeID,
@@ -1043,10 +1060,10 @@ impl TraCIServerAPI_Vehicle {
                     &line,
                     personCapacity,
                     personNumber,
-                    "",
-                    "",
-                    -1.0,
-                    "",
+                    &departPosLat,
+                    &arrivalPosLat,
+                    speedFactor,
+                    &insertionChecks,
                 );
             }
             REMOVE => {
