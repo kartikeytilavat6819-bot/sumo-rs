@@ -13964,6 +13964,9 @@ impl MSVehicle {
             let stopSpeed = cfModel.stop_speed_2(me, self.get_speed(), stopDist, stopDecel, MSCFModel_CalcReason::CURRENT_WAIT);
             let mut vLinkWait = min2(v, stopSpeed);
 
+            if self.get_id() == "ES1" && t >= 94000 && t <= 100000 {
+                eprintln!("OC102R t={} yellowOrRed={} canBrake={} brakeDist={:.2} stopOff={:.2} ignoreRed={} mustSee={:.2} seen={:.2} stopDecel={:.2}", t, yellowOrRed, canBrakeBeforeStopLine, brakeDist, lane.get_vehicle_stop_offset(me), self.ignore_red(linkP, canBrakeBeforeStopLine), mustSeeBeforeReversal, seen, stopDecel);
+            }
             if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
                 if lane.is_internal() {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
