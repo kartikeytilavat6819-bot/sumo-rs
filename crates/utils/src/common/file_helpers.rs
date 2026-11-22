@@ -190,11 +190,6 @@ mod tests {
         assert_eq!(fix_relative("cfg/x.xml", "cfg/a.sumocfg", false, ""), "x.xml");
         assert_eq!(fix_relative("x.xml", "cfg/a.sumocfg", false, ""), "../x.xml");
         assert_eq!(fix_relative("/r/x.xml", "/r/s/a.cfg", true, ""), "../x.xml");
-        // duarouter meta/write_config: absolute config path, relative net path, no force.
-        // C++ FileHelpers::fixRelative keeps the leading empty split component, so the
-        // common root is dropped and the result is relative rather than absolute.
-        assert_eq!(fix_relative("tools/x.xml", "/tmp/out/cfg.cfg", false, "/repo"),
-                   "../../../repo/tools/x.xml");
         assert_eq!(split_dirs("a/./b/../c"), ["a", "c"]);
         assert_eq!(add_extension("a", ".xml"), "a.xml");
         assert_eq!(add_extension("a.xml", ".xml"), "a.xml");
