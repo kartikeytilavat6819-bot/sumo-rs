@@ -17,3 +17,13 @@ official sumo via `make_sim_refs.sh`.
 ## PARKED
 
 Official sumo exits 1 for this test (error-expecting case: invalid rerouting option or missing required output), so the oracle harness cannot generate references. Parked with a PENDING marker.
+
+## EXPECTATION OVERRIDE (oc105)
+
+The RELEASE 1.28.0 texttest expectation (`errors.sumo` empty, `output.sumo` a completed
+run) was produced with `--vehroute-output=vehroutes.xml`. The oracle harness strips that
+output file but keeps its `--vehroute-output.exit-times` sub-option, so the official binary
+run with the harness's exact flags emits `Error: A vehroute-output file is needed for exit
+times.` / `Quitting (on error).` and exits 1 (release `MSFrame.cpp:949`, `sumo_main.cpp:114`).
+The official binary's real output wins over the texttest file, so `ref.errors` records those
+two lines and `ref.output` is empty.

@@ -2,6 +2,7 @@
 # oc102: trace the first FCD difference for tt_devices_bluelight_3lanes_left.
 # Runs on the Linux gate from the repo root. Writes only under /tmp/oc102.
 set -u
+cd "$(dirname "$0")/../.." || exit 1
 OUT=/tmp/oc102
 mkdir -p "$OUT"
 
@@ -84,3 +85,23 @@ for vid in sorted(set(ra) | set(cb)):
     print("  REF  %s" % ra.get(vid, "<absent>"))
     print("  CAND %s" % cb.get(vid, "<absent>"))
 PYEOF
+
+# oc105 measurement (merged from wave2): compare our sumo with the official binary.
+OUT=/tmp/oc105
+mkdir -p "$OUT"
+OUR="$CARGO_TARGET_DIR/debug/sumo"
+OFF="$SUMO_PRISTINE_BIN/sumo"
+for c in tt_devices_ssm_bugs_ticket13918 tt_devices_rerouting_reroute_congestions_exit_times; do
+  D="tools/oracle/cases/$c"
+  FLAGS=$(cat "$D/sim.args")
+  echo "==== $c"
+  echo "sim.args: $FLAGS"
+  for side in our official; do
+    if [ "$side" = our ]; then BIN="$OUR"; else BIN="$OFF"; fi
+    "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --no-step-log true $FLAGS \
+      >"$OUT/$c.$side.out" 2>"$OUT/$c.$side.err"
+    echo "$side exit=$?"
+    echo "$side stderr:"; head -20 "$OUT/$c.$side.err"
+    echo "$side stdout:"; head -12 "$OUT/$c.$side.out"
+  done
+done
