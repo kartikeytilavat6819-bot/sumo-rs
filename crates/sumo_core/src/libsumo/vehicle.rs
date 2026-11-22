@@ -3290,6 +3290,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn deactivate_gap_control(vehID: &str) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("deactivateGapControl not applicable for meso");
+            return;
+        }
         if veh.has_influencer() {
             veh.m().get_influencer().deactivate_gap_controller();
         }
@@ -3423,6 +3427,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_lane_change_mode(vehID: &str, laneChangeMode: i32) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setLaneChangeMode not applicable for meso");
+            return;
+        }
         veh.m().get_influencer().set_lane_change_mode(laneChangeMode);
     }
 
@@ -3607,6 +3615,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_lateral_lane_position(vehID: &str, posLat: f64) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setLateralLanePosition not applicable for meso");
+            return;
+        }
         veh.m().set_lateral_position_on_lane(posLat);
     }
 
@@ -3626,6 +3638,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn update_best_lanes(vehID: &str) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("updateBestLanes not applicable for meso");
+            return;
+        }
         if veh.is_on_road() {
             veh.m().update_best_lanes(true, Ptr::default());
         }
@@ -3792,6 +3808,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_signals(vehID: &str, signals: i32) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setSignals not applicable for meso");
+            return;
+        }
         // set influencer to make the change persistent
         veh.m().get_influencer().set_signals(signals);
         // set them now so that getSignals returns the correct value
