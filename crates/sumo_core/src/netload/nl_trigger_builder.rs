@@ -2029,3 +2029,22 @@ impl NLTriggerBuilder {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    #[test]
+    fn invalid_argument_payload_is_a_process_error() {
+        // C++ utils/common/UtilExceptions.h:64: `class InvalidArgument : public ProcessError`.
+        // Before the fix this panicked with a bare InvalidArgument, which main's ProcessError
+        // handler could not downcast -> "Quitting (on unknown error)" (TextTest
+        // tests/sumo/basic/person/errors/invalid_busstop).
+        let payload = catch_unwind(AssertUnwindSafe(|| {
+            throw_invalid_argument("bad stopping place".to_string())
+        })).unwrap_err();
+        let err = payload.downcast_ref::<ProcessError>().expect("InvalidArgument must be a ProcessError");
+        assert_eq!(err.to_string(), "bad stopping place");
+    }
+}
+

@@ -43,6 +43,8 @@ mod tests {
 
     #[test]
     fn edge_connection_preserves_may_definitely_pass() {
+        // C++ netbuild/NBEdge.cpp getConnection(int,int,int) returns the stored Connection;
+        // NBRequest.cpp:1097/845/818 use mayDefinitelyPass to suppress right/merge conflicts.
         // ticket6497: the input plain connection sets pass="1" on gneE6 lane 1 -> -gneE3 lane 1.
         let to = Ptr::null();
         let conns = vec![NBEdge_Connection::new(1, to, 1, true)];
