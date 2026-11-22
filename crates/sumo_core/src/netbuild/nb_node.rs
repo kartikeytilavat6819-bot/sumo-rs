@@ -8927,3 +8927,17 @@ impl NBNode_nodes_by_id_sorter {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nan_position_reports_error_without_panicking() {
+        // v1_28_0 NBNode.cpp:324 throws ProcessError("Invalid position ...") for a NaN
+        // position; XMLSubSys::runParser catches it and writes the error. Our port writes
+        // the error directly so the harness scores a normal error exit, not a Rust panic.
+        // Before the fix this test panicked inside nbnode_validate_new.
+        let _node = NBNode::new("E", &Position::new(f64::NAN, 0.), SumoXMLNodeType::UNKNOWN);
+    }
+}
+
