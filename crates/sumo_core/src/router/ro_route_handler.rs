@@ -1567,6 +1567,7 @@ impl RORouteHandler {
         // get the vehicle id
         if self.myVehicleParameter.departProcedure == DepartDefinition::GIVEN && self.myVehicleParameter.depart < self.myBegin {
             self.mySkippedVehicleIDs.insert(self.myVehicleParameter.id.clone());
+            self.myNet.m().route_skipped();
             return;
         }
         // get vehicle type
@@ -1728,6 +1729,8 @@ impl RORouteHandler {
                 self.check_last_depart();
                 self.register_last_depart();
             }
+        } else {
+            self.myNet.m().route_skipped();
         }
         self.delete_active_plan_and_vehicle_parameter();
     }
@@ -1996,6 +1999,7 @@ impl RORouteHandler {
         while self.myVehicleParameter.repetitionTotalOffset < offsetToBegin {
             self.myVehicleParameter.m().increment_flow(1., Ptr::null());
             if self.myVehicleParameter.repetitionsDone == self.myVehicleParameter.repetitionNumber {
+                self.myNet.m().route_skipped();
                 delete_ptr(self.myVehicleParameter);
                 self.myVehicleParameter = Ptr::null();
                 return;
@@ -2352,6 +2356,7 @@ impl RORouteHandler {
     #[allow(unused_variables)]
     pub fn add_flow_person(&mut self, typeID: &str, depart: SUMOTime, baseID: &str, i: i32) {
         if self.myVehicleParameter.departProcedure == DepartDefinition::GIVEN && depart < self.myBegin {
+            self.myNet.m().route_skipped();
             return;
         }
         let mut pars: SUMOVehicleParameter = (*self.myVehicleParameter).clone();

@@ -556,8 +556,9 @@ impl ROLoader {
         if self.myLogSteps {
             write_messagef!("Routes found between time steps % and %.", utils::common::time::time2string(firstStep), utils::common::time::time2string(lastStep));
         }
-        // v1_28_0 ROLoader.cpp:224 ends after the log message; the "No routes found
-        // between begin time ..." warning was added later.
+        if !net.have_processed_routes() && (net.have_skipped_routes() || net.further_stored()) && !error_informed() {
+            write_warningf!("No routes found between begin time % and end time %.", utils::common::time::time2string(start), utils::common::time::time2string(end));
+        }
     }
 
     /// C++: `SUMORouteHandler * ROLoader::getRouteHandler()`

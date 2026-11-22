@@ -1538,6 +1538,7 @@ impl RONet {
                 break;
             }
             let minTime = min2i(routableTime, containerTime);
+            self.myHaveProcessedRoutes = true;
             if routableTime == minTime {
                 // check whether to print the output
                 if lastTime != routableTime && lastTime != -1 {
@@ -2193,10 +2194,11 @@ impl RONet {
                         newPars.id = format!("{}.{}", pars.id, pars.repetitionsDone);
                         newPars.depart = pars.depart;
                         for stop in newPars.stops.iter_mut() {
-                            // v1_28_0 RONet.cpp:636-638 adjusts only `until`; the
-                            // `arrival` adjustment here was added later.
                             if stop.until >= 0 {
                                 stop.until += pars.depart - origDepart;
+                            }
+                            if stop.arrival >= 0 {
+                                stop.arrival += pars.depart - origDepart;
                             }
                         }
                         pars.m().repetitionsDone += 1;
