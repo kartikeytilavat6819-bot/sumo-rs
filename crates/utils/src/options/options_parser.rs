@@ -200,7 +200,9 @@ mod tests {
         // meta/option_list_append: +a appends to an existing list
         let mut oc = sample();
         setup(&mut oc);
-        assert!(parse_with(&mut oc, &args(&["-a", "a1.xml", "+a", "a2.xml"]), false));
+        assert!(parse_with(&mut oc, &args(&["-a", "a1.xml"]), false));
+        oc.reset_writable(); // the real parser resets between config and command line
+        assert!(parse_with(&mut oc, &args(&["+a", "a2.xml"]), false));
         assert_eq!(oc.get_string("additional-files").unwrap(), "a1.xml,a2.xml");
         // meta config-writing forms: --save-configuration=FILE, -C FILE (alias)
         let mut oc = sample();
