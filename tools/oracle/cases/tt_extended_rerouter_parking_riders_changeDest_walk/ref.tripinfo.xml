@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-22T03:13:07.992488-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk//ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk//routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk/input_additional.add.xml,tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk//ref.fcd.xml"/>
+        <tripinfo-output value="tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk//ref.tripinfo.xml"/>
+        <statistic-output value="tools/oracle/cases/tt_extended_rerouter_parking_riders_changeDest_walk//ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="94.00" waitingTime="0.00" timeLoss="13.80" traveltime="94.00">
+        <ride waitingTime="0.00" vehicle="vehicle_0" depart="0.00" arrival="17.00" arrivalPos="74.01" duration="17.00" routeLength="117.52" timeLoss="5.50"/>
+        <walk depart="17.00" departPos="74.01" arrival="94.00" arrivalPos="21.40" duration="77.00" routeLength="95.41" timeLoss="8.30" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1" depart="20.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="94.00" waitingTime="0.00" timeLoss="16.54" traveltime="94.00">
+        <ride waitingTime="0.00" vehicle="vehicle_1" depart="20.00" arrival="55.00" arrivalPos="58.85" duration="35.00" routeLength="267.73" timeLoss="10.84"/>
+        <walk depart="55.00" departPos="58.85" arrival="114.00" arrivalPos="21.40" duration="59.00" routeLength="74.02" timeLoss="5.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="vehicle_0" depart="0.00" departLane="E0_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="122.00" arrivalLane="E1_1" arrivalPos="110.22" arrivalSpeed="12.60" duration="122.00" routeLength="153.73" waitingTime="0.00" waitingCount="0" stopTime="100.00" timeLoss="6.84" rerouteNo="0" devices="tripinfo_vehicle_0 fcd_vehicle_0 person_vehicle_0" vType="car" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="vehicle_1" depart="20.00" departLane="E0_1" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="179.00" arrivalLane="E1_1" arrivalPos="110.22" arrivalSpeed="13.48" duration="159.00" routeLength="484.95" waitingTime="0.00" waitingCount="0" stopTime="100.00" timeLoss="16.63" rerouteNo="1" devices="tripinfo_vehicle_1 fcd_vehicle_1 person_vehicle_1" vType="car" speedFactor="1.00" vaporized=""/>
+</tripinfos>
