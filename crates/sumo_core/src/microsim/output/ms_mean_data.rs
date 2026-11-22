@@ -1538,7 +1538,7 @@ impl MSMeanData_MeanDataValueTracker {
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         let key = Ptr::from_mut(&mut *veh);
         if std::env::var_os("OC95_TRACE").is_some() {
-            eprintln!("OC95T leave t={} veh={:p} reason={:?} pos={} n={}", MSNet::get_instance().get_current_time_step(), &*veh as *const _, reason, lastPos, self.myTrackedData.len());
+            eprintln!("OC95T leave trk={:p} t={} veh={:p} reason={:?} pos={} n={}", self as *const _, MSNet::get_instance().get_current_time_step(), &*veh as *const _, reason, lastPos, self.myTrackedData.len());
         }
         if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
             let entry = self.myTrackedData[&key].clone();
@@ -1579,7 +1579,7 @@ impl MSMeanData_MeanDataValueTracker {
         }
         let key = Ptr::from_mut(&mut *veh);
         if std::env::var_os("OC95_TRACE").is_some() {
-            eprintln!("OC95T enter t={} veh={:p} reason={:?} tracked={} lane={:p}", MSNet::get_instance().get_current_time_step(), &*veh as *const _, reason, self.myTrackedData.contains_key(&key), enteredLane.as_raw());
+            eprintln!("OC95T enter trk={:p} t={} veh={:p} reason={:?} tracked={} lane={:p}", self as *const _, MSNet::get_instance().get_current_time_step(), &*veh as *const _, reason, self.myTrackedData.contains_key(&key), enteredLane.as_raw());
         }
         if self.myParent.base.vehicle_applies(veh) && !self.myTrackedData.contains_key(&key) {
             let entry = self.myCurrentData.back().unwrap().clone();
