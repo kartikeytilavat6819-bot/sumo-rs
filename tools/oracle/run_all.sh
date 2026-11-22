@@ -131,12 +131,13 @@ for dir in tools/oracle/cases/*/; do
       line "$c" err-NOEXIT "official exits non-zero, ours exited 0"; FAIL=$((FAIL+1)); continue
     fi
     r="PASS"; detail=""
-    if [ -s "$dir/ref.errors" ]; then
+    # -f, not -s: an empty official stream expects an empty stream from us, so compare it too.
+    if [ -f "$dir/ref.errors" ]; then
       if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.errors" "$OUT/$c.err.log" >"$OUT/$c.err.diff" 2>&1; then
         r="FAIL"; detail="stderr: $(head -2 "$OUT/$c.err.diff" | tr '\n' ' ' | cut -c1-150)"
       fi
     fi
-    if [ -s "$dir/ref.output" ]; then
+    if [ -f "$dir/ref.output" ]; then
       if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.output" "$OUT/$c.err.out" >"$OUT/$c.out.diff" 2>&1; then
         r="FAIL"; [ -z "$detail" ] && detail="stdout: $(head -2 "$OUT/$c.out.diff" | tr '\n' ' ' | cut -c1-150)"
       fi

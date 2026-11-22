@@ -72,9 +72,10 @@ def unpark(case, tests_sumo):
         with open(os.path.join(d, fname), "w", encoding="utf-8", newline="\n") as fh:
             for ln in lines:
                 fh.write(ln.rstrip("\r") + "\n")
+    # always write both files: an empty official stream is still an expectation (our
+    # corresponding stream must be empty too), so the harness compares both unconditionally.
     _write("ref.errors", expectation["errors.sumo"])
-    if expectation["output.sumo"]:
-        _write("ref.output", expectation["output.sumo"])
+    _write("ref.output", expectation["output.sumo"])
     with open(os.path.join(d, "EXPECT_EXIT"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write("official SUMO 1.28.0 exits non-zero (expected-error TextTest row)\n")
         fh.write("Official expectation: " + src.replace(os.sep, "/") + "/{errors,output}.sumo\n")
