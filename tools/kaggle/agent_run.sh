@@ -11,7 +11,8 @@ for c in $CASES; do
   args="$(cat "$d/sim.args" 2>/dev/null) -n $net -r $rou"
   for side in off ours; do
     bin=$OFF; [ "$side" = ours ] && bin=$OURS
-    timeout 300 "$bin" $args --tripinfo-output "$OUT/$c.$side.tripinfo.xml" --fcd-output "$OUT/$c.$side.fcd.xml" > "$OUT/$c.$side.stdout" 2> "$OUT/$c.$side.stderr"
+    dbg=""; [ "$side" = ours ] && dbg="OC98DBG=1"
+    env $dbg timeout 300 "$bin" $args --tripinfo-output "$OUT/$c.$side.tripinfo.xml" --fcd-output "$OUT/$c.$side.fcd.xml" > "$OUT/$c.$side.stdout" 2> "$OUT/$c.$side.stderr"
     echo "== $c $side exit=$?"
     head -n 3 "$OUT/$c.$side.stderr"
   done
