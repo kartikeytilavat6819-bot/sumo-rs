@@ -1790,11 +1790,11 @@ impl MSBaseVehicle {
                 edges.insert(0, self.get_edge());
                 oldSize = edges.len() as i32;
             }
+            // edges.insert(edges.begin(), myRoute->begin(), myCurrEdge): only for non-insertion reroutes
+            let mut prefixed: ConstMSEdgeVector = self.myRoute.get_edges().get(..self.myCurrEdge).unwrap_or(&[]).to_vec();
+            prefixed.append(edges);
+            *edges = prefixed;
         }
-        // edges.insert(edges.begin(), myRoute->begin(), myCurrEdge)
-        let mut prefixed: ConstMSEdgeVector = self.myRoute.get_edges().get(..self.myCurrEdge).unwrap_or(&[]).to_vec();
-        prefixed.append(edges);
-        *edges = prefixed;
         if *edges == *self.myRoute.get_edges() && self.have_valid_stop_edges(true) {
             // re-assign stop iterators when rerouting to a new parkingArea / insertStop
             return true;
