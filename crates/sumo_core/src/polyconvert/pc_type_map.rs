@@ -169,3 +169,16 @@ pub struct PCTypeMap_TypeDef {
 impl PCTypeMap_TypeDef {
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn filltype_values_match_release() {
+        // C++ polyconvert/PCTypeMap.h:52-54 — the values are written to output XML.
+        assert_eq!(PCTypeMap_Filltype::NOFILL as i64, 0);
+        assert_eq!(PCTypeMap_Filltype::FILL as i64, 1);
+        assert_eq!(PCTypeMap_Filltype::FORCE as i64, 2);
+    }
+}
+
