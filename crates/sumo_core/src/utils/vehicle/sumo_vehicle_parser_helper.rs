@@ -3883,3 +3883,48 @@ impl SUMOVehicleParserHelper {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use std::sync::{Arc, Mutex};
+    use utils::common::msg_handler::{register_device, with_instance, MsgType};
+    use utils::options::option::SumoOption;
+
+    #[derive(Clone, Default)]
+    struct Capture(Arc<Mutex<Vec<u8>>>);
+    impl Write for Capture {
+        fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(b);
+            Ok(b.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    }
+
+    /// Release C++ src/utils/vehicle/SUMOVehicleParserHelper.cpp:1793,1800 formats
+    /// these warnings with toString(double) (default %g, 6 significant digits):
+    /// "Parsing given value (1.2 s.) ...", "Ignoring given value (=-1.1 s.)".
+    /// A fixed two-decimal format ("1.20"/"-1.10") is wrong.
+    #[test]
+    fn action_step_length_warning_uses_cpp_float_format() {
+        utils::options::options_cont::with_options(|oc| {
+            if !oc.exists("step-length") {
+                oc.do_register("step-length", SumoOption::string_typed("1", "TIME"));
+            }
+        });
+        let cap = Capture::default();
+        register_device("oc98-action-step-capture", Box::new(cap.clone()));
+        with_instance(MsgType::Warning, |h| {
+            h.remove_retriever("stderr");
+            h.add_retriever("oc98-action-step-capture");
+        });
+        let _ = process_action_step_length(1.2);
+        with_instance(MsgType::Warning, |h| {
+            h.remove_retriever("oc98-action-step-capture");
+            h.add_retriever("stderr");
+        });
+        let text = String::from_utf8(cap.0.lock().unwrap().clone()).unwrap();
+        assert!(text.contains("Parsing given value (1.2 s.) to the adjusted value 1 s."), "got: {text}");
+    }
+}
+
