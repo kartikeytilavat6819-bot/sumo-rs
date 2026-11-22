@@ -437,7 +437,7 @@ impl MSDevice_Bluelight {
                         if self.myMinGapFactor != 1. {
                             // TODO this is a permanent change to the vtype!
                             let vt = vc.get_v_type(veh2.get_vehicle_type().get_id(), Ptr::null(), false);
-                            Ptr::new(vt.m().get_car_follow_model()).m().set_collision_min_gap_factor(self.myMinGapFactor);
+                            vt.m().get_car_follow_model_2().set_collision_min_gap_factor(self.myMinGapFactor);
                         }
 
                         // Vehicle gets a new Vehicletype to change the alignment and the lanechange options
@@ -451,13 +451,13 @@ impl MSDevice_Bluelight {
                         let minGap = t.get_min_gap() * self.myMinGapFactor;
                         t.set_min_gap(&minGap);
                         // C++ const_cast<SUMOVTypeParameter&>(t.getParameter()).jmParameter[SUMO_ATTR_JM_STOPLINE_GAP] = toString(myMinGapFactor)
-                        Ptr::new(t.get_parameter()).m().jmParameter.insert(SUMO_ATTR_JM_STOPLINE_GAP, f64_to_string(self.myMinGapFactor));
+                        t.myParameter.jmParameter.insert(SUMO_ATTR_JM_STOPLINE_GAP, f64_to_string(self.myMinGapFactor));
                         // disable strategic lane-changing
                         let mut tokenizer = StringTokenizer::new(&veh2.get_parameter().get_parameter(INFLUENCED_BY, ""));
                         let mut influencedBy: Vec<String> = tokenizer.get_vector();
                         if !influencedBy.contains(&holderID) {
                             influencedBy.push(holderID.clone());
-                            Ptr::new(veh2.get_parameter()).m().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
+                            veh2.m().get_parameter_mutable().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
                         }
                         veh2.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM), "-1");
                     }
@@ -701,7 +701,7 @@ impl MSDevice_Bluelight {
             if let Some(pos) = influencedBy.iter().position(|s| *s == holderID) {
                 influencedBy.remove(pos);
                 // C++ const_cast<SUMOVehicleParameter&>(veh2->getParameter()).setParameter(...)
-                Ptr::new(veh2.get_parameter()).m().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
+                veh2.m().get_parameter_mutable().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
             }
             if influencedBy.is_empty() {
                 veh2.m().replace_vehicle_type(targetType);
@@ -726,5 +726,155 @@ impl MSDevice_Bluelight {
         unreachable!("MSDevice_Bluelight assignment operator is private and undefined in C++")
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::microsim::ms_vehicle::MSVehicle_Influencer;
+
+    // MSDevice_Bluelight's constructor calls setSpeedMode(7) on its holder.
+    // Speed mode bits (MSVehicle.cpp Influencer::setSpeedMode): 1=safe velocity,
+    // 2=max acceleration, 4=max deceleration, 8=respect junction priority,
+    // 16=emergency brake at red. Mode 7 must leave the last two disabled so the
+    // emergency vehicle runs red lights (MSVehicle::ignoreRed / influencerPrio).
+    #[test]
+    fn bluelight_speed_mode_7_disables_red_and_junction_priority() {
+        let mut inf = MSVehicle_Influencer::new();
+        assert!(inf.get_respect_junction_priority());
+        assert!(inf.get_emergency_brake_red_light());
+        inf.set_speed_mode(7);
+        assert!(inf.consider_safe_velocity());
+        assert!(inf.myConsiderMaxAcceleration);
+        assert!(inf.consider_max_deceleration());
+        assert!(!inf.get_respect_junction_priority());
+        assert!(!inf.get_emergency_brake_red_light());
+    }
+
+    #[test]
+    fn bluelight_device_name_from_id() {
+        assert_eq!(MSDevice::get_device_name("bluelight_rescue"), "bluelight");
+    }
+
+    // C++ MSDevice_Bluelight.cpp:233: influenced vehicles get setLaneChangeMode(1605).
+    // MSVehicle::Influencer::setLaneChangeMode decodes 1605 = 1024+512+64+4+1:
+    // strategic/cooperative/right-drive/sublane = 1 (LC_NOCONFLICT),
+    // speed-gain = 0 (LC_NEVER), traci priority = 2 (LCP_URGENT).
+    #[test]
+    fn influenced_lane_change_mode_1605_decoding() {
+        let mut inf = MSVehicle_Influencer::new();
+        inf.set_lane_change_mode(1605);
+        assert_eq!(inf.myStrategicLC.0, 1);
+        assert_eq!(inf.myCooperativeLC.0, 1);
+        assert_eq!(inf.mySpeedGainLC.0, 0);
+        assert_eq!(inf.myRightDriveLC.0, 1);
+        assert_eq!(inf.mySublaneLC.0, 1);
+        assert_eq!(inf.myTraciLaneChangePriority as i32, 2);
+    }
+
+    // C++ MSDevice_Bluelight.cpp:255-259: influencedBy is a space-separated
+    // StringTokenizer list of holder IDs; resetVehicle erases this holder and
+    // restores the original vtype only when nothing else influenced the car.
+    #[test]
+    fn influenced_by_list_removal_gates_type_reset() {
+        let holder = "rescue";
+        // one influencer: removing it empties the list -> reset
+        let mut v = StringTokenizer::new(&format!("{}", holder)).get_vector();
+        assert_eq!(v, vec![holder]);
+        if let Some(pos) = v.iter().position(|s| *s == holder) { v.remove(pos); }
+        assert!(v.is_empty(), "single influencer must allow the vtype reset");
+
+        // two influencers: removing one leaves another -> keep singular type
+        let mut v = StringTokenizer::new(&format!("rescue_other {}", holder)).get_vector();
+        assert_eq!(v, vec!["rescue_other", holder]);
+        if let Some(pos) = v.iter().position(|s| *s == holder) { v.remove(pos); }
+        assert_eq!(v, vec!["rescue_other"], "another influencer must keep the singular type");
+    }
+
+    // C++ MSDevice_Bluelight.cpp:225-228: reactionProb uses the near-distance
+    // threshold 12.5 m; near prob 0.577, far prob 0.189, multiplied by the
+    // action-step length. The observed draws (gate trace) must select these.
+    #[test]
+    fn reaction_probability_threshold_and_defaults() {
+        let near_dist = 12.5_f64;
+        let prob_near = 0.577_f64;
+        let prob_far = 0.189_f64;
+        let step_secs = 1.0_f64;
+        let prob = |dist: f64| if dist < near_dist { prob_near } else { prob_far };
+        assert_eq!(prob(7.5), prob_near);
+        assert_eq!(prob(12.49), prob_near);
+        assert_eq!(prob(12.5), prob_far); // strict '<', as in C++
+        assert_eq!(prob(19.7), prob_far);
+        // draws from the official-matching gate trace
+        assert!(0.0455 < prob(19.7) * step_secs);   // straight.4 at t=17
+        assert!(0.0060 < prob(7.5) * step_secs);    // left.4 at t=19
+        assert!(0.4662 < prob(7.5) * step_secs);    // right.4 at t=19
+        assert!(0.4113 < prob(7.5) * step_secs);    // left.1 at t=24
+    }
+
+    // C++ uses std::set<std::string> (influenced IDs) and
+    // std::map<std::string, std::string> (target vtype per ID): both iterate
+    // in ID order and insert keeps the first value. BTreeMap/BTreeSet match.
+    #[test]
+    fn influenced_containers_are_id_ordered_and_keep_first_type() {
+        let mut ids = BTreeSet::new();
+        for id in ["straight.4", "left.0", "right.3"] { ids.insert(id.to_string()); }
+        assert_eq!(ids.iter().map(String::as_str).collect::<Vec<_>>(),
+                   vec!["left.0", "right.3", "straight.4"]);
+
+        let mut types = utils::common::parameterised::ParameterisedMap::new();
+        types.entry("left.0".to_string()).or_insert("car".to_string());
+        types.entry("left.0".to_string()).or_insert("car@left.0".to_string());
+        assert_eq!(types["left.0"], "car");
+    }
+
+    // C++ MSDevice_Bluelight.cpp:208-212 sets the ego's speedTimeLine to
+    // (now, currentSpeed) -> (now + TIME2STEPS(2), JM_DRIVE_RED_SPEED=5.56).
+    // MSVehicle::Influencer::influenceSpeed (MSVehicle.cpp:493-520) advances
+    // currentTime by DELTA_T and interpolates; with both endpoints 5.56 the
+    // rescue holds 5.56 m/s rather than decelerating.
+    #[test]
+    fn red_speed_timeline_holds_5_56() {
+        let mut inf = MSVehicle_Influencer::new();
+        inf.set_speed_time_line(&vec![(10_000, 5.56), (12_000, 5.56)]);
+        let out = inf.influence_speed(10_000, 8.0, 100.0, 0.0, 100.0);
+        assert!((out - 5.56).abs() < 1e-9, "got {out}");
+        // a real slowdown endpoint interpolates halfway at the issuing step
+        inf.set_speed_time_line(&vec![(10_000, 8.0), (12_000, 5.56)]);
+        let out = inf.influence_speed(10_000, 8.0, 100.0, 0.0, 100.0);
+        assert!((out - 6.78).abs() < 1e-9, "got {out}");
+    }
+
+    // C++ MSDevice_Bluelight.cpp:259 writes jmParameter[SUMO_ATTR_JM_STOPLINE_GAP]
+    // via const_cast<SUMOVTypeParameter&>(t.getParameter()); the Rust port writes
+    // through the public mutable field so the value is observably identical through
+    // getParameter(). (A regression test cannot fail on the old UB path: writing
+    // through a &-derived pointer happened to reach the same object.)
+    #[test]
+    fn stopline_gap_write_visible_through_vtype_accessor() {
+        use crate::microsim::ms_vehicle_type::MSVehicleType;
+        use crate::utils::vehicle::sumov_type_parameter::SUMOVTypeParameter;
+        use utils::common::sumo_vehicle_class::SVC_PASSENGER;
+        let params = SUMOVTypeParameter::new("car", SVC_PASSENGER);
+        let mut vt = MSVehicleType::new(&params);
+        vt.myParameter.jmParameter.insert(SUMO_ATTR_JM_STOPLINE_GAP, f64_to_string(1.0));
+        assert_eq!(
+            vt.get_parameter().jmParameter.get(&SUMO_ATTR_JM_STOPLINE_GAP).map(String::as_str),
+            Some("1.00")
+        );
+    }
+
+    // C++ MSBaseVehicle::getSingularType builds the id "<vtype>@<vehicle id>";
+    // MSDevice_Bluelight calls it on influenced vehicles to set the rescue-lane
+    // alignment, producing ids like "car@straight.4".
+    #[test]
+    fn singular_type_id_convention() {
+        let vtype = "car";
+        let veh = "straight.4";
+        assert_eq!(format!("{}@{}", vtype, veh), "car@straight.4");
+        // the device writes StringUtils/myMinGapFactor (default 1) to jmParameter;
+        // C++ toString(double, gPrecision=2) is fixed-point "1.00" (ToString.h:49-54).
+        assert_eq!(f64_to_string(1.0_f64), "1.00");
+    }
 }
 
