@@ -42,8 +42,8 @@ done
 C=tools/oracle/cases/tt_bugs_17xxx_ticket17583
 echo "################ tt_bugs_17xxx_ticket17583"
 for side in ours pristine; do
-  if [ "$side" = ours ]; then BIN=$OURS; else BIN=$SUMO_PRISTINE_BIN/sumo; fi
-  timeout 300 "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
+  if [ "$side" = ours ]; then BIN=$OURS; DBG=OC98DBG=1; else BIN=$SUMO_PRISTINE_BIN/sumo; DBG=; fi
+  timeout 300 env $DBG "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
     $(cat "$C/sim.args") --no-step-log true \
     --tripinfo-output "$OUT/17583.$side.ti.xml" \
     --vehroute-output "$OUT/17583.$side.vr.xml" \
@@ -133,4 +133,6 @@ for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_shor
 done
 echo "==== OC98 4299 LINK-LEADER FOES"
 grep 'OC98DBG 4299' "$OUT/4299.ours.log" | head -80
+echo "==== OC98 17583 v.25 REROUTES"
+grep 'OC98DBG reroute info=rerouter_1\|OC98DBG reroute panic' "$OUT/17583.ours.log" | head -40
 echo "OC98 DIAGNOSTIC DONE"
