@@ -586,7 +586,7 @@ impl NEMALogic {
                         det = lookup_e2_detector_by_id(&customID);
                         if det.is_null() {
                             panic!(
-                                "Unknown laneAreaDetector '{}' given as custom detector for NEMA tlLogic '{}', program '{}'.",
+                                "Unknown laneAreaDetector '{}' given as custom detector for NEMA tlLogic '{}', program '{}.",
                                 customID, self.get_id(), self.myProgramID
                             );
                         }
