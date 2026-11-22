@@ -3105,6 +3105,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("changeLane not applicable for meso");
+            return;
+        }
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
         laneTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), laneIndex));
@@ -3146,6 +3150,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("changeLaneRelative not applicable for meso");
+            return;
+        }
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         let laneIndex = veh.get_lane_index() + indexOffset;
         if laneIndex < 0 && !veh.m().get_lane_change_model().is_opposite() {
@@ -3176,6 +3184,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn change_sublane(vehID: &str, latDist: f64) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("changeSublane not applicable for meso");
+            return;
+        }
         veh.m().get_influencer().set_sublane_change(latDist);
     }
 
