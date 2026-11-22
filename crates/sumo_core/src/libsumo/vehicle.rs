@@ -168,7 +168,9 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
-        TraCIPosition { base: TraCIResult::new(), x: 0.0, y: 0.0, z: 0.0 }
+        // C++ returns a default-constructed TraCIPosition: x/y/z = INVALID_DOUBLE_VALUE
+        // and getType() derives POSITION_2D from z == INVALID_DOUBLE_VALUE.
+        TraCIPosition { base: TraCIResult { result_type: POSITION_2D }, x: INVALID_DOUBLE_VALUE, y: INVALID_DOUBLE_VALUE, z: INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
