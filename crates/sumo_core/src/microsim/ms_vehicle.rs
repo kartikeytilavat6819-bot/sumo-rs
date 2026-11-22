@@ -13791,7 +13791,6 @@ impl MSVehicle {
                         bestJump = preb.lane;
                     }
                 }
-                eprintln!("OC102JUMP t={} bestJump={} nextEdge={}", MSNet::get_instance().get_current_time_step(), if bestJump.is_null() { "NULL".to_string() } else { bestJump.get_id() }, self.succ_edge(1).get_id());
                 if !bestJump.is_null() {
                     // C++: `*(myCurrEdge + 1)` is the next route edge, not the internal edge get_next_edge_ptr() returns
                     let nextEdge = self.succ_edge(1);
