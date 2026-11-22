@@ -1778,7 +1778,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             (cs.get_parking_area().get_capacity() - cs.get_parking_area().get_occupancy()) as f64
         } else {
-            (cs.get_last_free_pos(self.myHolder.m(), 0.) - cs.get_begin_lane_position()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
+            (cs.get_last_free_pos(self.myHolder.m(), 0.) - cs.get_begin_lane_position()) / self.myHolder.m().get_vehicle_type().get_parameter().length
         }
     }
 
