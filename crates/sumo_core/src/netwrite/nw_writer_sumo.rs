@@ -684,9 +684,9 @@ impl NWWriter_SUMO {
                 GeoConvHelper::with_final(|g| g.cartesian2geo(&mut pos));
                 nodePos.push(pos);
             }
-            into.set_precision(utils::common::std_defs::g_precision_geo());
+            // v1_28_0 NWWriter_SUMO.cpp:1040 writes the position without changing precision;
+            // the gPrecisionGeo bracket around it was added later.
             into.write_attr(SUMO_ATTR_POSITION, &nodePos);
-            into.set_precision(utils::common::std_defs::g_precision());
         }
         // write the phases
         let varPhaseLength = logic.get_type() != TrafficLightType::STATIC;

@@ -727,14 +727,7 @@ impl NWWriter_XML {
 
         or_panic(edevice.close());
         or_panic(cdevice.close());
-
-        if dlrNavteq {
-            let cdevice2_ref = get_device(&format!("{prefix}.cpr.{ext}"));
-            let mut cdevice2 = cdevice2_ref.borrow_mut();
-            cdevice2.write_xml_header("connections", "connections_file.xsd", BTreeMap::new(), true);
-            NWWriter_DlrNavteq::write_prohibited_manoeuvres_attrs(&mut cdevice2, nc);
-            or_panic(cdevice2.close());
-        }
+        // v1_28_0 NWWriter_XML.cpp:347-349 ends here; the *.cpr.* output was added later.
     }
 
     /// C++: `void NWWriter_XML::writeTrafficLights(const std::string &, NBTrafficLightLogicCont &, NBEdgeCont &)` [static, private]
