@@ -328,6 +328,7 @@ impl GeoConvHelper {
             let y = cartesian.y() / 111136.;
             let x = cartesian.x() / 111320. / deg2rad(y).cos();
             cartesian.set(x, y);
+            return;
         }
         if let Some(p) = self.projection {
             let (lon, lat) = p.inv(cartesian.x(), cartesian.y());
