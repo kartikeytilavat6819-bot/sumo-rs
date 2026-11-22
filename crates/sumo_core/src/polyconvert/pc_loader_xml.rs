@@ -2,6 +2,13 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// Trampoline for the C++ virtual `PCLoaderXML::getLanePos` (PCLoaderXML.h:65).
+fn get_lane_pos_virtual(base: &mut ShapeHandler, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
+    // SAFETY: PCLoaderXML is #[repr(C)] and base is its first field.
+    let this = unsafe { &mut *(base as *mut ShapeHandler as *mut PCLoaderXML) };
+    PCLoaderXML::get_lane_pos(this, poiID, laneID, lanePos, friendlyPos, lanePosLat)
+}
+
 /// A reader for polygons and pois stored in XML-format
 /// C++ class `PCLoaderXML` (polyconvert/PCLoaderXML.h)
 #[repr(C)]
@@ -90,8 +97,10 @@ impl PCLoaderXML {
     //       myTypeMap(tm), myOptions(oc) {}
     #[allow(unused_variables)]
     pub fn new(toFill: &mut PCPolyContainer, tm: &mut PCTypeMap, oc: &mut OptionsCont) -> Self {
+        let mut base = ShapeHandler::new("xml-poi-definition", &mut toFill.base, Ptr::null());
+        base.get_lane_pos_override = Some(get_lane_pos_virtual);
         PCLoaderXML {
-            base: ShapeHandler::new("xml-poi-definition", &mut toFill.base, Ptr::null()),
+            base,
             myTypeMap: Ptr::from_mut(tm),
             myOptions: Ptr::from_mut(oc),
         }
