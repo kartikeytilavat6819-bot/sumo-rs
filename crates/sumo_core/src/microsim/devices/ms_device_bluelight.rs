@@ -796,6 +796,22 @@ mod tests {
         assert!(0.4113 < prob(7.5) * step_secs);    // left.1 at t=24
     }
 
+    // C++ uses std::set<std::string> (influenced IDs) and
+    // std::map<std::string, std::string> (target vtype per ID): both iterate
+    // in ID order and insert keeps the first value. BTreeMap/BTreeSet match.
+    #[test]
+    fn influenced_containers_are_id_ordered_and_keep_first_type() {
+        let mut ids = BTreeSet::new();
+        for id in ["straight.4", "left.0", "right.3"] { ids.insert(id.to_string()); }
+        assert_eq!(ids.iter().map(String::as_str).collect::<Vec<_>>(),
+                   vec!["left.0", "right.3", "straight.4"]);
+
+        let mut types = utils::common::parameterised::ParameterisedMap::new();
+        types.entry("left.0".to_string()).or_insert("car".to_string());
+        types.entry("left.0".to_string()).or_insert("car@left.0".to_string());
+        assert_eq!(types["left.0"], "car");
+    }
+
     // C++ MSBaseVehicle::getSingularType builds the id "<vtype>@<vehicle id>";
     // MSDevice_Bluelight calls it on influenced vehicles to set the rescue-lane
     // alignment, producing ids like "car@straight.4".
