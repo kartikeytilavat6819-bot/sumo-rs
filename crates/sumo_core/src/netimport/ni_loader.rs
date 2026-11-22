@@ -177,11 +177,11 @@ impl NILoader {
             return;
         }
         if !self.myNetBuilder.m().get_edge_cont().check_consistency(self.myNetBuilder.m().get_node_cont()) {
-            write_error(&ProcessError::default_msg());
+            write_error(&ProcessError::default_msg().to_string());
             return;
         }
         if !ok && !throw(oc.get_bool("ignore-errors")) {
-            write_error(&ProcessError::default_msg());
+            write_error(&ProcessError::default_msg().to_string());
             return;
         }
         // configure default values that depend on other values
