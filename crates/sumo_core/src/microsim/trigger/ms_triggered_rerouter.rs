@@ -861,6 +861,7 @@ impl MSTriggeredRerouter {
                 if !self.myHaveClosingUntil {
                     tObject.set_routing_mode(tObject.get_routing_mode() & !ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS);
                 } else if hasReroutingDevice && routingDevice.cast::<MSDevice_Routing>().get_period() > 0 {
+                    eprintln!("OC108_RR until-warning veh={} haveUntil={} mode={}", tObject.get_id(), self.myHaveClosingUntil, tObject.get_routing_mode());
                     utils::common::msg_handler::write_warning(&utils::tlf!("Periodic rerouting and rerouting mode 8 for vehicle '%' are incompatible with closingReroute attribute 'until' in rerouter (vehicle may return to an invalid route.", tObject.get_id(), self.base.get_id()));
                 }
             }

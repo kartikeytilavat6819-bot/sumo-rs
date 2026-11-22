@@ -1636,6 +1636,7 @@ impl MSBaseVehicle {
         if !edges.is_empty() && edges.last().unwrap().is_taz_connector() {
             edges.pop();
         }
+        eprintln!("OC108_REROUTE veh={} info={} mode={} ignore={} edges={:?}", self.get_id(), info, self.get_routing_mode() as i32, self.ignore_transient_permissions(), edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
         let routeCost = router.recompute_costs(&edges, Ptr::from_mut(&mut self.base), t, Ptr::default());
         // trips have no loaded route to compare against when routed on insertion
         let previousCost = if onInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
