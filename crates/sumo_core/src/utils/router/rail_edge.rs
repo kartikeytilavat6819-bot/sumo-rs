@@ -289,10 +289,6 @@ impl<E, V> RailEdge<E, V> {
                 self.myViaSuccessors.push((viaPair.0.railway_routing_edge(), second));
             }
         }
-        if std::env::var("OC98DBG").is_ok() && (self.get_id() == "E6" || self.get_id() == "E7") {
-            let succ: Vec<String> = self.myViaSuccessors.iter().map(|p| p.0.get_id().to_string()).collect();
-            eprintln!("OC98DBG railEdge={} successors={:?} maxLen={}", self.get_id(), succ, self.myMaxLength);
-        }
     }
 
     /// C++: `int RailEdge::getNumericalID() const` [const]
