@@ -1084,11 +1084,12 @@ mod tests {
     #[test]
     fn finite_prohibition_is_temporary() {
         let a = edge("A", 0, 10.);
-        let a = Ptr::from_box(a);
+        let a = Ptr::from_box(&a);
         let op: SUMOAbstractRouter_TypedOperation<TestEdge, TestVeh> = length_effort;
         let edges = vec![a];
         let mut router = DijkstraRouter::new(&edges, true, Some(op), None, true, Ptr::null(), false, false);
-        let veh = Ptr::from_box(Box::new(TestVeh));
+        let veh_box = Box::new(TestVeh);
+        let veh = Ptr::from_box(&veh_box);
 
         let mut prohibitions = SUMOAbstractRouter_Prohibitions::new();
         prohibitions.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: 200., permissions: SVC_RAIL });
