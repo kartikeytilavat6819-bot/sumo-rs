@@ -1757,3 +1757,33 @@ impl TraCIVehicleDataVectorWrapped {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cpp_scalar_formatting() {
+        // C++ ostream default: %g with precision 6, bool without boolalpha.
+        assert_eq!(cpp_dbl(13.89), "13.89");
+        assert_eq!(cpp_dbl(0.5), "0.5");
+        assert_eq!(cpp_bool(true), 1);
+        assert_eq!(cpp_bool(false), 0);
+    }
+
+    #[test]
+    fn collision_string_matches_cpp() {
+        let c = TraCICollision {
+            collider: "a".to_string(),
+            victim: "b".to_string(),
+            colliderType: "car".to_string(),
+            victimType: "bike".to_string(),
+            colliderSpeed: 1.,
+            victimSpeed: 2.,
+            type_: "collision".to_string(),
+            lane: "edge_0".to_string(),
+            pos: 3.,
+        };
+        assert_eq!(c.get_string(), "TraCICollision(collider=a, victim=b)");
+    }
+}
+
