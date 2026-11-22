@@ -218,6 +218,10 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_config(oc: &OptionsCont, prefix: &str, haveTypes: bool) {
+        if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| h.was_informed()) {
+            // C++ aborts on the first IO error; an earlier writer already reported it.
+            return;
+        }
         if !oc.exists("node-files") {
             // do not write configuration for netgen
             return;
@@ -235,7 +239,15 @@ impl NWWriter_XML {
         or_panic(tmp.set_default("plain-output-prefix", ""));
 
         let configPath = format!("{prefix}.netccfg");
-        let mut out = std::fs::File::create(&configPath).unwrap_or_else(|_| panic!("Could not save configuration to '{configPath}'"));
+        // v1_28_0 NWWriter_XML.cpp:213 throws ProcessError when the config file cannot be
+        // created; report the failure and return so main exits non-zero without a Rust panic.
+        let mut out = match std::fs::File::create(&configPath) {
+            Ok(f) => f,
+            Err(_) => {
+                write_error(&format!("Could not save configuration to '{configPath}'"));
+                return;
+            }
+        };
         let mut os = String::new();
         or_panic(tmp.write_configuration(&mut os, true, false, false, "", false, false, ""));
         std::io::Write::write_all(&mut out, os.as_bytes()).unwrap_or_else(|e| panic!("{e}"));
