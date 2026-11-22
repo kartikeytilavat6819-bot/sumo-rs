@@ -2859,7 +2859,7 @@ impl SUMOVehicleParserHelper {
         let mut result: SUMOTime = time2steps(given);
         if result <= 0 {
             if result < 0 {
-                write_warning(&format!("{}Ignoring given value (={} s.)", defaultError, utils::common::to_string::to_string(&steps2time(result))));
+                write_warning(&format!("{}Ignoring given value (={} s.)", defaultError, utils::common::to_string::f64_to_string_default(steps2time(result))));
             }
             result = delta_t();
         } else if result % delta_t() != 0 && utils::options::options_cont::exists("step-length") {
@@ -2869,8 +2869,8 @@ impl SUMOVehicleParserHelper {
                 write_warning(&format!(
                     "{}Parsing given value ({} s.) to the adjusted value {} s.",
                     defaultError,
-                    utils::common::to_string::to_string(&given),
-                    utils::common::to_string::to_string(&steps2time(result))
+                    utils::common::to_string::f64_to_string_default(given),
+                    utils::common::to_string::f64_to_string_default(steps2time(result))
                 ));
             }
         }
