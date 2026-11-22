@@ -17,6 +17,7 @@ for v in $TARGETS; do
   d=$OUT/$v; rm -rf "$d"; mkdir -p "$d/official_out" "$d/ours_out"
   case $in in args:*) src=${in#args:} ;; *) src="" ;; esac
   co=${opts//@D/$d\/official_out}; ro=${opts//@D/$d\/ours_out}
+  src=${src//tools//$ROOT/tools/}; co=${co//tools//$ROOT/tools/}; ro=${ro//tools//$ROOT/tools/}
   read -ra sa <<< "$src"; read -ra ca <<< "$co"; read -ra ra <<< "$ro"
   (cd "$d" && timeout 600 "$CPP" "${sa[@]}" "${ca[@]}" -o "$d/official.net.xml" > "$d/official.log" 2>&1); crc=$?
   (cd "$d" && timeout 600 "$RUST" "${sa[@]}" "${ra[@]}" -o "$d/ours.net.xml" > "$d/ours.log" 2>&1); rrc=$?
