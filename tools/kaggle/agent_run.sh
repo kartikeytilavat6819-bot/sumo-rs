@@ -96,4 +96,17 @@ for bt in r.findall('bt'):
   if len(s.findall('recognitionPoint'))==0:
    print('bt=',bt.get('id'),'seen=',s.get('id'),'tBeg=',s.get('tBeg'))
 PY
+echo "===== ERR STDERR SUMMARY (end) ====="
+for c in tt_output_emission-output_MMPEVEM_BMW_i3 tt_output_rawdump_one_vehicle tt_output_vtypeprobe_one_vehicle; do
+  D="tools/oracle/cases/$c"; R="$OUT/$c"
+  echo "--- $c rc-log ---"
+  python - "$R/err.log" <<'PY'
+import sys
+for i,l in enumerate(open(sys.argv[1]).read().splitlines()[:12]): print(i, repr(l))
+PY
+  echo "--- $c diff ---"
+  python tools/oracle/park_tt_errors.py --compare "$D/ref.errors" "$R/err.log" 2>&1
+done
+echo "===== ARP TRACE (t 23..27) ====="
+grep '^OC95BT ARP' /tmp/oc95/out_bt/sumo.log 2>/dev/null | head -40
 echo "AGENT RUN DONE"

@@ -474,6 +474,9 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
         if sd.nextView == -1. {
             sd.nextView = sd.lastView + MSDevice_BTreceiver::inquiry_delay_slots(backoffLimit) * 0.000625;
         }
+        if oc95_trace() && tEnd >= 23. && tEnd <= 27. {
+            eprintln!("OC95BT ARP tEnd={} nextView={} lastView={} n={}", tEnd, sd.nextView, sd.lastView, sd.recognitionPoints.len());
+        }
         if tEnd > sd.nextView {
             sd.lastView = sd.nextView;
             let mp = Ptr::from_raw(Box::into_raw(Box::new(MSDevice_BTreceiver_MeetingPoint::new(tEnd, receiverState, senderState))));
