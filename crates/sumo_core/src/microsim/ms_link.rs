@@ -2633,6 +2633,8 @@ impl MSLink {
         }
         let extraGap = if !ego.is_null() { ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_EXTRA_GAP, 0.) } else { 0. };
         let simStep = MSNet::get_instance().get_current_time_step();
+        let dbg = std::env::var("OC98DBG").is_ok() && !ego.is_null() && ego.get_id() == "ES1"
+            && (96900..=97400).contains(&simStep);
         for i in 0..self.myFoeLanes.len() {
             let foeLane = self.myFoeLanes[i];
             let foeExitLink = foeLane.get_link_cont()[0];
@@ -2643,6 +2645,14 @@ impl MSLink {
             let crossingWidth = if sameTarget || sameSource { 0. } else { self.myConflicts[i].conflictSize };
             let foeCrossingWidth = if sameTarget || sameSource { 0. } else { self.myConflicts[i].get_foe_conflict_size(foeExitLink) };
             let contLane = foeExitLink.get_via_lane_or_lane().get_edge().is_internal() && !(self.is_internal_junction_link() || self.is_exit_link_after_internal_junction());
+            if dbg {
+                eprintln!("OC98DBG 4299 link={} foeLane={} distToCrossing={:.3} lbc={:.3} flbc={:.3} cw={:.3} fcw={:.3} flag={:?} radius={:.3} sameTarget={} sameSource={} contLane={}",
+                    self.get_via_lane_or_lane().get_id(), foeLane.get_id(), distToCrossing,
+                    self.myConflicts[i].get_length_behind_crossing(Ptr::new(self)),
+                    self.myConflicts[i].get_foe_length_behind_crossing(foeExitLink),
+                    crossingWidth, foeCrossingWidth, self.myConflicts[i].flag, self.myRadius,
+                    sameTarget, sameSource, contLane);
+            }
             if distToCrossing + crossingWidth < 0. && !sameTarget && (ego.is_null() || !g_compute_lc() || distToCrossing + crossingWidth + ego.get_vehicle_type().get_length() < 0.) {
                 // vehicle is behind the crossing point, continue with next foe lane
                 continue;
@@ -2746,6 +2756,13 @@ impl MSLink {
                         }
                     }
                 }
+                if dbg {
+                    eprintln!("OC98DBG 4299 leader={} leaderBack={:.3} leaderBackDist={:.3} pastCP={} enteredCP={} bikeTurn={} cannotIgnore={} inTheWay={} willPass={} arrivalTime={} stopped={} atCrossing={}",
+                        leader.get_id(), leaderBack, leaderBackDist, pastTheCrossingPoint,
+                        enteredTheCrossingPoint, foeIsBicycleTurn, cannotIgnore, inTheWay,
+                        avi.willPass, avi.arrivalTime, leader.is_stopped(),
+                        leader.get_waiting_time(false) < g_ignore_junction_blocker());
+                }
                 if leader.get_waiting_time(false) < g_ignore_junction_blocker() {
                     let mut gap: f64;
                     let mut fromLeft = true;
@@ -2781,6 +2798,9 @@ impl MSLink {
                         | (if inTheWay { MSLink_LinkLeaderFlag::LL_IN_THE_WAY as i32 } else { 0 })
                         | (if sameSource { MSLink_LinkLeaderFlag::LL_SAME_SOURCE as i32 } else { 0 })
                         | (if sameTarget { MSLink_LinkLeaderFlag::LL_SAME_TARGET as i32 } else { 0 });
+                    if dbg {
+                        eprintln!("OC98DBG 4299 KEPT leader={} gap={:.3} stopAsap={} flags={}", leader.get_id(), gap, stopAsap, llFlags);
+                    }
                     result.push(MSLink_LinkLeader::new(leader, gap, if stopAsap { -1. } else { distToCrossing }, llFlags, leader.get_lat_offset(foeLane)));
                 }
             }
