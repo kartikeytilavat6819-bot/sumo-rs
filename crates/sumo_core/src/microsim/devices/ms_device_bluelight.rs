@@ -752,3 +752,32 @@ impl MSDevice_Bluelight {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::microsim::ms_vehicle::MSVehicle_Influencer;
+
+    // MSDevice_Bluelight's constructor calls setSpeedMode(7) on its holder.
+    // Speed mode bits (MSVehicle.cpp Influencer::setSpeedMode): 1=safe velocity,
+    // 2=max acceleration, 4=max deceleration, 8=respect junction priority,
+    // 16=emergency brake at red. Mode 7 must leave the last two disabled so the
+    // emergency vehicle runs red lights (MSVehicle::ignoreRed / influencerPrio).
+    #[test]
+    fn bluelight_speed_mode_7_disables_red_and_junction_priority() {
+        let mut inf = MSVehicle_Influencer::new();
+        assert!(inf.get_respect_junction_priority());
+        assert!(inf.get_emergency_brake_red_light());
+        inf.set_speed_mode(7);
+        assert!(inf.consider_safe_velocity());
+        assert!(inf.myConsiderMaxAcceleration);
+        assert!(inf.consider_max_deceleration());
+        assert!(!inf.get_respect_junction_priority());
+        assert!(!inf.get_emergency_brake_red_light());
+    }
+
+    #[test]
+    fn bluelight_device_name_from_id() {
+        assert_eq!(MSDevice::get_device_name("bluelight_rescue"), "bluelight");
+    }
+}
+
