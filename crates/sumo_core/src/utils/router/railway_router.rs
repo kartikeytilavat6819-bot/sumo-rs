@@ -106,6 +106,7 @@ fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
 
 /// The `RailwayRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
 pub fn railway_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    crate::microsim::oc93_probe::hit(11);
     Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
 }
 
@@ -243,6 +244,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         E: RouterEdge<V>,
     {
         self.ensure_internal_router();
+        crate::microsim::oc93_probe::hit(9);
         let mut toProhibitRE: SUMOAbstractRouter_Prohibitions = Default::default();
         for (edge, prohibition) in toProhibit {
             let edge: Ptr<E> = (*edge).cast();

@@ -5523,6 +5523,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
+        crate::microsim::oc93_probe::hit(10);
         if self.myRoutingMode == utils::traci::traci_constants::ROUTING_MODE_AGGREGATED {
             MSRoutingEngine::get_router_tt(self.get_rng_index(), self.get_v_class(), &Default::default())
         } else {

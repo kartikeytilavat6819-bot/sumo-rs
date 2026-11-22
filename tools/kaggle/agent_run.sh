@@ -12,8 +12,8 @@ OC93_COUNT=1 timeout 30 "$OUR" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou"
     --fcd-output "$OUT/$c.fcd.xml" --no-step-log true $args \
     > "$OUT/$c.out" 2> "$OUT/$c.err"
 echo "exit=$?"
-echo "==== last 40 OC93 counter lines ===="
-grep -a '^OC93' "$OUT/$c.err" | tail -40
+echo "==== first 3 and last 5 OC93 counter lines ===="
+grep -a "^OC93" "$OUT/$c.err" | sed -n "1,3p"; grep -a "^OC93" "$OUT/$c.err" | tail -5
 echo "==== last stdout lines ===="
 tail -5 "$OUT/$c.out"
 echo "last fcd: $(grep -a '<timestep' "$OUT/$c.fcd.xml" 2>/dev/null | tail -1 | grep -ao 'time="[0-9.]*"' | tail -1)"

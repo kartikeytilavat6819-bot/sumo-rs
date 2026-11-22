@@ -3305,6 +3305,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
+        crate::microsim::oc93_probe::hit(8);
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
