@@ -1,0 +1,6 @@
+[2026-11-22T03:33:28.236934-05:00] [PID: 71980] Loading net-file from 'D:\sumo-wt\agent-oc104\tools\oracle\cases\tt_meta_with_log_timestamps_pid\ref_simple.net.xml' ... done (11ms).
+[2026-11-22T03:33:28.249865-05:00] [PID: 71980] Loading route-files incrementally from 'D:\sumo-wt\agent-oc104\tools\oracle\cases\tt_meta_with_log_timestamps_pid\routes.rou'
+[2026-11-22T03:33:28.249908-05:00] [PID: 71980] Loading done.
+[2026-11-22T03:33:28.258136-05:00] [PID: 71980] Simulation version 1.28.0 started with time: 0.00.
+[2026-11-22T03:33:28.258901-05:00] [PID: 71980] Simulation ended at time: 100.00.
+[2026-11-22T03:33:28.258930-05:00] [PID: 71980] Reason: The final simulation step has been reached.
