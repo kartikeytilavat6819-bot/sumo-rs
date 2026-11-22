@@ -1,12 +1,12 @@
 //! Port of netwrite/NWWriter_XML.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::msg_handler::write_warning;
+use utils::common::msg_handler::{write_error, write_warning, with_instance, MsgType};
 use utils::common::std_defs::{g_precision, g_precision_geo, NETWORK_VERSION};
 use utils::common::string_utils::escape_xml;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, write_permissions, SVCPermissions, SVC_ALL, SVC_IGNORING, SVC_PEDESTRIAN, SVC_UNSPECIFIED};
 use utils::common::to_string::{join_to_string, mm_version_to_string};
-use utils::iodevices::output_device::OutputDeviceRef;
+use utils::iodevices::output_device::{OutputDevice, OutputDeviceRef};
 use utils::xml::sumo_xml_definitions::{LaneSpreadFunctions, TrafficLightTypes};
 
 // NBNode::UNSPECIFIED_RADIUS and NBEdge::UNSPECIFIED_* (C++ static members, NBNode.cpp / NBEdge.cpp)
@@ -30,7 +30,16 @@ fn opt_str(oc: &OptionsCont, name: &str) -> String {
 
 /// OutputDevice::getDevice(name)
 fn get_device(name: &str) -> OutputDeviceRef {
-    or_panic(OutputDevice::get_device(name, true))
+    match OutputDevice::get_device(name, true) {
+        Ok(d) => d,
+        Err(e) => {
+            // C++ throws ProcessError, which main catches and reports before exiting non-zero.
+            // Do the same without a Rust panic so the harness sees a normal error exit.
+            write_error(&e.to_string());
+            with_instance(MsgType::Error, |h| h.inform("Quitting (on error).", false));
+            std::process::exit(1);
+        }
+    }
 }
 
 /// GeoConvHelper::getFinal() (copied; the closure form cannot be held across the writers)

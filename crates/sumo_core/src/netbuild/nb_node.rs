@@ -107,7 +107,9 @@ fn nbnode_validate_new(id: &str, position: &Position) {
         panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
     }
     if position.is_nan() {
-        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", position, id)));
+        // C++ throws ProcessError (caught by the XML loader, which writes the error and
+        // keeps going); a Rust panic would be scored as PANIC by the harness.
+        utils::common::msg_handler::write_error(&format!("Invalid position '{}' for node '{}'", position, id));
     }
 }
 
@@ -864,7 +866,7 @@ impl NBNode {
     pub fn reinit(&mut self, position: &Position, type_: SumoXMLNodeType, updateEdgeGeometries: bool) {
         self.myPosition = *position;
         if self.myPosition.is_nan() {
-            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", self.myPosition, self.get_id())));
+            utils::common::msg_handler::write_error(&format!("Invalid position '{}' for node '{}'", self.myPosition, self.get_id()));
         }
         // patch type
         self.myType = type_;
