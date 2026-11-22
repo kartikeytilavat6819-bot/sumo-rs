@@ -1,7 +1,7 @@
 #!/bin/bash
 # oc104 diagnostics: our sumo vs pristine C++ sumo on the fcd-replay cases.
 # sumo's main.rs only runs the default panic hook (which prints file:line) when RUST_BACKTRACE is set.
-export RUST_BACKTRACE=1
+export RUST_BACKTRACE=full
 OURS=${OURS:-/tmp/target/debug/sumo}
 OUT=/tmp/oc104_fcd
 mkdir -p $OUT
@@ -26,7 +26,7 @@ for C in tools/oracle/cases/tt_devices_fcd-replay_plain tools/oracle/cases/tt_de
   diff -u $OUT/$NAME.pristine.stat.xml $OUT/$NAME.ours.stat.xml | head -40
 done
 echo "################ PANIC LOCATIONS"
-grep -h -E 'panicked at|attempt to|assertion failed' $OUT/*.ours.log | cut -c1-400
+grep -A8 -h -E 'panicked at' $OUT/*.ours.log | grep -E 'panicked at|sumo_core|utils::' | cut -c1-300
 
 # oc105 measurement (from wave2): compare our sumo with the official binary on two target rows.
 set -u
