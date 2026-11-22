@@ -511,7 +511,9 @@ impl GeoConvHelper {
     }
 }
 
-/// Transverse Mercator, Poder/Engsager "exact" algorithm (PROJ 9.4 src/projections/tmerc.cpp).
+/// Transverse Mercator, Poder/Engsager "exact" algorithm (PROJ 6.3.2 src/projections/tmerc.cpp —
+/// the version bundled with the official PyPI eclipse-sumo 1.28.0 wheel; its inverse differs by
+/// a few ULPs from PROJ 9.4's optimized form, which changes 6-decimal boundary rounding).
 /// Field names mirror PROJ's `PoderEngsager`: Qn has no `a` factor, Zb is the origin northing,
 /// x0/y0 are the false easting/northing applied by PROJ's fwd_finalize/inv_prepare.
 #[derive(Clone, Copy, Debug)]
@@ -534,22 +536,26 @@ fn adjlon(lon: f64) -> f64 {
     if lon.abs() <= PI { lon } else { (lon + PI).rem_euclid(2. * PI) - PI }
 }
 
-/// PROJ `gatg`: real Clenshaw summation of `sum p[i] * sin(2(i+1) B)`, plus B.
-fn gatg(p: &[f64; 6], b: f64, cos_2b: f64, sin_2b: f64) -> f64 {
-    let two_cos_2b = 2. * cos_2b;
+/// PROJ 6.3.2 `gatg`: real Clenshaw summation of `sum p[i] * sin(2(i+1) B)`, plus B.
+fn gatg(p: &[f64; 6], b: f64) -> f64 {
+    let cos_2b = 2. * (2. * b).cos();
     let mut h = 0.;
     let mut h2 = 0.;
     let mut h1 = p[5];
     for i in (0..5).rev() {
-        h = -h2 + two_cos_2b * h1 + p[i];
+        h = -h2 + cos_2b * h1 + p[i];
         h2 = h1;
         h1 = h;
     }
-    b + h * sin_2b
+    b + h * (2. * b).sin()
 }
 
-/// PROJ complex Clenshaw summation; returns (R, I).
-fn clen_s(a: &[f64; 6], sin_arg_r: f64, cos_arg_r: f64, sinh_arg_i: f64, cosh_arg_i: f64) -> (f64, f64) {
+/// PROJ 6.3.2 complex Clenshaw summation (takes raw 2*Cn, 2*Ce); returns (R, I).
+fn clen_s(a: &[f64; 6], arg_r: f64, arg_i: f64) -> (f64, f64) {
+    let sin_arg_r = arg_r.sin();
+    let cos_arg_r = arg_r.cos();
+    let sinh_arg_i = arg_i.sinh();
+    let cosh_arg_i = arg_i.cosh();
     let mut r = 2. * cos_arg_r * cosh_arg_i;
     let mut i = -2. * sin_arg_r * sinh_arg_i;
     let mut hi1 = 0.;
@@ -586,7 +592,9 @@ fn clens(a: &[f64; 6], arg_r: f64) -> f64 {
 impl Etmerc {
     /// PROJ `setup_exact`: all six coefficient series, Qn (no `a`), Zb.
     fn new(a: f64, rf: f64, k0: f64, lon0_rad: f64, x0: f64, y0: f64, lat0_rad: f64) -> Etmerc {
-        let f = 1. / rf;
+        // PROJ 6.3.2 derives the third flattening from `es`, not directly from 1/rf.
+        let es = (1. / rf) * (2. - 1. / rf);
+        let f = es / (1. + (1. - es).sqrt());
         let n = f / (2. - f);
         let mut np = n;
         let mut cgb = [0.; 6];
@@ -631,7 +639,7 @@ impl Etmerc {
         utg[5] = np * (-20648693. / 638668800.);
         gtu[5] = np * (212378941. / 319334400.);
 
-        let z = gatg(&cbg, lat0_rad, (2. * lat0_rad).cos(), (2. * lat0_rad).sin());
+        let z = gatg(&cbg, lat0_rad);
         let zb = -qn * (z + clens(&gtu, 2. * z));
         Etmerc { lon0: lon0_rad, x0, y0, a, ra: 1. / a, qn, zb, cgb, cbg, utg, gtu }
     }
@@ -686,28 +694,19 @@ impl Etmerc {
         }
     }
 
-    /// PROJ `exact_e_fwd` followed by `fwd_finalize`: lon/lat (radians) -> easting/northing (metres).
+    /// PROJ 6.3.2 `exact_e_fwd` + `fwd_finalize`: lon/lat (radians) -> easting/northing (metres).
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
         let lam = adjlon(lon - self.lon0);
-        let mut cn = gatg(&self.cbg, lat, (2. * lat).cos(), (2. * lat).sin());
+        let mut cn = gatg(&self.cbg, lat);
         let sin_cn = cn.sin();
         let cos_cn = cn.cos();
         let sin_ce = lam.sin();
         let cos_ce = lam.cos();
-        let cos_cn_cos_ce = cos_cn * cos_ce;
-        cn = sin_cn.atan2(cos_cn_cos_ce);
-        let inv_denom_tan_ce = 1. / sin_cn.hypot(cos_cn_cos_ce);
-        let tan_ce = sin_ce * cos_cn * inv_denom_tan_ce;
-        let mut ce = tan_ce.asinh();
-        let two_inv_denom_tan_ce = 2. * inv_denom_tan_ce;
-        let two_inv_denom_tan_ce_square = two_inv_denom_tan_ce * inv_denom_tan_ce;
-        let tmp_r = cos_cn_cos_ce * two_inv_denom_tan_ce_square;
-        let sin_arg_r = sin_cn * tmp_r;
-        let cos_arg_r = cos_cn_cos_ce * tmp_r - 1.;
-        let sinh_arg_i = tan_ce * two_inv_denom_tan_ce;
-        let cosh_arg_i = two_inv_denom_tan_ce_square - 1.;
-        let (_d_cn, d_ce) = clen_s(&self.gtu, sin_arg_r, cos_arg_r, sinh_arg_i, cosh_arg_i);
-        cn += _d_cn;
+        cn = sin_cn.atan2(cos_ce * cos_cn);
+        let mut ce = (sin_ce * cos_cn).atan2(sin_cn.hypot(cos_cn * cos_ce));
+        ce = ce.tan().asinh();
+        let (d_cn, d_ce) = clen_s(&self.gtu, 2. * cn, 2. * ce);
+        cn += d_cn;
         ce += d_ce;
         let ry = self.qn * cn + self.zb;
         let rx = self.qn * ce;
@@ -715,32 +714,24 @@ impl Etmerc {
         (self.a * rx + self.x0, self.a * ry + self.y0)
     }
 
-    /// PROJ `inv_prepare` + `exact_e_inv` + `inv_finalize`: easting/northing (metres) -> lon/lat (radians).
+    /// PROJ 6.3.2 `inv_prepare` + `exact_e_inv` + `inv_finalize`: metres -> lon/lat (radians).
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
         // PROJ inv_prepare (CLASSIC, to_meter = 1): de-offset then multiply by ra = 1/a
         let cx = (x - self.x0) * self.ra;
         let cy = (y - self.y0) * self.ra;
         let mut cn = (cy - self.zb) / self.qn;
         let mut ce = cx / self.qn;
-        let sin_arg_r = (2. * cn).sin();
-        let cos_arg_r = (2. * cn).cos();
-        let exp_2_ce = (2. * ce).exp();
-        let half_inv_exp_2_ce = 0.5 / exp_2_ce;
-        let sinh_arg_i = 0.5 * exp_2_ce - half_inv_exp_2_ce;
-        let cosh_arg_i = 0.5 * exp_2_ce + half_inv_exp_2_ce;
-        let (_d_cn, d_ce) = clen_s(&self.utg, sin_arg_r, cos_arg_r, sinh_arg_i, cosh_arg_i);
-        cn += _d_cn;
+        let (d_cn, d_ce) = clen_s(&self.utg, 2. * cn, 2. * ce);
+        cn += d_cn;
         ce += d_ce;
+        ce = ce.sinh().atan();
         let sin_cn = cn.sin();
         let cos_cn = cn.cos();
-        let sinh_ce = ce.sinh();
-        ce = sinh_ce.atan2(cos_cn);
-        let modulus_ce = sinh_ce.hypot(cos_cn);
-        cn = sin_cn.atan2(modulus_ce);
-        let tmp = 2. * modulus_ce / (sinh_ce * sinh_ce + 1.);
-        let sin_2_cn = sin_cn * tmp;
-        let cos_2_cn = tmp * modulus_ce - 1.;
-        let phi = gatg(&self.cgb, cn, cos_2_cn, sin_2_cn);
+        let sin_ce = ce.sin();
+        let cos_ce = ce.cos();
+        ce = sin_ce.atan2(cos_ce * cos_cn);
+        cn = (sin_cn * cos_ce).atan2(sin_ce.hypot(cos_ce * cos_cn));
+        let phi = gatg(&self.cgb, cn);
         (adjlon(ce + self.lon0), phi)
     }
 }
