@@ -23,11 +23,14 @@ def parse(path):
 
 
 def time_seconds(v):
-    """SUMO writes times >1 day as D:HH:MM:SS; plain seconds otherwise."""
+    """SUMO writes plain seconds, or H:MM:SS.ss / D:H:MM:SS.ss with -H."""
     if ":" not in v:
         return float(v)
+    parts = v.split(":")
+    if len(parts) == 4:  # D:HH:MM:SS
+        return float(parts[0]) * 86400 + float(parts[1]) * 3600 + float(parts[2]) * 60 + float(parts[3])
     sec = 0.0
-    for part in v.split(":"):
+    for part in parts:
         sec = sec * 60 + float(part)
     return sec
 
@@ -45,12 +48,12 @@ def check(args):
         perf = [p for p in root.iter("performance")]
         if not perf:
             raise SystemExit(f"INCOMPLETE {args.stat}: no <performance> element")
-        end = float(perf[0].get("end"))
+        end = time_seconds(perf[0].get("end"))
         if args.end is not None and abs(end - args.end) > 1e-6:
             raise SystemExit(f"INCOMPLETE {args.stat}: end={end} but --end={args.end}")
     if args.fcd:
         root = parse(args.fcd)
-        times = [float(t.get("time")) for t in root.iter("timestep")]
+        times = [time_seconds(t.get("time")) for t in root.iter("timestep")]
         if not times:
             raise SystemExit(f"INCOMPLETE {args.fcd}: no timesteps")
         target = args.end if args.end is not None else (max(arrivals) if arrivals else None)
@@ -59,7 +62,15 @@ def check(args):
     print("COMPLETE")
 
 
+def self_check():
+    assert time_seconds("12.5") == 12.5
+    assert time_seconds("00:00:12.50") == 12.5
+    assert time_seconds("00:16:40.00") == 1000.0
+    assert time_seconds("1:00:00:00.00") == 86400.0
+
+
 def main(argv=None):
+    self_check()
     p = argparse.ArgumentParser()
     p.add_argument("--end", type=float)
     p.add_argument("--tripinfo")
