@@ -3593,6 +3593,12 @@ impl MSVehicle {
     pub fn execute_move(&mut self) -> bool {
         let TS = ts();
         let DELTA_T = delta_t();
+        if self.get_id() == "ES1" {
+            let st = MSNet::get_instance().get_current_time_step();
+            if st >= 90000 && st <= 100000 {
+                eprintln!("OC102P t={} lane={} pos={:.3} speed={:.3} x={:.2} y={:.2}", st, self.myLane.get_id(), self.myState.myPos, self.myState.mySpeed, self.get_position(0.0).x(), self.get_position(0.0).y());
+            }
+        }
         // C++ macro NUMERICAL_EPS_SPEED (0.1 * NUMERICAL_EPS * TS), defined in MSVehicle.cpp
         let NUMERICAL_EPS_SPEED = 0.1 * utils::geom::NUMERICAL_EPS * TS;
         // Maximum safe velocity
