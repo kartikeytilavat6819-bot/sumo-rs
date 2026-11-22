@@ -1,0 +1,1 @@
+shortcut: XSD schema validation is not ported (utils/xml has no grammar pool); official emits attribute-not-declared / schema-lookup errors. Upgrade when schema validation lands.

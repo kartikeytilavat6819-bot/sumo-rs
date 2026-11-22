@@ -13780,6 +13780,8 @@ impl MSVehicle {
             // move to next lane
             //  get the next link used
             let mut link: usize = MSLane::succ_link_sec(self, (view + 1) as i32, &lane, bestLaneConts);
+            // C++ keeps an iterator into the lane the link belongs to; `linkLane` is that lane (differs from `lane` after the blue-light jump)
+            let mut linkLane: Ptr<MSLane> = lane;
             if lane.is_link_end(&mut link) && self.myLaneChangeModel.has_blue_light() && self.myCurrEdge + 1 != self.myRoute.size() as usize {
                 // emergency vehicle is on the wrong lane. Obtain the link that it would use from the correct turning lane
                 let currentIndex = lane.get_index();
@@ -13790,10 +13792,12 @@ impl MSVehicle {
                     }
                 }
                 if !bestJump.is_null() {
-                    let nextEdge = self.get_next_edge_ptr();
+                    // C++: `*(myCurrEdge + 1)` is the next route edge, not the internal edge get_next_edge_ptr() returns
+                    let nextEdge = self.succ_edge(1);
                     for (i, cand) in bestJump.get_link_cont().iter().enumerate() {
                         if Ptr::new(cand.get_lane().get_edge()) == nextEdge {
                             link = i;
+                            linkLane = bestJump;
                             break;
                         }
                     }
@@ -13801,11 +13805,11 @@ impl MSVehicle {
             }
 
             // Check whether this is a turn (to save info about the next upcoming turn)
-            if !encounteredTurn && !lane.is_link_end(&mut link) && lane.get_link_cont().len() > 1 {
-                let linkDir = lane.get_link_cont()[link].get_direction();
+            if !encounteredTurn && !linkLane.is_link_end(&mut link) && lane.get_link_cont().len() > 1 {
+                let linkDir = linkLane.get_link_cont()[link].get_direction();
                 if linkDir != LinkDirection::STRAIGHT && linkDir != LinkDirection::NODIR {
                     myNextTurn.0 = seen;
-                    myNextTurn.1 = lane.get_link_cont()[link];
+                    myNextTurn.1 = linkLane.get_link_cont()[link];
                     encounteredTurn = true;
                 }
             }
@@ -13827,9 +13831,9 @@ impl MSVehicle {
                 break;
             }
             // check whether the lane or the shadowLane is a dead end (allow some leeway on intersections)
-            if lane.is_link_end(&mut link)
-                || (crate::microsim::ms_globals::sublane() && self.brake_for_overlap(lane.get_link_cont()[link], lane))
-                || (opposite && lane.get_link_cont()[link].get_via_lane_or_lane().get_parallel_opposite().is_null() && !self.myLaneChangeModel.has_blue_light())
+            if linkLane.is_link_end(&mut link)
+                || (crate::microsim::ms_globals::sublane() && self.brake_for_overlap(linkLane.get_link_cont()[link], lane))
+                || (opposite && linkLane.get_link_cont()[link].get_via_lane_or_lane().get_parallel_opposite().is_null() && !self.myLaneChangeModel.has_blue_light())
             {
                 let va = cfModel.stop_speed(me, self.get_speed(), seen, MSCFModel_CalcReason::CURRENT);
                 if !lastLink.is_null() {
@@ -13840,12 +13844,12 @@ impl MSVehicle {
                 } else {
                     v = min2(va, v);
                 }
-                if lane.is_link_end(&mut link) {
+                if linkLane.is_link_end(&mut link) {
                     lfLinks.push(MSVehicle_DriveProcessItem::new_2(v, seen, 0.0));
                     break;
                 }
             }
-            let linkP: Ptr<MSLink> = lane.get_link_cont()[link];
+            let linkP: Ptr<MSLink> = linkLane.get_link_cont()[link];
             lateralShift += linkP.get_lateral_shift();
             let yellowOrRed = linkP.have_red() || linkP.have_yellow();
             // We distinguish 3 cases when determining the point at which a vehicle stops:

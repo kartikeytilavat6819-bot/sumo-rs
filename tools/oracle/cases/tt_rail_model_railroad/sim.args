@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --time-to-teleport.railsignal-deadlock 200 -c tools/oracle/cases/tt_rail_model_railroad/sumo.sumocfg -e 3600 --scale 0.5
