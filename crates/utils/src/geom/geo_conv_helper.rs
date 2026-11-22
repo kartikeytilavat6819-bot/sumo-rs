@@ -770,7 +770,7 @@ impl Projection {
     }
 }
 
-/// Spherical Mercator (`+proj=merc`), faithful to PROJ 9.4 `src/projections/merc.cpp`
+/// Spherical Mercator (`+proj=merc`), faithful to PROJ 6.3.2 `src/projections/merc.cpp`
 /// (`merc_s_forward` / `merc_s_inverse`) plus the fwd_finalize/inv_prepare scaling.
 #[derive(Clone, Copy, Debug)]
 struct Merc {
@@ -928,7 +928,8 @@ mod tests {
         format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
     }
 
-    /// PROJ 9.4 reference: `echo "lon lat" | cs2cs +proj=longlat +datum=WGS84 +to +proj=utm +zone=Z +ellps=WGS84 +datum=WGS84 +units=m +no_defs -f %.9f`
+    /// cs2cs reference (PROJ; tolerance covers the 6.3.2 vs 9.4 ULP difference):
+    /// `echo "lon lat" | cs2cs +proj=longlat +datum=WGS84 +to +proj=utm +zone=Z +ellps=WGS84 +datum=WGS84 +units=m +no_defs -f %.9f`
     #[test]
     fn utm_matches_proj() {
         let cases: [(f64, f64, i32, f64, f64); 19] = [
@@ -994,7 +995,7 @@ mod tests {
         assert!(s.x2cartesian_const(&mut p));
         assert!((p.y() - 6248819.230249108).abs() < 1e-6);
 
-        // PROJ 9.4: cs2cs +proj=longlat +ellps=bessel +to +proj=tmerc +lat_0=0 +lon_0=12 +k=1 +x_0=4500000 +y_0=0 +ellps=bessel +units=m +no_defs
+        // cs2cs +proj=longlat +ellps=bessel +to +proj=tmerc +lat_0=0 +lon_0=12 +k=1 +x_0=4500000 +y_0=0 +ellps=bessel +units=m +no_defs
         let d = GeoConvHelper::new(&dhdn_proj_string(4), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
         let mut q = Position::new(12.5, 52.3);
         assert!(d.x2cartesian_const(&mut q));
