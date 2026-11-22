@@ -3851,9 +3851,6 @@ impl MSLane {
                             }
                         }
 
-                        if (collider.get_id() == "ES1" || victim.get_id() == "ES1") && timestep >= 99000 && timestep <= 101000 {
-                            eprintln!("OC102J t={} lane={} collider={} victim={} cBox={:?} vBox={:?} cPoly={:?} vPoly={:?}", timestep, self.get_id(), collider.get_id(), victim.get_id(), colliderBoundary.0.iter().map(|p| p.to_string()).collect::<Vec<_>>(), victim.get_bounding_box(0.).0.iter().map(|p| p.to_string()).collect::<Vec<_>>(), collider.get_bounding_poly(check_junction_collision_min_gap()).0.iter().map(|p| p.to_string()).collect::<Vec<_>>(), victim.get_bounding_poly(0.).0.iter().map(|p| p.to_string()).collect::<Vec<_>>());
-                        }
                         if colliderBoundary.overlaps_with(&victim.get_bounding_box(0.), 0.) {
                             // make a detailed check
                             let _boundingPoly = collider.get_bounding_poly(0.);
