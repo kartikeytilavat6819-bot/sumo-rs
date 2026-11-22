@@ -16,7 +16,7 @@ for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_shor
     if [ "$side" = ours ]; then BIN=$OURS; else BIN=$REF; fi
     if [ "$side" = ours ]; then DBG=OC98DBG=1; else DBG=; fi
     timeout 300 env $DBG "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
-      $(cat "$C/sim.args") --no-step-log true \
+      $(cat "$C/sim.args") --no-step-log true --end 400 \
       --tripinfo-output "$OUT/$case.$side.ti.xml" \
       --vehroute-output "$OUT/$case.$side.vr.xml" \
       --fcd-output "$OUT/$case.$side.fcd.xml" \
@@ -123,5 +123,12 @@ for c in tt_devices_ssm_bugs_ticket13918 tt_devices_rerouting_reroute_congestion
     echo "$side stderr:"; head -20 "$OC105_OUT/$c.$side.err"
     echo "$side stdout:"; head -12 "$OC105_OUT/$c.$side.out"
   done
+done
+# rail stop-skipping decision (per-stop delay/cost) — printed last so it
+# survives the gate's tail truncation
+echo "==== OC98 RAIL STOP-SKIP DECISION"
+for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_short_closing_wait; do
+  echo "---- $case"
+  grep 'OC98DBG reroute-stop\|OC98DBG reroute info\|OC98DBG interval\|OC98DBG getClosed\|OC98DBG prohibit\|OC98DBG railEdge' "$OUT/$case.ours.log" | head -60
 done
 echo "OC98 DIAGNOSTIC DONE"

@@ -884,7 +884,19 @@ impl MSTriggeredRerouter {
                 // C++ wraps this in try { ... } catch (ProcessError&) {}: a failed reroute leaves the route unchanged
                 ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     v.reroute(now, self.base.get_id(), router, false, false, canChangeDest, newEdge)
-                })).unwrap_or(false);
+                })).unwrap_or_else(|e| {
+                    if std::env::var("OC98DBG").is_ok() {
+                        let msg = if let Some(s) = e.downcast_ref::<String>() {
+                            s.clone()
+                        } else if let Some(s) = e.downcast_ref::<&str>() {
+                            (*s).to_string()
+                        } else {
+                            format!("{:?}", e)
+                        };
+                        eprintln!("OC98DBG reroute panic (first attempt): {}", msg);
+                    }
+                    false
+                });
                 if !ok && !keepDestination && canChangeDest {
                     // destination unreachable due to closed intermediate edges. pick among alternative targets
                     let mut edgeProbs2 = rerouteDef.edgeProbs.clone();
@@ -905,7 +917,19 @@ impl MSTriggeredRerouter {
                         }
                         ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                             v.reroute(now, self.base.get_id(), router, false, false, true, newEdge)
-                        })).unwrap_or(false);
+                        })).unwrap_or_else(|e| {
+                            if std::env::var("OC98DBG").is_ok() {
+                                let msg = if let Some(s) = e.downcast_ref::<String>() {
+                                    s.clone()
+                                } else if let Some(s) = e.downcast_ref::<&str>() {
+                                    (*s).to_string()
+                                } else {
+                                    format!("{:?}", e)
+                                };
+                                eprintln!("OC98DBG reroute panic (alt target): {}", msg);
+                            }
+                            false
+                        });
                     }
                 }
                 self.reset_closed_edges(hasReroutingDevice, tObject);
