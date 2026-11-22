@@ -1082,6 +1082,20 @@ mod tests {
         assert!(!router.compute(ptrs[3], ptrs[0], Ptr::null(), 0, &mut none, true));
         assert!(none.is_empty());
     }
+
+    /// An empty prohibit on a router with no current prohibitions is a C++ no-op: it must not
+    /// dispatch through the (virtual) prohibit callback (ticket9812 rail-taxi hang).
+    #[test]
+    fn empty_prohibit_does_not_invoke_callback() {
+        let boxes = vec![edge("A", 0, 10.)];
+        let ptrs: Vec<Ptr<TestEdge>> = boxes.iter().map(|b| Ptr::from_box(b)).collect();
+        let op: SUMOAbstractRouter_TypedOperation<TestEdge, TestVeh> = length_effort;
+        let mut router = DijkstraRouter::new(&ptrs, true, Some(op), None, true, Ptr::null(), false, false);
+        router.base.myProhibit = Some(|_, _| panic!("empty prohibit must not invoke the callback"));
+        let empty = SUMOAbstractRouter_Prohibitions::default();
+        router.prohibit(&empty);
+        router.prohibit(&empty);
+    }
 }
 
 
