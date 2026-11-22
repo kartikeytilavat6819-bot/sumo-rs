@@ -431,7 +431,13 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
             std::io::Read::read_to_string(&mut r, &mut t).map(|_| t)
         }) {
             Ok(t) => t,
-            Err(_) => panic!("{}", ProcessError::new(format!("Could not load landmark-lookup-table from '{}'.", filename))),
+            // C++ zstr::ifstream uses strict_fstream, whose constructor throws on open failure
+            // before the "Could not load landmark-lookup-table" check is reached.
+            Err(e) => {
+                let msg = e.to_string();
+                let reason = msg.split(" (os error").next().unwrap_or(&msg);
+                panic!("{}", ProcessError::new(format!("strict_fstream: open('{}',in|binary): open failed: {}", filename, reason)));
+            }
         };
         let mut landmarks: Vec<Ptr<E>> = Vec::new();
         let mut numLandMarks: i32 = 0;
