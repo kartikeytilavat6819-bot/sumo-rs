@@ -958,7 +958,10 @@ mod tests {
 
     impl RouterVehicle for TestVeh {
         fn v_class(&self) -> SUMOVehicleClass {
-            SVC_IGNORING
+            // SVC_IGNORING is 0 (the null vehicle used by the other tests), for which
+            // prohibition permission bits are a no-op. Use a real class here so the
+            // prohibition check behaves like C++ with an actual vehicle.
+            SVC_RAIL
         }
         fn get_id(&self) -> String {
             "veh".to_string()
