@@ -8,7 +8,7 @@ FLAGS="--xml-validation never --write-license --default.speeddev 0 --default.dep
 echo "=== RUST ==="
 ${CARGO_TARGET_DIR}/debug/sumo -n "$C/ref_simple.net.xml" -r "$C/routes.rou" $FLAGS \
     --tripinfo-output "$OUT/rust.tripinfo.xml" >"$OUT/rust.log" 2>&1 || echo "rust exit $?"
-grep -E 'OC108_OPTI|skip|replac|could not assign|Error' "$OUT/rust.log" | head -60
+grep -E 'OC108_OPTI|OC108_REPL|OC108_REROUTE|skip|replac|could not assign|Error' "$OUT/rust.log" | head -160
 echo "=== CPP ==="
 ${SUMO_PRISTINE_BIN}/sumo -n "$C/ref_simple.net.xml" -r "$C/routes.rou" $FLAGS \
     --tripinfo-output "$OUT/cpp.tripinfo.xml" >"$OUT/cpp.log" 2>&1 || echo "cpp exit $?"

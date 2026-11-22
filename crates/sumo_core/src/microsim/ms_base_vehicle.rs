@@ -2095,6 +2095,7 @@ impl MSBaseVehicle {
                 lastPos = endPos;
 
                 self.myStops[iter].edge = (searchStart..edgeCount).find(|&i| self.myRoute.get_edges()[i] == stopEdge).unwrap_or(edgeCount);
+                eprintln!("OC108_REROUTE stop={} found={} of {} prio={}", stopEdge.get_id(), self.myStops[iter].edge, edgeCount, self.myStops[iter].pars.priority);
                 if self.myStops[iter].edge == edgeCount && self.myStops[iter].pars.priority >= 0.0 {
                     let oldEdge = self.myStops[iter].pars.edge.clone();
                     let oldName = self.myStops[iter].get_stopping_place_name().0;
@@ -6123,21 +6124,29 @@ impl MSBaseVehicle {
     // }
     pub fn replace_with_alternative(&mut self, iter: usize, searchStart: MSRouteIterator, end: MSRouteIterator) -> bool {
         let nameTag = self.myStops[iter].get_stopping_place_name();
+        eprintln!("OC108_REPL enter iter={} name={:?} searchStart={} end={}", iter, nameTag, searchStart, end);
         if !nameTag.0.is_empty() {
             let alternatives: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().get_stopping_place_alternatives(&nameTag.0, nameTag.1).clone();
+            eprintln!("OC108_REPL alternatives={}", alternatives.len());
             for alt in alternatives {
                 let altLane = alt.get_lane();
-                if Ptr::new(altLane.get_edge()) == Ptr::new(self.myStops[iter].lane.get_edge()) || !altLane.allows_vehicle_class(self.get_v_class()) {
+                let altEdge = Ptr::new(altLane.get_edge());
+                let same = altEdge == Ptr::new(self.myStops[iter].lane.get_edge());
+                let allows = altLane.allows_vehicle_class(self.get_v_class());
+                let found = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge);
+                eprintln!("OC108_REPL alt={} edge={} same={} allows={} found={:?}", alt.get_id(), altEdge.get_id(), same, allows, found);
+                if same || !allows {
                     continue;
                 }
-                let altEdge = Ptr::new(altLane.get_edge());
-                self.myStops[iter].edge = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge).unwrap_or(end);
+                self.myStops[iter].edge = found.unwrap_or(end);
                 if self.myStops[iter].edge != end {
                     self.myStops[iter].replace_stopping_place(alt);
+                    eprintln!("OC108_REPL SUCCESS edge={}", self.myStops[iter].edge);
                     return true;
                 }
             }
         }
+        eprintln!("OC108_REPL FAIL");
         false
     }
 
