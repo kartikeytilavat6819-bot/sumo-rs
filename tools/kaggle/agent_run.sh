@@ -1,22 +1,17 @@
 #!/bin/bash
-# Probe the 4 complex regressions: official vs ours, full first diff per test.
+# Probe the real regression: OSM parser netconvert row, official vs ours.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-OUT=/tmp/oc100_regress
+OUT=/tmp/oc100_osm
 rm -rf "$OUT"
 mkdir -p "$OUT"
-for c in misc/concurrent person/person simulation/loadState/persons_include simulation/simulation; do
-  key=$(echo "$c" | tr / _)
-  for side in official ours; do
-    d="$OUT/$key/$side"
-    cp -r "tools/oracle/complex_bundle/$c" "$d"
-    if [ "$side" = official ]; then BIN="$SUMO_PRISTINE_BIN/sumo"; else BIN="$CARGO_TARGET_DIR/debug/sumo"; fi
-    (cd "$d" && SUMO_BINARY="$BIN" PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}" python3 runner.py > console.txt 2>&1)
-  done
-  echo "===== $c"
-  diff -u "$OUT/$key/official/console.txt" "$OUT/$key/ours/console.txt" | head -80
-  if [ -f "$OUT/$key/official/state.xml" ] || [ -f "$OUT/$key/ours/state.xml" ]; then
-    echo "----- state.xml"
-    diff -u "$OUT/$key/official/state.xml" "$OUT/$key/ours/state.xml" | head -40
-  fi
-done
+C=tools/oracle/cases/itt_nc_netconvert_import_OSM_osm_parser
+SRC=(--write-license --osm-files "$C/osm.xml" -v --proj.utm --ignore-errors --output.street-names)
+"$SUMO_PRISTINE_BIN/netconvert" "${SRC[@]}" -o "$OUT/cpp.net.xml" > "$OUT/cpp.log" 2>&1
+echo "official exit=$?"
+"$CARGO_TARGET_DIR/debug/netconvert" "${SRC[@]}" -o "$OUT/rust.net.xml" > "$OUT/rust.log" 2>&1
+echo "ours exit=$?"
+echo "===== stderr diff"
+diff -u "$OUT/cpp.log" "$OUT/rust.log" | head -80
+echo "===== net diff"
+diff -u "$OUT/cpp.net.xml" "$OUT/rust.net.xml" | head -60
