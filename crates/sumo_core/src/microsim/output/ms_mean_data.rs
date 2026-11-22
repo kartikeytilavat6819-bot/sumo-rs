@@ -1507,13 +1507,7 @@ impl MSMeanData_MeanDataValueTracker {
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         let key = Ptr::from_mut(&mut *veh);
-        // Internal junction lanes are not part of an edge-based data set (myDumpInternal is
-        // false), so a leave towards an internal lane must not close a real edge's entry.
-        let crosses_internal = reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION
-            && self.base.base.myLane.is_null()
-            && !enteredLane.is_null()
-            && enteredLane.get_edge().is_internal();
-        if !crosses_internal && (self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT) {
+        if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
             let entry = self.myTrackedData[&key].clone();
             entry.myNumVehicleLeft.set(entry.myNumVehicleLeft.get() + 1);
         }
@@ -1551,15 +1545,6 @@ impl MSMeanData_MeanDataValueTracker {
             return true;
         }
         let key = Ptr::from_mut(&mut *veh);
-        // An edge-based tracker must not open an entry when the vehicle moves onto an
-        // internal junction lane: those edges are not part of the data set.
-        if reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION
-            && self.base.base.myLane.is_null()
-            && !enteredLane.is_null()
-            && enteredLane.get_edge().is_internal()
-        {
-            return true;
-        }
         if self.myParent.base.vehicle_applies(veh) && !self.myTrackedData.contains_key(&key) {
             let entry = self.myCurrentData.back().unwrap().clone();
             self.myTrackedData.insert(key, entry.clone());
