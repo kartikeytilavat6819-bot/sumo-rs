@@ -22,6 +22,7 @@ for v in $ROWNAMES; do
   echo "=== $v exit official=$crc ours=$rrc"
   echo "--- official stderr:"; head -n 8 "$d/official.stderr"
   echo "--- ours stderr:"; head -n 8 "$d/ours.stderr"
+  echo "--- stderr diff (official vs ours, first 12):"; diff "$d/official.stderr" "$d/ours.stderr" | head -n 12
   if [ "$crc" = 0 ] && [ -s "$d/official/net.net.xml" ] && [ -s "$d/ours/net.net.xml" ]; then
     echo "--- compare_net:"; (cd "$ROOT" && python3 tools/oracle/compare_net.py "$d/official/net.net.xml" "$d/ours/net.net.xml" 2>&1 | head -n 20)
   fi
