@@ -119,7 +119,9 @@ for dir in tools/oracle/cases/*/; do
   # exit code and the error/warning lines against the committed ref.errors / ref.output (from
   # errors.sumo / output.sumo), not against tripinfo/fcd/statistic. Streams are compared
   # separately, each in order, exactly like texttest. Cases without EXPECT_EXIT are unaffected.
-  if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ]; then
+  # netconvert error rows carry EXPECT_EXIT/ref.errors too, but their expectation came from
+  # errors.netconvert and they have no ref_simple.net.xml/routes.rou: run_netopts_new.sh scores them.
+  if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ] && [ -f "$dir/ref_simple.net.xml" ]; then
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
         --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
