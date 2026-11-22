@@ -1178,4 +1178,47 @@ pub struct MSDevice_FCDReplay_TrajectoryEntry {
 impl MSDevice_FCDReplay_TrajectoryEntry {
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Pins the mapping from the device.fcd-replay.consistency option to the attribute mask
+    // that my_start_element / fcd_opt_double read (C++ MSDevice_FCDReplay::init / myUsedAttributes).
+    #[test]
+    fn used_attributes_mask_is_respected() {
+        MY_USED_ATTRIBUTES.with(|m| {
+            let mut set = m.borrow_mut();
+            set.clear();
+            set.insert(SUMO_ATTR_X);
+            set.insert(SUMO_ATTR_SPEED);
+        });
+        assert!(fcd_used(SUMO_ATTR_X));
+        assert!(fcd_used(SUMO_ATTR_SPEED));
+        assert!(!fcd_used(SUMO_ATTR_Y));
+        assert!(!fcd_used(SUMO_ATTR_LANE));
+        MY_USED_ATTRIBUTES.with(|m| m.borrow_mut().clear());
+    }
+
+    // Pins the field layout consumed by move(): edgeOrLane selects moveToXY(7) vs (0),
+    // lanePos is the vehicle desired depart position, and speed feeds libsumo setSpeed.
+    #[test]
+    fn trajectory_entry_fields_match_move_paths() {
+        let e = MSDevice_FCDReplay_TrajectoryEntry {
+            time: 100,
+            pos: Position::new(-294.97, -49.16),
+            edgeOrLane: "onRamp_0".to_string(),
+            lanePos: 5.1,
+            speed: 2.6,
+            angle: 80.54,
+        };
+        assert_eq!(e.time, 100);
+        assert!((e.pos.x() - -294.97).abs() < 1e-9);
+        assert!((e.pos.y() - -49.16).abs() < 1e-9);
+        assert_eq!(e.edgeOrLane, "onRamp_0");
+        assert_eq!(e.lanePos, 5.1);
+        assert_eq!(e.speed, 2.6);
+        assert_eq!(e.angle, 80.54);
+    }
+}
+
 
