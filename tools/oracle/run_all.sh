@@ -157,8 +157,8 @@ for dir in tools/oracle/cases/*/; do
     CFG="$OUT/$c.cfg"
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     ARGS=$(printf '%s\n' "$EXTRA" | sed -E \
-      -e "s#(--save-(configuration|template|schema))[[:space:]]+[^[:space:]]+#\1 $CFG#g" \
-      -e "s#(--save-(configuration|template|schema))=[^[:space:]]+#\1=$CFG#g")
+      -e "s#(--save-(configuration|template|schema)|-C)[[:space:]]+[^[:space:]]+#\1 $CFG#g" \
+      -e "s#(--save-(configuration|template|schema)|-C)=[^[:space:]]+#\1=$CFG#g")
     rm -f "$CFG"
     timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
         --no-step-log true $ARGS >"$OUT/$c.cfg.out" 2>"$OUT/$c.cfg.err"
