@@ -46,6 +46,18 @@ for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
     grep '^OC95BT' "$R/sumo.log" | awk '{for(i=1;i<=NF;i++) if($i ~ /^step=/){split($i,a,"="); if(a[2]>=4 && a[2]<=9) print}}' | head -80
     echo "--- OUR bt.xml (first 60) ---"
     head -60 "$R/x.bt.xml" 2>/dev/null || echo MISSING
+    echo "--- FIRST BT MISMATCH (bt id, seen idx, seen id, n-recognitionPoints) ---"
+    python - "$D/ref.bt.xml" "$R/x.bt.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+a=ET.parse(sys.argv[1]).getroot(); b=ET.parse(sys.argv[2]).getroot()
+for x,y in zip(a.findall('bt'), b.findall('bt')):
+    sa,sb=x.findall('seen'),y.findall('seen')
+    for i in range(max(len(sa),len(sb))):
+        ra = None if i>=len(sa) else (sa[i].get('id'), sa[i].get('tBeg'), len(sa[i].findall('recognitionPoint')))
+        rb = None if i>=len(sb) else (sb[i].get('id'), sb[i].get('tBeg'), len(sb[i].findall('recognitionPoint')))
+        if ra!=rb:
+            print('bt=',x.get('id'),'idx=',i,'ref=',ra,'ours=',rb); sys.exit()
+PY
   fi
   echo "--- DIFF meandata/bt/elec vs ref ---"
   if [ -f "$D/add_outputs.txt" ]; then
