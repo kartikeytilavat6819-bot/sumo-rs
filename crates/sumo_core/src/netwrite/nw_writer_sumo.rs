@@ -268,7 +268,7 @@ impl NWWriter_SUMO {
         if oc.exists("geometry.avoid-overlap") && !oc.get_bool("geometry.avoid-overlap").unwrap() {
             // C++ toString(bool) uses ostringstream without boolalpha -> "0"/"1"
             let v = oc.get_bool("geometry.avoid-overlap").unwrap();
-            attrs.insert(SUMO_ATTR_AVOID_OVERLAP, if v { "1" } else { "0" }.to_string());
+            attrs.insert(SUMO_ATTR_AVOID_OVERLAP, cxx_bool_str(v).to_string());
         }
         if oc.exists("junctions.higher-speed") && oc.get_bool("junctions.higher-speed").unwrap() {
             attrs.insert(SUMO_ATTR_HIGHER_SPEED, oc.get_bool("junctions.higher-speed").unwrap().to_string());
@@ -2256,4 +2256,22 @@ fn write_location(into: &mut OutputDevice) {
         into.close_tag("");
         into.lf();
     });
+}
+
+/// C++ `toString(bool)` uses `std::ostringstream` without `boolalpha`, so a bool is written as "0"/"1".
+fn cxx_bool_str(v: bool) -> &'static str {
+    if v { "1" } else { "0" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::cxx_bool_str;
+
+    #[test]
+    fn avoid_overlap_header_bool_is_cxx_zero_or_one() {
+        // NWWriter_SUMO.cpp:101: attrs[SUMO_ATTR_AVOID_OVERLAP] = toString(oc.getBool("geometry.avoid-overlap"));
+        // The attribute is only written when the option is false.
+        assert_eq!(cxx_bool_str(false), "0");
+        assert_eq!(cxx_bool_str(true), "1");
+    }
 }
