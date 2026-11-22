@@ -660,6 +660,15 @@ impl MSTriggeredRerouter {
             }
             eprintln!("OC98DBG getClosed={:?}", rerouteDef.get_closed().iter().map(|(e, p)| (e.get_id().to_string(), p.begin, p.end, p.permissions)).collect::<Vec<_>>());
         }
+        if std::env::var("OC98DBG").is_ok() && !rerouteDef.is_null() {
+            let dbg_prob = if self.myAmInUserMode { self.myUserProbability } else { self.myProbability };
+            eprintln!("OC98DBG trigger-state reason={:?} prob={} threshold={} waitF={} waitT={} park={} overtake={} stopAlt={} routeProbs={} edgeProbs={}",
+                reason, dbg_prob, self.myTimeThreshold,
+                tObject.get_waiting_time(false), tObject.get_waiting_time(true),
+                rerouteDef.parkProbs.get_overall_prob(), rerouteDef.overtakeLocations.len(),
+                rerouteDef.stopAlternatives.len(), rerouteDef.routeProbs.get_overall_prob(),
+                rerouteDef.edgeProbs.get_overall_prob());
+        }
         if rerouteDef.is_null() {
             return true; // an active interval could appear later
         }
