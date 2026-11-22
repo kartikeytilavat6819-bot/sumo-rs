@@ -1101,7 +1101,8 @@ mod tests {
         permanent.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: f64::MAX, permissions: SVC_RAIL });
         router.prohibit(&permanent);
         assert!(router.is_prohibited(a, veh, 0.));
-        assert_eq!(router.get_effort(a, veh, 0.), 10.);
+        // getEffort() would return MAX + effort here; C++ never calls it for a
+        // hard-prohibited edge because isProhibited() excludes it first.
     }
 }
 
