@@ -51,7 +51,7 @@ for c in $CASES; do
   done
 done
 echo "--- OC95T trace (md_midinterval ours, first 40 lines)"
-grep -h "OC95T leave" "$OUT/md_midinterval/ours/stderr.txt" | awk '{print $2}' | sort | uniq -c
+grep -h "OC95T leave" "$OUT/md_midinterval/ours/stderr.txt" | awk '{print $3}' | sort | uniq -c
 echo "--- OC95T enter counts per tracker"
-grep -h "OC95T enter" "$OUT/md_midinterval/ours/stderr.txt" | awk '{print $2}' | sort | uniq -c
+grep -h "OC95T enter" "$OUT/md_midinterval/ours/stderr.txt" | awk '{print $3}' | sort | uniq -c
 echo "PROBE DONE (outputs in $OUT)"
