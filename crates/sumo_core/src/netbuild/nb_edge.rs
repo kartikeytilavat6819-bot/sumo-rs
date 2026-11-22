@@ -7248,7 +7248,6 @@ impl NBEdge {
                         // compute the crossing point
                         if (needsCont || (bothPrio && oppositeLeftIntersect && !utils::common::sumo_vehicle_class::is_railway(conPermissions))) && (!con.indirectLeft || dir2 == LinkDirection::STRAIGHT) && !isBicycleLeftTurn {
                             crossingPositions.1.push(index);
-                            if n.get_id() == "gneJ8" { eprintln!("DEBUG needsCont fromE={} toE={} otherFrom={} otherTo={} needsCont={} bothPrio={} oppLeft={} isBikeLeft={} minDV cand", self.get_id(), con.toEdge.get_id(), i2.get_id(), k2.toEdge.get_id(), needsCont, bothPrio, oppositeLeftIntersect, isBicycleLeftTurn); }
                             let otherShape = n.compute_internal_lane_shape(i2, k2, numPoints, Ptr::null(), shapeFlag);
                             otherShapes.push(otherShape.clone());
                             let secondIntersection = con.indirectLeft && this == i2 && con.fromLane == k2.fromLane;
@@ -7390,7 +7389,6 @@ impl NBEdge {
             assert!(shape.len() >= 2);
             // get internal splits if any
             con.id = format!("{}_{}", innerID, edgeIndex);
-            if n.get_id() == "gneJ8" { eprintln!("DEBUG buildInnerEdges node={} fromE={} toE={} conIdx={} cp0={} shapeLen={}", n.get_id(), self.get_id(), con.toEdge.get_id(), i, crossingPositions.0, shape.length()); }
             let shapeLength = shape.length();
             let mut firstLength = shapeLength;
             con.internalViaLaneIndex = 0; // reset to default for netedit
