@@ -3229,6 +3229,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("slowDown not applicable for meso");
+            return;
+        }
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
         speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
         speedTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), speed));
@@ -3270,6 +3274,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("openGap not applicable for meso");
+            return;
+        }
         let mut refVeh: Ptr<MSVehicle> = Ptr::default();
         if referenceVehID != "" {
             refVeh = micro_veh(Helper::get_vehicle(referenceVehID));
@@ -4747,9 +4755,14 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_action_step_length(vehID: &str, actionStepLength: f64, resetActionOffset: bool) {
         if actionStepLength < 0.0 {
+            utils::common::msg_handler::write_error("Invalid action step length (<0). Ignoring command setActionStepLength().");
             return;
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setActionStepLength not applicable for meso");
+            return;
+        }
         if actionStepLength == 0. {
             veh.m().reset_action_offset(0);
         } else {
