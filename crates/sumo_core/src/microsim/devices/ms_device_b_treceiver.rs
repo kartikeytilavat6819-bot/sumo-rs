@@ -491,6 +491,11 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
         let mut os = os.borrow_mut();
         if oc95_trace() {
             eprintln!("OC95BT OUTPUT bt id={} seen_keys={} nseen={}", id, seen.len(), seen.values().map(|v| v.len()).sum::<usize>());
+            for (sid, list) in seen.iter() {
+                for (j, sd) in list.iter().enumerate() {
+                    eprintln!("OC95BT SEEN bt={} seen={} idx={} rps={}", id, sid, j, sd.m().recognitionPoints.len());
+                }
+            }
         }
         os.open_tag("bt").write_attr("id", id);
         for (itemID, devices) in seen {
