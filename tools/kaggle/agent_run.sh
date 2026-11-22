@@ -37,8 +37,8 @@ for c in $CASES; do
   if [ -n "$line" ]; then
     T=$(ext "$OUT/$name/ours/fcd.xml" | sed -n "${line}p")
     for side in ref ours; do
-      echo "-- $side lanes :C_9_* at t=$T (id lane pos speed):"
-      awk -v T="$T" '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} t==T && /lane=":C_9/' "$OUT/$name/$side/fcd.xml" | sed -E 's/.*id="([^"]*)".* speed="([^"]*)" pos="([^"]*)" lane="([^"]*)".*/\1 \4 \3 \2/' | head -12
+      echo "-- $side all vehicles at t=$T (id lane pos speed):"
+      awk -v T="$T" '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} t==T && /<vehicle/' "$OUT/$name/$side/fcd.xml" | sed -E 's/.*id="([^"]*)".* speed="([^"]*)" pos="([^"]*)" lane="([^"]*)".*/\1 \4 \3 \2/' | head -20
     done
   fi
 done
