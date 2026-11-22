@@ -2,7 +2,8 @@
 //!
 //! UTM, DHDN and DHDN_UTM use an in-crate port of PROJ's default `etmerc` (see `Etmerc`), matching PROJ
 //! to well below 1 mm. The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
-//! shortcut: other explicit proj strings are projected only when they are +proj=utm or +proj=tmerc with lat_0=0.
+//! In-crate PROJ ports cover UTM, ellipsoidal tmerc (any lat_0) and spherical merc; other explicit
+//! proj strings are still unsupported (PROJ itself is not linked).
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
