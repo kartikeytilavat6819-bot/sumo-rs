@@ -166,17 +166,23 @@ impl NILoader {
         }
         ok &= self.load_xml(oc);
         // check the loaded structures
+        // C++ throws ProcessError here; main reports it and exits non-zero. Writing the
+        // error and returning lets the same top-level check run without a Rust panic.
         if self.myNetBuilder.m().get_node_cont().size() == 0 {
-            std::panic::panic_any(ProcessError::new("No nodes loaded."));
+            write_error("No nodes loaded.");
+            return;
         }
         if self.myNetBuilder.m().get_edge_cont().size() == 0 {
-            std::panic::panic_any(ProcessError::new("No edges loaded."));
+            write_error("No edges loaded.");
+            return;
         }
         if !self.myNetBuilder.m().get_edge_cont().check_consistency(self.myNetBuilder.m().get_node_cont()) {
-            std::panic::panic_any(ProcessError::default_msg());
+            write_error(&ProcessError::default_msg());
+            return;
         }
         if !ok && !throw(oc.get_bool("ignore-errors")) {
-            std::panic::panic_any(ProcessError::default_msg());
+            write_error(&ProcessError::default_msg());
+            return;
         }
         // configure default values that depend on other values
         self.myNetBuilder.m().get_node_cont().apply_conditional_defaults();
