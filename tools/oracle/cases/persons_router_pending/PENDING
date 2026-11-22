@@ -1,0 +1,1 @@
+Tripinfo devices diverge for bus0: ref='tripinfo_bus0 person_bus0' but the port omits the person_(vehicle) device created on boarding (MSDevice_Transportable::buildVehicleDevices) and lists fcd_ instead. Needs the intermodal person-boarding/device path, re-enable when it matches.
