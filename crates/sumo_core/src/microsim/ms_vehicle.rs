@@ -3593,7 +3593,4355 @@ impl MSVehicle {
     pub fn execute_move(&mut self) -> bool {
         let TS = ts();
         let DELTA_T = delta_t();
-        let DELTA_T = delta_t();
+        // C++ macro NUMERICAL_EPS_SPEED (0.1 * NUMERICAL_EPS * TS), defined in MSVehicle.cpp
+        let NUMERICAL_EPS_SPEED = 0.1 * utils::geom::NUMERICAL_EPS * TS;
+        // Maximum safe velocity
+        let mut vSafe: f64 = f64::MAX;
+        // Minimum safe velocity (lower bound).
+        let mut vSafeMin: f64 = -f64::MAX;
+        // The distance to a link, which should either be crossed this step
+        // or in front of which we need to stop.
+        let mut vSafeMinDist: f64 = 0.0;
+
+        if self.myActionStep {
+            // Actuate control (i.e. choose bounds for safe speed in current simstep (euler), resp. after current sim step (ballistic))
+            self.process_link_approaches(&mut vSafe, &mut vSafeMin, &mut vSafeMinDist);
+        } else {
+            // Continue with current acceleration
+            vSafe = self.get_speed() + accel2speed(self.myAcceleration);
+        }
+
+        // Determine vNext = speed after current sim step (ballistic), resp. in current simstep (euler)
+        // Call to finalizeSpeed applies speed reduction due to dawdling / lane changing but ensures minimum safe speed
+        let mut vNext = vSafe;
+        // the car-following model is owned by the vehicle type, not the vehicle: the raw deref only detaches the borrow from &mut self
+        let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
+        let rawAccel = speed2accel(max2(vNext, 0.0) - self.myState.mySpeed);
+        if vNext <= utils::common::std_defs::SUMO_CONST_HALTING_SPEED * TS && self.myWaitingTime > crate::microsim::ms_globals::startup_wait_threshold() && rawAccel <= self.accel_threshold_for_waiting() && self.myActionStep {
+            self.myTimeSinceStartup = 0;
+        } else if self.is_stopped() {
+            // do not apply startupDelay for waypoints
+            if cfModel.startup_delay_stopped() && self.get_next_stop().pars.speed <= 0.0 {
+                self.myTimeSinceStartup = DELTA_T;
+            } else {
+                // do not apply startupDelay but signal that a stop has taken place
+                self.myTimeSinceStartup = cfModel.get_startup_delay() + DELTA_T;
+            }
+        } else {
+            // identify potential startup (before other effects reduce the speed again)
+            self.myTimeSinceStartup += DELTA_T;
+        }
+        if self.myActionStep {
+            vNext = cfModel.finalize_speed(Ptr::from_mut(self), vSafe);
+            if vNext > 0.0 {
+                vNext = max2(vNext, vSafeMin);
+            }
+        }
+        // (Leo) to avoid tiny oscillations (< 1e-10) of vNext in a standing vehicle column (observed for ballistic update), we cap off vNext
+        //       (We assure to do this only for vNext<<NUMERICAL_EPS since otherwise this would nullify the workaround for #2995
+        // (Jakob) We also need to make sure to reach a stop at the start of the next edge
+        if vNext.abs() < NUMERICAL_EPS_SPEED && (self.myStopDist > POSITION_EPS || (self.has_stops() && self.myCurrEdge == self.get_next_stop().edge)) {
+            vNext = 0.0;
+        }
+
+        // vNext may be higher than vSafe without implying a bug:
+        //  - when approaching a green light that suddenly switches to yellow
+        //  - when using unregulated junctions
+        //  - when using tau < step-size
+        //  - when using unsafe car following models
+        //  - when using TraCI and some speedMode / laneChangeMode settings
+
+        if semi_implicit_euler_update() {
+            vNext = max2(vNext, 0.0);
+        } else {
+            // (Leo) Ballistic: negative vNext can be used to indicate a stop within next step.
+        }
+
+        // Check for speed advices from the traci client
+        vNext = self.process_tra_ci_speed_control(vSafe, vNext);
+
+        // the acceleration of a vehicle equipped with the elecHybrid device is restricted by the maximal power of the electric drive as well
+        let elecHybridOfVehicle = MSDevice::get_device_by_name(&self.myDevices, "elecHybrid").cast::<MSDevice_ElecHybrid>();
+        if !elecHybridOfVehicle.is_null() {
+            let sv: &mut SUMOVehicle = unsafe { &mut *(self as *mut MSVehicle as *mut SUMOVehicle) };
+            // this is the consumption given by the car following model-computed acceleration
+            let c = elecHybridOfVehicle.m().consumption(sv, (vNext - self.get_speed()) / ts(), vNext);
+            elecHybridOfVehicle.m().set_consum(c);
+            // but the maximum power of the electric motor may be lower
+            // it needs to be converted from [W] to [Wh/s] (3600s / 1h) so that TS can be taken into account
+            let maxPower = self.get_emission_parameters().get_double_optional(SUMO_ATTR_MAXIMUMPOWER, 100000.) / 3600.;
+            if elecHybridOfVehicle.get_consum() / ts() > maxPower {
+                // no, we cannot accelerate that fast, recompute the maximum possible acceleration
+                let accel = elecHybridOfVehicle.m().acceleration(sv, maxPower, self.get_speed());
+                // and update the speed of the vehicle
+                vNext = min2(vNext, self.get_speed() + accel * ts());
+                vNext = max2(vNext, 0.);
+                // and set the vehicle consumption to reflect this
+                let c = elecHybridOfVehicle.m().consumption(sv, (vNext - self.get_speed()) / ts(), vNext);
+                elecHybridOfVehicle.m().set_consum(c);
+            }
+        }
+        self.set_braking_signals(vNext);
+
+        // update position and speed
+        let mut oldLaneOffset: i32 = self.myLane.m().get_edge().get_num_lanes() - self.myLane.m().get_index();
+        let oldLaneMaybeOpposite = self.myLane;
+        if self.myLaneChangeModel.m().is_opposite() {
+            // transform to the forward-direction lane, move and then transform back
+            self.myState.myPos = self.myLane.m().get_opposite_pos(self.myState.myPos);
+            self.myLane = self.myLane.m().get_parallel_opposite();
+        }
+        self.update_state(vNext, false);
+        self.update_waiting_time(vNext);
+
+        // Lanes, which the vehicle touched at some moment of the executed simstep
+        let mut passedLanes: Vec<Ptr<MSLane>> = Vec::new();
+        // remember previous lane (myLane is updated in processLaneAdvances)
+        let mut oldLane = self.myLane;
+        // Reason for a possible emergency stop
+        let mut emergencyReason: String = String::new();
+        self.process_lane_advances(&mut passedLanes, &mut emergencyReason);
+
+        self.update_time_loss(vNext);
+        self.myCollisionImmunity = std::cmp::max(-1, self.myCollisionImmunity - DELTA_T);
+
+        if !self.has_arrived_internal(true) && !self.myLane.m().get_edge().is_vaporizing() {
+            if self.myState.myPos > self.myLane.m().get_length() {
+                if emergencyReason == "" {
+                    emergencyReason = " for unknown reasons".to_string();
+                }
+                write_warningf!(
+                    "Vehicle '%' performs emergency stop at the end of lane '%'% (decel=%, offset=%), time=%.",
+                    self.get_id(),
+                    self.myLane.m().get_id(),
+                    emergencyReason,
+                    self.myAcceleration - self.myState.mySpeed,
+                    self.myState.myPos - self.myLane.m().get_length(),
+                    time2string(MSNet::get_instance().get_current_time_step())
+                );
+                MSNet::get_instance().m().get_vehicle_control().register_emergency_stop();
+                MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(self).cast::<SUMOVehicle>(), MSNet_VehicleState::EMERGENCYSTOP, "");
+                self.myState.myPos = self.myLane.m().get_length();
+                self.myState.mySpeed = 0.0;
+                self.myAcceleration = 0.0;
+            }
+            let oldBackLane = self.get_back_lane();
+            if self.myLaneChangeModel.m().is_opposite() {
+                passedLanes.clear(); // ignore back occupation
+            }
+            // updateFurtherLanes modifies myFurtherLanes(+PosLat) in place: move them out to avoid aliasing &mut self
+            let mut furtherLanes = std::mem::take(&mut self.myFurtherLanes);
+            let mut furtherLanesPosLat = std::mem::take(&mut self.myFurtherLanesPosLat);
+            self.myState.myBackPos = self.update_further_lanes(&mut furtherLanes, &mut furtherLanesPosLat, &passedLanes);
+            self.myFurtherLanes = furtherLanes;
+            self.myFurtherLanesPosLat = furtherLanesPosLat;
+            if passedLanes.len() > 1 && self.is_rail() {
+                for pi in passedLanes.iter().rev() {
+                    let pLane: Ptr<MSLane> = *pi;
+                    if pLane != self.myLane && !self.myFurtherLanes.contains(&pLane) {
+                        self.leave_lane_back(MSMoveReminder_Notification::NOTIFICATION_JUNCTION, pLane);
+                    }
+                }
+            }
+            // bestLanes need to be updated before lane changing starts. NOTE: This call is also a presumption for updateDriveItems()
+            self.update_best_lanes(false, Ptr::null());
+            if self.myLane != oldLane || oldBackLane != self.get_back_lane() {
+                if !self.myLaneChangeModel.m().get_shadow_lane().is_null() || self.get_lateral_overlap() > POSITION_EPS {
+                    // shadow lane must be updated if the front or back lane changed
+                    // either if we already have a shadowLane or if there is lateral overlap
+                    self.myLaneChangeModel.m().update_shadow_lane();
+                }
+                if crate::microsim::ms_globals::lateral_resolution() > 0.0 && !self.myLaneChangeModel.m().is_opposite() {
+                    // The vehicles target lane must be also be updated if the front or back lane changed
+                    self.myLaneChangeModel.m().update_target_lane();
+                }
+            }
+            self.set_blinker_information(); // needs updated bestLanes
+            //change the blue light only for emergency vehicles SUMOVehicleClass
+            if self.get_vehicle_type().get_vehicle_class() == SVC_EMERGENCY {
+                self.set_emergency_blue_light(MSNet::get_instance().get_current_time_step());
+            }
+            // must be done before angle computation
+            // State needs to be reset for all vehicles before the next call to MSEdgeControl::changeLanes
+            if self.myActionStep {
+                // check (#2681): Can this be skipped?
+                self.myLaneChangeModel.m().prepare_step();
+            } else {
+                self.myLaneChangeModel.m().reset_speed_lat();
+            }
+            self.myLaneChangeModel.m().set_previous_angle_offset(self.myLaneChangeModel.m().get_angle_offset());
+            self.myAngle = self.compute_angle();
+        }
+        if self.myLaneChangeModel.m().is_opposite() {
+            // transform back to the opposite-direction lane
+            let mut newOpposite: Ptr<MSLane> = Ptr::null();
+            let newOppositeEdge = self.myLane.m().get_edge().get_opposite_edge();
+            if !newOppositeEdge.is_null() {
+                newOpposite = newOppositeEdge.m().get_lanes()[(newOppositeEdge.m().get_num_lanes() - std::cmp::max(1, oldLaneOffset)) as usize];
+            }
+            if newOpposite.is_null() {
+                if !self.myLaneChangeModel.m().has_blue_light() {
+                    // unusual overtaking at junctions is ok for emergency vehicles
+                    write_warningf!(
+                        "Unexpected end of opposite lane for vehicle '%' at lane '%', time=%.",
+                        self.get_id(),
+                        self.myLane.m().get_id(),
+                        time2string(MSNet::get_instance().get_current_time_step())
+                    );
+                }
+                self.myLaneChangeModel.m().changed_to_opposite();
+                if self.myState.myPos < self.get_length() {
+                    // further lanes is always cleared during opposite driving
+                    let oldOpposite = oldLane.m().get_opposite();
+                    if !oldOpposite.is_null() {
+                        self.myFurtherLanes.push(oldOpposite);
+                        self.myFurtherLanesPosLat.push(0.0);
+                        // small value since the lane is going in the other direction
+                        self.myState.myBackPos = self.get_length() - self.myState.myPos;
+                        self.myAngle = self.compute_angle();
+                    } else {
+                        debug_assert!(false, "should not happen"); // SOFT_ASSERT(false)
+                    }
+                }
+            } else {
+                self.myState.myPos = self.myLane.m().get_opposite_pos(self.myState.myPos);
+                self.myLane = newOpposite;
+                oldLane = oldLaneMaybeOpposite;
+                self.myCachedPosition.set(Position::INVALID);
+                self.myLaneChangeModel.m().update_shadow_lane();
+            }
+        }
+        // myAngle was already updated. Update lastAngle so moveRemindes have consisent angleDiff (after finalizeSpeed because it uses the old angles)
+        self.myLastAngle = self.myRawAngle;
+        // store angle before lane changing
+        self.myRawAngle = self.myAngle;
+
+        self.work_on_move_reminders(self.myState.myPos - self.myState.myLastCoveredDist, self.myState.myPos, self.myState.mySpeed);
+        // Return whether the vehicle did move to another lane
+        self.myLane != oldLane
+    }
+
+    /// C++: `void MSVehicle::executeFractionalMove(double)`
+    /// move vehicle forward by the given distance during insertion
+    // void
+    // MSVehicle::executeFractionalMove(double dist) {
+    //     myState.myPos += dist;
+    //     myState.myLastCoveredDist = dist;
+    //     myCachedPosition = Position::INVALID;
+    //
+    //     const std::vector<const MSLane*> lanes = getUpcomingLanesUntil(dist);
+    //     const SUMOTime t = MSNet::getInstance()->getCurrentTimeStep();
+    //     for (int i = 0; i < (int)lanes.size(); i++) {
+    //         MSLink* link = nullptr;
+    //         if (i + 1 < (int)lanes.size()) {
+    //             const MSLane* const to = lanes[i + 1];
+    //             const bool internal = to->isInternal();
+    //             for (MSLink* const l : lanes[i]->getLinkCont()) {
+    //                 if ((internal && l->getViaLane() == to) || (!internal && l->getLane() == to)) {
+    //                     link = l;
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //         myLFLinkLanes.emplace_back(link, getSpeed(), getSpeed(), true, t, getSpeed(), 0, 0, dist);
+    //     }
+    //     // minimum execute move:
+    //     std::vector<MSLane*> passedLanes;
+    //     // Reason for a possible emergency stop
+    //     if (lanes.size() > 1) {
+    //         myLane->removeVehicle(this, MSMoveReminder::NOTIFICATION_JUNCTION, false);
+    //     }
+    //     std::string emergencyReason;
+    //     processLaneAdvances(passedLanes, emergencyReason);
+    // #ifdef DEBUG_EXTRAPOLATE_DEPARTPOS
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " veh=" << getID() << " executeFractionalMove dist=" << dist
+    //                   << " passedLanes=" << toString(passedLanes) << " lanes=" << toString(lanes)
+    //                   << " finalPos=" << myState.myPos
+    //                   << " speed=" << getSpeed()
+    //                   << " myFurtherLanes=" << toString(myFurtherLanes)
+    //                   << "\n";
+    //     }
+    // #endif
+    //     workOnMoveReminders(myState.myPos - myState.myLastCoveredDist, myState.myPos, myState.mySpeed);
+    //     if (lanes.size() > 1) {
+    //         for (std::vector<MSLane*>::iterator i = myFurtherLanes.begin(); i != myFurtherLanes.end(); ++i) {
+    // #ifdef DEBUG_FURTHER
+    //             if (DEBUG_COND) {
+    //                 std::cout << SIMTIME << " leaveLane \n";
+    //             }
+    // #endif
+    //             (*i)->resetPartialOccupation(this);
+    //         }
+    //         myFurtherLanes.clear();
+    //         myFurtherLanesPosLat.clear();
+    //         myLane->forceVehicleInsertion(this, getPositionOnLane(), MSMoveReminder::NOTIFICATION_JUNCTION, getLateralPositionOnLane());
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn execute_fractional_move(&mut self, dist: f64) {
+        self.myState.myPos += dist;
+        self.myState.myLastCoveredDist = dist;
+        self.myCachedPosition.set(Position::INVALID);
+
+        let lanes = self.get_upcoming_lanes_until(dist);
+        let t = MSNet::get_instance().m().get_current_time_step();
+        for i in 0..lanes.len() {
+            let mut link = Ptr::null();
+            if i + 1 < lanes.len() {
+                let to = lanes[i + 1];
+                let internal = to.m().is_internal();
+                for l in lanes[i].m().myLinks.iter() {
+                    if (internal && l.m().get_via_lane() == to) || (!internal && l.m().get_lane() == to) {
+                        link = *l;
+                        break;
+                    }
+                }
+            }
+            let speed = self.get_speed();
+            self.myLFLinkLanes.push(MSVehicle_DriveProcessItem::new(link, speed, speed, true, t, speed, 0.0, 0.0, dist));
+        }
+        // minimum execute move:
+        let mut passedLanes: Vec<Ptr<MSLane>> = Vec::new();
+        // Reason for a possible emergency stop
+        if lanes.len() > 1 {
+            let lane = self.myLane;
+            lane.m().remove_vehicle(Ptr::from_mut(self), MSMoveReminder_Notification::NOTIFICATION_JUNCTION, false);
+        }
+        let mut emergencyReason = String::new();
+        self.process_lane_advances(&mut passedLanes, &mut emergencyReason);
+        self.work_on_move_reminders(self.myState.myPos - self.myState.myLastCoveredDist, self.myState.myPos, self.myState.mySpeed);
+        if lanes.len() > 1 {
+            let furtherLanes = self.myFurtherLanes.clone();
+            for fl in furtherLanes {
+                fl.m().reset_partial_occupation(Ptr::from_mut(self));
+            }
+            self.myFurtherLanes.clear();
+            self.myFurtherLanesPosLat.clear();
+            let pos = self.get_position_on_lane();
+            let posLat = self.get_lateral_position_on_lane();
+            let lane = self.myLane;
+            lane.m().force_vehicle_insertion(Ptr::from_mut(self), pos, MSMoveReminder_Notification::NOTIFICATION_JUNCTION, posLat);
+        }
+    }
+
+    /// C++: `double MSVehicle::getDeltaPos(const double) const` [const]
+    /// calculates the distance covered in the next integration step given an acceleration and assuming the current velocity. (gives different results for different integration methods, e.g., euler vs. ballistic)
+    // double
+    // MSVehicle::getDeltaPos(const double accel) const {
+    //     double vNext = myState.mySpeed + ACCEL2SPEED(accel);
+    //     if (MSGlobals::gSemiImplicitEulerUpdate) {
+    //         // apply implicit Euler positional update
+    //         return SPEED2DIST(MAX2(vNext, 0.));
+    //     } else {
+    //         // apply ballistic update
+    //         if (vNext >= 0) {
+    //             // assume constant acceleration during this time step
+    //             return SPEED2DIST(myState.mySpeed + 0.5 * ACCEL2SPEED(accel));
+    //         } else {
+    //             // negative vNext indicates a stop within the middle of time step
+    //             // The corresponding stop time is s = mySpeed/deceleration \in [0,dt], and the
+    //             // covered distance is therefore deltaPos = mySpeed*s - 0.5*deceleration*s^2.
+    //             // Here, deceleration = (myState.mySpeed - vNext)/dt is the constant deceleration
+    //             // until the vehicle stops.
+    //             return -SPEED2DIST(0.5 * myState.mySpeed * myState.mySpeed / ACCEL2SPEED(accel));
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_delta_pos(&self, accel: f64) -> f64 {
+        let vNext = self.myState.mySpeed + accel2speed(accel);
+        if semi_implicit_euler_update() {
+            // apply implicit Euler positional update
+            speed2dist(max2(vNext, 0.))
+        } else {
+            // apply ballistic update
+            if vNext >= 0.0 {
+                // assume constant acceleration during this time step
+                speed2dist(self.myState.mySpeed + 0.5 * accel2speed(accel))
+            } else {
+                // negative vNext indicates a stop within the middle of time step
+                // The corresponding stop time is s = mySpeed/deceleration \in [0,dt], and the
+                // covered distance is therefore deltaPos = mySpeed*s - 0.5*deceleration*s^2.
+                // Here, deceleration = (myState.mySpeed - vNext)/dt is the constant deceleration
+                // until the vehicle stops.
+                -speed2dist(0.5 * self.myState.mySpeed * self.myState.mySpeed / accel2speed(accel))
+            }
+        }
+    }
+
+    /// C++: `double MSVehicle::getPositionOnLane() const` [const, virtual]
+    /// Get the vehicle's position along the lane
+    // double getPositionOnLane() const {
+    //         return myState.myPos;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_position_on_lane(&self) -> f64 {
+        self.myState.myPos
+    }
+
+    /// C++: `double MSVehicle::getLastStepDist() const` [const]
+    /// Get the distance the vehicle covered in the previous timestep
+    // double getLastStepDist() const {
+    //         return myState.lastCoveredDist();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_last_step_dist(&self) -> f64 {
+        self.myState.last_covered_dist()
+    }
+
+    /// C++: `double MSVehicle::getPositionOnLane(const MSLane *) const` [const]
+    /// Get the vehicle's front position relative to the given lane
+    // double
+    // MSVehicle::getPositionOnLane(const MSLane* lane) const {
+    //     return getBackPositionOnLane(lane, true) + myType->getLength();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_position_on_lane_2(&self, lane: Ptr<MSLane>) -> f64 {
+        self.get_back_position_on_lane_3(lane, true) + self.myType.get_length()
+    }
+
+    /// C++: `double MSVehicle::getBackPositionOnLane(const MSLane *) const` [const, virtual]
+    /// Get the vehicle's position relative to the given lane
+    // inline double getBackPositionOnLane(const MSLane* lane) const {
+    //         return getBackPositionOnLane(lane, false);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_back_position_on_lane(&self, lane: Ptr<MSLane>) -> f64 {
+        self.get_back_position_on_lane_3(lane, false)
+    }
+
+    /// C++: `double MSVehicle::getBackPositionOnLane() const` [const]
+    /// Get the vehicle's position relative to its current lane
+    // double getBackPositionOnLane() const {
+    //         return getBackPositionOnLane(myLane);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_back_position_on_lane_2(&self) -> f64 {
+        self.get_back_position_on_lane_3(self.myLane, false)
+    }
+
+    /// C++: `double MSVehicle::getLateralPositionOnLane() const` [const, virtual]
+    /// Get the vehicle's lateral position on the lane
+    // double getLateralPositionOnLane() const {
+    //         return myState.myPosLat;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_lateral_position_on_lane(&self) -> f64 {
+        self.myState.myPosLat
+    }
+
+    /// C++: `void MSVehicle::setLateralPositionOnLane(double)`
+    // void setLateralPositionOnLane(double posLat) {
+    //         myState.myPosLat = posLat;
+    //     }
+    #[allow(unused_variables)]
+    pub fn set_lateral_position_on_lane(&mut self, posLat: f64) {
+        self.myState.myPosLat = posLat;
+    }
+
+    /// C++: `void MSVehicle::invalidateCachedPosition()`
+    // void invalidateCachedPosition() {
+    //         myCachedPosition = Position::INVALID;
+    //     }
+    #[allow(unused_variables)]
+    pub fn invalidate_cached_position(&mut self) {
+        self.myCachedPosition.set(Position::INVALID);
+    }
+
+    /// C++: `double MSVehicle::getRightSideOnLane() const` [const]
+    /// Get the lateral position of the vehicles right side on the lane:
+    // double
+    // MSVehicle::getRightSideOnLane() const {
+    //     return myState.myPosLat + 0.5 * myLane->getWidth() - 0.5 * getVehicleType().getWidth();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_right_side_on_lane(&self) -> f64 {
+        self.myState.myPosLat + 0.5 * self.myLane.get_width() - 0.5 * self.get_vehicle_type().get_width()
+    }
+
+    /// C++: `double MSVehicle::getLeftSideOnLane() const` [const]
+    /// Get the lateral position of the vehicles left side on the lane:
+    // double
+    // MSVehicle::getLeftSideOnLane() const {
+    //     return myState.myPosLat + 0.5 * myLane->getWidth() + 0.5 * getVehicleType().getWidth();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_left_side_on_lane(&self) -> f64 {
+        self.myState.myPosLat + 0.5 * self.myLane.get_width() + 0.5 * self.get_vehicle_type().get_width()
+    }
+
+    /// C++: `double MSVehicle::getRightSideOnLane(const MSLane *) const` [const]
+    /// Get the lateral position of the vehicles right side on the lane:
+    // double
+    // MSVehicle::getRightSideOnLane(const MSLane* lane) const {
+    //     return myState.myPosLat + 0.5 * lane->getWidth() - 0.5 * getVehicleType().getWidth();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_right_side_on_lane_2(&self, lane: Ptr<MSLane>) -> f64 {
+        self.myState.myPosLat + 0.5 * lane.get_width() - 0.5 * self.get_vehicle_type().get_width()
+    }
+
+    /// C++: `double MSVehicle::getLeftSideOnLane(const MSLane *) const` [const]
+    /// Get the lateral position of the vehicles left side on the lane:
+    // double
+    // MSVehicle::getLeftSideOnLane(const MSLane* lane) const {
+    //     return myState.myPosLat + 0.5 * lane->getWidth() + 0.5 * getVehicleType().getWidth();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_left_side_on_lane_2(&self, lane: Ptr<MSLane>) -> f64 {
+        self.myState.myPosLat + 0.5 * lane.get_width() + 0.5 * self.get_vehicle_type().get_width()
+    }
+
+    /// C++: `double MSVehicle::lateralDistanceToLane(const int) const` [const]
+    /// Get the minimal lateral distance required to move fully onto the lane at given offset
+    // double
+    // MSVehicle::lateralDistanceToLane(const int offset) const {
+    //     // compute the distance when changing to the neighboring lane
+    //     // (ensure we do not lap into the line behind neighLane since there might be unseen blockers)
+    //     assert(offset == 0 || offset == 1 || offset == -1);
+    //     assert(myLane != nullptr);
+    //     assert(myLane->getParallelLane(offset) != nullptr || myLane->getParallelOpposite() != nullptr);
+    //     const double halfCurrentLaneWidth = 0.5 * myLane->getWidth();
+    //     const double halfVehWidth = 0.5 * (getWidth() + NUMERICAL_EPS);
+    //     const double latPos = getLateralPositionOnLane();
+    //     const double oppositeSign = getLaneChangeModel().isOpposite() ? -1 : 1;
+    //     double leftLimit = halfCurrentLaneWidth - halfVehWidth - oppositeSign * latPos;
+    //     double rightLimit = -halfCurrentLaneWidth + halfVehWidth - oppositeSign * latPos;
+    //     double latLaneDist = 0;  // minimum distance to move the vehicle fully onto the new lane
+    //     if (offset == 0) {
+    //         if (latPos + halfVehWidth > halfCurrentLaneWidth) {
+    //             // correct overlapping left
+    //             latLaneDist = halfCurrentLaneWidth - latPos - halfVehWidth;
+    //         } else if (latPos - halfVehWidth < -halfCurrentLaneWidth) {
+    //             // correct overlapping right
+    //             latLaneDist = -halfCurrentLaneWidth - latPos + halfVehWidth;
+    //         }
+    //         latLaneDist *= oppositeSign;
+    //     } else if (offset == -1) {
+    //         latLaneDist = rightLimit - (getWidth() + NUMERICAL_EPS);
+    //     } else if (offset == 1) {
+    //         latLaneDist = leftLimit + (getWidth() + NUMERICAL_EPS);
+    //     }
+    // #ifdef DEBUG_ACTIONSTEPS
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME
+    //                   << " veh=" << getID()
+    //                   << " halfCurrentLaneWidth=" << halfCurrentLaneWidth
+    //                   << " halfVehWidth=" << halfVehWidth
+    //                   << " latPos=" << latPos
+    //                   << " latLaneDist=" << latLaneDist
+    //                   << " leftLimit=" << leftLimit
+    //                   << " rightLimit=" << rightLimit
+    //                   << "\n";
+    //     }
+    // #endif
+    //     return latLaneDist;
+    // }
+    #[allow(unused_variables)]
+    pub fn lateral_distance_to_lane(&self, offset: i32) -> f64 {
+        // compute the distance when changing to the neighboring lane
+        // (ensure we do not lap into the line behind neighLane since there might be unseen blockers)
+        debug_assert!(offset == 0 || offset == 1 || offset == -1);
+        debug_assert!(!self.myLane.is_null());
+        let halfCurrentLaneWidth = 0.5 * self.myLane.get_width();
+        let halfVehWidth = 0.5 * (self.get_width() + utils::geom::NUMERICAL_EPS);
+        let latPos = self.get_lateral_position_on_lane();
+        let oppositeSign: f64 = if self.get_lane_change_model_2().is_opposite() { -1.0 } else { 1.0 };
+        let leftLimit = halfCurrentLaneWidth - halfVehWidth - oppositeSign * latPos;
+        let rightLimit = -halfCurrentLaneWidth + halfVehWidth - oppositeSign * latPos;
+        let mut latLaneDist: f64 = 0.0; // minimum distance to move the vehicle fully onto the new lane
+        if offset == 0 {
+            if latPos + halfVehWidth > halfCurrentLaneWidth {
+                // correct overlapping left
+                latLaneDist = halfCurrentLaneWidth - latPos - halfVehWidth;
+            } else if latPos - halfVehWidth < -halfCurrentLaneWidth {
+                // correct overlapping right
+                latLaneDist = -halfCurrentLaneWidth - latPos + halfVehWidth;
+            }
+            latLaneDist *= oppositeSign;
+        } else if offset == -1 {
+            latLaneDist = rightLimit - (self.get_width() + utils::geom::NUMERICAL_EPS);
+        } else if offset == 1 {
+            latLaneDist = leftLimit + (self.get_width() + utils::geom::NUMERICAL_EPS);
+        }
+        latLaneDist
+    }
+
+    /// C++: `double MSVehicle::getLateralOverlap() const` [const]
+    /// return the amount by which the vehicle extends laterally outside it's primary lane
+    // double
+    // MSVehicle::getLateralOverlap() const {
+    //     return getLateralOverlap(getLateralPositionOnLane(), myLane);
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lateral_overlap(&self) -> f64 {
+        self.get_lateral_overlap_3(self.get_lateral_position_on_lane(), self.myLane)
+    }
+
+    /// C++: `double MSVehicle::getLateralOverlap(const MSLane *) const` [const]
+    // double
+    // MSVehicle::getLateralOverlap(const MSLane* lane) const {
+    //     return getLateralOverlap(getLateralPositionOnLane(), lane);
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lateral_overlap_2(&self, lane: Ptr<MSLane>) -> f64 {
+        self.get_lateral_overlap_3(self.get_lateral_position_on_lane(), lane)
+    }
+
+    /// C++: `double MSVehicle::getLateralOverlap(double, const MSLane *) const` [const]
+    // double
+    // MSVehicle::getLateralOverlap(double posLat, const MSLane* lane) const {
+    //     return (fabs(posLat) + 0.5 * getVehicleType().getWidth()
+    //             - 0.5 * lane->getWidth());
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lateral_overlap_3(&self, posLat: f64, lane: Ptr<MSLane>) -> f64 {
+        posLat.abs() + 0.5 * self.get_vehicle_type().get_width() - 0.5 * lane.m().get_width()
+    }
+
+    /// C++: `double MSVehicle::getLeftSideOnEdge(const MSLane *) const` [const]
+    /// Get the vehicle's lateral position on the edge of the given lane (or its current edge if lane == 0)
+    // double
+    // MSVehicle::getLeftSideOnEdge(const MSLane* lane) const {
+    //     return getCenterOnEdge(lane) + 0.5 * getVehicleType().getWidth();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_left_side_on_edge(&self, lane: Ptr<MSLane>) -> f64 {
+        self.get_center_on_edge(lane) + 0.5 * self.get_vehicle_type().get_width()
+    }
+
+    /// C++: `double MSVehicle::getRightSideOnEdge(const MSLane *) const` [const, virtual]
+    /// Get the vehicle's lateral position on the edge of the given lane (or its current edge if lane == 0)
+    // double
+    // MSVehicle::getRightSideOnEdge(const MSLane* lane) const {
+    //     return getCenterOnEdge(lane) - 0.5 * getVehicleType().getWidth();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_right_side_on_edge(&self, lane: Ptr<MSLane>) -> f64 {
+        self.get_center_on_edge(lane) - 0.5 * self.get_vehicle_type().get_width()
+    }
+
+    /// C++: `double MSVehicle::getCenterOnEdge(const MSLane *) const` [const]
+    /// Get the vehicle's lateral position on the edge of the given lane (or its current edge if lane == 0)
+    // double
+    // MSVehicle::getCenterOnEdge(const MSLane* lane) const {
+    //     if (lane == nullptr || &lane->getEdge() == &myLane->getEdge()) {
+    //         return myLane->getRightSideOnEdge() + myState.myPosLat + 0.5 * myLane->getWidth();
+    //     } else if (lane == myLaneChangeModel->getShadowLane()) {
+    //         if (myLaneChangeModel->isOpposite() && &lane->getEdge() != &myLane->getEdge()) {
+    //             return lane->getRightSideOnEdge() + lane->getWidth() - myState.myPosLat + 0.5 * myLane->getWidth();
+    //         }
+    //         if (myLaneChangeModel->getShadowDirection() == -1) {
+    //             return lane->getRightSideOnEdge() + lane->getWidth() + myState.myPosLat + 0.5 * myLane->getWidth();
+    //         } else {
+    //             return lane->getRightSideOnEdge() - myLane->getWidth() + myState.myPosLat + 0.5 * myLane->getWidth();
+    //         }
+    //     } else if (lane == myLane->getBidiLane()) {
+    //         return lane->getRightSideOnEdge() - myState.myPosLat + 0.5 * lane->getWidth();
+    //     } else {
+    //         assert(myFurtherLanes.size() == myFurtherLanesPosLat.size());
+    //         for (int i = 0; i < (int)myFurtherLanes.size(); ++i) {
+    //             if (myFurtherLanes[i] == lane) {
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) std::cout << "    getCenterOnEdge veh=" << getID() << " lane=" << lane->getID() << " i=" << i << " furtherLat=" << myFurtherLanesPosLat[i]
+    //                                               << " result=" << lane->getRightSideOnEdge() + myFurtherLanesPosLat[i] + 0.5 * lane->getWidth()
+    //                                               << "\n";
+    // #endif
+    //                 return lane->getRightSideOnEdge() + myFurtherLanesPosLat[i] + 0.5 * lane->getWidth();
+    //             } else if (myFurtherLanes[i]->getBidiLane() == lane) {
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) std::cout << "    getCenterOnEdge veh=" << getID() << " lane=" << lane->getID() << " i=" << i << " furtherLat(bidi)=" << myFurtherLanesPosLat[i]
+    //                                               << " result=" << lane->getRightSideOnEdge() + myFurtherLanesPosLat[i] + 0.5 * lane->getWidth()
+    //                                               << "\n";
+    // #endif
+    //                 return lane->getRightSideOnEdge() - myFurtherLanesPosLat[i] + 0.5 * lane->getWidth();
+    //             }
+    //         }
+    //         //if (DEBUG_COND) std::cout << SIMTIME << " veh=" << getID() << " myShadowFurtherLanes=" << toString(myLaneChangeModel->getShadowFurtherLanes()) << "\n";
+    //         const std::vector<MSLane*>& shadowFurther = myLaneChangeModel->getShadowFurtherLanes();
+    //         for (int i = 0; i < (int)shadowFurther.size(); ++i) {
+    //             //if (DEBUG_COND) std::cout << " comparing i=" << (*i)->getID() << " lane=" << lane->getID() << "\n";
+    //             if (shadowFurther[i] == lane) {
+    //                 assert(myLaneChangeModel->getShadowLane() != 0);
+    //                 return (lane->getRightSideOnEdge() + myLaneChangeModel->getShadowFurtherLanesPosLat()[i] + 0.5 * lane->getWidth()
+    //                         + (myLane->getCenterOnEdge() - myLaneChangeModel->getShadowLane()->getCenterOnEdge()));
+    //             } else if (shadowFurther[i]->getBidiLane() == lane) {
+    //                 assert(myLaneChangeModel->getShadowLane() != 0);
+    //                 return (lane->getRightSideOnEdge() - myLaneChangeModel->getShadowFurtherLanesPosLat()[i] + 0.5 * lane->getWidth()
+    //                         + (myLane->getCenterOnEdge() - myLaneChangeModel->getShadowLane()->getCenterOnEdge()));
+    //             }
+    //         }
+    //         assert(false);
+    //         throw ProcessError("Request lateral pos of vehicle '" + getID() + "' for invalid lane '" + Named::getIDSecure(lane) + "'");
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_center_on_edge(&self, lane: Ptr<MSLane>) -> f64 {
+        if lane.is_null() || std::ptr::eq(lane.m().get_edge(), self.myLane.m().get_edge()) {
+            return self.myLane.m().get_right_side_on_edge() + self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+        } else if lane == self.myLaneChangeModel.m().get_shadow_lane() {
+            if self.myLaneChangeModel.m().is_opposite() && !std::ptr::eq(lane.m().get_edge(), self.myLane.m().get_edge()) {
+                return lane.m().get_right_side_on_edge() + lane.m().get_width() - self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+            }
+            if self.myLaneChangeModel.m().get_shadow_direction() == -1 {
+                return lane.m().get_right_side_on_edge() + lane.m().get_width() + self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+            } else {
+                return lane.m().get_right_side_on_edge() - self.myLane.m().get_width() + self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+            }
+        } else if lane == self.myLane.m().get_bidi_lane() {
+            return lane.m().get_right_side_on_edge() - self.myState.myPosLat + 0.5 * lane.m().get_width();
+        } else {
+            debug_assert_eq!(self.myFurtherLanes.len(), self.myFurtherLanesPosLat.len());
+            for i in 0..self.myFurtherLanes.len() {
+                if self.myFurtherLanes[i] == lane {
+                    return lane.m().get_right_side_on_edge() + self.myFurtherLanesPosLat[i] + 0.5 * lane.m().get_width();
+                } else if self.myFurtherLanes[i].m().get_bidi_lane() == lane {
+                    return lane.m().get_right_side_on_edge() - self.myFurtherLanesPosLat[i] + 0.5 * lane.m().get_width();
+                }
+            }
+            let shadowFurther = self.myLaneChangeModel.m().get_shadow_further_lanes().clone();
+            for i in 0..shadowFurther.len() {
+                if shadowFurther[i] == lane {
+                    debug_assert!(!self.myLaneChangeModel.m().get_shadow_lane().is_null());
+                    return lane.m().get_right_side_on_edge() + self.myLaneChangeModel.m().get_shadow_further_lanes_pos_lat()[i] + 0.5 * lane.m().get_width()
+                        + (self.myLane.m().get_center_on_edge() - self.myLaneChangeModel.m().get_shadow_lane().m().get_center_on_edge());
+                } else if shadowFurther[i].m().get_bidi_lane() == lane {
+                    debug_assert!(!self.myLaneChangeModel.m().get_shadow_lane().is_null());
+                    return lane.m().get_right_side_on_edge() - self.myLaneChangeModel.m().get_shadow_further_lanes_pos_lat()[i] + 0.5 * lane.m().get_width()
+                        + (self.myLane.m().get_center_on_edge() - self.myLaneChangeModel.m().get_shadow_lane().m().get_center_on_edge());
+                }
+            }
+            panic!("{}", ProcessError::new(&format!("Request lateral pos of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get().map(|l| &l.base), "NULL"))));
+        }
+    }
+
+    /// C++: `double MSVehicle::getLatOffset(const MSLane *) const` [const]
+    /// Get the offset that that must be added to interpret myState.myPosLat for the given lane
+    // double
+    // MSVehicle::getLatOffset(const MSLane* lane) const {
+    //     assert(lane != 0);
+    //     if (&lane->getEdge() == &myLane->getEdge()) {
+    //         return myLane->getRightSideOnEdge() - lane->getRightSideOnEdge();
+    //     } else if (myLane->getParallelOpposite() == lane) {
+    //         return (myLane->getWidth() + lane->getWidth()) * 0.5 - 2 * getLateralPositionOnLane();
+    //     } else if (myLane->getBidiLane() == lane) {
+    //         return -2 * getLateralPositionOnLane();
+    //     } else {
+    //         // Check whether the lane is a further lane for the vehicle
+    //         for (int i = 0; i < (int)myFurtherLanes.size(); ++i) {
+    //             if (myFurtherLanes[i] == lane) {
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) {
+    //                     std::cout << "    getLatOffset veh=" << getID() << " lane=" << lane->getID() << " i=" << i << " posLat=" << myState.myPosLat << " furtherLat=" << myFurtherLanesPosLat[i] << "\n";
+    //                 }
+    // #endif
+    //                 return myFurtherLanesPosLat[i] - myState.myPosLat;
+    //             } else if (myFurtherLanes[i]->getBidiLane() == lane) {
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) {
+    //                     std::cout << "    getLatOffset veh=" << getID() << " lane=" << lane->getID() << " i=" << i << " posLat=" << myState.myPosLat << " furtherBidiLat=" << myFurtherLanesPosLat[i] << "\n";
+    //                 }
+    // #endif
+    //                 return -2 * (myFurtherLanesPosLat[i] - myState.myPosLat);
+    //             }
+    //         }
+    // #ifdef DEBUG_FURTHER
+    //         if (DEBUG_COND) {
+    //             std::cout << SIMTIME << " veh=" << getID() << " myShadowFurtherLanes=" << toString(myLaneChangeModel->getShadowFurtherLanes()) << "\n";
+    //         }
+    // #endif
+    //         // Check whether the lane is a "shadow further lane" for the vehicle
+    //         const std::vector<MSLane*>& shadowFurther = myLaneChangeModel->getShadowFurtherLanes();
+    //         for (int i = 0; i < (int)shadowFurther.size(); ++i) {
+    //             if (shadowFurther[i] == lane) {
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) std::cout << "    getLatOffset veh=" << getID()
+    //                                               << " shadowLane=" << Named::getIDSecure(myLaneChangeModel->getShadowLane())
+    //                                               << " lane=" << lane->getID()
+    //                                               << " i=" << i
+    //                                               << " posLat=" << myState.myPosLat
+    //                                               << " shadowPosLat=" << getLatOffset(myLaneChangeModel->getShadowLane())
+    //                                               << " shadowFurtherLat=" << myLaneChangeModel->getShadowFurtherLanesPosLat()[i]
+    //                                               <<  "\n";
+    // #endif
+    //                 return getLatOffset(myLaneChangeModel->getShadowLane()) + myLaneChangeModel->getShadowFurtherLanesPosLat()[i] - myState.myPosLat;
+    //             } else if (shadowFurther[i]->getBidiLane() == lane) {
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) {
+    //                     std::cout << "    getLatOffset veh=" << getID() << " shadowbidilane=" << lane->getID() << " i=" << i << " posLat=" << myState.myPosLat << " furtherBidiLat=" << myFurtherLanesPosLat[i] << "\n";
+    //                 }
+    // #endif
+    //                 return -2 * getLatOffset(myLaneChangeModel->getShadowLane()) + myLaneChangeModel->getShadowFurtherLanesPosLat()[i] - myState.myPosLat;
+    //             }
+    //         }
+    //         // Check whether the vehicle issued a maneuverReservation on the lane.
+    //         const std::vector<MSLane*>& furtherTargets = myLaneChangeModel->getFurtherTargetLanes();
+    //         for (int i = 0; i < (int)myFurtherLanes.size(); ++i) {
+    //             // Further target lanes are just neighboring lanes of the vehicle's further lanes, @see MSAbstractLaneChangeModel::updateTargetLane()
+    //             MSLane* targetLane = furtherTargets[i];
+    //             if (targetLane == lane) {
+    //                 const double targetDir = myLaneChangeModel->getManeuverDist() < 0 ? -1. : 1.;
+    //                 const double latOffset = myFurtherLanesPosLat[i] - myState.myPosLat + targetDir * 0.5 * (myFurtherLanes[i]->getWidth() + targetLane->getWidth());
+    // #ifdef DEBUG_TARGET_LANE
+    //                 if (DEBUG_COND) {
+    //                     std::cout << "    getLatOffset veh=" << getID()
+    //                               << " wrt targetLane=" << Named::getIDSecure(myLaneChangeModel->getTargetLane())
+    //                               << "\n    i=" << i
+    //                               << " posLat=" << myState.myPosLat
+    //                               << " furtherPosLat=" << myFurtherLanesPosLat[i]
+    //                               << " maneuverDist=" << myLaneChangeModel->getManeuverDist()
+    //                               << " targetDir=" << targetDir
+    //                               << " latOffset=" << latOffset
+    //                               <<  std::endl;
+    //                 }
+    // #endif
+    //                 return latOffset;
+    //             } else if (targetLane != nullptr && targetLane->getBidiLane() == lane) {
+    //                 const double targetDir = myLaneChangeModel->getManeuverDist() < 0 ? -1. : 1.;
+    //                 const double latOffset = myFurtherLanesPosLat[i] - myState.myPosLat + targetDir * 0.5 * (myFurtherLanes[i]->getWidth() + targetLane->getWidth());
+    // #ifdef DEBUG_FURTHER
+    //                 if (DEBUG_COND) {
+    //                     std::cout << "    getLatOffset veh=" << getID() << " furthertargetbidilane=" << lane->getID() << " i=" << i << " posLat=" << myState.myPosLat << " furtherBidiLat=" << myFurtherLanesPosLat[i] << "\n";
+    //                 }
+    // #endif
+    //                 return -2 * latOffset;
+    //             }
+    //         }
+    //         assert(false);
+    //         throw ProcessError("Request lateral offset of vehicle '" + getID() + "' for invalid lane '" + Named::getIDSecure(lane) + "'");
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lat_offset(&self, lane: Ptr<MSLane>) -> f64 {
+        debug_assert!(!lane.is_null());
+        if std::ptr::eq(lane.m().get_edge(), self.myLane.m().get_edge()) {
+            return self.myLane.m().get_right_side_on_edge() - lane.m().get_right_side_on_edge();
+        } else if self.myLane.m().get_parallel_opposite() == lane {
+            return (self.myLane.m().get_width() + lane.m().get_width()) * 0.5 - 2.0 * self.get_lateral_position_on_lane();
+        } else if self.myLane.m().get_bidi_lane() == lane {
+            return -2.0 * self.get_lateral_position_on_lane();
+        } else {
+            // Check whether the lane is a further lane for the vehicle
+            for i in 0..self.myFurtherLanes.len() {
+                if self.myFurtherLanes[i] == lane {
+                    return self.myFurtherLanesPosLat[i] - self.myState.myPosLat;
+                } else if self.myFurtherLanes[i].m().get_bidi_lane() == lane {
+                    return -2.0 * (self.myFurtherLanesPosLat[i] - self.myState.myPosLat);
+                }
+            }
+            // Check whether the lane is a "shadow further lane" for the vehicle
+            let shadowFurther = self.myLaneChangeModel.m().get_shadow_further_lanes();
+            for i in 0..shadowFurther.len() {
+                if shadowFurther[i] == lane {
+                    return self.get_lat_offset(self.myLaneChangeModel.m().get_shadow_lane()) + self.myLaneChangeModel.m().get_shadow_further_lanes_pos_lat()[i] - self.myState.myPosLat;
+                } else if shadowFurther[i].m().get_bidi_lane() == lane {
+                    return -2.0 * self.get_lat_offset(self.myLaneChangeModel.m().get_shadow_lane()) + self.myLaneChangeModel.m().get_shadow_further_lanes_pos_lat()[i] - self.myState.myPosLat;
+                }
+            }
+            // Check whether the vehicle issued a maneuverReservation on the lane.
+            let furtherTargets = self.myLaneChangeModel.m().get_further_target_lanes();
+            for i in 0..self.myFurtherLanes.len() {
+                // Further target lanes are just neighboring lanes of the vehicle's further lanes, @see MSAbstractLaneChangeModel::updateTargetLane()
+                let targetLane = furtherTargets[i];
+                if targetLane == lane {
+                    let targetDir = if self.myLaneChangeModel.m().get_maneuver_dist() < 0.0 { -1.0 } else { 1.0 };
+                    let latOffset = self.myFurtherLanesPosLat[i] - self.myState.myPosLat + targetDir * 0.5 * (self.myFurtherLanes[i].m().get_width() + targetLane.m().get_width());
+                    return latOffset;
+                } else if !targetLane.is_null() && targetLane.m().get_bidi_lane() == lane {
+                    let targetDir = if self.myLaneChangeModel.m().get_maneuver_dist() < 0.0 { -1.0 } else { 1.0 };
+                    let latOffset = self.myFurtherLanesPosLat[i] - self.myState.myPosLat + targetDir * 0.5 * (self.myFurtherLanes[i].m().get_width() + targetLane.m().get_width());
+                    return -2.0 * latOffset;
+                }
+            }
+            debug_assert!(false);
+            panic!("{}", ProcessError::new(&format!("Request lateral offset of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get().map(|l| &l.base), "NULL"))));
+        }
+    }
+
+    /// C++: `double MSVehicle::getSpeed() const` [const, virtual]
+    /// Returns the vehicle's current speed
+    // double getSpeed() const {
+    //         return myState.mySpeed;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_speed(&self) -> f64 {
+        self.myState.mySpeed
+    }
+
+    /// C++: `double MSVehicle::getPreviousSpeed() const` [const, virtual]
+    /// Returns the vehicle's speed before the previous time step
+    // double getPreviousSpeed() const {
+    //         return myState.myPreviousSpeed;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_previous_speed(&self) -> f64 {
+        self.myState.myPreviousSpeed
+    }
+
+    /// C++: `void MSVehicle::setPreviousSpeed(double, double)`
+    /// Sets the influenced previous speed
+    // void
+    // MSVehicle::setPreviousSpeed(double prevSpeed, double prevAcceleration) {
+    //     myState.mySpeed = MAX2(0., prevSpeed);
+    //     // also retcon acceleration
+    //     if (prevAcceleration != std::numeric_limits<double>::min()) {
+    //         myAcceleration = prevAcceleration;
+    //     } else {
+    //         myAcceleration = SPEED2ACCEL(myState.mySpeed - myState.myPreviousSpeed);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn set_previous_speed(&mut self, prevSpeed: f64, prevAcceleration: f64) {
+        self.myState.mySpeed = max2(0., prevSpeed);
+        // also retcon acceleration
+        if prevAcceleration != f64::MIN_POSITIVE {
+            self.myAcceleration = prevAcceleration;
+        } else {
+            self.myAcceleration = speed2accel(self.myState.mySpeed - self.myState.myPreviousSpeed);
+        }
+    }
+
+    /// C++: `double MSVehicle::getAcceleration() const` [const, virtual]
+    /// Returns the vehicle's acceleration in m/s (this is computed as the last step's mean acceleration in case that a stop occurs within the middle of the time-step)
+    // double getAcceleration() const {
+    //         return myAcceleration;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_acceleration(&self) -> f64 {
+        self.myAcceleration
+    }
+
+    /// C++: `double MSVehicle::getCurrentApparentDecel() const` [const]
+    /// get apparent deceleration based on vType parameters and current acceleration
+    // double
+    // MSVehicle::getCurrentApparentDecel() const {
+    //     //return MAX2(-myAcceleration, getCarFollowModel().getApparentDecel());
+    //     return getCarFollowModel().getApparentDecel();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_current_apparent_decel(&self) -> f64 {
+        //return MAX2(-myAcceleration, getCarFollowModel().getApparentDecel());
+        self.get_car_follow_model().get_apparent_decel()
+    }
+
+    /// C++: `SUMOTime MSVehicle::getActionStepLength() const` [const]
+    /// Returns the vehicle's action step length in millisecs, i.e. the interval between two action points.
+    // SUMOTime getActionStepLength() const {
+    //         return myType->getActionStepLength();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_action_step_length(&self) -> SUMOTime {
+        self.myType.m().get_action_step_length()
+    }
+
+    /// C++: `double MSVehicle::getActionStepLengthSecs() const` [const]
+    /// Returns the vehicle's action step length in secs, i.e. the interval between two action points.
+    // double getActionStepLengthSecs() const {
+    //         return myType->getActionStepLengthSecs();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_action_step_length_secs(&self) -> f64 {
+        self.myType.m().get_action_step_length_secs()
+    }
+
+    /// C++: `SUMOTime MSVehicle::getLastActionTime() const` [const, virtual]
+    /// Returns the time of the vehicle's last action point.
+    // SUMOTime getLastActionTime() const {
+    //         return myLastActionTime;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_last_action_time(&self) -> SUMOTime {
+        self.myLastActionTime
+    }
+
+    /// C++: `double MSVehicle::getSlope() const` [const, virtual]
+    /// Returns the slope of the road at vehicle's position in degrees
+    // double
+    // MSVehicle::getSlope() const {
+    //     if (isParking() && getStops().begin()->parkingarea != nullptr) {
+    //         return getStops().begin()->parkingarea->getVehicleSlope(*this);
+    //     }
+    //     if (myLane == nullptr) {
+    //         return 0;
+    //     }
+    //     if (MSGlobals::gSlopeCentered) {
+    //         MSLane* centerLane = myLane;
+    //         double centerPos = getPositionOnLane() - getLength() / 2;
+    //         int furtherIndex = 0;
+    //         while (centerPos < 0 && furtherIndex < (int)myFurtherLanes.size()) {
+    //             centerLane = myFurtherLanes[furtherIndex];
+    //             centerPos += centerLane->getLength();
+    //             furtherIndex++;
+    //         }
+    //         return centerLane->getShape().slopeDegreeAtOffset(centerLane->interpolateLanePosToGeometryPos(centerPos));
+    //     }
+    //     const double posLat = myState.myPosLat; // @todo get rid of the '-'
+    //     Position p1 = getPosition();
+    //     Position p2 = getBackPosition();
+    //     if (p2 == Position::INVALID) {
+    //         // Handle special case of vehicle's back reaching out of the network
+    //         if (myFurtherLanes.size() > 0) {
+    //             p2 = myFurtherLanes.back()->geometryPositionAtOffset(0, -myFurtherLanesPosLat.back());
+    //             if (p2 == Position::INVALID) {
+    //                 // unsuitable lane geometry
+    //                 p2 = myLane->geometryPositionAtOffset(0, posLat);
+    //             }
+    //         } else {
+    //             p2 = myLane->geometryPositionAtOffset(0, posLat);
+    //         }
+    //     }
+    //     return (p1 != p2 ? RAD2DEG(p2.slopeTo2D(p1)) : myLane->getShape().slopeDegreeAtOffset(myLane->interpolateLanePosToGeometryPos(getPositionOnLane())));
+    // }
+    #[allow(unused_variables)]
+    pub fn get_slope(&self) -> f64 {
+        if self.is_parking() && self.get_stops().front().map_or(false, |s| !s.parkingarea.is_null()) {
+            let parkingArea = self.get_stops().front().unwrap().parkingarea;
+            return parkingArea.m().get_vehicle_slope(self);
+        }
+        if self.myLane.is_null() {
+            return 0.0;
+        }
+        if crate::microsim::ms_globals::slope_centered() {
+            let mut centerLane = self.myLane;
+            let mut centerPos = self.get_position_on_lane() - self.get_length() / 2.0;
+            let mut furtherIndex: usize = 0;
+            while centerPos < 0.0 && furtherIndex < self.myFurtherLanes.len() {
+                centerLane = self.myFurtherLanes[furtherIndex];
+                centerPos += centerLane.m().get_length();
+                furtherIndex += 1;
+            }
+            return centerLane.m().get_shape_2().slope_degree_at_offset(centerLane.m().interpolate_lane_pos_to_geometry_pos(centerPos));
+        }
+        let posLat = self.myState.myPosLat; // @todo get rid of the '-'
+        let p1 = self.get_position(0.0);
+        let mut p2 = self.get_back_position();
+        if p2 == Position::INVALID {
+            // Handle special case of vehicle's back reaching out of the network
+            if self.myFurtherLanes.len() > 0 {
+                let last = self.myFurtherLanes.len() - 1;
+                p2 = self.myFurtherLanes[last].m().geometry_position_at_offset(0.0, -self.myFurtherLanesPosLat[last]);
+                if p2 == Position::INVALID {
+                    // unsuitable lane geometry
+                    p2 = self.myLane.m().geometry_position_at_offset(0.0, posLat);
+                }
+            } else {
+                p2 = self.myLane.m().geometry_position_at_offset(0.0, posLat);
+            }
+        }
+        if p1 != p2 {
+            utils::geom::geom_helper::rad2deg(p2.slope_to2d(&p1))
+        } else {
+            self.myLane.m().get_shape_2().slope_degree_at_offset(self.myLane.m().interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()))
+        }
+    }
+
+    /// C++: `Position MSVehicle::getPosition(const double) const` [const, virtual]
+    /// Return current position (x/y, cartesian)
+    // Position
+    // MSVehicle::getPosition(const double offset) const {
+    //     if (myLane == nullptr) {
+    //         // when called in the context of GUI-Drawing, the simulation step is already incremented
+    //         if (myInfluencer != nullptr && myInfluencer->isRemoteAffected(MSNet::getInstance()->getCurrentTimeStep())) {
+    //             return myCachedPosition;
+    //         } else {
+    //             return Position::INVALID;
+    //         }
+    //     }
+    //     if (isParking()) {
+    //         if (myInfluencer != nullptr && myInfluencer->getLastAccessTimeStep() > getNextStopParameter()->started) {
+    //             return myCachedPosition;
+    //         }
+    //         if (myStops.begin()->parkingarea != nullptr) {
+    //             return myStops.begin()->parkingarea->getVehiclePosition(*this);
+    //         } else {
+    //             // position beside the road
+    //             PositionVector shp = myLane->getEdge().getLanes()[0]->getShape();
+    //             shp.move2side(SUMO_const_laneWidth * (MSGlobals::gLefthand ? -1 : 1));
+    //             return shp.positionAtOffset(myLane->interpolateLanePosToGeometryPos(getPositionOnLane() + offset));
+    //         }
+    //     }
+    //     const bool changingLanes = myLaneChangeModel->isChangingLanes();
+    //     const double posLat = (MSGlobals::gLefthand ? 1 : -1) * getLateralPositionOnLane();
+    //     if (offset == 0. && !changingLanes) {
+    //         if (myCachedPosition == Position::INVALID) {
+    //             myCachedPosition = validatePosition(myLane->geometryPositionAtOffset(myState.myPos, posLat));
+    //             if (MSNet::getInstance()->hasElevation() && MSGlobals::gSublane) {
+    //                 interpolateLateralZ(myCachedPosition, myState.myPos, posLat);
+    //             }
+    //         }
+    //         return myCachedPosition;
+    //     }
+    //     Position result = validatePosition(myLane->geometryPositionAtOffset(getPositionOnLane() + offset, posLat), offset);
+    //     interpolateLateralZ(result, getPositionOnLane() + offset, posLat);
+    //     return result;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_position(&self, offset: f64) -> Position {
+        // myCachedPosition is a C++ `mutable` member, written from this const method, hence Cell
+        if self.myLane.is_null() {
+            // when called in the context of GUI-Drawing, the simulation step is already incremented
+            if !self.myInfluencer.is_null() && self.myInfluencer.m().is_remote_affected(MSNet::get_instance().get_current_time_step()) {
+                return self.myCachedPosition.get();
+            } else {
+                return Position::INVALID;
+            }
+        }
+        if self.is_parking() {
+            if !self.myInfluencer.is_null() && self.myInfluencer.m().get_last_access_time_step() > self.get_next_stop_parameter().m().started {
+                return self.myCachedPosition.get();
+            }
+            let parkingArea = self.get_stops().front().unwrap().parkingarea;
+            if !parkingArea.is_null() {
+                return parkingArea.m().get_vehicle_position(self);
+            } else {
+                // position beside the road
+                let mut shp = self.myLane.m().get_edge().get_lanes()[0].m().get_shape_2().clone();
+                shp.move2side(utils::common::std_defs::SUMO_CONST_LANE_WIDTH * (if crate::microsim::ms_globals::lefthand() { -1.0 } else { 1.0 }), 100.0);
+                return shp.position_at_offset(self.myLane.m().interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane() + offset), 0.0);
+            }
+        }
+        let changingLanes = self.myLaneChangeModel.m().is_changing_lanes();
+        let posLat = (if crate::microsim::ms_globals::lefthand() { 1.0 } else { -1.0 }) * self.get_lateral_position_on_lane();
+        if offset == 0.0 && !changingLanes {
+            if self.myCachedPosition.get() == Position::INVALID {
+                let mut pos = self.validate_position(self.myLane.m().geometry_position_at_offset(self.myState.myPos, posLat), 0.0);
+                if MSNet::get_instance().has_elevation() && crate::microsim::ms_globals::sublane() {
+                    self.interpolate_lateral_z(&mut pos, self.myState.myPos, posLat);
+                }
+                self.myCachedPosition.set(pos);
+            }
+            return self.myCachedPosition.get();
+        }
+        let mut result = self.validate_position(self.myLane.m().geometry_position_at_offset(self.get_position_on_lane() + offset, posLat), offset);
+        self.interpolate_lateral_z(&mut result, self.get_position_on_lane() + offset, posLat);
+        result
+    }
+
+    /// C++: `Position MSVehicle::getPositionAlongBestLanes(double) const` [const]
+    /// Return the (x,y)-position, which the vehicle would reach if it continued along its best continuation lanes from the current for a distance of offset m.
+    // Position
+    // MSVehicle::getPositionAlongBestLanes(double offset) const {
+    //     assert(MSGlobals::gUsingInternalLanes);
+    //     if (!isOnRoad()) {
+    //         return Position::INVALID;
+    //     }
+    //     const std::vector<MSLane*>& bestLanes = getBestLanesContinuation();
+    //     auto nextBestLane = bestLanes.begin();
+    //     const bool opposite = myLaneChangeModel->isOpposite();
+    //     double pos = opposite ? myLane->getLength() - myState.myPos : myState.myPos;
+    //     const MSLane* lane = opposite ? myLane->getParallelOpposite() : getLane();
+    //     assert(lane != 0);
+    //     bool success = true;
+    //
+    //     while (offset > 0) {
+    //         // take into account lengths along internal lanes
+    //         while (lane->isInternal() && offset > 0) {
+    //             if (offset > lane->getLength() - pos) {
+    //                 offset -= lane->getLength() - pos;
+    //                 lane = lane->getLinkCont()[0]->getViaLaneOrLane();
+    //                 pos = 0.;
+    //                 if (lane == nullptr) {
+    //                     success = false;
+    //                     offset = 0.;
+    //                 }
+    //             } else {
+    //                 pos += offset;
+    //                 offset = 0;
+    //             }
+    //         }
+    //         // set nextBestLane to next non-internal lane
+    //         while (nextBestLane != bestLanes.end() && *nextBestLane == nullptr) {
+    //             ++nextBestLane;
+    //         }
+    //         if (offset > 0) {
+    //             assert(!lane->isInternal());
+    //             assert(lane == *nextBestLane);
+    //             if (offset > lane->getLength() - pos) {
+    //                 offset -= lane->getLength() - pos;
+    //                 ++nextBestLane;
+    //                 assert(nextBestLane == bestLanes.end() || *nextBestLane != 0);
+    //                 if (nextBestLane == bestLanes.end()) {
+    //                     success = false;
+    //                     offset = 0.;
+    //                 } else {
+    //                     const MSLink* link = lane->getLinkTo(*nextBestLane);
+    //                     assert(link != nullptr);
+    //                     lane = link->getViaLaneOrLane();
+    //                     pos = 0.;
+    //                 }
+    //             } else {
+    //                 pos += offset;
+    //                 offset = 0;
+    //             }
+    //         }
+    //
+    //     }
+    //
+    //     if (success) {
+    //         return lane->geometryPositionAtOffset(pos, -getLateralPositionOnLane());
+    //     } else {
+    //         return Position::INVALID;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_position_along_best_lanes(&self, offset: f64) -> Position {
+        if !self.is_on_road() {
+            return Position::INVALID;
+        }
+        let bestLanes = self.get_best_lanes_continuation();
+        let mut nextBestLane: usize = 0; // index into bestLanes (C++ iterator)
+        let opposite = self.myLaneChangeModel.is_opposite();
+        let mut offset = offset;
+        let mut pos = if opposite { self.myLane.get_length() - self.myState.myPos } else { self.myState.myPos };
+        let mut lane: Ptr<MSLane> = if opposite { self.myLane.get_parallel_opposite() } else { self.get_lane() };
+        debug_assert!(!lane.is_null());
+        let mut success = true;
+
+        while offset > 0.0 {
+            // take into account lengths along internal lanes
+            // (offset test first so that a lane nulled below is never dereferenced)
+            while offset > 0.0 && lane.is_internal() {
+                if offset > lane.get_length() - pos {
+                    offset -= lane.get_length() - pos;
+                    lane = lane.get_link_cont()[0].get_via_lane_or_lane();
+                    pos = 0.0;
+                    if lane.is_null() {
+                        success = false;
+                        offset = 0.0;
+                    }
+                } else {
+                    pos += offset;
+                    offset = 0.0;
+                }
+            }
+            // set nextBestLane to next non-internal lane
+            while nextBestLane < bestLanes.len() && bestLanes[nextBestLane].is_null() {
+                nextBestLane += 1;
+            }
+            if offset > 0.0 {
+                debug_assert!(!lane.is_internal());
+                debug_assert!(nextBestLane < bestLanes.len() && lane == bestLanes[nextBestLane]);
+                if offset > lane.get_length() - pos {
+                    offset -= lane.get_length() - pos;
+                    nextBestLane += 1;
+                    debug_assert!(nextBestLane >= bestLanes.len() || !bestLanes[nextBestLane].is_null());
+                    if nextBestLane >= bestLanes.len() {
+                        success = false;
+                        offset = 0.0;
+                    } else {
+                        let link = lane.get_link_to(bestLanes[nextBestLane]);
+                        debug_assert!(!link.is_null());
+                        lane = link.get_via_lane_or_lane();
+                        pos = 0.0;
+                    }
+                } else {
+                    pos += offset;
+                    offset = 0.0;
+                }
+            }
+        }
+
+        if success {
+            lane.geometry_position_at_offset(pos, -self.get_lateral_position_on_lane())
+        } else {
+            Position::INVALID
+        }
+    }
+
+    /// C++: `const MSLane * MSVehicle::getLane() const` [const, virtual]
+    /// Returns the lane the vehicle is on
+    // const MSLane* getLane() const {
+    //         return myLane;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_lane(&self) -> Ptr<MSLane> {
+        self.myLane
+    }
+
+    /// C++: `MSLane * MSVehicle::getMutableLane() const` [const]
+    /// Returns the lane the vehicle is on Non const version indicates that something volatile is going on
+    // MSLane* getMutableLane() const {
+    //         return myLane;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_mutable_lane(&self) -> Ptr<MSLane> {
+        self.myLane
+    }
+
+    /// C++: `const MSLane * MSVehicle::getBackLane() const` [const, virtual]
+    // const MSLane*
+    // MSVehicle::getBackLane() const {
+    //     if (myFurtherLanes.size() > 0) {
+    //         return myFurtherLanes.back();
+    //     } else {
+    //         return myLane;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_back_lane(&self) -> Ptr<MSLane> {
+        if self.myFurtherLanes.len() > 0 {
+            *self.myFurtherLanes.last().unwrap()
+        } else {
+            self.myLane
+        }
+    }
+
+    /// C++: `double MSVehicle::getMaxSpeedOnLane() const` [const]
+    /// Returns the maximal speed for the vehicle on its current lane (including speed factor and deviation, i.e., not necessarily the allowed speed limit)
+    // double
+    // MSVehicle::getMaxSpeedOnLane() const {
+    //     if (myLane != nullptr) {
+    //         return myLane->getVehicleMaxSpeed(this);
+    //     }
+    //     return myType->getMaxSpeed();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_max_speed_on_lane(&self) -> f64 {
+        if !self.myLane.is_null() {
+            return self.myLane.m().get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>());
+        }
+        self.myType.m().get_max_speed()
+    }
+
+    /// C++: `bool MSVehicle::isOnRoad() const` [const, virtual]
+    /// Returns the information whether the vehicle is on a road (is simulated)
+    // inline bool isOnRoad() const {
+    //         return myAmOnNet;
+    //     }
+    #[allow(unused_variables)]
+    pub fn is_on_road(&self) -> bool {
+        self.myAmOnNet
+    }
+
+    /// C++: `void MSVehicle::setIdling(bool)`
+    /// access function for Idling flag used to record whether vehicle is waiting to enter lane (after parking)
+    // void
+    //     setIdling(bool amIdling) {
+    //         myAmIdling = amIdling;
+    //     }
+    #[allow(unused_variables)]
+    pub fn set_idling(&mut self, amIdling: bool) {
+        self.myAmIdling = amIdling;
+    }
+
+    /// C++: `bool MSVehicle::isIdling() const` [const, virtual]
+    /// Returns whether a sim vehicle is waiting to enter a lane (after parking has completed)
+    // inline bool isIdling() const {
+    //         return myAmIdling;
+    //     }
+    #[allow(unused_variables)]
+    pub fn is_idling(&self) -> bool {
+        self.myAmIdling
+    }
+
+    /// C++: `bool MSVehicle::isActive() const` [const]
+    /// Returns whether the current simulation step is an action point for the vehicle
+    // inline bool isActive() const {
+    //         return myActionStep;
+    //     }
+    #[allow(unused_variables)]
+    pub fn is_active(&self) -> bool {
+        self.myActionStep
+    }
+
+    /// C++: `bool MSVehicle::isActionStep(SUMOTime) const` [const]
+    /// Returns whether the next simulation step will be an action point for the vehicle
+    // inline bool isActionStep(SUMOTime t) const {
+    //         return (t - myLastActionTime) % getActionStepLength() == 0;
+    // //        return t%getActionStepLength() == 0; // synchronized actions for all vehicles with identical actionsteplengths
+    //     }
+    #[allow(unused_variables)]
+    pub fn is_action_step(&self, t: SUMOTime) -> bool {
+        (t - self.myLastActionTime) % self.get_action_step_length() == 0
+    }
+
+    /// C++: `bool MSVehicle::isFrontOnLane(const MSLane *) const` [const, virtual]
+    /// Returns the information whether the front of the vehicle is on the given lane
+    // bool
+    // MSVehicle::isFrontOnLane(const MSLane* lane) const {
+    //     return lane == myLane || lane == myLaneChangeModel->getShadowLane() || lane == myLane->getBidiLane();
+    // }
+    #[allow(unused_variables)]
+    pub fn is_front_on_lane(&self, lane: Ptr<MSLane>) -> bool {
+        lane == self.myLane || lane == self.myLaneChangeModel.m().get_shadow_lane() || lane == self.myLane.m().get_bidi_lane()
+    }
+
+    /// C++: `const MSEdge * MSVehicle::getCurrentEdge() const` [const, virtual]
+    /// Returns the edge the vehicle is currently at (possibly an internal edge or nullptr)
+    // const MSEdge*
+    // MSVehicle::getCurrentEdge() const {
+    //     return myLane != nullptr ? &myLane->getEdge() : getEdge();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_current_edge(&self) -> Ptr<MSEdge> {
+        if !self.myLane.is_null() {
+            Ptr::from_mut(self.myLane.m().get_edge())
+        } else {
+            self.get_edge()
+        }
+    }
+
+    /// C++: `const MSEdge * MSVehicle::getNextEdgePtr() const` [const, virtual]
+    /// returns the next edge (possibly an internal edge)
+    // const MSEdge*
+    // MSVehicle::getNextEdgePtr() const {
+    //     if (myLane == nullptr || (myCurrEdge + 1) == myRoute->end()) {
+    //         return nullptr;
+    //     }
+    //     if (myLane->isInternal()) {
+    //         return &myLane->getCanonicalSuccessorLane()->getEdge();
+    //     } else {
+    //         const MSEdge* nextNormal = succEdge(1);
+    //         const MSEdge* nextInternal = myLane->getEdge().getInternalFollowingEdge(nextNormal, getVClass());
+    //         return nextInternal ? nextInternal : nextNormal;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
+        if self.myLane.is_null() || self.myCurrEdge + 1 == self.myRoute.size() as usize {
+            return Ptr::default();
+        }
+        if self.myLane.is_internal() {
+            Ptr::from_mut(self.myLane.get_canonical_successor_lane().get_edge())
+        } else {
+            let nextNormal = self.succ_edge(1);
+            let nextInternal = self.myLane.get_edge().get_internal_following_edge(nextNormal, self.get_v_class());
+            if !nextInternal.is_null() { nextInternal } else { nextNormal }
+        }
+    }
+
+    /// C++: `ConstMSEdgeVector::const_iterator MSVehicle::getRerouteOrigin() const` [const, virtual]
+    /// Returns the starting point for reroutes (usually the current edge)
+    // ConstMSEdgeVector::const_iterator
+    // MSVehicle::getRerouteOrigin() const {
+    //     // too close to the next junction, so avoid an emergency brake here
+    //     if (myLane != nullptr && (myCurrEdge + 1) != myRoute->end() && !isRailway(getVClass())) {
+    //         if (myLane->isInternal()) {
+    //             return myCurrEdge + 1;
+    //         }
+    //         if (myState.myPos > myLane->getLength() - getCarFollowModel().brakeGap(myState.mySpeed, getCarFollowModel().getMaxDecel(), 0.)) {
+    //             return myCurrEdge + 1;
+    //         }
+    //         if (myLane->getEdge().hasChangeProhibitions(getVClass(), myLane->getIndex())) {
+    //             return myCurrEdge + 1;
+    //         }
+    //     }
+    //     return myCurrEdge;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
+        // too close to the next junction, so avoid an emergency brake here
+        if !self.myLane.is_null() && self.myCurrEdge + 1 != self.myRoute.size() as usize && !utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) {
+            if self.myLane.is_internal() {
+                return self.myCurrEdge + 1;
+            }
+            if self.myState.myPos > self.myLane.get_length() - self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.0) {
+                return self.myCurrEdge + 1;
+            }
+            if self.myLane.get_edge().has_change_prohibitions(self.get_v_class(), self.myLane.get_index()) {
+                return self.myCurrEdge + 1;
+            }
+        }
+        self.myCurrEdge
+    }
+
+    /// C++: `SUMOTime MSVehicle::getWaitingTime(const bool) const` [const, virtual]
+    /// Returns the SUMOTime waited (speed was lesser than 0.1m/s)
+    // SUMOTime getWaitingTime(const bool accumulated = false) const {
+    //         if (!accumulated) {
+    //             return myWaitingTime;
+    //         }
+    //         return myWaitingTimeCollector.cumulatedWaitingTime(MSGlobals::gWaitingTimeMemory);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_waiting_time(&self, accumulated: bool) -> SUMOTime {
+        if !accumulated {
+            return self.myWaitingTime;
+        }
+        self.myWaitingTimeCollector.cumulated_waiting_time(crate::microsim::ms_globals::waiting_time_memory())
+    }
+
+    /// C++: `SUMOTime MSVehicle::getWaitingTimeFor(const MSLink *) const` [const]
+    /// getWaitingTime, but taking into account having stopped for a stop-link
+    // SUMOTime
+    // MSVehicle::getWaitingTimeFor(const MSLink* link) const {
+    //     // this vehicle currently has the highest priority on the allway_stop
+    //     return link == myHaveStoppedFor ? SUMOTime_MAX : getWaitingTime();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_waiting_time_for(&self, link: Ptr<MSLink>) -> SUMOTime {
+        // this vehicle currently has the highest priority on the allway_stop
+        if link == self.myHaveStoppedFor {
+            SUMOTIME_MAX
+        } else {
+            self.get_waiting_time(false)
+        }
+    }
+
+    /// C++: `SUMOTime MSVehicle::getTimeSinceStartup() const` [const]
+    /// Returns the SUMOTime spent driving since startup (speed was larger than 0.1m/s)
+    // SUMOTime getTimeSinceStartup() const {
+    //         return myTimeSinceStartup;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_time_since_startup(&self) -> SUMOTime {
+        self.myTimeSinceStartup
+    }
+
+    /// C++: `double MSVehicle::getTimeSinceStartupSeconds() const` [const]
+    // inline double getTimeSinceStartupSeconds() const {
+    //         return STEPS2TIME(myTimeSinceStartup);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_time_since_startup_seconds(&self) -> f64 {
+        steps2time(self.myTimeSinceStartup)
+    }
+
+    /// C++: `SUMOTime MSVehicle::getTimeLoss() const` [const, virtual]
+    /// Returns the SUMOTime lost (speed was lesser maximum speed)
+    // SUMOTime getTimeLoss() const {
+    //         return TIME2STEPS(myTimeLoss);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_time_loss(&self) -> SUMOTime {
+        time2steps(self.myTimeLoss)
+    }
+
+    /// C++: `double MSVehicle::getAccumulatedWaitingSeconds() const` [const]
+    /// Returns the number of seconds waited (speed was lesser than 0.1m/s) within the last millisecs
+    // double getAccumulatedWaitingSeconds() const {
+    //         return STEPS2TIME(getWaitingTime(true));
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_accumulated_waiting_seconds(&self) -> f64 {
+        steps2time(self.get_waiting_time(true))
+    }
+
+    /// C++: `double MSVehicle::getTimeLossSeconds() const` [const, virtual]
+    /// Returns the time loss in seconds
+    // double getTimeLossSeconds() const {
+    //         return myTimeLoss;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_time_loss_seconds(&self) -> f64 {
+        self.myTimeLoss
+    }
+
+    /// C++: `double MSVehicle::getStopDelay() const` [const, virtual]
+    /// Returns the public transport stop delay in seconds
+    // double
+    // MSVehicle::getStopDelay() const {
+    //     if (hasStops() && myStops.front().pars.until >= 0) {
+    //         const MSStop& stop = myStops.front();
+    //         SUMOTime estimatedDepart = MSNet::getInstance()->getCurrentTimeStep() - DELTA_T;
+    //         if (stop.reached) {
+    //             return STEPS2TIME(estimatedDepart + stop.duration - stop.pars.until);
+    //         }
+    //         if (stop.pars.duration > 0) {
+    //             estimatedDepart += stop.pars.duration;
+    //         }
+    //         estimatedDepart += TIME2STEPS(estimateTimeToNextStop().first);
+    //         const double result = MAX2(0.0, STEPS2TIME(estimatedDepart - stop.pars.until));
+    //         return result;
+    //     } else {
+    //         // vehicles cannot drive before 'until' so stop delay can never be
+    //         // negative and we can use -1 to signal "undefined"
+    //         return -1;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_stop_delay(&self) -> f64 {
+        if self.has_stops() && self.myStops.front().unwrap().pars.until >= 0 {
+            let stop = self.myStops.front().unwrap();
+            let mut estimatedDepart: SUMOTime = MSNet::get_instance().get_current_time_step() - delta_t();
+            if stop.reached {
+                return steps2time(estimatedDepart + stop.duration - stop.pars.until);
+            }
+            if stop.pars.duration > 0 {
+                estimatedDepart += stop.pars.duration;
+            }
+            estimatedDepart += time2steps(self.estimate_time_to_next_stop().0);
+            let x = steps2time(estimatedDepart - stop.pars.until);
+            let result = if 0.0 > x { 0.0 } else { x }; // MAX2(0.0, ...)
+            return result;
+        } else {
+            // vehicles cannot drive before 'until' so stop delay can never be
+            // negative and we can use -1 to signal "undefined"
+            return -1.0;
+        }
+    }
+
+    /// C++: `double MSVehicle::getStopArrivalDelay() const` [const, virtual]
+    /// Returns the estimated public transport stop arrival delay in seconds
+    // double
+    // MSVehicle::getStopArrivalDelay() const {
+    //     if (hasStops() && myStops.front().pars.arrival >= 0) {
+    //         const MSStop& stop = myStops.front();
+    //         if (stop.reached) {
+    //             return STEPS2TIME(stop.pars.started - stop.pars.arrival);
+    //         } else {
+    //             return STEPS2TIME(MSNet::getInstance()->getCurrentTimeStep()) + estimateTimeToNextStop().first - STEPS2TIME(stop.pars.arrival);
+    //         }
+    //     } else {
+    //         // vehicles can arrive earlier than planned so arrival delay can be negative
+    //         return INVALID_DOUBLE;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_stop_arrival_delay(&self) -> f64 {
+        if self.has_stops() && self.myStops.front().unwrap().pars.arrival >= 0 {
+            let stop = self.myStops.front().unwrap();
+            if stop.reached {
+                return steps2time(stop.pars.started - stop.pars.arrival);
+            } else {
+                return steps2time(MSNet::get_instance().get_current_time_step()) + self.estimate_time_to_next_stop().0 - steps2time(stop.pars.arrival);
+            }
+        } else {
+            // vehicles can arrive earlier than planned so arrival delay can be negative
+            return utils::common::std_defs::INVALID_DOUBLE;
+        }
+    }
+
+    /// C++: `double MSVehicle::getAngle() const` [const, virtual]
+    /// Returns the vehicle's direction in radians
+    // double getAngle() const {
+    //         return myAngle;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_angle(&self) -> f64 {
+        self.myAngle
+    }
+
+    /// C++: `double MSVehicle::getCurveRadius() const` [const]
+    /// Returns the vehicle's current curve radius in m
+    // double
+    // MSVehicle::getCurveRadius() const {
+    //     const double angleDiff = getAngleDiff();
+    //     return angleDiff == 0
+    //         ? std::numeric_limits<double>::max()
+    //         : SPEED2DIST(getSpeed()) / fabs(angleDiff);
+    // }
+    #[allow(unused_variables)]
+    pub fn get_curve_radius(&self) -> f64 {
+        let angleDiff = self.get_angle_diff();
+        if angleDiff == 0.0 {
+            f64::MAX
+        } else {
+            speed2dist(self.get_speed()) / angleDiff.abs()
+        }
+    }
+
+    /// C++: `Position MSVehicle::getVelocityVector() const` [const]
+    /// Returns the vehicle's direction in radians
+    // Position getVelocityVector() const {
+    //         return Position(std::cos(myAngle) * myState.speed(), std::sin(myAngle) * myState.speed());
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_velocity_vector(&self) -> Position {
+        Position::new(self.myAngle.cos() * self.myState.speed(), self.myAngle.sin() * self.myState.speed())
+    }
+
+    /// C++: `double MSVehicle::computeAngle() const` [const]
+    /// compute the current vehicle angle
+    // double
+    // MSVehicle::computeAngle() const {
+    //     Position p1;
+    //     const double posLat = -myState.myPosLat; // @todo get rid of the '-'
+    //     const double lefthandSign = (MSGlobals::gLefthand ? -1 : 1);
+    //
+    //     // if parking manoeuvre is happening then rotate vehicle on each step
+    //     if (MSGlobals::gModelParkingManoeuver && !manoeuvreIsComplete()) {
+    //         return getAngle() + myManoeuvre.getGUIIncrement();
+    //     }
+    //
+    //     if (isParking()) {
+    //         if (myStops.begin()->parkingarea != nullptr) {
+    //             return myStops.begin()->parkingarea->getVehicleAngle(*this);
+    //         } else {
+    //             return myLane->getShape().rotationAtOffset(myLane->interpolateLanePosToGeometryPos(getPositionOnLane()));
+    //         }
+    //     }
+    //     if (myLaneChangeModel->isChangingLanes()) {
+    //         // cannot use getPosition() because it already includes the offset to the side and thus messes up the angle
+    //         p1 = myLane->geometryPositionAtOffset(myState.myPos, lefthandSign * posLat);
+    //         if (p1 == Position::INVALID && myLane->getShape().length2D() == 0. && myLane->isInternal()) {
+    //             // workaround: extrapolate the preceding lane shape
+    //             MSLane* predecessorLane = myLane->getCanonicalPredecessorLane();
+    //             p1 = predecessorLane->geometryPositionAtOffset(predecessorLane->getLength() + myState.myPos, lefthandSign * posLat);
+    //         }
+    //     } else {
+    //         p1 = getPosition();
+    //     }
+    //
+    //     Position p2;
+    //     if (getVehicleType().getParameter().locomotiveLength > 0) {
+    //         // articulated vehicle should use the heading of the first part
+    //         const double locoLength = MIN2(getVehicleType().getParameter().locomotiveLength, getLength());
+    //         p2 = getPosition(-locoLength);
+    //     } else {
+    //         p2 = getBackPosition();
+    //     }
+    //     if (p2 == Position::INVALID) {
+    //         // Handle special case of vehicle's back reaching out of the network
+    //         if (myFurtherLanes.size() > 0) {
+    //             p2 = myFurtherLanes.back()->geometryPositionAtOffset(0, -myFurtherLanesPosLat.back());
+    //             if (p2 == Position::INVALID) {
+    //                 // unsuitable lane geometry
+    //                 p2 = myLane->geometryPositionAtOffset(0, posLat);
+    //             }
+    //         } else {
+    //             p2 = myLane->geometryPositionAtOffset(0, posLat);
+    //         }
+    //     }
+    //     double result = (p1 != p2 ? p2.angleTo2D(p1) :
+    //                      myLane->getShape().rotationAtOffset(myLane->interpolateLanePosToGeometryPos(getPositionOnLane())));
+    //
+    //     result += lefthandSign * myLaneChangeModel->calcAngleOffset();
+    //
+    // #ifdef DEBUG_FURTHER
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " computeAngle veh=" << getID() << " p1=" << p1 << " p2=" << p2 << " angle=" << RAD2DEG(result) << " naviDegree=" << GeomHelper::naviDegree(result) << "\n";
+    //     }
+    // #endif
+    //     return result;
+    // }
+    #[allow(unused_variables)]
+    pub fn compute_angle(&self) -> f64 {
+        let mut p1 = Position::default();
+        let posLat = -self.myState.myPosLat; // @todo get rid of the '-'
+        let lefthandSign = if crate::microsim::ms_globals::lefthand() { -1.0 } else { 1.0 };
+
+        // if parking manoeuvre is happening then rotate vehicle on each step
+        if crate::microsim::ms_globals::model_parking_manoeuver() && !self.manoeuvre_is_complete() {
+            return self.get_angle() + self.myManoeuvre.get_gui_increment();
+        }
+
+        if self.is_parking() {
+            if !self.myStops.front().unwrap().parkingarea.is_null() {
+                return self.myStops.front().unwrap().parkingarea.get_vehicle_angle(self);
+            } else {
+                return self.myLane.get_shape_2().rotation_at_offset(self.myLane.interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()));
+            }
+        }
+        if self.myLaneChangeModel.is_changing_lanes() {
+            // cannot use getPosition() because it already includes the offset to the side and thus messes up the angle
+            p1 = self.myLane.geometry_position_at_offset(self.myState.myPos, lefthandSign * posLat);
+            if p1 == Position::INVALID && self.myLane.get_shape_2().length2d() == 0. && self.myLane.is_internal() {
+                // workaround: extrapolate the preceding lane shape
+                let predecessorLane = self.myLane.get_canonical_predecessor_lane();
+                p1 = predecessorLane.geometry_position_at_offset(predecessorLane.get_length() + self.myState.myPos, lefthandSign * posLat);
+            }
+        } else {
+            p1 = self.get_position(0.0);
+        }
+
+        let mut p2: Position;
+        if self.get_vehicle_type().get_parameter().locomotiveLength > 0.0 {
+            // articulated vehicle should use the heading of the first part
+            let locoLength = f64::min(self.get_vehicle_type().get_parameter().locomotiveLength, self.get_length());
+            p2 = self.get_position(-locoLength);
+        } else {
+            p2 = self.get_back_position();
+        }
+        if p2 == Position::INVALID {
+            // Handle special case of vehicle's back reaching out of the network
+            if self.myFurtherLanes.len() > 0 {
+                p2 = self.myFurtherLanes.last().unwrap().geometry_position_at_offset(0.0, -self.myFurtherLanesPosLat.last().unwrap());
+                if p2 == Position::INVALID {
+                    // unsuitable lane geometry
+                    p2 = self.myLane.geometry_position_at_offset(0.0, posLat);
+                }
+            } else {
+                p2 = self.myLane.geometry_position_at_offset(0.0, posLat);
+            }
+        }
+        let mut result = if p1 != p2 {
+            p2.angle_to2d(&p1)
+        } else {
+            self.myLane.get_shape_2().rotation_at_offset(self.myLane.interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()))
+        };
+
+        result += lefthandSign * self.myLaneChangeModel.m().calc_angle_offset();
+
+        result
+    }
+
+    /// C++: `void MSVehicle::setAngle(double, bool)`
+    /// Set a custom vehicle angle in rad, optionally updates furtherLanePosLat
+    // void
+    // MSVehicle::setAngle(double angle, bool straightenFurther) {
+    // #ifdef DEBUG_FURTHER
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " veh '" << getID() << " setAngle(" << angle <<  ") straightenFurther=" << straightenFurther << std::endl;
+    //     }
+    // #endif
+    //     myAngle = angle;
+    //     MSLane* next = myLane;
+    //     if (straightenFurther && myFurtherLanesPosLat.size() > 0) {
+    //         for (int i = 0; i < (int)myFurtherLanes.size(); i++) {
+    //             MSLane* further = myFurtherLanes[i];
+    //             const MSLink* link = further->getLinkTo(next);
+    //             if (link  != nullptr) {
+    //                 myFurtherLanesPosLat[i] = getLateralPositionOnLane() - link->getLateralShift();
+    //                 next = further;
+    //             } else {
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn set_angle(&mut self, angle: f64, straightenFurther: bool) {
+        self.myAngle = angle;
+        let mut next = self.myLane;
+        if straightenFurther && self.myFurtherLanesPosLat.len() > 0 {
+            for i in 0..self.myFurtherLanes.len() {
+                let further = self.myFurtherLanes[i];
+                let link = further.get_link_to(next);
+                if !link.is_null() {
+                    let pos = self.get_lateral_position_on_lane() - link.get_lateral_shift();
+                    self.myFurtherLanesPosLat[i] = pos;
+                    next = further;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// C++: `void MSVehicle::setActionStepLength(double, bool)`
+    /// Sets the action steplength of the vehicle
+    // void
+    // MSVehicle::setActionStepLength(double actionStepLength, bool resetOffset) {
+    //     SUMOTime actionStepLengthMillisecs = SUMOVehicleParserHelper::processActionStepLength(actionStepLength);
+    //     SUMOTime previousActionStepLength = getActionStepLength();
+    //     const bool newActionStepLength = actionStepLengthMillisecs != previousActionStepLength;
+    //     if (newActionStepLength) {
+    //         getSingularType().setActionStepLength(actionStepLengthMillisecs, resetOffset);
+    //         if (!resetOffset) {
+    //             updateActionOffset(previousActionStepLength, actionStepLengthMillisecs);
+    //         }
+    //     }
+    //     if (resetOffset) {
+    //         resetActionOffset();
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn set_action_step_length(&mut self, actionStepLength: f64, resetActionOffset: bool) {
+        let actionStepLengthMillisecs: SUMOTime = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::process_action_step_length(actionStepLength);
+        let previousActionStepLength: SUMOTime = self.get_action_step_length();
+        let newActionStepLength = actionStepLengthMillisecs != previousActionStepLength;
+        if newActionStepLength {
+            self.get_singular_type().set_action_step_length(actionStepLengthMillisecs, resetActionOffset);
+            if !resetActionOffset {
+                self.update_action_offset(previousActionStepLength, actionStepLengthMillisecs);
+            }
+        }
+        if resetActionOffset {
+            self.reset_action_offset(0);
+        }
+    }
+
+    /// C++: `bool MSVehicle::overlap(const MSVehicle *, const MSVehicle *)` [static]
+    /// Returns true if the two vehicles overlap.
+    // static bool overlap(const MSVehicle* veh1, const MSVehicle* veh2) {
+    //         if (veh1->myState.myPos < veh2->myState.myPos) {
+    //             return veh2->myState.myPos - veh2->getVehicleType().getLengthWithGap() < veh1->myState.myPos;
+    //         }
+    //         return veh1->myState.myPos - veh1->getVehicleType().getLengthWithGap() < veh2->myState.myPos;
+    //     }
+    #[allow(unused_variables)]
+    pub fn overlap(veh1: Ptr<MSVehicle>, veh2: Ptr<MSVehicle>) -> bool {
+        if veh1.myState.myPos < veh2.myState.myPos {
+            return veh2.myState.myPos - veh2.get_vehicle_type().get_length_with_gap() < veh1.myState.myPos;
+        }
+        veh1.myState.myPos - veh1.get_vehicle_type().get_length_with_gap() < veh2.myState.myPos
+    }
+
+    /// C++: `bool MSVehicle::congested() const` [const]
+    /// Returns true if vehicle's speed is below 60km/h. This is only relevant on highways. Overtaking on the right is allowed then.
+    // bool
+    // MSVehicle::congested() const {
+    //     return myState.mySpeed < (60.0 / 3.6) || myLane->getSpeedLimit() < (60.1 / 3.6);
+    // }
+    #[allow(unused_variables)]
+    pub fn congested(&self) -> bool {
+        self.myState.mySpeed < (60.0 / 3.6) || self.myLane.get_speed_limit() < (60.1 / 3.6)
+    }
+
+    /// C++: `void MSVehicle::enterLaneAtMove(MSLane *, bool)`
+    /// Update when the vehicle enters a new lane in the move step.
+    // void
+    // MSVehicle::enterLaneAtMove(MSLane* enteredLane, bool onTeleporting) {
+    //     myAmOnNet = !onTeleporting;
+    //     // vaporizing edge?
+    //     /*
+    //     if (enteredLane->getEdge().isVaporizing()) {
+    //         // yep, let's do the vaporization...
+    //         myLane = enteredLane;
+    //         return true;
+    //     }
+    //     */
+    //     // Adjust MoveReminder offset to the next lane
+    //     adaptLaneEntering2MoveReminder(*enteredLane);
+    //     // set the entered lane as the current lane
+    //     MSLane* oldLane = myLane;
+    //     myLane = enteredLane;
+    //     myLastBestLanesEdge = nullptr;
+    //
+    //     // internal edges are not a part of the route...
+    //     if (!enteredLane->getEdge().isInternal()) {
+    //         ++myCurrEdge;
+    //         assert(myLaneChangeModel->isOpposite() || haveValidStopEdges());
+    //     }
+    //     if (myInfluencer != nullptr) {
+    //         myInfluencer->adaptLaneTimeLine(myLane->getIndex() - oldLane->getIndex());
+    //     }
+    //     if (!onTeleporting) {
+    //         activateReminders(MSMoveReminder::NOTIFICATION_JUNCTION, enteredLane);
+    //         if (MSGlobals::gLateralResolution > 0) {
+    //             myFurtherLanesPosLat.push_back(myState.myPosLat);
+    //             // transform lateral position when the lane width changes
+    //             assert(oldLane != nullptr);
+    //             const MSLink* const link = oldLane->getLinkTo(myLane);
+    //             if (link != nullptr) {
+    //                 myState.myPosLat += link->getLateralShift();
+    //             } else {
+    //                 myState.myPosLat += (oldLane->getCenterOnEdge() - myLane->getCanonicalPredecessorLane()->getRightSideOnEdge()) / 2;
+    //             }
+    //         } else if (fabs(myState.myPosLat) > NUMERICAL_EPS) {
+    //             const double overlap = MAX2(0.0, getLateralOverlap(myState.myPosLat, oldLane));
+    //             const double range = (oldLane->getWidth() - getVehicleType().getWidth()) * 0.5 + overlap;
+    //             const double range2 = (myLane->getWidth() - getVehicleType().getWidth()) * 0.5 + overlap;
+    //             myState.myPosLat *= range2 / range;
+    //         }
+    //         if (myLane->getBidiLane() != nullptr && (!isRailway(getVClass()) || (myLane->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //             // railways don't need to "see" each other when moving in opposite directions on the same track (efficiency)
+    //             // (unless the lane is shared with cars)
+    //             myLane->getBidiLane()->setPartialOccupation(this);
+    //         }
+    //     } else {
+    //         // normal move() isn't called so reset position here. must be done
+    //         // before calling reminders
+    //         myState.myPos = 0;
+    //         myCachedPosition = Position::INVALID;
+    //         activateReminders(MSMoveReminder::NOTIFICATION_TELEPORT, enteredLane);
+    //     }
+    //     // update via
+    //     if (myParameter->via.size() > 0 &&  myLane->getEdge().getID() == myParameter->via.front()) {
+    //         myParameter->via.erase(myParameter->via.begin());
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn enter_lane_at_move(&mut self, enteredLane: Ptr<MSLane>, onTeleporting: bool) {
+        self.myAmOnNet = !onTeleporting;
+        // vaporizing edge block is commented out in C++ as well
+        // Adjust MoveReminder offset to the next lane
+        self.adapt_lane_entering2_move_reminder(&enteredLane);
+        // set the entered lane as the current lane
+        let oldLane = self.myLane;
+        self.myLane = enteredLane;
+        self.myLastBestLanesEdge = Ptr::null();
+
+        // internal edges are not a part of the route...
+        if !enteredLane.get_edge().is_internal() {
+            self.myCurrEdge += 1;
+            debug_assert!(self.myLaneChangeModel.m().is_opposite() || self.have_valid_stop_edges(false));
+        }
+        if !self.myInfluencer.is_null() {
+            let shift = self.myLane.get_index() - oldLane.get_index();
+            self.myInfluencer.m().adapt_lane_time_line(shift);
+        }
+        if !onTeleporting {
+            self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_JUNCTION, enteredLane);
+            if crate::microsim::ms_globals::lateral_resolution() > 0.0 {
+                let posLat = self.myState.myPosLat;
+                self.myFurtherLanesPosLat.push(posLat);
+                // transform lateral position when the lane width changes
+                debug_assert!(!oldLane.is_null());
+                let link = oldLane.get_link_to(self.myLane);
+                if !link.is_null() {
+                    self.myState.myPosLat += link.get_lateral_shift();
+                } else {
+                    self.myState.myPosLat += (oldLane.get_center_on_edge() - self.myLane.get_canonical_predecessor_lane().get_right_side_on_edge()) / 2.0;
+                }
+            } else if self.myState.myPosLat.abs() > utils::geom::NUMERICAL_EPS {
+                let overlap = max2(0.0, self.get_lateral_overlap_3(self.myState.myPosLat, oldLane));
+                let range = (oldLane.get_width() - self.get_vehicle_type().get_width()) * 0.5 + overlap;
+                let range2 = (self.myLane.get_width() - self.get_vehicle_type().get_width()) * 0.5 + overlap;
+                self.myState.myPosLat *= range2 / range;
+            }
+            if !self.myLane.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (self.myLane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                // railways don't need to "see" each other when moving in opposite directions on the same track (efficiency)
+                // (unless the lane is shared with cars)
+                let bidi = self.myLane.get_bidi_lane();
+                bidi.m().set_partial_occupation(Ptr::from_mut(self));
+            }
+        } else {
+            // normal move() isn't called so reset position here. must be done
+            // before calling reminders
+            self.myState.myPos = 0.0;
+            self.myCachedPosition.set(Position::INVALID);
+            self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_TELEPORT, enteredLane);
+        }
+        // update via
+        if self.myParameter.m().via.len() > 0 && self.myLane.get_edge().get_id() == self.myParameter.m().via[0] {
+            self.myParameter.m().via.remove(0);
+        }
+    }
+
+    /// C++: `void MSVehicle::enterLaneAtInsertion(MSLane *, double, double, double, MSMoveReminder::Notification)`
+    /// Update when the vehicle enters a new lane in the emit step
+    // void
+    // MSVehicle::enterLaneAtInsertion(MSLane* enteredLane, double pos, double speed, double posLat, MSMoveReminder::Notification notification) {
+    //     myState = State(pos, speed, posLat, pos - getVehicleType().getLength(), hasDeparted() ? myState.myPreviousSpeed : speed);
+    //     if (myDeparture == NOT_YET_DEPARTED) {
+    //         onDepart();
+    //     }
+    //     if (enteredLane->isInternal() && myJunctionEntryTime == SUMOTime_MAX) {
+    //         myJunctionEntryTime = MSNet::getInstance()->getCurrentTimeStep();
+    //         myJunctionEntryTimeNeverYield = myJunctionEntryTime;
+    //         assert(enteredLane->getIncomingLanes().size() == 1);
+    //         if (enteredLane->getIncomingLanes().front().viaLink->isConflictEntryLink()) {
+    //             myJunctionConflictEntryTime = myJunctionEntryTime;
+    //         }
+    //     }
+    //     myCachedPosition = Position::INVALID;
+    //     assert(myState.myPos >= 0);
+    //     assert(myState.mySpeed >= 0);
+    //     myLane = enteredLane;
+    //     myAmOnNet = true;
+    //     // schedule action for the next timestep
+    //     myLastActionTime = MSNet::getInstance()->getCurrentTimeStep() + DELTA_T;
+    //     if (notification != MSMoveReminder::NOTIFICATION_TELEPORT) {
+    //         if (notification == MSMoveReminder::NOTIFICATION_PARKING && myInfluencer != nullptr) {
+    //             drawOutsideNetwork(false);
+    //         }
+    //         // set and activate the new lane's reminders, teleports already did that at enterLaneAtMove
+    //         for (std::vector< MSMoveReminder* >::const_iterator rem = enteredLane->getMoveReminders().begin(); rem != enteredLane->getMoveReminders().end(); ++rem) {
+    //             addReminder(*rem);
+    //         }
+    //         activateReminders(notification, enteredLane);
+    //     } else {
+    //         myLastBestLanesEdge = nullptr;
+    //         myLastBestLanesInternalLane = nullptr;
+    //         myLaneChangeModel->resetState();
+    //         while (!myStops.empty() && myStops.front().edge == myCurrEdge && &myStops.front().lane->getEdge() == &myLane->getEdge()
+    //                 && myStops.front().pars.endPos < pos) {
+    //             WRITE_WARNINGF(TL("Vehicle '%' skips stop on lane '%' time=%."), getID(), myStops.front().lane->getID(),
+    //                            time2string(MSNet::getInstance()->getCurrentTimeStep()));
+    //             cleanupParkingReservation();
+    //             myStops.pop_front();
+    //         }
+    //         // avoid startup-effects after teleport
+    //         myTimeSinceStartup = getCarFollowModel().getStartupDelay() + DELTA_T;
+    //         myStopSpeed = std::numeric_limits<double>::max();
+    //     }
+    //     computeFurtherLanes(enteredLane, pos);
+    //     if (MSGlobals::gLateralResolution > 0) {
+    //         myLaneChangeModel->updateShadowLane();
+    //         myLaneChangeModel->updateTargetLane();
+    //     } else if (MSGlobals::gLaneChangeDuration > 0) {
+    //         myLaneChangeModel->updateShadowLane();
+    //     }
+    //     if (notification != MSMoveReminder::NOTIFICATION_LOAD_STATE) {
+    //         myAngle = computeAngle();
+    //         myRawAngle = myAngle;
+    //         if (myLaneChangeModel->isOpposite()) {
+    //             myAngle += M_PI;
+    //         }
+    //     }
+    //     if (MSNet::getInstance()->hasPersons()) {
+    //         for (MSLane* further : myFurtherLanes) {
+    //             if (further->mustCheckJunctionCollisions()) {
+    //                 MSNet::getInstance()->getEdgeControl().checkCollisionForInactive(further);
+    //             }
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn enter_lane_at_insertion(&mut self, enteredLane: Ptr<MSLane>, pos: f64, speed: f64, posLat: f64, notification: MSMoveReminder_Notification) {
+        let backPos = pos - self.get_vehicle_type().get_length();
+        let previousSpeed = if self.has_departed() { self.myState.myPreviousSpeed } else { speed };
+        self.myState = MSVehicle_State::new(pos, speed, posLat, backPos, previousSpeed);
+        if self.myDeparture == MS_BASE_VEHICLE_NOT_YET_DEPARTED {
+            self.on_depart();
+        }
+        if enteredLane.is_internal() && self.myJunctionEntryTime == SUMOTIME_MAX {
+            self.myJunctionEntryTime = MSNet::get_instance().get_current_time_step();
+            self.myJunctionEntryTimeNeverYield = self.myJunctionEntryTime;
+            debug_assert!(enteredLane.get_incoming_lanes().len() == 1);
+            if enteredLane.get_incoming_lanes()[0].viaLink.is_conflict_entry_link() {
+                self.myJunctionConflictEntryTime = self.myJunctionEntryTime;
+            }
+        }
+        self.myCachedPosition.set(Position::INVALID);
+        debug_assert!(self.myState.myPos >= 0.0);
+        debug_assert!(self.myState.mySpeed >= 0.0);
+        self.myLane = enteredLane;
+        self.myAmOnNet = true;
+        // schedule action for the next timestep
+        self.myLastActionTime = MSNet::get_instance().get_current_time_step() + delta_t();
+        if notification != MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            if notification == MSMoveReminder_Notification::NOTIFICATION_PARKING && !self.myInfluencer.is_null() {
+                self.draw_outside_network(false);
+            }
+            // set and activate the new lane's reminders, teleports already did that at enterLaneAtMove
+            for rem in enteredLane.get_move_reminders().iter() {
+                self.add_reminder(*rem, 0.0);
+            }
+            self.activate_reminders(notification, enteredLane);
+        } else {
+            self.myLastBestLanesEdge = Ptr::null();
+            self.myLastBestLanesInternalLane = Ptr::null();
+            self.myLaneChangeModel.m().reset_state();
+            while !self.myStops.is_empty()
+                && self.myStops[0].edge == self.myCurrEdge
+                && Ptr::new(self.myStops[0].lane.get_edge()) == Ptr::new(self.myLane.get_edge())
+                && self.myStops[0].pars.endPos < pos
+            {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' skips stop on lane '%' time=%.", self.get_id(), self.myStops[0].lane.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                self.cleanup_parking_reservation();
+                self.myStops.pop_front();
+            }
+            // avoid startup-effects after teleport
+            self.myTimeSinceStartup = self.get_car_follow_model().get_startup_delay() + delta_t();
+            self.myStopSpeed = f64::MAX;
+        }
+        self.compute_further_lanes(enteredLane, pos, false);
+        if crate::microsim::ms_globals::lateral_resolution() > 0.0 {
+            self.myLaneChangeModel.m().update_shadow_lane();
+            self.myLaneChangeModel.m().update_target_lane();
+        } else if crate::microsim::ms_globals::lane_change_duration() > 0 {
+            self.myLaneChangeModel.m().update_shadow_lane();
+        }
+        if notification != MSMoveReminder_Notification::NOTIFICATION_LOAD_STATE {
+            self.myAngle = self.compute_angle();
+            self.myRawAngle = self.myAngle;
+            if self.myLaneChangeModel.m().is_opposite() {
+                self.myAngle += std::f64::consts::PI;
+            }
+        }
+        if MSNet::get_instance().has_persons() {
+            let net = MSNet::get_instance();
+            for further in self.myFurtherLanes.iter() {
+                if further.must_check_junction_collisions() {
+                    net.m().get_edge_control().check_collision_for_inactive(*further);
+                }
+            }
+        }
+    }
+
+    /// C++: `void MSVehicle::setTentativeLaneAndPosition(MSLane *, double, double)`
+    /// set tentative lane and position during insertion to ensure that all cfmodels work (some of them require veh->getLane() to return a valid lane) Once the vehicle is successfully inserted the lane is set again (see enterLaneAtInsertion)
+    // void
+    // MSVehicle::setTentativeLaneAndPosition(MSLane* lane, double pos, double posLat) {
+    //     myLane = lane;
+    //     myState.myPos = pos;
+    //     myState.myPosLat = posLat;
+    //     myState.myBackPos = pos - getVehicleType().getLength();
+    // }
+    #[allow(unused_variables)]
+    pub fn set_tentative_lane_and_position(&mut self, lane: Ptr<MSLane>, pos: f64, posLat: f64) {
+        self.myLane = lane;
+        self.myState.myPos = pos;
+        self.myState.myPosLat = posLat;
+        self.myState.myBackPos = pos - self.get_vehicle_type().get_length();
+    }
+
+    /// C++: `void MSVehicle::enterLaneAtLaneChange(MSLane *)`
+    /// Update when the vehicle enters a new lane in the laneChange step.
+    // void
+    // MSVehicle::enterLaneAtLaneChange(MSLane* enteredLane) {
+    //     myAmOnNet = true;
+    //     myLane = enteredLane;
+    //     myCachedPosition = Position::INVALID;
+    //     // need to update myCurrentLaneInBestLanes
+    //     updateBestLanes();
+    //     // switch to and activate the new lane's reminders
+    //     // keep OldLaneReminders
+    //     for (std::vector< MSMoveReminder* >::const_iterator rem = enteredLane->getMoveReminders().begin(); rem != enteredLane->getMoveReminders().end(); ++rem) {
+    //         addReminder(*rem);
+    //     }
+    //     activateReminders(MSMoveReminder::NOTIFICATION_LANE_CHANGE, enteredLane);
+    //     MSLane* lane = myLane;
+    //     double leftLength = getVehicleType().getLength() - myState.myPos;
+    //     int deleteFurther = 0;
+    // #ifdef DEBUG_SETFURTHER
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " enterLaneAtLaneChange entered=" << Named::getIDSecure(enteredLane) << " oldFurther=" << toString(myFurtherLanes) << "\n";
+    //     }
+    // #endif
+    //     if (myLane->getBidiLane() != nullptr && (!isRailway(getVClass()) || (myLane->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //         // railways don't need to "see" each other when moving in opposite directions on the same track (efficiency)
+    //         // (unless the lane is shared with cars)
+    //         myLane->getBidiLane()->setPartialOccupation(this);
+    //     }
+    //     for (int i = 0; i < (int)myFurtherLanes.size(); i++) {
+    //         if (lane != nullptr) {
+    //             lane = lane->getLogicalPredecessorLane(myFurtherLanes[i]->getEdge());
+    //         }
+    // #ifdef DEBUG_SETFURTHER
+    //         if (DEBUG_COND) {
+    //             std::cout << "  enterLaneAtLaneChange i=" << i << " lane=" << Named::getIDSecure(lane) << " leftLength=" << leftLength << "\n";
+    //         }
+    // #endif
+    //         if (leftLength > 0) {
+    //             if (lane != nullptr) {
+    //                 myFurtherLanes[i]->resetPartialOccupation(this);
+    //                 if (myFurtherLanes[i]->getBidiLane() != nullptr
+    //                         && (!isRailway(getVClass()) || (myFurtherLanes[i]->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //                     myFurtherLanes[i]->getBidiLane()->resetPartialOccupation(this);
+    //                 }
+    //                 // lane changing onto longer lanes may reduce the number of
+    //                 // remaining further lanes
+    //                 myFurtherLanes[i] = lane;
+    //                 myFurtherLanesPosLat[i] = myState.myPosLat;
+    //                 leftLength -= lane->setPartialOccupation(this);
+    //                 if (lane->getBidiLane() != nullptr
+    //                         && (!isRailway(getVClass()) || (lane->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //                     lane->getBidiLane()->setPartialOccupation(this);
+    //                 }
+    //                 myState.myBackPos = -leftLength;
+    // #ifdef DEBUG_SETFURTHER
+    //                 if (DEBUG_COND) {
+    //                     std::cout << SIMTIME << "   newBackPos=" << myState.myBackPos << "\n";
+    //                 }
+    // #endif
+    //             } else {
+    //                 // keep the old values, but ensure there is no shadow
+    //                 if (myLaneChangeModel->isChangingLanes()) {
+    //                     myLaneChangeModel->setNoShadowPartialOccupator(myFurtherLanes[i]);
+    //                 }
+    //                 if (myState.myBackPos < 0) {
+    //                     myState.myBackPos += myFurtherLanes[i]->getLength();
+    //                 }
+    // #ifdef DEBUG_SETFURTHER
+    //                 if (DEBUG_COND) {
+    //                     std::cout << SIMTIME << "   i=" << i << " further=" << myFurtherLanes[i]->getID() << " newBackPos=" << myState.myBackPos << "\n";
+    //                 }
+    // #endif
+    //             }
+    //         } else {
+    //             myFurtherLanes[i]->resetPartialOccupation(this);
+    //             if (myFurtherLanes[i]->getBidiLane() != nullptr
+    //                     && (!isRailway(getVClass()) || (myFurtherLanes[i]->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //                 myFurtherLanes[i]->getBidiLane()->resetPartialOccupation(this);
+    //             }
+    //             deleteFurther++;
+    //         }
+    //     }
+    //     if (deleteFurther > 0) {
+    // #ifdef DEBUG_SETFURTHER
+    //         if (DEBUG_COND) {
+    //             std::cout << SIMTIME << " veh=" << getID() << " shortening myFurtherLanes by " << deleteFurther << "\n";
+    //         }
+    // #endif
+    //         myFurtherLanes.erase(myFurtherLanes.end() - deleteFurther, myFurtherLanes.end());
+    //         myFurtherLanesPosLat.erase(myFurtherLanesPosLat.end() - deleteFurther, myFurtherLanesPosLat.end());
+    //     }
+    // #ifdef DEBUG_SETFURTHER
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " enterLaneAtLaneChange new furtherLanes=" << toString(myFurtherLanes)
+    //                   << " furterLanesPosLat=" << toString(myFurtherLanesPosLat) << "\n";
+    //     }
+    // #endif
+    //     myAngle = computeAngle();
+    // }
+    #[allow(unused_variables)]
+    pub fn enter_lane_at_lane_change(&mut self, enteredLane: Ptr<MSLane>) {
+        self.myAmOnNet = true;
+        self.myLane = enteredLane;
+        self.myCachedPosition.set(Position::INVALID);
+        // need to update myCurrentLaneInBestLanes
+        self.update_best_lanes(false, Ptr::null());
+        // switch to and activate the new lane's reminders
+        // keep OldLaneReminders
+        for rem in enteredLane.get_move_reminders().iter() {
+            self.add_reminder(*rem, 0.0);
+        }
+        self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE, enteredLane);
+        let mut lane = self.myLane;
+        let mut leftLength = self.get_vehicle_type().get_length() - self.myState.myPos;
+        let mut deleteFurther: usize = 0;
+        if !self.myLane.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (self.myLane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+            // railways don't need to "see" each other when moving in opposite directions on the same track (efficiency)
+            // (unless the lane is shared with cars)
+            let bidi = self.myLane.get_bidi_lane();
+            bidi.m().set_partial_occupation(Ptr::from_mut(self));
+        }
+        for i in 0..self.myFurtherLanes.len() {
+            if !lane.is_null() {
+                lane = lane.get_logical_predecessor_lane_2(self.myFurtherLanes[i].get_edge());
+            }
+            if leftLength > 0.0 {
+                if !lane.is_null() {
+                    let mut fl = self.myFurtherLanes[i];
+                    fl.m().reset_partial_occupation(Ptr::from_mut(self));
+                    if !fl.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (fl.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                        fl.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                    }
+                    // lane changing onto longer lanes may reduce the number of
+                    // remaining further lanes
+                    self.myFurtherLanes[i] = lane;
+                    self.myFurtherLanesPosLat[i] = self.myState.myPosLat;
+                    leftLength -= lane.m().set_partial_occupation(Ptr::from_mut(self));
+                    if !lane.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (lane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                        lane.get_bidi_lane().m().set_partial_occupation(Ptr::from_mut(self));
+                    }
+                    self.myState.myBackPos = -leftLength;
+                } else {
+                    // keep the old values, but ensure there is no shadow
+                    if self.myLaneChangeModel.m().is_changing_lanes() {
+                        let fl = self.myFurtherLanes[i];
+                        self.myLaneChangeModel.m().set_no_shadow_partial_occupator(fl);
+                    }
+                    if self.myState.myBackPos < 0.0 {
+                        self.myState.myBackPos += self.myFurtherLanes[i].get_length();
+                    }
+                }
+            } else {
+                let mut fl = self.myFurtherLanes[i];
+                fl.m().reset_partial_occupation(Ptr::from_mut(self));
+                if !fl.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (fl.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                    fl.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                }
+                deleteFurther += 1;
+            }
+        }
+        if deleteFurther > 0 {
+            let newLen = self.myFurtherLanes.len() - deleteFurther;
+            self.myFurtherLanes.truncate(newLen);
+            self.myFurtherLanesPosLat.truncate(newLen);
+        }
+        self.myAngle = self.compute_angle();
+    }
+
+    /// C++: `void MSVehicle::leaveLane(const MSMoveReminder::Notification, const MSLane *)`
+    /// Update of members if vehicle leaves a new lane in the lane change step or at arrival.
+    // void
+    // MSVehicle::leaveLane(const MSMoveReminder::Notification reason, const MSLane* approachedLane) {
+    //     for (MoveReminderCont::iterator rem = myMoveReminders.begin(); rem != myMoveReminders.end();) {
+    //         if (rem->first->notifyLeave(*this, myState.myPos + rem->second, reason, approachedLane)) {
+    // #ifdef _DEBUG
+    //             if (myTraceMoveReminders) {
+    //                 traceMoveReminder("notifyLeave", rem->first, rem->second, true);
+    //             }
+    // #endif
+    //             ++rem;
+    //         } else {
+    // #ifdef _DEBUG
+    //             if (myTraceMoveReminders) {
+    //                 traceMoveReminder("notifyLeave", rem->first, rem->second, false);
+    //             }
+    // #endif
+    //             rem = myMoveReminders.erase(rem);
+    //         }
+    //     }
+    //     if ((reason == MSMoveReminder::NOTIFICATION_JUNCTION
+    //             || reason == MSMoveReminder::NOTIFICATION_TELEPORT
+    //             || reason == MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION)
+    //             && myLane != nullptr) {
+    //         myOdometer += getLane()->getLength();
+    //     }
+    //     if (myLane != nullptr && myLane->getBidiLane() != nullptr && myAmOnNet
+    //             && (!isRailway(getVClass()) || (myLane->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //         myLane->getBidiLane()->resetPartialOccupation(this);
+    //     }
+    //     if (reason != MSMoveReminder::NOTIFICATION_JUNCTION && reason != MSMoveReminder::NOTIFICATION_LANE_CHANGE) {
+    //         // @note. In case of lane change, myFurtherLanes and partial occupation
+    //         // are handled in enterLaneAtLaneChange()
+    //         for (MSLane* further : myFurtherLanes) {
+    // #ifdef DEBUG_FURTHER
+    //             if (DEBUG_COND) {
+    //                 std::cout << SIMTIME << " leaveLane \n";
+    //             }
+    // #endif
+    //             further->resetPartialOccupation(this);
+    //             if (further->getBidiLane() != nullptr
+    //                     && (!isRailway(getVClass()) || (further->getPermissions() & ~SVC_RAIL_CLASSES) != 0)) {
+    //                 further->getBidiLane()->resetPartialOccupation(this);
+    //             }
+    //         }
+    //         myFurtherLanes.clear();
+    //         myFurtherLanesPosLat.clear();
+    //     }
+    //     if (reason >= MSMoveReminder::NOTIFICATION_TELEPORT) {
+    //         myAmOnNet = false;
+    //         myWaitingTime = 0;
+    //     }
+    //     if (reason != MSMoveReminder::NOTIFICATION_PARKING && resumeFromStopping()) {
+    //         myStopDist = std::numeric_limits<double>::max();
+    //         if (myPastStops.back().speed <= 0) {
+    //             WRITE_WARNINGF(TL("Vehicle '%' aborts stop."), getID());
+    //         }
+    //     }
+    //     if (reason != MSMoveReminder::NOTIFICATION_PARKING && reason != MSMoveReminder::NOTIFICATION_LANE_CHANGE) {
+    //         while (!myStops.empty() && myStops.front().edge == myCurrEdge && &myStops.front().lane->getEdge() == &myLane->getEdge()) {
+    //             if (myStops.front().getSpeed() <= 0) {
+    //                 WRITE_WARNINGF(TL("Vehicle '%' skips stop on lane '%' time=%."), getID(), myStops.front().lane->getID(),
+    //                                time2string(MSNet::getInstance()->getCurrentTimeStep()));
+    //                 cleanupParkingReservation();
+    //                 if (MSStopOut::active()) {
+    //                     // clean up if stopBlocked was called
+    //                     MSStopOut::getInstance()->stopNotStarted(this);
+    //                 }
+    //                 myStops.pop_front();
+    //             } else {
+    //                 MSStop& stop = myStops.front();
+    //                 // passed waypoint at the end of the lane
+    //                 if (!stop.reached) {
+    //                     if (MSStopOut::active()) {
+    //                         MSStopOut::getInstance()->stopStarted(this, getPersonNumber(), getContainerNumber(), MSNet::getInstance()->getCurrentTimeStep());
+    //                     }
+    //                     stop.reached = true;
+    //                     // enter stopping place so leaveFrom works as expected
+    //                     if (stop.busstop != nullptr) {
+    //                         // let the bus stop know the vehicle
+    //                         stop.busstop->enter(this, stop.pars.parking == ParkingType::OFFROAD);
+    //                     }
+    //                     if (stop.containerstop != nullptr) {
+    //                         // let the container stop know the vehicle
+    //                         stop.containerstop->enter(this, stop.pars.parking == ParkingType::OFFROAD);
+    //                     }
+    //                     // do not enter parkingarea!
+    //                     if (stop.chargingStation != nullptr) {
+    //                         // let the container stop know the vehicle
+    //                         stop.chargingStation->enter(this, stop.pars.parking == ParkingType::OFFROAD);
+    //                     }
+    //                 }
+    //                 resumeFromStopping();
+    //             }
+    //             myStopDist = std::numeric_limits<double>::max();
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn leave_lane(&mut self, reason: MSMoveReminder_Notification, approachedLane: Ptr<MSLane>) {
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let mut rem = self.myMoveReminders[i].0;
+            let remPos = self.myMoveReminders[i].1;
+            let lastPos = self.myState.myPos + remPos;
+            if rem.notify_leave(self, lastPos, reason, approachedLane) {
+                i += 1;
+            } else {
+                self.myMoveReminders.remove(i);
+            }
+        }
+        if (reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION) && !self.myLane.is_null() {
+            self.myOdometer += self.myLane.get_length();
+        }
+        if !self.myLane.is_null() && !self.myLane.get_bidi_lane().is_null() && self.myAmOnNet && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (self.myLane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+            self.myLane.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+            // @note. In case of lane change, myFurtherLanes and partial occupation
+            // are handled in enterLaneAtLaneChange()
+            let furthers = self.myFurtherLanes.clone();
+            for further in furthers {
+                further.m().reset_partial_occupation(Ptr::from_mut(self));
+                if !further.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (further.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                    further.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                }
+            }
+            self.myFurtherLanes.clear();
+            self.myFurtherLanesPosLat.clear();
+        }
+        if reason >= MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            self.myAmOnNet = false;
+            self.myWaitingTime = 0;
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_PARKING && self.resume_from_stopping() {
+            self.myStopDist = f64::MAX;
+            if self.myPastStops.last().unwrap().speed <= 0.0 {
+                write_warningf!("Vehicle '%' aborts stop.", self.get_id());
+            }
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_PARKING && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+            while !self.myStops.is_empty() && self.myStops.front().unwrap().edge == self.myCurrEdge && std::ptr::eq(self.myStops.front().unwrap().lane.get_edge(), self.myLane.get_edge()) {
+                if self.myStops.front().unwrap().get_speed() <= 0.0 {
+                    write_warningf!("Vehicle '%' skips stop on lane '%' time=%.", self.get_id(), self.myStops.front().unwrap().lane.get_id(), time2string(MSNet::get_instance().get_current_time_step()));
+                    self.cleanup_parking_reservation();
+                    if MSStopOut::active() {
+                        // clean up if stopBlocked was called
+                        MSStopOut::get_instance().m().stop_not_started(Ptr::from_mut(self).cast::<SUMOVehicle>());
+                    }
+                    self.myStops.pop_front();
+                } else {
+                    let me: Ptr<MSVehicle> = Ptr::from_mut(self);
+                    let stop: Ptr<MSStop> = Ptr::from_mut(self.myStops.front_mut().unwrap());
+                    // passed waypoint at the end of the lane
+                    if !stop.reached {
+                        if MSStopOut::active() {
+                            MSStopOut::get_instance().m().stop_started(me.cast::<SUMOVehicle>(), self.get_person_number(), self.get_container_number(), MSNet::get_instance().get_current_time_step());
+                        }
+                        stop.m().reached = true;
+                        // enter stopping place so leaveFrom works as expected
+                        if !stop.busstop.is_null() {
+                            // let the bus stop know the vehicle
+                            stop.busstop.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                        if !stop.containerstop.is_null() {
+                            // let the container stop know the vehicle
+                            stop.containerstop.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                        // do not enter parkingarea!
+                        if !stop.chargingStation.is_null() {
+                            // let the container stop know the vehicle
+                            stop.chargingStation.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                    }
+                    self.resume_from_stopping();
+                }
+                self.myStopDist = f64::MAX;
+            }
+        }
+    }
+
+    /// C++: `void MSVehicle::leaveLaneBack(const MSMoveReminder::Notification, const MSLane *)`
+    /// Update of reminders if vehicle back leaves a lane during (during forward movement
+    // void
+    // MSVehicle::leaveLaneBack(const MSMoveReminder::Notification reason, const MSLane* leftLane) {
+    //     for (MoveReminderCont::iterator rem = myMoveReminders.begin(); rem != myMoveReminders.end();) {
+    //         if (rem->first->notifyLeaveBack(*this, reason, leftLane)) {
+    // #ifdef _DEBUG
+    //             if (myTraceMoveReminders) {
+    //                 traceMoveReminder("notifyLeaveBack", rem->first, rem->second, true);
+    //             }
+    // #endif
+    //             ++rem;
+    //         } else {
+    // #ifdef _DEBUG
+    //             if (myTraceMoveReminders) {
+    //                 traceMoveReminder("notifyLeaveBack", rem->first, rem->second, false);
+    //             }
+    // #endif
+    //             rem = myMoveReminders.erase(rem);
+    //         }
+    //     }
+    // #ifdef DEBUG_MOVEREMINDERS
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " veh=" << getID() << " myReminders:";
+    //         for (auto rem : myMoveReminders) {
+    //             std::cout << rem.first->getDescription() << " ";
+    //         }
+    //         std::cout << "\n";
+    //     }
+    // #endif
+    // }
+    #[allow(unused_variables)]
+    pub fn leave_lane_back(&mut self, reason: MSMoveReminder_Notification, leftLane: Ptr<MSLane>) {
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let mut rem = self.myMoveReminders[i].0;
+            if rem.notify_leave_back(self, reason, leftLane) {
+                i += 1;
+            } else {
+                self.myMoveReminders.remove(i);
+            }
+        }
+    }
+
+    /// C++: `void MSVehicle::updateDriveItems()`
+    /// Check whether the drive items (myLFLinkLanes) are up to date, and update them if required.
+    // void
+    // MSVehicle::updateDriveItems() {
+    // #ifdef DEBUG_ACTIONSTEPS
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " updateDriveItems(), veh='" << getID() << "' (lane: '" << getLane()->getID() << "')\nCurrent drive items:" << std::endl;
+    //         for (const auto& dpi : myLFLinkLanes) {
+    //             std::cout
+    //                     << " vPass=" << dpi.myVLinkPass
+    //                     << " vWait=" << dpi.myVLinkWait
+    //                     << " linkLane=" << (dpi.myLink == 0 ? "NULL" : dpi.myLink->getViaLaneOrLane()->getID())
+    //                     << " request=" << dpi.mySetRequest
+    //                     << "\n";
+    //         }
+    //         std::cout << " myNextDriveItem's linked lane: " << (myNextDriveItem->myLink == 0 ? "NULL" : myNextDriveItem->myLink->getViaLaneOrLane()->getID()) << std::endl;
+    //     }
+    // #endif
+    //     if (myLFLinkLanes.size() == 0) {
+    //         // nothing to update
+    //         return;
+    //     }
+    //     const MSLink* nextPlannedLink = nullptr;
+    // //    auto i = myLFLinkLanes.begin();
+    //     auto i = myNextDriveItem;
+    //     while (i != myLFLinkLanes.end() && nextPlannedLink == nullptr) {
+    //         nextPlannedLink = i->myLink;
+    //         ++i;
+    //     }
+    //
+    //     if (nextPlannedLink == nullptr) {
+    //         // No link for upcoming item -> no need for an update
+    // #ifdef DEBUG_ACTIONSTEPS
+    //         if (DEBUG_COND) {
+    //             std::cout << "Found no link-related drive item." << std::endl;
+    //         }
+    // #endif
+    //         return;
+    //     }
+    //
+    //     if (getLane() == nextPlannedLink->getLaneBefore()) {
+    //         // Current lane approaches the stored next link, i.e. no LC happend and no update is required.
+    // #ifdef DEBUG_ACTIONSTEPS
+    //         if (DEBUG_COND) {
+    //             std::cout << "Continuing on planned lane sequence, no update required." << std::endl;
+    //         }
+    // #endif
+    //         return;
+    //     }
+    //     // Lane must have been changed, determine the change direction
+    //     const MSLink* parallelLink = nextPlannedLink->getParallelLink(1);
+    //     if (parallelLink != nullptr && parallelLink->getLaneBefore() == getLane()) {
+    //         // lcDir = 1;
+    //     } else {
+    //         parallelLink = nextPlannedLink->getParallelLink(-1);
+    //         if (parallelLink != nullptr && parallelLink->getLaneBefore() == getLane()) {
+    //             // lcDir = -1;
+    //         } else {
+    //             // If the vehicle's current lane is not the approaching lane for the next
+    //             // drive process item's link, it is expected to lead to a parallel link,
+    //             // XXX: What if the lc was an overtaking maneuver and there is no upcoming link?
+    //             //      Then a stop item should be scheduled! -> TODO!
+    //             //assert(false);
+    //             return;
+    //         }
+    //     }
+    // #ifdef DEBUG_ACTIONSTEPS
+    //     if (DEBUG_COND) {
+    //         std::cout << "Changed lane. Drive items will be updated along the current lane continuation." << std::endl;
+    //     }
+    // #endif
+    //     // Trace link sequence along current best lanes and transfer drive items to the corresponding links
+    // //        DriveItemVector::iterator driveItemIt = myLFLinkLanes.begin();
+    //     DriveItemVector::iterator driveItemIt = myNextDriveItem;
+    //     // In the loop below, lane holds the currently considered lane on the vehicles continuation (including internal lanes)
+    //     const MSLane* lane = myLane;
+    //     assert(myLane == parallelLink->getLaneBefore());
+    //     // *lit is a pointer to the next lane in best continuations for the current lane (always non-internal)
+    //     std::vector<MSLane*>::const_iterator bestLaneIt = getBestLanesContinuation().begin() + 1;
+    //     // Pointer to the new link for the current drive process item
+    //     MSLink* newLink = nullptr;
+    //     while (driveItemIt != myLFLinkLanes.end()) {
+    //         if (driveItemIt->myLink == nullptr) {
+    //             // Items not related to a specific link are not updated
+    //             // (XXX: when a stop item corresponded to a dead end, which is overcome by the LC that made
+    //             //       the update necessary, this may slow down the vehicle's continuation on the new lane...)
+    //             ++driveItemIt;
+    //             continue;
+    //         }
+    //         // Continuation links for current best lanes are less than for the former drive items (myLFLinkLanes)
+    //         // We just remove the leftover link-items, as they cannot be mapped to new links.
+    //         if (bestLaneIt == getBestLanesContinuation().end()) {
+    // #ifdef DEBUG_ACTIONSTEPS
+    //             if (DEBUG_COND) {
+    //                 std::cout << "Reached end of the new continuation sequence. Erasing leftover link-items." << std::endl;
+    //             }
+    // #endif
+    //             while (driveItemIt != myLFLinkLanes.end()) {
+    //                 if (driveItemIt->myLink == nullptr) {
+    //                     ++driveItemIt;
+    //                     continue;
+    //                 } else {
+    //                     driveItemIt->myLink->removeApproaching(this);
+    //                     driveItemIt = myLFLinkLanes.erase(driveItemIt);
+    //                 }
+    //             }
+    //             break;
+    //         }
+    //         // Do the actual link-remapping for the item. And un/register approaching information on the corresponding links
+    //         const MSLane* const target = *bestLaneIt;
+    //         assert(!target->isInternal());
+    //         newLink = nullptr;
+    //         for (MSLink* const link : lane->getLinkCont()) {
+    //             if (link->getLane() == target) {
+    //                 newLink = link;
+    //                 break;
+    //             }
+    //         }
+    //
+    //         if (newLink == driveItemIt->myLink) {
+    //             // new continuation merged into previous - stop update
+    // #ifdef DEBUG_ACTIONSTEPS
+    //             if (DEBUG_COND) {
+    //                 std::cout << "Old and new continuation sequences merge at link\n"
+    //                           << "'" << newLink->getLaneBefore()->getID() << "'->'" << newLink->getViaLaneOrLane()->getID() << "'"
+    //                           << "\nNo update beyond merge required." << std::endl;
+    //             }
+    // #endif
+    //             break;
+    //         }
+    //
+    // #ifdef DEBUG_ACTIONSTEPS
+    //         if (DEBUG_COND) {
+    //             std::cout << "lane=" << lane->getID() << "\nUpdating link\n    '" << driveItemIt->myLink->getLaneBefore()->getID() << "'->'" << driveItemIt->myLink->getViaLaneOrLane()->getID() << "'"
+    //                       << "==> " << "'" << newLink->getLaneBefore()->getID() << "'->'" << newLink->getViaLaneOrLane()->getID() << "'" << std::endl;
+    //         }
+    // #endif
+    //         newLink->setApproaching(this, driveItemIt->myLink->getApproaching(this));
+    //         driveItemIt->myLink->removeApproaching(this);
+    //         driveItemIt->myLink = newLink;
+    //         lane = newLink->getViaLaneOrLane();
+    //         ++driveItemIt;
+    //         if (!lane->isInternal()) {
+    //             ++bestLaneIt;
+    //         }
+    //     }
+    // #ifdef DEBUG_ACTIONSTEPS
+    //     if (DEBUG_COND) {
+    //         std::cout << "Updated drive items:" << std::endl;
+    //         for (const auto& dpi : myLFLinkLanes) {
+    //             std::cout
+    //                     << " vPass=" << dpi.myVLinkPass
+    //                     << " vWait=" << dpi.myVLinkWait
+    //                     << " linkLane=" << (dpi.myLink == 0 ? "NULL" : dpi.myLink->getViaLaneOrLane()->getID())
+    //                     << " request=" << dpi.mySetRequest
+    //                     << "\n";
+    //         }
+    //     }
+    // #endif
+    // }
+    #[allow(unused_variables)]
+    pub fn update_drive_items(&mut self) {
+        if self.myLFLinkLanes.len() == 0 {
+            // nothing to update
+            return;
+        }
+        let mut nextPlannedLink: Ptr<MSLink> = Ptr::null();
+        let mut i = self.myNextDriveItem;
+        while i < self.myLFLinkLanes.len() && nextPlannedLink.is_null() {
+            nextPlannedLink = self.myLFLinkLanes[i].myLink;
+            i += 1;
+        }
+        if nextPlannedLink.is_null() {
+            // No link for upcoming item -> no need for an update
+            return;
+        }
+        if self.myLane == nextPlannedLink.get_lane_before() {
+            // Current lane approaches the stored next link, i.e. no LC happend and no update is required.
+            return;
+        }
+        // Lane must have been changed, determine the change direction
+        let mut parallelLink = nextPlannedLink.get_parallel_link(1);
+        if !parallelLink.is_null() && parallelLink.get_lane_before() == self.myLane {
+            // lcDir = 1;
+        } else {
+            parallelLink = nextPlannedLink.get_parallel_link(-1);
+            if !parallelLink.is_null() && parallelLink.get_lane_before() == self.myLane {
+                // lcDir = -1;
+            } else {
+                // If the vehicle's current lane is not the approaching lane for the next
+                // drive process item's link, it is expected to lead to a parallel link,
+                // XXX: What if the lc was an overtaking maneuver and there is no upcoming link?
+                //      Then a stop item should be scheduled! -> TODO!
+                return;
+            }
+        }
+        // Trace link sequence along current best lanes and transfer drive items to the corresponding links
+        let mut driveItemIt = self.myNextDriveItem;
+        // In the loop below, lane holds the currently considered lane on the vehicles continuation (including internal lanes)
+        let mut lane = self.myLane;
+        debug_assert!(self.myLane == parallelLink.get_lane_before());
+        // *lit is a pointer to the next lane in best continuations for the current lane (always non-internal)
+        // C++ iterator begin() + 1, as an index
+        let mut bestLaneIt: usize = 1;
+        // Pointer to the new link for the current drive process item
+        let mut newLink: Ptr<MSLink>;
+        while driveItemIt < self.myLFLinkLanes.len() {
+            if self.myLFLinkLanes[driveItemIt].myLink.is_null() {
+                // Items not related to a specific link are not updated
+                driveItemIt += 1;
+                continue;
+            }
+            // Continuation links for current best lanes are less than for the former drive items (myLFLinkLanes)
+            // We just remove the leftover link-items, as they cannot be mapped to new links.
+            if bestLaneIt == self.get_best_lanes_continuation().len() {
+                while driveItemIt < self.myLFLinkLanes.len() {
+                    if self.myLFLinkLanes[driveItemIt].myLink.is_null() {
+                        driveItemIt += 1;
+                        continue;
+                    } else {
+                        let link = self.myLFLinkLanes[driveItemIt].myLink;
+                        link.m().remove_approaching(Ptr::from_mut(self).cast::<SUMOVehicle>());
+                        self.myLFLinkLanes.remove(driveItemIt);
+                    }
+                }
+                break;
+            }
+            // Do the actual link-remapping for the item. And un/register approaching information on the corresponding links
+            let target = self.get_best_lanes_continuation()[bestLaneIt];
+            debug_assert!(!target.is_internal());
+            newLink = Ptr::null();
+            for link in lane.get_link_cont().iter() {
+                if link.get_lane() == target {
+                    newLink = *link;
+                    break;
+                }
+            }
+            if newLink == self.myLFLinkLanes[driveItemIt].myLink {
+                // new continuation merged into previous - stop update
+                break;
+            }
+            let veh = Ptr::from_mut(self).cast::<SUMOVehicle>();
+            let ai = self.myLFLinkLanes[driveItemIt].myLink.get_approaching(veh);
+            newLink.m().set_approaching_2(veh, ai);
+            self.myLFLinkLanes[driveItemIt].myLink.m().remove_approaching(veh);
+            self.myLFLinkLanes[driveItemIt].myLink = newLink;
+            lane = newLink.get_via_lane_or_lane();
+            driveItemIt += 1;
+            if !lane.is_internal() {
+                bestLaneIt += 1;
+            }
+        }
+    }
+
+    /// C++: `const std::pair<double, const MSLink *> & MSVehicle::getNextTurn()`
+    /// Get the distance and direction of the next upcoming turn for the vehicle (within its look-ahead range)
+    // const std::pair<double, const MSLink*>& getNextTurn() {
+    //         return myNextTurn;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_next_turn(&mut self) -> &(f64, Ptr<MSLink>) {
+        &self.myNextTurn
+    }
+
+    /// C++: `MSAbstractLaneChangeModel & MSVehicle::getLaneChangeModel()`
+    // MSAbstractLaneChangeModel&
+    // MSVehicle::getLaneChangeModel() {
+    //     return *myLaneChangeModel;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lane_change_model(&mut self) -> &mut MSAbstractLaneChangeModel {
+        self.myLaneChangeModel.m()
+    }
+
+    /// C++: `const MSAbstractLaneChangeModel & MSVehicle::getLaneChangeModel() const` [const]
+    // const MSAbstractLaneChangeModel&
+    // MSVehicle::getLaneChangeModel() const {
+    //     return *myLaneChangeModel;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lane_change_model_2(&self) -> &MSAbstractLaneChangeModel {
+        self.myLaneChangeModel.m()
+    }
+
+    /// C++: `const std::vector<MSLane *> & MSVehicle::getFurtherLanes() const` [const]
+    // const std::vector<MSLane*>& getFurtherLanes() const {
+    //         return myFurtherLanes;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_further_lanes(&self) -> &Vec<Ptr<MSLane>> {
+        &self.myFurtherLanes
+    }
+
+    /// C++: `const std::vector<double> & MSVehicle::getFurtherLanesPosLat() const` [const]
+    // const std::vector<double>& getFurtherLanesPosLat() const {
+    //         return myFurtherLanesPosLat;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_further_lanes_pos_lat(&self) -> &Vec<f64> {
+        &self.myFurtherLanesPosLat
+    }
+
+    /// C++: `bool MSVehicle::onFurtherEdge(const MSEdge *) const` [const]
+    /// whether this vehicle has its back (and no its front) on the given edge
+    // bool
+    // MSVehicle::onFurtherEdge(const MSEdge* edge) const {
+    //     for (std::vector<MSLane*>::const_iterator i = myFurtherLanes.begin(); i != myFurtherLanes.end(); ++i) {
+    //         if (&(*i)->getEdge() == edge) {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
+    #[allow(unused_variables)]
+    pub fn on_further_edge(&self, edge: Ptr<MSEdge>) -> bool {
+        self.myFurtherLanes.iter().any(|i| std::ptr::eq(i.get_edge() as *const MSEdge, &*edge as *const MSEdge))
+    }
+
+    /// C++: `bool MSVehicle::isBidiOn(const MSLane *) const` [const]
+    /// whether this vehicle is driving against lane
+    // bool
+    // MSVehicle::isBidiOn(const MSLane* lane) const {
+    //     return lane->getBidiLane() != nullptr && (
+    //                myLane == lane->getBidiLane()
+    //                || onFurtherEdge(&lane->getBidiLane()->getEdge()));
+    // }
+    #[allow(unused_variables)]
+    pub fn is_bidi_on(&self, lane: Ptr<MSLane>) -> bool {
+        let bidi = lane.get_bidi_lane();
+        !bidi.is_null() && (self.myLane == bidi || self.on_further_edge(Ptr::from_mut(bidi.get_edge())))
+    }
+
+    /// C++: `const std::vector<LaneQ> & MSVehicle::getBestLanes() const` [const]
+    /// Returns the description of best lanes to use in order to continue the route
+    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    #[allow(unused_variables)]
+    pub fn get_best_lanes(&self) -> &Vec<MSVehicle_LaneQ> {
+        &self.myBestLanes[0]
+    }
+
+    /// C++: `void MSVehicle::updateBestLanes(bool, const MSLane *)` [virtual]
+    /// computes the best lanes to use in order to continue the route
+    // void
+    // MSVehicle::updateBestLanes(bool forceRebuild, const MSLane* startLane) {
+    // #ifdef DEBUG_BESTLANES
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " updateBestLanes veh=" << getID() << " force=" << forceRebuild << " startLane1=" << Named::getIDSecure(startLane) << " myLane=" << Named::getIDSecure(myLane) << "\n";
+    //     }
+    // #endif
+    //     if (startLane == nullptr) {
+    //         startLane = myLane;
+    //     }
+    //     assert(startLane != 0);
+    //     if (myLaneChangeModel->isOpposite()) {
+    //         // depending on the calling context, startLane might be the forward lane
+    //         // or the reverse-direction lane. In the latter case we need to
+    //         // transform it to the forward lane.
+    //         if (isOppositeLane(startLane)) {
+    //             // use leftmost lane of forward edge
+    //             startLane = startLane->getEdge().getOppositeEdge()->getLanes().back();
+    //             assert(startLane != 0);
+    // #ifdef DEBUG_BESTLANES
+    //             if (DEBUG_COND) {
+    //                 std::cout << "   startLaneIsOpposite newStartLane=" << startLane->getID() << "\n";
+    //             }
+    // #endif
+    //         }
+    //     }
+    //     if (forceRebuild) {
+    //         myLastBestLanesEdge = nullptr;
+    //         myLastBestLanesInternalLane = nullptr;
+    //     }
+    //     if (myBestLanes.size() > 0 && !forceRebuild && myLastBestLanesEdge == &startLane->getEdge()) {
+    //         updateOccupancyAndCurrentBestLane(startLane);
+    // #ifdef DEBUG_BESTLANES
+    //         if (DEBUG_COND) {
+    //             std::cout << "  only updateOccupancyAndCurrentBestLane\n";
+    //         }
+    // #endif
+    //         return;
+    //     }
+    //     if (startLane->getEdge().isInternal()) {
+    //         if (myBestLanes.size() == 0 || forceRebuild) {
+    //             // rebuilt from previous non-internal lane (may backtrack twice if behind an internal junction)
+    //             updateBestLanes(true, startLane->getLogicalPredecessorLane());
+    //         }
+    //         if (myLastBestLanesInternalLane == startLane && !forceRebuild) {
+    // #ifdef DEBUG_BESTLANES
+    //             if (DEBUG_COND) {
+    //                 std::cout << "  nothing to do on internal\n";
+    //             }
+    // #endif
+    //             return;
+    //         }
+    //         // adapt best lanes to fit the current internal edge:
+    //         // keep the entries that are reachable from this edge
+    //         const MSEdge* nextEdge = startLane->getNextNormal();
+    //         assert(!nextEdge->isInternal());
+    //         for (std::vector<std::vector<LaneQ> >::iterator it = myBestLanes.begin(); it != myBestLanes.end();) {
+    //             std::vector<LaneQ>& lanes = *it;
+    //             assert(lanes.size() > 0);
+    //             if (&(lanes[0].lane->getEdge()) == nextEdge) {
+    //                 // keep those lanes which are successors of internal lanes from the edge of startLane
+    //                 std::vector<LaneQ> oldLanes = lanes;
+    //                 lanes.clear();
+    //                 const std::vector<MSLane*>& sourceLanes = startLane->getEdge().getLanes();
+    //                 for (std::vector<MSLane*>::const_iterator it_source = sourceLanes.begin(); it_source != sourceLanes.end(); ++it_source) {
+    //                     for (std::vector<LaneQ>::iterator it_lane = oldLanes.begin(); it_lane != oldLanes.end(); ++it_lane) {
+    //                         if ((*it_source)->getLinkCont()[0]->getLane() == (*it_lane).lane) {
+    //                             lanes.push_back(*it_lane);
+    //                             break;
+    //                         }
+    //                     }
+    //                 }
+    //                 assert(lanes.size() == startLane->getEdge().getLanes().size());
+    //                 // patch invalid bestLaneOffset and updated myCurrentLaneInBestLanes
+    //                 for (int i = 0; i < (int)lanes.size(); ++i) {
+    //                     if (i + lanes[i].bestLaneOffset < 0) {
+    //                         lanes[i].bestLaneOffset = -i;
+    //                     }
+    //                     if (i + lanes[i].bestLaneOffset >= (int)lanes.size()) {
+    //                         lanes[i].bestLaneOffset = (int)lanes.size() - i - 1;
+    //                     }
+    //                     assert(i + lanes[i].bestLaneOffset >= 0);
+    //                     assert(i + lanes[i].bestLaneOffset < (int)lanes.size());
+    //                     if (lanes[i].bestContinuations[0] != 0) {
+    //                         // patch length of bestContinuation to match expectations (only once)
+    //                         lanes[i].bestContinuations.insert(lanes[i].bestContinuations.begin(), (MSLane*)nullptr);
+    //                     }
+    //                     if (startLane->getLinkCont()[0]->getLane() == lanes[i].lane) {
+    //                         myCurrentLaneInBestLanes = lanes.begin() + i;
+    //                     }
+    //                     assert(&(lanes[i].lane->getEdge()) == nextEdge);
+    //                 }
+    //                 myLastBestLanesInternalLane = startLane;
+    //                 updateOccupancyAndCurrentBestLane(startLane);
+    // #ifdef DEBUG_BESTLANES
+    //                 if (DEBUG_COND) {
+    //                     std::cout << "  updated for internal\n";
+    //                 }
+    // #endif
+    //                 return;
+    //             } else {
+    //                 // remove passed edges
+    //                 it = myBestLanes.erase(it);
+    //             }
+    //         }
+    //         assert(false); // should always find the next edge
+    //     }
+    //     // start rebuilding
+    //     myLastBestLanesInternalLane = nullptr;
+    //     myLastBestLanesEdge = &startLane->getEdge();
+    //     myBestLanes.clear();
+    //
+    //     // get information about the next stop
+    //     MSRouteIterator nextStopEdge = myRoute->end();
+    //     const MSLane* nextStopLane = nullptr;
+    //     double nextStopPos = 0;
+    //     if (!myStops.empty()) {
+    //         const MSStop& nextStop = myStops.front();
+    //         nextStopLane = nextStop.lane;
+    //         if (nextStop.isOpposite) {
+    //             // target leftmost lane in forward direction
+    //             nextStopLane = nextStopLane->getEdge().getOppositeEdge()->getLanes().back();
+    //         }
+    //         nextStopEdge = nextStop.edge;
+    //         nextStopPos = nextStop.pars.startPos;
+    //     }
+    //     // myArrivalTime = -1 in the context of validating departSpeed with departLane=best
+    //     if (myParameter->arrivalLaneProcedure >= ArrivalLaneDefinition::GIVEN && nextStopEdge == myRoute->end() && myArrivalLane >= 0) {
+    //         nextStopEdge = (myRoute->end() - 1);
+    //         nextStopLane = (*nextStopEdge)->getLanes()[myArrivalLane];
+    //         nextStopPos = myArrivalPos;
+    //     }
+    //     if (nextStopEdge != myRoute->end()) {
+    //         // make sure that the "wrong" lanes get a penalty. (penalty needs to be
+    //         // large enough to overcome a magic threshold in MSLaneChangeModel::DK2004.cpp:383)
+    //         nextStopPos = MAX2(POSITION_EPS, MIN2((double)nextStopPos, (double)(nextStopLane->getLength() - 2 * POSITION_EPS)));
+    //         if (nextStopLane->isInternal()) {
+    //             // switch to the correct lane before entering the intersection
+    //             nextStopPos = (*nextStopEdge)->getLength();
+    //         }
+    //     }
+    //
+    //     // go forward along the next lanes; always look past stops to ensure that we
+    //     // know where to go once the stop ends
+    //     // trains do not have to deal with lane-changing for stops but their best
+    //     // lanes lookahead is needed for rail signal control
+    //     int seen = 0;
+    //     double seenLength = 0;
+    //     bool progress = true;
+    //     // bestLanes must cover the braking distance even when at the very end of the current lane to avoid unecessary slow down
+    //     const double maxBrakeDist = startLane->getLength() + getCarFollowModel().getHeadwayTime() * getMaxSpeed() + getCarFollowModel().brakeGap(getMaxSpeed()) + getVehicleType().getMinGap();
+    //     const double lookahead = getLaneChangeModel().getStrategicLookahead();
+    //     for (MSRouteIterator ce = myCurrEdge; progress;) {
+    //         std::vector<LaneQ> currentLanes;
+    //         const std::vector<MSLane*>* allowed = nullptr;
+    //         const MSEdge* nextEdge = nullptr;
+    //         if (ce != myRoute->end() && ce + 1 != myRoute->end()) {
+    //             nextEdge = *(ce + 1);
+    //             allowed = (*ce)->allowedLanes(*nextEdge, myType->getVehicleClass());
+    //         }
+    //         const std::vector<MSLane*>& lanes = (*ce)->getLanes();
+    //         for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
+    //             LaneQ q;
+    //             MSLane* cl = *i;
+    //             q.lane = cl;
+    //             q.bestContinuations.push_back(cl);
+    //             q.bestLaneOffset = 0;
+    //             q.length = cl->allowsVehicleClass(myType->getVehicleClass()) ? (*ce)->getLength() : 0;
+    //             q.currentLength = q.length;
+    //             // if all lanes are forbidden (i.e. due to a dynamic closing) we want to express no preference
+    //             q.allowsContinuation = allowed == nullptr || std::find(allowed->begin(), allowed->end(), cl) != allowed->end();
+    //             q.occupation = 0;
+    //             q.nextOccupation = 0;
+    //             currentLanes.push_back(q);
+    //         }
+    //         //
+    //         if (nextStopEdge == ce
+    //                 // already past the stop edge
+    //                 && !(ce == myCurrEdge && myLane != nullptr && myLane->isInternal())) {
+    //             const MSLane* normalStopLane = nextStopLane->getNormalPredecessorLane();
+    //             for (std::vector<LaneQ>::iterator q = currentLanes.begin(); q != currentLanes.end(); ++q) {
+    //                 if (nextStopLane != nullptr && normalStopLane != (*q).lane) {
+    //                     (*q).allowsContinuation = false;
+    //                     (*q).length = nextStopPos;
+    //                     (*q).currentLength = (*q).length;
+    //                 }
+    //             }
+    //         }
+    //
+    //         myBestLanes.push_back(currentLanes);
+    //         ++seen;
+    //         seenLength += currentLanes[0].lane->getLength();
+    //         ++ce;
+    //         if (lookahead >= 0) {
+    //             progress &= (seen <= 2 || seenLength < lookahead); // custom (but we need to look at least one edge ahead)
+    //         } else {
+    //             progress &= (seen <= 4 || seenLength < MAX2(maxBrakeDist, 3000.0)); // motorway
+    //             progress &= (seen <= 8 || seenLength < MAX2(maxBrakeDist, 200.0) || isRailway(getVClass()));  // urban
+    //         }
+    //         progress &= ce != myRoute->end();
+    //         /*
+    //         if(progress) {
+    //           progress &= (currentLanes.size()!=1||(*ce)->getLanes().size()!=1);
+    //         }
+    //         */
+    //     }
+    //
+    //     // we are examining the last lane explicitly
+    //     if (myBestLanes.size() != 0) {
+    //         double bestLength = -1;
+    //         // minimum and maximum lane index with best length
+    //         int bestThisIndex = 0;
+    //         int bestThisMaxIndex = 0;
+    //         int index = 0;
+    //         std::vector<LaneQ>& last = myBestLanes.back();
+    //         for (std::vector<LaneQ>::iterator j = last.begin(); j != last.end(); ++j, ++index) {
+    //             if ((*j).length > bestLength) {
+    //                 bestLength = (*j).length;
+    //                 bestThisIndex = index;
+    //                 bestThisMaxIndex = index;
+    //             } else if ((*j).length == bestLength) {
+    //                 bestThisMaxIndex = index;
+    //             }
+    //         }
+    //         index = 0;
+    //         bool requiredChangeRightForbidden = false;
+    //         int requireChangeToLeftForbidden = -1;
+    //         for (std::vector<LaneQ>::iterator j = last.begin(); j != last.end(); ++j, ++index) {
+    //             if ((*j).length < bestLength) {
+    //                 if (abs(bestThisIndex - index) < abs(bestThisMaxIndex - index)) {
+    //                     (*j).bestLaneOffset = bestThisIndex - index;
+    //                 } else {
+    //                     (*j).bestLaneOffset = bestThisMaxIndex - index;
+    //                 }
+    //                 if (!(*j).allowsContinuation) {
+    //                     if ((*j).bestLaneOffset < 0 && (!(*j).lane->allowsChangingRight(getVClass())
+    //                                 || !(*j).lane->getParallelLane(-1, false)->allowsVehicleClass(getVClass())
+    //                                 || requiredChangeRightForbidden)) {
+    //                         // this lane and all further lanes to the left cannot be used
+    //                         requiredChangeRightForbidden = true;
+    //                         (*j).length = 0;
+    //                     } else if ((*j).bestLaneOffset > 0 && (!(*j).lane->allowsChangingLeft(getVClass())
+    //                                 || !(*j).lane->getParallelLane(1, false)->allowsVehicleClass(getVClass()))) {
+    //                         // this lane and all previous lanes to the right cannot be used
+    //                         requireChangeToLeftForbidden = (*j).lane->getIndex();
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         for (int i = requireChangeToLeftForbidden; i >= 0; i--) {
+    //             if (last[i].bestLaneOffset > 0) {
+    //                 last[i].length = 0;
+    //             }
+    //         }
+    // #ifdef DEBUG_BESTLANES
+    //         if (DEBUG_COND) {
+    //             std::cout << "   last edge=" << last.front().lane->getEdge().getID() << " (bestIndex=" << bestThisIndex << " bestMaxIndex=" << bestThisMaxIndex << "):\n";
+    //             std::vector<LaneQ>& laneQs = myBestLanes.back();
+    //             for (std::vector<LaneQ>::iterator j = laneQs.begin(); j != laneQs.end(); ++j) {
+    //                 std::cout << "     lane=" << (*j).lane->getID() << " length=" << (*j).length << " bestOffset=" << (*j).bestLaneOffset << "\n";
+    //             }
+    //         }
+    // #endif
+    //     }
+    //     // go backward through the lanes
+    //     // track back best lane and compute the best prior lane(s)
+    //     for (std::vector<std::vector<LaneQ> >::reverse_iterator i = myBestLanes.rbegin() + 1; i != myBestLanes.rend(); ++i) {
+    //         std::vector<LaneQ>& nextLanes = (*(i - 1));
+    //         std::vector<LaneQ>& clanes = (*i);
+    //         MSEdge* const cE = &clanes[0].lane->getEdge();
+    //         int index = 0;
+    //         double bestConnectedLength = -1;
+    //         double bestLength = -1;
+    //         for (const LaneQ& j : nextLanes) {
+    //             if (j.lane->isApproachedFrom(cE) && bestConnectedLength < j.length) {
+    //                 bestConnectedLength = j.length;
+    //             }
+    //             if (bestLength < j.length) {
+    //                 bestLength = j.length;
+    //             }
+    //         }
+    //         // compute index of the best lane (highest length and least offset from the best next lane)
+    //         int bestThisIndex = 0;
+    //         int bestThisMaxIndex = 0;
+    //         if (bestConnectedLength > 0) {
+    //             index = 0;
+    //             for (LaneQ& j : clanes) {
+    //                 const LaneQ* bestConnectedNext = nullptr;
+    //                 if (j.allowsContinuation) {
+    //                     for (const LaneQ& m : nextLanes) {
+    //                         if ((m.lane->allowsVehicleClass(getVClass()) || m.lane->hadPermissionChanges())
+    //                                 && m.lane->isApproachedFrom(j.lane, getVClass())) {
+    //                             if (betterContinuation(bestConnectedNext, m)) {
+    //                                 bestConnectedNext = &m;
+    //                             }
+    //                         }
+    //                     }
+    //                     if (bestConnectedNext != nullptr) {
+    //                         if (bestConnectedNext->length == bestConnectedLength && abs(bestConnectedNext->bestLaneOffset) < 2) {
+    //                             j.length += bestLength;
+    //                         } else {
+    //                             j.length += bestConnectedNext->length;
+    //                         }
+    //                         j.bestLaneOffset = bestConnectedNext->bestLaneOffset;
+    //                     }
+    //                 }
+    //                 if (bestConnectedNext != nullptr && (bestConnectedNext->allowsContinuation || bestConnectedNext->length > 0)) {
+    //                     copy(bestConnectedNext->bestContinuations.begin(), bestConnectedNext->bestContinuations.end(), back_inserter(j.bestContinuations));
+    //                 } else {
+    //                     j.allowsContinuation = false;
+    //                 }
+    //                 if (clanes[bestThisIndex].length < j.length
+    //                         || (clanes[bestThisIndex].length == j.length && abs(clanes[bestThisIndex].bestLaneOffset) > abs(j.bestLaneOffset))
+    //                         || (clanes[bestThisIndex].length == j.length && abs(clanes[bestThisIndex].bestLaneOffset) == abs(j.bestLaneOffset) &&
+    //                             nextLinkPriority(clanes[bestThisIndex].bestContinuations) < nextLinkPriority(j.bestContinuations))
+    //                    ) {
+    //                     bestThisIndex = index;
+    //                     bestThisMaxIndex = index;
+    //                 } else if (clanes[bestThisIndex].length == j.length
+    //                            && abs(clanes[bestThisIndex].bestLaneOffset) == abs(j.bestLaneOffset)
+    //                            && nextLinkPriority(clanes[bestThisIndex].bestContinuations) == nextLinkPriority(j.bestContinuations)) {
+    //                     bestThisMaxIndex = index;
+    //                 }
+    //                 index++;
+    //             }
+    //
+    //             //vehicle with elecHybrid device prefers running under an overhead wire
+    //             if (getDevice(typeid(MSDevice_ElecHybrid)) != nullptr) {
+    //                 index = 0;
+    //                 for (const LaneQ& j : clanes) {
+    //                     std::string overheadWireSegmentID = MSNet::getInstance()->getStoppingPlaceID(j.lane, j.currentLength / 2., SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+    //                     if (overheadWireSegmentID != "") {
+    //                         bestThisIndex = index;
+    //                         bestThisMaxIndex = index;
+    //                     }
+    //                     index++;
+    //                 }
+    //             }
+    //
+    //         } else {
+    //             // only needed in case of disconnected routes
+    //             int bestNextIndex = 0;
+    //             int bestDistToNeeded = (int) clanes.size();
+    //             index = 0;
+    //             for (std::vector<LaneQ>::iterator j = clanes.begin(); j != clanes.end(); ++j, ++index) {
+    //                 if ((*j).allowsContinuation) {
+    //                     int nextIndex = 0;
+    //                     for (std::vector<LaneQ>::const_iterator m = nextLanes.begin(); m != nextLanes.end(); ++m, ++nextIndex) {
+    //                         if ((*m).lane->isApproachedFrom((*j).lane, getVClass())) {
+    //                             if (bestDistToNeeded > abs((*m).bestLaneOffset)) {
+    //                                 bestDistToNeeded = abs((*m).bestLaneOffset);
+    //                                 bestThisIndex = index;
+    //                                 bestThisMaxIndex = index;
+    //                                 bestNextIndex = nextIndex;
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             clanes[bestThisIndex].length += nextLanes[bestNextIndex].length;
+    //             copy(nextLanes[bestNextIndex].bestContinuations.begin(), nextLanes[bestNextIndex].bestContinuations.end(), back_inserter(clanes[bestThisIndex].bestContinuations));
+    //
+    //         }
+    //         // set bestLaneOffset for all lanes
+    //         index = 0;
+    //         bool requiredChangeRightForbidden = false;
+    //         int requireChangeToLeftForbidden = -1;
+    //         for (std::vector<LaneQ>::iterator j = clanes.begin(); j != clanes.end(); ++j, ++index) {
+    //             if ((*j).length < clanes[bestThisIndex].length
+    //                     || ((*j).length == clanes[bestThisIndex].length && abs((*j).bestLaneOffset) > abs(clanes[bestThisIndex].bestLaneOffset))
+    //                     || (nextLinkPriority((*j).bestContinuations)) < nextLinkPriority(clanes[bestThisIndex].bestContinuations)
+    //                ) {
+    //                 if (abs(bestThisIndex - index) < abs(bestThisMaxIndex - index)) {
+    //                     (*j).bestLaneOffset = bestThisIndex - index;
+    //                 } else {
+    //                     (*j).bestLaneOffset = bestThisMaxIndex - index;
+    //                 }
+    //                 if ((nextLinkPriority((*j).bestContinuations)) < nextLinkPriority(clanes[bestThisIndex].bestContinuations)) {
+    //                     // try to move away from the lower-priority lane before it ends
+    //                     (*j).length = (*j).currentLength;
+    //                 }
+    //                 if (!(*j).allowsContinuation) {
+    //                     if ((*j).bestLaneOffset < 0 && (!(*j).lane->allowsChangingRight(getVClass())
+    //                                 || !(*j).lane->getParallelLane(-1, false)->allowsVehicleClass(getVClass())
+    //                                 || requiredChangeRightForbidden)) {
+    //                         // this lane and all further lanes to the left cannot be used
+    //                         requiredChangeRightForbidden = true;
+    //                         if ((*j).length == (*j).currentLength) {
+    //                             (*j).length = 0;
+    //                         }
+    //                     } else if ((*j).bestLaneOffset > 0 && (!(*j).lane->allowsChangingLeft(getVClass())
+    //                                 || !(*j).lane->getParallelLane(1, false)->allowsVehicleClass(getVClass()))) {
+    //                         // this lane and all previous lanes to the right cannot be used
+    //                         requireChangeToLeftForbidden = (*j).lane->getIndex();
+    //                     }
+    //                 }
+    //             } else {
+    //                 (*j).bestLaneOffset = 0;
+    //             }
+    //         }
+    //         for (int idx = requireChangeToLeftForbidden; idx >= 0; idx--) {
+    //             if (clanes[idx].length == clanes[idx].currentLength) {
+    //                 clanes[idx].length = 0;
+    //             };
+    //         }
+    //
+    //         //vehicle with elecHybrid device prefers running under an overhead wire
+    //         if (static_cast<MSDevice_ElecHybrid*>(getDevice(typeid(MSDevice_ElecHybrid))) != 0) {
+    //             index = 0;
+    //             std::string overheadWireID = MSNet::getInstance()->getStoppingPlaceID(clanes[bestThisIndex].lane, (clanes[bestThisIndex].currentLength) / 2, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+    //             if (overheadWireID != "") {
+    //                 for (std::vector<LaneQ>::iterator j = clanes.begin(); j != clanes.end(); ++j, ++index) {
+    //                     (*j).bestLaneOffset = bestThisIndex - index;
+    //                 }
+    //             }
+    //         }
+    //
+    // #ifdef DEBUG_BESTLANES
+    //         if (DEBUG_COND) {
+    //             std::cout << "   edge=" << cE->getID() << " (bestIndex=" << bestThisIndex << " bestMaxIndex=" << bestThisMaxIndex << "):\n";
+    //             std::vector<LaneQ>& laneQs = clanes;
+    //             for (std::vector<LaneQ>::iterator j = laneQs.begin(); j != laneQs.end(); ++j) {
+    //                 std::cout << "     lane=" << (*j).lane->getID() << " length=" << (*j).length << " bestOffset=" << (*j).bestLaneOffset << " allowCont=" << (*j).allowsContinuation << "\n";
+    //             }
+    //         }
+    // #endif
+    //
+    //     }
+    //     if (myBestLanes.front().front().lane->isInternal()) {
+    //         // route starts on an internal lane
+    //         if (myLane != nullptr) {
+    //             startLane = myLane;
+    //         } else {
+    //             // vehicle not yet departed
+    //             startLane = myBestLanes.front().front().lane;
+    //         }
+    //     }
+    //     updateOccupancyAndCurrentBestLane(startLane);
+    // #ifdef DEBUG_BESTLANES
+    //     if (DEBUG_COND) {
+    //         std::cout << SIMTIME << " veh=" << getID() << " bestCont=" << toString(getBestLanesContinuation()) << "\n";
+    //     }
+    // #endif
+    // }
+    #[allow(unused_variables)]
+    pub fn update_best_lanes(&mut self, forceRebuild: bool, startLane: Ptr<MSLane>) {
+        // DEBUG_BESTLANES blocks are compile-time debug output and are not ported.
+        let mut startLane = startLane;
+        if startLane.is_null() {
+            startLane = self.myLane;
+        }
+        debug_assert!(!startLane.is_null());
+        if self.myLaneChangeModel.is_opposite() {
+            // depending on the calling context, startLane might be the forward lane
+            // or the reverse-direction lane. In the latter case we need to
+            // transform it to the forward lane.
+            if self.is_opposite_lane(startLane) {
+                // use leftmost lane of forward edge
+                startLane = *startLane.get_edge().get_opposite_edge().get_lanes().last().unwrap();
+                debug_assert!(!startLane.is_null());
+            }
+        }
+        if forceRebuild {
+            self.myLastBestLanesEdge = Ptr::default();
+            self.myLastBestLanesInternalLane = Ptr::default();
+        }
+        if self.myBestLanes.len() > 0 && !forceRebuild && self.myLastBestLanesEdge == Ptr::from_mut(startLane.get_edge()) {
+            self.update_occupancy_and_current_best_lane(startLane);
+            return;
+        }
+        if startLane.get_edge().is_internal() {
+            if self.myBestLanes.len() == 0 || forceRebuild {
+                // rebuilt from previous non-internal lane (may backtrack twice if behind an internal junction)
+                let pred = startLane.get_logical_predecessor_lane();
+                self.update_best_lanes(true, pred);
+            }
+            if self.myLastBestLanesInternalLane == startLane && !forceRebuild {
+                // nothing to do on internal
+                return;
+            }
+            // adapt best lanes to fit the current internal edge:
+            // keep the entries that are reachable from this edge
+            let nextEdge = startLane.get_next_normal();
+            debug_assert!(!nextEdge.is_internal());
+            let mut it: usize = 0;
+            while it < self.myBestLanes.len() {
+                debug_assert!(self.myBestLanes[it].len() > 0);
+                if Ptr::from_mut(self.myBestLanes[it][0].lane.get_edge()) == nextEdge {
+                    // keep those lanes which are successors of internal lanes from the edge of startLane
+                    let oldLanes = std::mem::take(&mut self.myBestLanes[it]);
+                    let mut lanes: Vec<MSVehicle_LaneQ> = Vec::new();
+                    for itSource in startLane.get_edge().get_lanes().iter() {
+                        for itLane in oldLanes.iter() {
+                            if itSource.get_link_cont()[0].get_lane() == itLane.lane {
+                                lanes.push(itLane.clone());
+                                break;
+                            }
+                        }
+                    }
+                    debug_assert!(lanes.len() == startLane.get_edge().get_lanes().len());
+                    // patch invalid bestLaneOffset and updated myCurrentLaneInBestLanes
+                    let n = lanes.len() as i32;
+                    for i in 0..lanes.len() {
+                        let ii = i as i32;
+                        if ii + lanes[i].bestLaneOffset < 0 {
+                            lanes[i].bestLaneOffset = -ii;
+                        }
+                        if ii + lanes[i].bestLaneOffset >= n {
+                            lanes[i].bestLaneOffset = n - ii - 1;
+                        }
+                        debug_assert!(ii + lanes[i].bestLaneOffset >= 0);
+                        debug_assert!(ii + lanes[i].bestLaneOffset < n);
+                        if lanes[i].bestContinuations.first().map_or(false, |c| !c.is_null()) {
+                            // patch length of bestContinuation to match expectations (only once)
+                            lanes[i].bestContinuations.insert(0, Ptr::default());
+                        }
+                        if startLane.get_link_cont()[0].get_lane() == lanes[i].lane {
+                            self.myCurrentLaneInBestLanes = i;
+                        }
+                        debug_assert!(Ptr::from_mut(lanes[i].lane.get_edge()) == nextEdge);
+                    }
+                    self.myBestLanes[it] = lanes;
+                    self.myLastBestLanesInternalLane = startLane;
+                    self.update_occupancy_and_current_best_lane(startLane);
+                    return;
+                } else {
+                    // remove passed edges
+                    self.myBestLanes.remove(it);
+                }
+            }
+            debug_assert!(false, "should always find the next edge");
+        }
+        // start rebuilding
+        self.myLastBestLanesInternalLane = Ptr::default();
+        self.myLastBestLanesEdge = Ptr::from_mut(startLane.get_edge());
+        self.myBestLanes.clear();
+
+        // get information about the next stop
+        let routeSize: i32 = self.myRoute.size();
+        let mut nextStopEdge: usize = routeSize as usize; // C++ myRoute->end()
+        let mut nextStopLane: Ptr<MSLane> = Ptr::default();
+        let mut nextStopPos: f64 = 0.0;
+        if let Some(nextStop) = self.myStops.front() {
+            nextStopLane = nextStop.lane;
+            if nextStop.isOpposite {
+                // target leftmost lane in forward direction
+                nextStopLane = *nextStopLane.get_edge().get_opposite_edge().get_lanes().last().unwrap();
+            }
+            nextStopEdge = nextStop.edge;
+            nextStopPos = nextStop.pars.startPos;
+        }
+        // myArrivalTime = -1 in the context of validating departSpeed with departLane=best
+        if self.myParameter.arrivalLaneProcedure >= ArrivalLaneDefinition::GIVEN && nextStopEdge == routeSize as usize && self.myArrivalLane >= 0 {
+            nextStopEdge = (routeSize - 1) as usize;
+            nextStopLane = self.myRoute.index_op(routeSize - 1).get_lanes()[self.myArrivalLane as usize];
+            nextStopPos = self.myArrivalPos;
+        }
+        if nextStopEdge != routeSize as usize {
+            // make sure that the "wrong" lanes get a penalty. (penalty needs to be
+            // large enough to overcome a magic threshold in MSLaneChangeModel::DK2004.cpp:383)
+            nextStopPos = max2(POSITION_EPS, min2(nextStopPos, nextStopLane.get_length() - 2.0 * POSITION_EPS));
+            if nextStopLane.is_internal() {
+                // switch to the correct lane before entering the intersection
+                nextStopPos = self.myRoute.index_op(nextStopEdge as i32).get_length();
+            }
+        }
+
+        // go forward along the next lanes; always look past stops to ensure that we
+        // know where to go once the stop ends
+        // trains do not have to deal with lane-changing for stops but their best
+        // lanes lookahead is needed for rail signal control
+        let mut seen: i32 = 0;
+        let mut seenLength: f64 = 0.0;
+        let mut progress: bool = true;
+        let vclass = self.get_v_class();
+        // bestLanes must cover the braking distance even when at the very end of the current lane to avoid unecessary slow down
+        let maxBrakeDist = startLane.get_length() + self.get_car_follow_model().get_headway_time() * self.get_max_speed() + self.get_car_follow_model().brake_gap(self.get_max_speed()) + self.get_vehicle_type().get_min_gap();
+        let lookahead = self.get_lane_change_model().get_strategic_lookahead();
+        let mut ce: usize = self.myCurrEdge;
+        while progress {
+            let mut currentLanes: Vec<MSVehicle_LaneQ> = Vec::new();
+            let mut allowed: Ptr<Vec<Ptr<MSLane>>> = Ptr::default();
+            if ce != routeSize as usize && ce + 1 != routeSize as usize {
+                let nextEdge = self.myRoute.index_op((ce + 1) as i32);
+                allowed = self.myRoute.index_op(ce as i32).allowed_lanes(&nextEdge, vclass, false);
+            }
+            let cedge = self.myRoute.index_op(ce as i32);
+            for cl in cedge.get_lanes().iter() {
+                let cl: Ptr<MSLane> = *cl;
+                let mut q = MSVehicle_LaneQ {
+                    lane: cl,
+                    length: 0.0,
+                    currentLength: 0.0,
+                    occupation: 0.0,
+                    nextOccupation: 0.0,
+                    bestLaneOffset: 0,
+                    allowsContinuation: false,
+                    bestContinuations: vec![cl],
+                };
+                q.length = if cl.allows_vehicle_class(vclass) { cedge.get_length() } else { 0.0 };
+                q.currentLength = q.length;
+                // if all lanes are forbidden (i.e. due to a dynamic closing) we want to express no preference
+                q.allowsContinuation = allowed.is_null() || allowed.get().map_or(false, |a| a.contains(&cl));
+                currentLanes.push(q);
+            }
+            if nextStopEdge == ce
+                // already past the stop edge
+                && !(ce == self.myCurrEdge && !self.myLane.is_null() && self.myLane.is_internal())
+            {
+                let normalStopLane = nextStopLane.get_normal_predecessor_lane();
+                for q in currentLanes.iter_mut() {
+                    if !nextStopLane.is_null() && normalStopLane != q.lane {
+                        q.allowsContinuation = false;
+                        q.length = nextStopPos;
+                        q.currentLength = q.length;
+                    }
+                }
+            }
+
+            seenLength += currentLanes[0].lane.get_length();
+            self.myBestLanes.push(currentLanes);
+            seen += 1;
+            ce += 1;
+            if lookahead >= 0.0 {
+                progress &= seen <= 2 || seenLength < lookahead; // custom (but we need to look at least one edge ahead)
+            } else {
+                progress &= seen <= 4 || seenLength < max2(maxBrakeDist, 3000.0); // motorway
+                progress &= seen <= 8 || seenLength < max2(maxBrakeDist, 200.0) || utils::common::sumo_vehicle_class::is_railway(vclass); // urban
+            }
+            progress &= ce != routeSize as usize;
+        }
+
+        // we are examining the last lane explicitly
+        if self.myBestLanes.len() != 0 {
+            let lastIdx = self.myBestLanes.len() - 1;
+            let mut bestLength: f64 = -1.0;
+            // minimum and maximum lane index with best length
+            let mut bestThisIndex: i32 = 0;
+            let mut bestThisMaxIndex: i32 = 0;
+            let mut index: i32 = 0;
+            for j in self.myBestLanes[lastIdx].iter() {
+                if j.length > bestLength {
+                    bestLength = j.length;
+                    bestThisIndex = index;
+                    bestThisMaxIndex = index;
+                } else if j.length == bestLength {
+                    bestThisMaxIndex = index;
+                }
+                index += 1;
+            }
+            index = 0;
+            let mut requiredChangeRightForbidden = false;
+            let mut requireChangeToLeftForbidden: i32 = -1;
+            for j in self.myBestLanes[lastIdx].iter_mut() {
+                if j.length < bestLength {
+                    if (bestThisIndex - index).abs() < (bestThisMaxIndex - index).abs() {
+                        j.bestLaneOffset = bestThisIndex - index;
+                    } else {
+                        j.bestLaneOffset = bestThisMaxIndex - index;
+                    }
+                    if !j.allowsContinuation {
+                        if j.bestLaneOffset < 0
+                            && (!j.lane.allows_changing_right(vclass) || !j.lane.get_parallel_lane(-1, false).allows_vehicle_class(vclass) || requiredChangeRightForbidden)
+                        {
+                            // this lane and all further lanes to the left cannot be used
+                            requiredChangeRightForbidden = true;
+                            j.length = 0.0;
+                        } else if j.bestLaneOffset > 0 && (!j.lane.allows_changing_left(vclass) || !j.lane.get_parallel_lane(1, false).allows_vehicle_class(vclass)) {
+                            // this lane and all previous lanes to the right cannot be used
+                            requireChangeToLeftForbidden = j.lane.get_index();
+                        }
+                    }
+                }
+                index += 1;
+            }
+            let mut i: i32 = requireChangeToLeftForbidden;
+            while i >= 0 {
+                if self.myBestLanes[lastIdx][i as usize].bestLaneOffset > 0 {
+                    self.myBestLanes[lastIdx][i as usize].length = 0.0;
+                }
+                i -= 1;
+            }
+        }
+        // go backward through the lanes
+        // track back best lane and compute the best prior lane(s)
+        let hasElecHybrid = !MSDevice::get_device_by_name(&self.myDevices, "elecHybrid").is_null();
+        // Rng and contRight are read up front (side-effect free) so betterContinuation can run while myBestLanes is borrowed
+        let rng = self.get_rng();
+        let contRight = self.get_vehicle_type().get_parameter().get_lc_param(SUMO_ATTR_LCA_CONTRIGHT, 1.0);
+        let nBest = self.myBestLanes.len();
+        for ci in (0..nBest.saturating_sub(1)).rev() {
+            let (head, tail) = self.myBestLanes.split_at_mut(ci + 1);
+            let clanes: &mut Vec<MSVehicle_LaneQ> = &mut head[ci];
+            let nextLanes: &Vec<MSVehicle_LaneQ> = &tail[0];
+            let cE = Ptr::from_mut(clanes[0].lane.get_edge());
+            let mut bestConnectedLength: f64 = -1.0;
+            let mut bestLength: f64 = -1.0;
+            for j in nextLanes.iter() {
+                if j.lane.m().is_approached_from(cE) && bestConnectedLength < j.length {
+                    bestConnectedLength = j.length;
+                }
+                if bestLength < j.length {
+                    bestLength = j.length;
+                }
+            }
+            // compute index of the best lane (highest length and least offset from the best next lane)
+            let mut bestThisIndex: i32 = 0;
+            let mut bestThisMaxIndex: i32 = 0;
+            if bestConnectedLength > 0.0 {
+                for jx in 0..clanes.len() {
+                    let index = jx as i32;
+                    let mut bestConnectedNext: Ptr<MSVehicle_LaneQ> = Ptr::default();
+                    if clanes[jx].allowsContinuation {
+                        for m in nextLanes.iter() {
+                            if (m.lane.allows_vehicle_class(vclass) || m.lane.had_permission_changes()) && m.lane.m().is_approached_from_2(clanes[jx].lane, vclass) {
+                                if Self::better_continuation_with(bestConnectedNext, m, contRight, rng) {
+                                    bestConnectedNext = Ptr::new(m);
+                                }
+                            }
+                        }
+                        if let Some(bcn) = bestConnectedNext.get() {
+                            if bcn.length == bestConnectedLength && bcn.bestLaneOffset.abs() < 2 {
+                                clanes[jx].length += bestLength;
+                            } else {
+                                clanes[jx].length += bcn.length;
+                            }
+                            clanes[jx].bestLaneOffset = bcn.bestLaneOffset;
+                        }
+                    }
+                    match bestConnectedNext.get() {
+                        Some(bcn) if bcn.allowsContinuation || bcn.length > 0.0 => {
+                            clanes[jx].bestContinuations.extend(bcn.bestContinuations.iter().copied());
+                        }
+                        _ => {
+                            clanes[jx].allowsContinuation = false;
+                        }
+                    }
+                    let bti = bestThisIndex as usize;
+                    if clanes[bti].length < clanes[jx].length
+                        || (clanes[bti].length == clanes[jx].length && clanes[bti].bestLaneOffset.abs() > clanes[jx].bestLaneOffset.abs())
+                        || (clanes[bti].length == clanes[jx].length
+                            && clanes[bti].bestLaneOffset.abs() == clanes[jx].bestLaneOffset.abs()
+                            && Self::next_link_priority(&clanes[bti].bestContinuations) < Self::next_link_priority(&clanes[jx].bestContinuations))
+                    {
+                        bestThisIndex = index;
+                        bestThisMaxIndex = index;
+                    } else if clanes[bti].length == clanes[jx].length
+                        && clanes[bti].bestLaneOffset.abs() == clanes[jx].bestLaneOffset.abs()
+                        && Self::next_link_priority(&clanes[bti].bestContinuations) == Self::next_link_priority(&clanes[jx].bestContinuations)
+                    {
+                        bestThisMaxIndex = index;
+                    }
+                }
+
+                //vehicle with elecHybrid device prefers running under an overhead wire
+                if hasElecHybrid {
+                    let mut index: i32 = 0;
+                    for jx in 0..clanes.len() {
+                        let overheadWireSegmentID = MSNet::get_instance().get_stopping_place_id(clanes[jx].lane, clanes[jx].currentLength / 2.0, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+                        if overheadWireSegmentID != "" {
+                            bestThisIndex = index;
+                            bestThisMaxIndex = index;
+                        }
+                        index += 1;
+                    }
+                }
+            } else {
+                // only needed in case of disconnected routes
+                let mut bestNextIndex: usize = 0;
+                let mut bestDistToNeeded: i32 = clanes.len() as i32;
+                for jx in 0..clanes.len() {
+                    if clanes[jx].allowsContinuation {
+                        for (nextIndex, m) in nextLanes.iter().enumerate() {
+                            if m.lane.m().is_approached_from_2(clanes[jx].lane, vclass) {
+                                if bestDistToNeeded > m.bestLaneOffset.abs() {
+                                    bestDistToNeeded = m.bestLaneOffset.abs();
+                                    bestThisIndex = jx as i32;
+                                    bestThisMaxIndex = jx as i32;
+                                    bestNextIndex = nextIndex;
+                                }
+                            }
+                        }
+                    }
+                }
+                let bti = bestThisIndex as usize;
+                clanes[bti].length += nextLanes[bestNextIndex].length;
+                clanes[bti].bestContinuations.extend(nextLanes[bestNextIndex].bestContinuations.iter().copied());
+            }
+            // set bestLaneOffset for all lanes
+            let mut requiredChangeRightForbidden = false;
+            let mut requireChangeToLeftForbidden: i32 = -1;
+            for jx in 0..clanes.len() {
+                let index = jx as i32;
+                let bti = bestThisIndex as usize;
+                if clanes[jx].length < clanes[bti].length
+                    || (clanes[jx].length == clanes[bti].length && clanes[jx].bestLaneOffset.abs() > clanes[bti].bestLaneOffset.abs())
+                    || Self::next_link_priority(&clanes[jx].bestContinuations) < Self::next_link_priority(&clanes[bti].bestContinuations)
+                {
+                    if (bestThisIndex - index).abs() < (bestThisMaxIndex - index).abs() {
+                        clanes[jx].bestLaneOffset = bestThisIndex - index;
+                    } else {
+                        clanes[jx].bestLaneOffset = bestThisMaxIndex - index;
+                    }
+                    if Self::next_link_priority(&clanes[jx].bestContinuations) < Self::next_link_priority(&clanes[bti].bestContinuations) {
+                        // try to move away from the lower-priority lane before it ends
+                        clanes[jx].length = clanes[jx].currentLength;
+                    }
+                    if !clanes[jx].allowsContinuation {
+                        if clanes[jx].bestLaneOffset < 0
+                            && (!clanes[jx].lane.allows_changing_right(vclass) || !clanes[jx].lane.get_parallel_lane(-1, false).allows_vehicle_class(vclass) || requiredChangeRightForbidden)
+                        {
+                            // this lane and all further lanes to the left cannot be used
+                            requiredChangeRightForbidden = true;
+                            if clanes[jx].length == clanes[jx].currentLength {
+                                clanes[jx].length = 0.0;
+                            }
+                        } else if clanes[jx].bestLaneOffset > 0
+                            && (!clanes[jx].lane.allows_changing_left(vclass) || !clanes[jx].lane.get_parallel_lane(1, false).allows_vehicle_class(vclass))
+                        {
+                            // this lane and all previous lanes to the right cannot be used
+                            requireChangeToLeftForbidden = clanes[jx].lane.get_index();
+                        }
+                    }
+                } else {
+                    clanes[jx].bestLaneOffset = 0;
+                }
+            }
+            let mut idx: i32 = requireChangeToLeftForbidden;
+            while idx >= 0 {
+                let u = idx as usize;
+                if clanes[u].length == clanes[u].currentLength {
+                    clanes[u].length = 0.0;
+                }
+                idx -= 1;
+            }
+
+            //vehicle with elecHybrid device prefers running under an overhead wire
+            if hasElecHybrid {
+                let bti = bestThisIndex as usize;
+                let overheadWireID = MSNet::get_instance().get_stopping_place_id(clanes[bti].lane, clanes[bti].currentLength / 2.0, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+                if overheadWireID != "" {
+                    let mut index: i32 = 0;
+                    for j in clanes.iter_mut() {
+                        j.bestLaneOffset = bestThisIndex - index;
+                        index += 1;
+                    }
+                }
+            }
+        }
+        if self.myBestLanes[0][0].lane.is_internal() {
+            // route starts on an internal lane
+            if !self.myLane.is_null() {
+                startLane = self.myLane;
+            } else {
+                // vehicle not yet departed
+                startLane = self.myBestLanes[0][0].lane;
+            }
+        }
+        self.update_occupancy_and_current_best_lane(startLane);
+    }
+
+    /// C++: `void MSVehicle::updateLaneBruttoSum()`
+    /// Update the lane brutto occupancy after a change in minGap
+    // void
+    // MSVehicle::updateLaneBruttoSum() {
+    //     if (myLane != nullptr) {
+    //         myLane->markRecalculateBruttoSum();
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn update_lane_brutto_sum(&mut self) {
+        if !self.myLane.is_null() {
+            self.myLane.m().mark_recalculate_brutto_sum();
+        }
+    }
+
+    /// C++: `const std::vector<MSLane *> & MSVehicle::getBestLanesContinuation() const` [const]
+    /// Returns the best sequence of lanes to continue the route starting at myLane
+    // const std::vector<MSLane*>&
+    // MSVehicle::getBestLanesContinuation() const {
+    //     if (myBestLanes.empty() || myBestLanes[0].empty()) {
+    //         return myEmptyLaneVector;
+    //     }
+    //     return (*myCurrentLaneInBestLanes).bestContinuations;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_best_lanes_continuation(&self) -> &Vec<Ptr<MSLane>> {
+        if self.myBestLanes.is_empty() || self.myBestLanes[0].is_empty() {
+            return MY_EMPTY_LANE_VECTOR;
+        }
+        &self.myBestLanes[0][self.myCurrentLaneInBestLanes].bestContinuations
+    }
+
+    /// C++: `const std::vector<MSLane *> & MSVehicle::getBestLanesContinuation(const MSLane *const) const` [const]
+    /// Returns the best sequence of lanes to continue the route starting at the given lane
+    // const std::vector<MSLane*>&
+    // MSVehicle::getBestLanesContinuation(const MSLane* const l) const {
+    //     const MSLane* lane = l;
+    //     // XXX: shouldn't this be a "while" to cover more than one internal lane? (Leo) Refs. #2575
+    //     if (lane->getEdge().isInternal()) {
+    //         // internal edges are not kept inside the bestLanes structure
+    //         lane = lane->getLinkCont()[0]->getLane();
+    //     }
+    //     if (myBestLanes.size() == 0) {
+    //         return myEmptyLaneVector;
+    //     }
+    //     for (std::vector<LaneQ>::const_iterator i = myBestLanes[0].begin(); i != myBestLanes[0].end(); ++i) {
+    //         if ((*i).lane == lane) {
+    //             return (*i).bestContinuations;
+    //         }
+    //     }
+    //     return myEmptyLaneVector;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_best_lanes_continuation_2(&self, l: Ptr<MSLane>) -> &Vec<Ptr<MSLane>> {
+        let mut lane = l;
+        // XXX: shouldn't this be a "while" to cover more than one internal lane? (Leo) Refs. #2575
+        if lane.get_edge().is_internal() {
+            // internal edges are not kept inside the bestLanes structure
+            lane = lane.get_link_cont()[0].get_lane();
+        }
+        if self.myBestLanes.is_empty() {
+            return MY_EMPTY_LANE_VECTOR;
+        }
+        for i in self.myBestLanes[0].iter() {
+            if i.lane == lane {
+                return &i.bestContinuations;
+            }
+        }
+        MY_EMPTY_LANE_VECTOR
+    }
+
+    /// C++: `const std::vector<const MSLane *> MSVehicle::getUpcomingLanesUntil(double) const` [const]
+    /// Returns the upcoming (best followed by default 0) sequence of lanes to continue the route starting at the current lane
+    // const std::vector<const MSLane*>
+    // MSVehicle::getUpcomingLanesUntil(double distance) const {
+    //     std::vector<const MSLane*> lanes;
+    //
+    //     if (distance <= 0. || hasArrived()) {
+    //         // WRITE_WARNINGF(TL("MSVehicle::getUpcomingLanesUntil(): distance ('%') should be greater than 0."), distance);
+    //         return lanes;
+    //     }
+    //
+    //     if (!myLaneChangeModel->isOpposite()) {
+    //         distance += getPositionOnLane();
+    //     } else {
+    //         distance += myLane->getOppositePos(getPositionOnLane());
+    //     }
+    //     MSLane* lane = myLaneChangeModel->isOpposite() ? myLane->getParallelOpposite() : myLane;
+    //     while (lane->isInternal() && (distance > 0.)) {  // include initial internal lanes
+    //         lanes.insert(lanes.end(), lane);
+    //         distance -= lane->getLength();
+    //         lane = lane->getLinkCont().front()->getViaLaneOrLane();
+    //     }
+    //
+    //     const std::vector<MSLane*>& contLanes = getBestLanesContinuation();
+    //     if (contLanes.empty()) {
+    //         return lanes;
+    //     }
+    //     auto contLanesIt = contLanes.begin();
+    //     MSRouteIterator routeIt = myCurrEdge;  // keep track of covered edges in myRoute
+    //     while (distance > 0.) {
+    //         MSLane* l = nullptr;
+    //         if (contLanesIt != contLanes.end()) {
+    //             l = *contLanesIt;
+    //             if (l != nullptr) {
+    //                 assert(l->getEdge().getID() == (*routeIt)->getLanes().front()->getEdge().getID());
+    //             }
+    //             ++contLanesIt;
+    //             if (l != nullptr || myLane->isInternal()) {
+    //                 ++routeIt;
+    //             }
+    //             if (l == nullptr) {
+    //                 continue;
+    //             }
+    //         } else if (routeIt != myRoute->end()) {  // bestLanes didn't get us far enough
+    //             // choose left-most lane as default (avoid sidewalks, bike lanes etc)
+    //             l = (*routeIt)->getLanes().back();
+    //             ++routeIt;
+    //         } else {  // the search distance goes beyond our route
+    //             break;
+    //         }
+    //
+    //         assert(l != nullptr);
+    //
+    //         // insert internal lanes if applicable
+    //         const MSLane* internalLane = lanes.size() > 0 ? lanes.back()->getInternalFollowingLane(l) : nullptr;
+    //         while ((internalLane != nullptr) && internalLane->isInternal() && (distance > 0.)) {
+    //             lanes.insert(lanes.end(), internalLane);
+    //             distance -= internalLane->getLength();
+    //             internalLane = internalLane->getLinkCont().front()->getViaLaneOrLane();
+    //         }
+    //         if (distance <= 0.) {
+    //             break;
+    //         }
+    //
+    //         lanes.insert(lanes.end(), l);
+    //         distance -= l->getLength();
+    //     }
+    //
+    //     return lanes;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_upcoming_lanes_until(&self, mut distance: f64) -> Vec<Ptr<MSLane>> {
+        let mut lanes: Vec<Ptr<MSLane>> = Vec::new();
+
+        if distance <= 0. || self.has_arrived() {
+            // WRITE_WARNINGF(TL("MSVehicle::getUpcomingLanesUntil(): distance ('%') should be greater than 0."), distance);
+            return lanes;
+        }
+
+        if !self.myLaneChangeModel.is_opposite() {
+            distance += self.get_position_on_lane();
+        } else {
+            distance += self.myLane.get_opposite_pos(self.get_position_on_lane());
+        }
+        let mut lane = if self.myLaneChangeModel.is_opposite() { self.myLane.get_parallel_opposite() } else { self.myLane };
+        while lane.is_internal() && (distance > 0.) {
+            // include initial internal lanes
+            lanes.push(lane);
+            distance -= lane.get_length();
+            lane = lane.get_link_cont().first().unwrap().get_via_lane_or_lane();
+        }
+
+        let contLanes = self.get_best_lanes_continuation();
+        if contLanes.is_empty() {
+            return lanes;
+        }
+        let mut contLanesIt: usize = 0;
+        let mut routeIt: usize = self.myCurrEdge; // keep track of covered edges in myRoute
+        let routeEdges = self.myRoute.get_edges();
+        while distance > 0. {
+            let l: Ptr<MSLane>;
+            if contLanesIt < contLanes.len() {
+                l = contLanes[contLanesIt];
+                contLanesIt += 1;
+                if !l.is_null() || self.myLane.is_internal() {
+                    routeIt += 1;
+                }
+                if l.is_null() {
+                    continue;
+                }
+            } else if routeIt < routeEdges.len() {
+                // bestLanes didn't get us far enough
+                // choose left-most lane as default (avoid sidewalks, bike lanes etc)
+                l = *routeEdges[routeIt].get_lanes().last().unwrap();
+                routeIt += 1;
+            } else {
+                // the search distance goes beyond our route
+                break;
+            }
+
+            // insert internal lanes if applicable
+            let mut internalLane = if !lanes.is_empty() { lanes.last().unwrap().get_internal_following_lane(l) } else { Ptr::null() };
+            while !internalLane.is_null() && internalLane.is_internal() && (distance > 0.) {
+                lanes.push(internalLane);
+                distance -= internalLane.get_length();
+                internalLane = internalLane.get_link_cont().first().unwrap().get_via_lane_or_lane();
+            }
+            if distance <= 0. {
+                break;
+            }
+
+            lanes.push(l);
+            distance -= l.get_length();
+        }
+
+        lanes
+    }
+
+    /// C++: `const std::vector<const MSLane *> MSVehicle::getPastLanesUntil(double) const` [const]
+    /// Returns the sequence of past lanes (right-most on edge) based on the route starting at the current lane
+    // const std::vector<const MSLane*>
+    // MSVehicle::getPastLanesUntil(double distance) const {
+    //     std::vector<const MSLane*> lanes;
+    //
+    //     if (distance <= 0.) {
+    //         // WRITE_WARNINGF(TL("MSVehicle::getPastLanesUntil(): distance ('%') should be greater than 0."), distance);
+    //         return lanes;
+    //     }
+    //
+    //     MSRouteIterator routeIt = myCurrEdge;
+    //     if (!myLaneChangeModel->isOpposite()) {
+    //         distance += myLane->getLength() - getPositionOnLane();
+    //     } else {
+    //         distance += myLane->getParallelOpposite()->getLength() - myLane->getOppositePos(getPositionOnLane());
+    //     }
+    //     MSLane* lane = myLaneChangeModel->isOpposite() ? myLane->getParallelOpposite() : myLane;
+    //     while (lane->isInternal() && (distance > 0.)) {  // include initial internal lanes
+    //         lanes.insert(lanes.end(), lane);
+    //         distance -= lane->getLength();
+    //         lane = lane->getLogicalPredecessorLane();
+    //     }
+    //
+    //     while (distance > 0.) {
+    //         // choose left-most lane as default (avoid sidewalks, bike lanes etc)
+    //         MSLane* l = (*routeIt)->getLanes().back();
+    //
+    //         // insert internal lanes if applicable
+    //         const MSEdge* internalEdge = lanes.size() > 0 ? (*routeIt)->getInternalFollowingEdge(&(lanes.back()->getEdge()), getVClass()) : nullptr;
+    //         const MSLane* internalLane = internalEdge != nullptr ? internalEdge->getLanes().front() : nullptr;
+    //         std::vector<const MSLane*> internalLanes;
+    //         while ((internalLane != nullptr) && internalLane->isInternal()) {  // collect all internal successor lanes
+    //             internalLanes.insert(internalLanes.begin(), internalLane);
+    //             internalLane = internalLane->getLinkCont().front()->getViaLaneOrLane();
+    //         }
+    //         for (auto it = internalLanes.begin(); (it != internalLanes.end()) && (distance > 0.); ++it) {  // check remaining distance in correct order
+    //             lanes.insert(lanes.end(), *it);
+    //             distance -= (*it)->getLength();
+    //         }
+    //         if (distance <= 0.) {
+    //             break;
+    //         }
+    //
+    //         lanes.insert(lanes.end(), l);
+    //         distance -= l->getLength();
+    //
+    //         // NOTE: we're going backwards with the (bi-directional) Iterator
+    //         // TODO: consider make reverse_iterator() when moving on to C++14 or later
+    //         if (routeIt != myRoute->begin()) {
+    //             --routeIt;
+    //         } else {  // we went backwards to begin() and already processed the first and final element
+    //             break;
+    //         }
+    //     }
+    //
+    //     return lanes;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_past_lanes_until(&self, mut distance: f64) -> Vec<Ptr<MSLane>> {
+        let mut lanes: Vec<Ptr<MSLane>> = Vec::new();
+
+        if distance <= 0. {
+            // WRITE_WARNINGF(TL("MSVehicle::getPastLanesUntil(): distance ('%') should be greater than 0."), distance);
+            return lanes;
+        }
+
+        let mut routeIt: usize = self.myCurrEdge;
+        if !self.myLaneChangeModel.is_opposite() {
+            distance += self.myLane.get_length() - self.get_position_on_lane();
+        } else {
+            distance += self.myLane.get_parallel_opposite().get_length() - self.myLane.get_opposite_pos(self.get_position_on_lane());
+        }
+        let mut lane = if self.myLaneChangeModel.is_opposite() { self.myLane.get_parallel_opposite() } else { self.myLane };
+        while lane.is_internal() && (distance > 0.) {
+            // include initial internal lanes
+            lanes.push(lane);
+            distance -= lane.get_length();
+            lane = lane.get_logical_predecessor_lane();
+        }
+
+        let routeEdges = self.myRoute.get_edges();
+        while distance > 0. {
+            // choose left-most lane as default (avoid sidewalks, bike lanes etc)
+            let l = *routeEdges[routeIt].get_lanes().last().unwrap();
+
+            // insert internal lanes if applicable
+            let internalEdge = if !lanes.is_empty() {
+                routeEdges[routeIt].get_internal_following_edge(Ptr::from_mut(lanes.last().unwrap().get_edge()), self.get_v_class())
+            } else {
+                Ptr::null()
+            };
+            let mut internalLane: Ptr<MSLane> = if !internalEdge.is_null() { *internalEdge.get_lanes().first().unwrap() } else { Ptr::null() };
+            let mut internalLanes: Vec<Ptr<MSLane>> = Vec::new();
+            while !internalLane.is_null() && internalLane.is_internal() {
+                // collect all internal successor lanes
+                internalLanes.insert(0, internalLane);
+                internalLane = internalLane.get_link_cont().first().unwrap().get_via_lane_or_lane();
+            }
+            for &il in internalLanes.iter() {
+                // check remaining distance in correct order
+                if !(distance > 0.) {
+                    break;
+                }
+                lanes.push(il);
+                distance -= il.get_length();
+            }
+            if distance <= 0. {
+                break;
+            }
+
+            lanes.push(l);
+            distance -= l.get_length();
+
+            // NOTE: we're going backwards with the (bi-directional) Iterator
+            if routeIt != 0 {
+                routeIt -= 1;
+            } else {
+                // we went backwards to begin() and already processed the first and final element
+                break;
+            }
+        }
+
+        lanes
+    }
+
+    /// C++: `const std::vector<MSLane *> MSVehicle::getUpstreamOppositeLanes() const` [const]
+    /// Returns the sequence of opposite lanes corresponding to past lanes
+    // const std::vector<MSLane*>
+    // MSVehicle::getUpstreamOppositeLanes() const {
+    //     const std::vector<const MSLane*> routeLanes = getPastLanesUntil(myLane->getMaximumBrakeDist());
+    //     std::vector<MSLane*> result;
+    //     for (const MSLane* lane : routeLanes) {
+    //         MSLane* opposite = lane->getOpposite();
+    //         if (opposite != nullptr) {
+    //             result.push_back(opposite);
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     return result;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_upstream_opposite_lanes(&self) -> Vec<Ptr<MSLane>> {
+        let routeLanes = self.get_past_lanes_until(self.myLane.get_maximum_brake_dist());
+        let mut result: Vec<Ptr<MSLane>> = Vec::new();
+        for lane in routeLanes {
+            let opposite = lane.get_opposite();
+            if !opposite.is_null() {
+                result.push(opposite);
+            } else {
+                break;
+            }
+        }
+        result
+    }
+
+    /// C++: `int MSVehicle::getBestLaneOffset() const` [const]
+    // int
+    // MSVehicle::getBestLaneOffset() const {
+    //     if (myBestLanes.empty() || myBestLanes[0].empty()) {
+    //         return 0;
+    //     } else {
+    //         return (*myCurrentLaneInBestLanes).bestLaneOffset;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_best_lane_offset(&self) -> i32 {
+        if self.myBestLanes.is_empty() || self.myBestLanes[0].is_empty() {
+            0
+        } else {
+            self.myBestLanes[0][self.myCurrentLaneInBestLanes].bestLaneOffset
+        }
+    }
+
+    /// C++: `double MSVehicle::getBestLaneDist() const` [const]
+    /// returns the distance that can be driven without lane change *
+    // double
+    // MSVehicle::getBestLaneDist() const {
+    //     if (myBestLanes.empty() || myBestLanes[0].empty()) {
+    //         return -1;
+    //     } else {
+    //         return (*myCurrentLaneInBestLanes).length;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_best_lane_dist(&self) -> f64 {
+        if self.myBestLanes.is_empty() || self.myBestLanes[0].is_empty() {
+            -1.
+        } else {
+            self.myBestLanes[0][self.myCurrentLaneInBestLanes].length
+        }
+    }
+
+    /// C++: `void MSVehicle::adaptBestLanesOccupation(int, double)`
+    /// update occupation from MSLaneChanger
+    // void
+    // MSVehicle::adaptBestLanesOccupation(int laneIndex, double density) {
+    //     std::vector<MSVehicle::LaneQ>& preb = myBestLanes.front();
+    //     assert(laneIndex < (int)preb.size());
+    //     preb[laneIndex].occupation = density + preb[laneIndex].nextOccupation;
+    // }
+    #[allow(unused_variables)]
+    pub fn adapt_best_lanes_occupation(&mut self, laneIndex: i32, density: f64) {
+        let preb = &mut self.myBestLanes[0];
+        let idx = laneIndex as usize;
+        assert!(idx < preb.len());
+        preb[idx].occupation = density + preb[idx].nextOccupation;
+    }
+
+    /// C++: `void MSVehicle::fixPosition()`
+    /// repair errors in vehicle position after changing between internal edges
+    // void
+    // MSVehicle::fixPosition() {
+    //     if (MSGlobals::gLaneChangeDuration > 0 && !myLaneChangeModel->isChangingLanes()) {
+    //         myState.myPosLat = 0;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn fix_position(&mut self) {
+        if MSGlobals::lane_change_duration() > 0 && !self.myLaneChangeModel.is_changing_lanes() {
+            self.myState.myPosLat = 0.;
+        }
+    }
+
+    /// C++: `std::pair<const MSLane *, double> MSVehicle::getLanePosAfterDist(double) const` [const]
+    /// return lane and position along bestlanes at the given distance
+    // std::pair<const MSLane*, double>
+    // MSVehicle::getLanePosAfterDist(double distance) const {
+    //     if (distance == 0) {
+    //         return std::make_pair(myLane, getPositionOnLane());
+    //     }
+    //     const std::vector<const MSLane*> lanes = getUpcomingLanesUntil(distance);
+    //     distance += getPositionOnLane();
+    //     for (const MSLane* lane : lanes) {
+    //         if (lane->getLength() > distance) {
+    //             return std::make_pair(lane, distance);
+    //         }
+    //         distance -= lane->getLength();
+    //     }
+    //     return std::make_pair(nullptr, -1);
+    // }
+    #[allow(unused_variables)]
+    pub fn get_lane_pos_after_dist(&self, distance: f64) -> (Ptr<MSLane>, f64) {
+        if distance == 0. {
+            return (self.myLane, self.get_position_on_lane());
+        }
+        let lanes = self.get_upcoming_lanes_until(distance);
+        let mut distance = distance + self.get_position_on_lane();
+        for lane in lanes {
+            if lane.get_length() > distance {
+                return (lane, distance);
+            }
+            distance -= lane.get_length();
+        }
+        (Ptr::null(), -1.)
+    }
+
+    /// C++: `const MSCFModel & MSVehicle::getCarFollowModel() const` [const]
+    /// Returns the vehicle's car following model definition
+    // inline const MSCFModel& getCarFollowModel() const {
+    //         return myType->getCarFollowModel();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_car_follow_model(&self) -> &MSCFModel {
+        self.myType.get_car_follow_model()
+    }
+
+    /// C++: `std::shared_ptr<MSSimpleDriverState> MSVehicle::getDriverState() const` [const]
+    /// Returns the vehicle driver's state
+    // std::shared_ptr<MSSimpleDriverState>
+    // MSVehicle::getDriverState() const {
+    //     return myDriverState->getDriverState();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_driver_state(&self) -> Rc<MSSimpleDriverState> {
+        self.myDriverState.get_driver_state()
+    }
+
+    /// C++: `double MSVehicle::getFriction() const` [const]
+    /// Returns the current friction on the road as perceived by the friction device
+    // double
+    // MSVehicle::getFriction() const {
+    //     return myFrictionDevice == nullptr ? 1. : myFrictionDevice->getMeasuredFriction();
+    // }
+    #[allow(unused_variables)]
+    pub fn get_friction(&self) -> f64 {
+        if self.myFrictionDevice.is_null() {
+            1.
+        } else {
+            self.myFrictionDevice.m().get_measured_friction()
+        }
+    }
+
+    /// C++: `MSCFModel::VehicleVariables * MSVehicle::getCarFollowVariables() const` [const]
+    /// Returns the vehicle's car following model variables
+    // inline MSCFModel::VehicleVariables* getCarFollowVariables() const {
+    //         return myCFVariables;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_car_follow_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
+        self.myCFVariables
+    }
+
+    /// C++: `bool MSVehicle::hasDriverState() const` [const]
+    /// Whether this vehicle is equipped with a MSDriverState
+    // inline bool hasDriverState() const {
+    //         return myDriverState != nullptr;
+    //     }
+    #[allow(unused_variables)]
+    pub fn has_driver_state(&self) -> bool {
+        !self.myDriverState.is_null()
+    }
+
+    /// C++: `SUMOTime MSVehicle::remainingStopDuration() const` [const, virtual]
+    /// Returns the remaining stop duration for a stopped vehicle or 0
+    // SUMOTime
+    // MSVehicle::remainingStopDuration() const {
+    //     if (isStopped()) {
+    //         return myStops.front().duration;
+    //     }
+    //     return 0;
+    // }
+    #[allow(unused_variables)]
+    pub fn remaining_stop_duration(&self) -> SUMOTime {
+        if self.is_stopped() {
+            return self.myStops.front().unwrap().duration;
+        }
+        0
+    }
+
+    /// C++: `bool MSVehicle::instantStopping() const` [const, virtual]
+    /// whether instant stopping is permitted
+    // bool
+    // MSVehicle::instantStopping() const {
+    //     return myInfluencer && !myInfluencer->considerMaxDeceleration();
+    // }
+    #[allow(unused_variables)]
+    pub fn instant_stopping(&self) -> bool {
+        !self.myInfluencer.is_null() && !self.myInfluencer.consider_max_deceleration()
+    }
+
+    /// C++: `bool MSVehicle::willStop() const` [const]
+    /// Returns whether the vehicle will stop on the current edge
+    // bool
+    // MSVehicle::willStop() const {
+    //     return !isStopped() && !myStops.empty() && myLane != nullptr && &myStops.front().lane->getEdge() == &myLane->getEdge();
+    // }
+    #[allow(unused_variables)]
+    pub fn will_stop(&self) -> bool {
+        !self.is_stopped()
+            && !self.myStops.is_empty()
+            && !self.myLane.is_null()
+            && Ptr::from_mut(self.myStops.front().unwrap().lane.get_edge()) == Ptr::from_mut(self.myLane.get_edge())
+    }
+
+    /// C++: `bool MSVehicle::isStoppedOnLane() const` [const]
+    /// Returns whether the vehicle is at a stop and on the correct lane
+    // bool
+    // MSVehicle::isStoppedOnLane() const {
+    //     return isStopped() && myStops.front().lane == myLane;
+    // }
+    #[allow(unused_variables)]
+    pub fn is_stopped_on_lane(&self) -> bool {
+        self.is_stopped() && self.myStops.front().unwrap().lane == self.myLane
+    }
+
+    /// C++: `bool MSVehicle::keepStopping(bool) const` [const]
+    /// Returns whether the vehicle is stopped and must continue to do so
+    // bool
+    // MSVehicle::keepStopping(bool afterProcessing) const {
+    //     if (isStopped()) {
+    //         // when coming out of vehicleTransfer we must shift the time forward
+    //         return (myStops.front().duration - (afterProcessing ? DELTA_T : 0) > 0 || isStoppedTriggered() || myStops.front().pars.collision
+    //                 || myStops.front().pars.breakDown || (myStops.front().getSpeed() > 0
+    //                         && (myState.myPos < MIN2(myStops.front().pars.endPos, myStops.front().lane->getLength() - POSITION_EPS))
+    //                         && (myStops.front().pars.parking == ParkingType::ONROAD || getSpeed() >= SUMO_const_haltingSpeed)));
+    //     } else {
+    //         return false;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn keep_stopping(&self, afterProcessing: bool) -> bool {
+        if self.is_stopped() {
+            // when coming out of vehicleTransfer we must shift the time forward
+            let DELTA_T = delta_t();
             let front = self.myStops.front().unwrap();
             return (front.duration - (if afterProcessing { DELTA_T } else { 0 }) > 0
                 || self.is_stopped_triggered()
