@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-22T03:06:07.259590-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_cf_model_vehs_per_hour_free_flow_kraussOrig1/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_cf_model_vehs_per_hour_free_flow_kraussOrig1/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_cf_model_vehs_per_hour_free_flow_kraussOrig1/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_vehs_per_hour_free_flow_kraussOrig1/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_vehs_per_hour_free_flow_kraussOrig1/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_vehs_per_hour_free_flow_kraussOrig1/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport value="0"/>
+        <max-depart-delay value="1"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="KraussOrig1"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<detector xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/det_e1_file.xsd">
+    <interval begin="0.00" end="60.00" id="end3_0" nVehContrib="41" flow="2460.00" occupancy="10.67" speed="32.15" harmonicMeanSpeed="32.02" length="5.00" nVehEntered="41"/>
+    <interval begin="60.00" end="120.00" id="end3_0" nVehContrib="42" flow="2520.00" occupancy="11.34" speed="30.92" harmonicMeanSpeed="30.87" length="5.00" nVehEntered="42"/>
+    <interval begin="120.00" end="180.00" id="end3_0" nVehContrib="40" flow="2400.00" occupancy="10.91" speed="30.60" harmonicMeanSpeed="30.54" length="5.00" nVehEntered="40"/>
+    <interval begin="180.00" end="240.00" id="end3_0" nVehContrib="30" flow="1800.00" occupancy="8.82" speed="28.53" harmonicMeanSpeed="28.35" length="5.00" nVehEntered="30"/>
+    <interval begin="240.00" end="300.00" id="end3_0" nVehContrib="42" flow="2520.00" occupancy="11.92" speed="29.51" harmonicMeanSpeed="29.37" length="5.00" nVehEntered="42"/>
+    <interval begin="300.00" end="360.00" id="end3_0" nVehContrib="41" flow="2460.00" occupancy="11.59" speed="29.51" harmonicMeanSpeed="29.49" length="5.00" nVehEntered="41"/>
+    <interval begin="360.00" end="420.00" id="end3_0" nVehContrib="31" flow="1860.00" occupancy="10.27" speed="25.26" harmonicMeanSpeed="25.15" length="5.00" nVehEntered="31"/>
+    <interval begin="420.00" end="480.00" id="end3_0" nVehContrib="42" flow="2520.00" occupancy="12.18" speed="28.78" harmonicMeanSpeed="28.75" length="5.00" nVehEntered="42"/>
+    <interval begin="480.00" end="540.00" id="end3_0" nVehContrib="41" flow="2460.00" occupancy="11.75" speed="29.13" harmonicMeanSpeed="29.09" length="5.00" nVehEntered="41"/>
+    <interval begin="540.00" end="600.00" id="end3_0" nVehContrib="40" flow="2400.00" occupancy="12.23" speed="27.29" harmonicMeanSpeed="27.26" length="5.00" nVehEntered="40"/>
+    <interval begin="600.00" end="660.00" id="end3_0" nVehContrib="30" flow="1800.00" occupancy="9.71" speed="26.09" harmonicMeanSpeed="25.76" length="5.00" nVehEntered="30"/>
+    <interval begin="660.00" end="720.00" id="end3_0" nVehContrib="42" flow="2520.00" occupancy="12.02" speed="29.23" harmonicMeanSpeed="29.17" length="5.00" nVehEntered="43"/>
+    <interval begin="720.00" end="780.00" id="end3_0" nVehContrib="42" flow="2520.00" occupancy="11.55" speed="30.30" harmonicMeanSpeed="30.25" length="5.00" nVehEntered="41"/>
+    <interval begin="780.00" end="840.00" id="end3_0" nVehContrib="41" flow="2460.00" occupancy="12.05" speed="28.43" harmonicMeanSpeed="28.36" length="5.00" nVehEntered="41"/>
+    <interval begin="840.00" end="900.00" id="end3_0" nVehContrib="38" flow="2280.00" occupancy="11.21" speed="28.97" harmonicMeanSpeed="28.89" length="5.00" nVehEntered="39"/>
+    <interval begin="900.00" end="960.00" id="end3_0" nVehContrib="39" flow="2340.00" occupancy="11.62" speed="27.48" harmonicMeanSpeed="27.38" length="5.00" nVehEntered="38"/>
+    <interval begin="960.00" end="1017.00" id="end3_0" nVehContrib="33" flow="2084.21" occupancy="10.78" speed="26.87" harmonicMeanSpeed="26.85" length="5.00" nVehEntered="33"/>
+</detector>

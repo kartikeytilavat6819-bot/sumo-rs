@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --carfollow.model IDMM -a tools/oracle/cases/tt_cf_model_tls_driveOff_idmm/input_additional.add.xml,tools/oracle/cases/tt_cf_model_tls_driveOff_idmm/input_additional2.add.xml
