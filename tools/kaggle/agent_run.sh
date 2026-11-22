@@ -35,4 +35,26 @@ for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_shor
     grep -E '<vehicle ' "$OUT/$case.$side.fcd.xml" | head -4
   done
 done
+
+# ticket17583: 26 vehicles on a circular track with two destProbRerouters.
+# Official: none arrive before t=100. Ours: v.25 arrives. Show every tripinfo,
+# the flow statistics, and the routes the rerouters assign.
+C=tools/oracle/cases/tt_bugs_17xxx_ticket17583
+echo "################ tt_bugs_17xxx_ticket17583"
+for side in ours pristine; do
+  if [ "$side" = ours ]; then BIN=$OURS; else BIN=$SUMO_PRISTINE_BIN/sumo; fi
+  timeout 300 "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
+    $(cat "$C/sim.args") --no-step-log true \
+    --tripinfo-output "$OUT/17583.$side.ti.xml" \
+    --vehroute-output "$OUT/17583.$side.vr.xml" \
+    --statistic-output "$OUT/17583.$side.stat.xml" \
+    >"$OUT/17583.$side.log" 2>&1
+  echo "== $side exit=$?"
+  echo "-- tripinfos:"
+  grep '<tripinfo ' "$OUT/17583.$side.ti.xml"
+  echo "-- vehicles stat:"
+  grep '<vehicles ' "$OUT/17583.$side.stat.xml"
+  echo "-- v.25 route replacements (first 12 route tags):"
+  grep -E '<route' "$OUT/17583.$side.vr.xml" | head -12
+done
 echo "OC98 DIAGNOSTIC DONE"
