@@ -1050,7 +1050,8 @@ mod tests {
         };
         let out = StorageHelper::to_storage(&v.base);
         let bytes = out.as_bytes();
-        assert_eq!(bytes[bytes.len() - 2], TYPE_BYTE as u8);
+        // C++ StorageHelper.cpp writeTypedByte: type tag TYPE_BYTE (0x08), then the value byte.
+        assert_eq!(&bytes[bytes.len() - 2..], &[TYPE_BYTE as u8, 7]);
         assert_ne!(bytes[bytes.len() - 2], TYPE_UBYTE as u8);
     }
 }
