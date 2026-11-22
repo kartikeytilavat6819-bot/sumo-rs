@@ -440,6 +440,9 @@ mod tests {
         utils::options::options_cont::with_options(|oc| {
             oc.clear();
             RODFFrame::fill_options(); // reentrant: fills the same oc
+            // BoolExtended::set("false") empties the value string, so print_help
+            // prints the full help (including Examples) instead of a topic list.
+            oc.set("help", "false", false).unwrap();
             let mut help = String::new();
             oc.print_help(&mut help).unwrap();
             assert!(help.contains("Examples:"), "no examples section in help: {help}");
