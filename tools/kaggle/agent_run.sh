@@ -24,15 +24,17 @@ for c in tt_meta_bool_value tt_meta_deprecated_option tt_meta_verbose tt_meta_wr
          tt_meta_write_schema tt_meta_write_template_full tt_meta_write_template_commented_full \
          tt_meta_umlaut_encoding tt_meta_space tt_meta_option_list_append tt_meta_rel_path; do
   d="tools/oracle/cases/$c"
+  CFG=oc110_$c.cfg
   ARGS=$(cat "$d/sim.args" | sed -E \
-    -e "s#(--save-(configuration|template|schema)|-C)[[:space:]]+[^[:space:]]+#\1 $OUT/$c.cfg#g" \
-    -e "s#(--save-(configuration|template|schema)|-C)=[^[:space:]]+#\1=$OUT/$c.cfg#g")
-  rm -f "$OUT/$c.cfg"
+    -e "s#(--save-(configuration|template|schema)|-C)[[:space:]]+[^[:space:]]+#\1 $CFG#g" \
+    -e "s#(--save-(configuration|template|schema)|-C)=[^[:space:]]+#\1=$CFG#g")
+  rm -f "$CFG"
   "$OUR" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" --no-step-log true $ARGS >"$OUT/$c.cfg.out" 2>"$OUT/$c.cfg.err"
   rc=$?
-  if [ ! -f "$OUT/$c.cfg" ]; then echo "$c rc=$rc NO CFG $(head -1 "$OUT/$c.cfg.err")"; continue; fi
-  $PY tools/oracle/compare_xml.py "$d/ref.cfg" "$OUT/$c.cfg" >"$OUT/$c.cfgdiff" 2>&1
+  if [ ! -f "$CFG" ]; then echo "$c rc=$rc NO CFG $(head -1 "$OUT/$c.cfg.err")"; continue; fi
+  $PY tools/oracle/compare_xml.py "$d/ref.cfg" "$CFG" >"$OUT/$c.cfgdiff" 2>&1
   echo "$c rc=$rc cmp=$?: $(head -1 "$OUT/$c.cfgdiff")"
+  rm -f "$CFG"
 done
 
 echo "=== EXPECT_EXIT case (umlaut) ==="
