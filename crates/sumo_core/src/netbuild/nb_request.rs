@@ -15,7 +15,14 @@ fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
     e.get_connections_from_lane(lane, Ptr::default(), -1)
 }
 fn edge_connection(e: Ptr<NBEdge>, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> NBEdge_Connection {
-    NBEdge_Connection::new(fromLane, to, toLane, false)
+    // C++ `from->getConnection(fromLane, to, toLane)` returns the *stored* connection, including
+    // mayDefinitelyPass (set by pass="1" in an input connections file). Fabricating a fresh one
+    // drops that flag and makes rightTurnConflict/mergeConflict yield wrongly (ticket6497).
+    e.get_connections()
+        .iter()
+        .find(|c| c.fromLane == fromLane && c.toEdge == to && c.toLane == toLane)
+        .cloned()
+        .unwrap_or_else(|| NBEdge_Connection::new(fromLane, to, toLane, false))
 }
 // shortcut: C++ Edge::getNumLanes-based vectors are copied into leaked boxes so the Ptr-typed fields outlive the call, upgrade: store the vectors by value
 fn leak_vec<T>(v: T) -> Ptr<T> {
