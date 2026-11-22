@@ -1,1 +1,0 @@
-official sumo exit 1: Warning: Unsafe green phase 0 in tlLogic '0/1', program 't1'. Lane '0/1to0/0_0' is targeted by 3 'G'-links. (use 'g' instead) Overall 3 lanes in 2 pha
