@@ -1018,9 +1018,11 @@ impl MSDevice_FCDReplay {
         if te.edgeOrLane != "" {
             let edgeID = utils::xml::sumo_xml_definitions::get_edge_id_from_lane(&te.edgeOrLane);
             let laneIdx = utils::xml::sumo_xml_definitions::get_index_from_lane(&te.edgeOrLane).unwrap_or_else(|e| panic!("{}", e));
-            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, &edgeID, laneIdx, te.pos.x(), te.pos.y(), te.angle, 7, -1.);
+            // C++ moveToXY(..., 7) uses its default matchThreshold of 100 m
+            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, &edgeID, laneIdx, te.pos.x(), te.pos.y(), te.angle, 7, 100.);
         } else if te.pos.x() != INVALID_DOUBLE_VALUE {
-            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, "", -1, te.pos.x(), te.pos.y(), te.angle, 0, -1.);
+            // C++ moveToXY(..., 0) likewise uses the default matchThreshold of 100 m
+            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, "", -1, te.pos.x(), te.pos.y(), te.angle, 0, 100.);
         }
         v.m().get_influencer().set_speed_mode(0);
         crate::libsumo::vehicle::Vehicle::set_speed(&holderID, te.speed);
