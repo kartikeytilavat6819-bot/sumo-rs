@@ -373,10 +373,12 @@ impl MSDevice_Bluelight {
             let inf = ego.get_influencer_2();
             let (prio, redBrake) = if inf.is_null() { (true, true) } else { (inf.get_respect_junction_priority(), inf.get_emergency_brake_red_light()) };
             let lcm = ego.get_lane_change_model_2();
-            eprintln!("OC102 t={} egoLane={} egoEdge={} egoPos={:.3} egoSpeed={:.3} inflNull={} prio={} redBrake={} lcState={} lcManeuver={:.3} upcomingEdges={:?} influenced={:?} toReset={:?}",
+            let lf = &ego.myLFLinkLanes;
+            let lf0 = lf.first().map(|d| (d.myLink.get_lane().get_id(), format!("{:?}", d.myLink.get_state()), d.myDistance, d.myVLinkPass, d.myVLinkWait));
+            eprintln!("OC102 t={} egoLane={} egoEdge={} egoPos={:.3} egoSpeed={:.3} inflNull={} prio={} redBrake={} lcState={} lcManeuver={:.3} lfCount={} lf0={:?} upcomingEdges={:?} influenced={:?} toReset={:?}",
                 simstep, ego.get_lane().get_id(), ego.get_lane().get_edge().get_id(),
                 ego.get_position_on_lane(), ego.get_speed(),
-                inf.is_null(), prio, redBrake, lcm.get_own_state(), lcm.get_maneuver_dist(),
+                inf.is_null(), prio, redBrake, lcm.get_own_state(), lcm.get_maneuver_dist(), lf.len(), lf0,
                 upcomingEdges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>(),
                 self.myInfluencedVehicles.iter().cloned().collect::<Vec<_>>(),
                 lastStepInfluencedVehicles.iter().cloned().collect::<Vec<_>>());
