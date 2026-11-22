@@ -1627,6 +1627,9 @@ impl MSBaseVehicle {
         }
 
         // router.setHint(myCurrEdge, myRoute->end(), this, t);
+        if self.get_id() == "t_0" {
+            eprintln!("OC108_PRECHECK info={} onInit={} silent={} edgesEmpty={} nEdges={} hasSkipped={}", info, onInit, silent, edges.is_empty(), edges.len(), hasSkipped);
+        }
         if edges.is_empty() && silent {
             return false;
         }
