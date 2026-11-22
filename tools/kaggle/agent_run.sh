@@ -17,11 +17,11 @@ trace() {
     if [ "$side" = cpp ]; then B="${SUMO_PRISTINE_BIN:?no SUMO_PRISTINE_BIN}/sumo"; else B="$BIN/sumo"; fi
     if [ "$side" = cpp ]; then
       timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat,x,y,speed,pos,lane,accel,accelLat \
+        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat,x,y,speed,pos,lane,acceleration,accelerationLat \
         --fcd-output.acceleration true --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
     else
       OC97_TRACE="$scope" timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat,x,y,speed,pos,lane,accel,accelLat \
+        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat,x,y,speed,pos,lane,acceleration,accelerationLat \
         --fcd-output.acceleration true --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
     fi
     echo "  run $side rc=$?"
@@ -41,7 +41,7 @@ def extract(path):
                 t = round(float(m.group(1)), 2)
             if '<vehicle' in line and needle in line:
                 p = re.search(r'posLat="([^"]+)"', line)
-                al = re.search(r'accelLat="([^"]+)"', line)
+                al = re.search(r'accelerationLat="([^"]+)"', line)
                 v = re.search(r'speed="([^"]+)"', line)
                 if p and t is not None:
                     out[t] = (float(p.group(1)), float(al.group(1)) if al else 0.0, float(v.group(1)) if v else 0.0)
