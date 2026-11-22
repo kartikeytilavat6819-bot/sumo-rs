@@ -2090,7 +2090,6 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn insert_vehicle(&self, v: &mut SUMOVehicle, time: SUMOTime, checkOnly: bool, forceCheck: bool) -> bool {
-        crate::microsim::oc93_probe::hit(5);
         // when vaporizing, no vehicles are inserted, but checking needs to be successful to trigger removal
         let vp: Ptr<SUMOVehicle> = Ptr::from_mut(v);
         if self.is_vaporizing() || self.is_taz_connector()

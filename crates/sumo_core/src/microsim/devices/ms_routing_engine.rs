@@ -637,7 +637,6 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn reroute(vehicle: &mut SUMOVehicle, currentTime: SUMOTime, info: &str, onInit: bool, silent: bool, prohibited: &SUMOAbstractRouter_Prohibitions) {
-        crate::microsim::oc93_probe::hit(12);
         if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
             Self::init_router(Ptr::from_mut(vehicle));
         }
@@ -699,7 +698,6 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn reroute_2(t: &mut MSTransportable, currentTime: SUMOTime, info: &str, onInit: bool, silent: bool, prohibited: &SUMOAbstractRouter_Prohibitions) {
-        crate::microsim::oc93_probe::hit(13);
         let router = Self::get_intermodal_router_tt(t.get_rng_index(), prohibited);
         if !prohibited.is_empty() {
             router.prohibit(prohibited);
@@ -845,7 +843,6 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(rngIndex: i32, svc: SUMOVehicleClass, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSVehicleRouter {
-        crate::microsim::oc93_probe::hit(1);
         if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
             Self::init_weight_update(-1);
             Self::init_edge_weights(svc, -1, -1);
@@ -883,7 +880,6 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router_tt(rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSTransportableRouter {
-        crate::microsim::oc93_probe::hit(17);
         if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
             Self::init_weight_update(-1);
             Self::init_edge_weights(SVC_PEDESTRIAN, -1, -1);

@@ -849,10 +849,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) where E: RouterEdgeInfo {
-        if crate::microsim::oc93_probe::hit(0) % 100000 == 0 { crate::microsim::oc93_probe::line("prohibit"); }
-        crate::microsim::oc93_probe::hit(22);
         if let Some(prohibit) = self.myProhibit {
-            crate::microsim::oc93_probe::hit(21);
             return prohibit(self, toProhibit);
         }
         for item in self.myProhibited.keys() {

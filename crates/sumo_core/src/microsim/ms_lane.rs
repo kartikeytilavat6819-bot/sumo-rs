@@ -992,7 +992,6 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn insert_vehicle(&mut self, v: &mut MSVehicle) -> bool {
-        crate::microsim::oc93_probe::hit(4);
         let mut pos: f64 = 0.;
         let mut patchSpeed: bool = true; // whether the speed shall be adapted to infrastructure/traffic in front
         // the C++ holds a reference into the vehicle; a raw pointer keeps the same aliasing

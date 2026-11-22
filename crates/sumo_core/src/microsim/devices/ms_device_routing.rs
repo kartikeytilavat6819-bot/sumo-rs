@@ -388,7 +388,6 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        crate::microsim::oc93_probe::hit(2);
         if reason == MSMoveReminder_Notification::NOTIFICATION_DEPARTED {
             let now = MSNet::get_instance().m().get_current_time_step();
             if self.myRerouteCommand.is_null() && self.myPreInsertionPeriod > 0 && self.myHolder.m().get_depart_delay() > self.myPreInsertionPeriod {

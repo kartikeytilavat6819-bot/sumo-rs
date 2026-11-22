@@ -28,7 +28,6 @@ pub mod ms_link;
 pub mod ms_logic_junction;
 pub mod ms_move_reminder;
 pub mod ms_net;
-pub mod oc93_probe;
 pub mod ms_no_logic_junction;
 pub mod ms_parking_area;
 pub mod ms_right_of_way_junction;

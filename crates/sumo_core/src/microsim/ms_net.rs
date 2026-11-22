@@ -3305,7 +3305,6 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        crate::microsim::oc93_probe::hit(8);
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
@@ -3355,7 +3354,6 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_effort(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        crate::microsim::oc93_probe::hit(14);
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
@@ -3382,7 +3380,6 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
-        crate::microsim::oc93_probe::hit(15);
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         let found = me.myPedestrianRouter.borrow().get(&rngIndex).copied();
@@ -3423,7 +3420,6 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router(&self, rngIndex: i32, routingMode: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSTransportableRouter {
-        crate::microsim::oc93_probe::hit(16);
         let key = rngIndex * get_int("thread-rngs") + routingMode;
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
