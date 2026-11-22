@@ -333,7 +333,7 @@ impl NBEdgeCont {
             let boundary_shape = utils::geom::geom_conv_helper::parse_shape_reporting(&poly_plain_string, "pruning-boundary", None, false, false);
             if let Some(boundary_shape) = boundary_shape {
                 if boundary_shape.len() < 2 {
-                    panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
+                    std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
                 } else if boundary_shape.len() == 2 {
                     // prunning boundary (box)
                     self.myPruningBoundary.push(boundary_shape[0]);
@@ -351,9 +351,9 @@ impl NBEdgeCont {
                     poly.push(utils::common::string_utils::to_double(i).unwrap_or_else(|e| std::panic::panic_any(e))); // !!! may throw something anyhow...
                 }
                 if poly.len() < 4 {
-                    panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
+                    std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
                 } else if poly.len() % 2 != 0 {
-                    panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: malformed coordinate"));
+                    std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Invalid boundary: malformed coordinate"));
                 } else if poly.len() == 4 {
                     // prunning boundary (box)
                     self.myPruningBoundary.push(utils::geom::position::Position::new(poly[0], poly[1]));

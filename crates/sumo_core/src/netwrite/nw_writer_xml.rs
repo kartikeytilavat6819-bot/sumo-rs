@@ -20,7 +20,9 @@ const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
 
 /// C++ `OptionsCont` getters throw ProcessError; the options used here are always registered
 fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
-    r.unwrap_or_else(|e| panic!("{e}"))
+    // C++ getters throw ProcessError; keep that payload type so netconvert's
+    // panic hook suppresses the Rust-only "thread panicked at ..." line.
+    r.unwrap_or_else(|e| std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(e.to_string())))
 }
 
 /// OptionsCont::getOptions().getString(name)
