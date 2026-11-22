@@ -1,0 +1,3 @@
+Warning: VTypeProbes are deprecated. Use fcd-output devices (assigned to the vType) instead.
+Error: Another vehicle type (or distribution) with the id 't1' exists.
+Quitting (on error).

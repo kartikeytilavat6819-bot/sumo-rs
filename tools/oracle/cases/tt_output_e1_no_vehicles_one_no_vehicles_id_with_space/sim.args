@@ -1,1 +1,1 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first {CLEAR --no-duration-log -b 0 -e 1000 -a tools/oracle/cases/tt_output_e1_no_vehicles_one_no_vehicles_id_with_space/input_additional.add.xml
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 1000 -a tools/oracle/cases/tt_output_e1_no_vehicles_one_no_vehicles_id_with_space/input_additional.add.xml

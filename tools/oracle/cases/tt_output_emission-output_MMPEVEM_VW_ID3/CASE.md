@@ -17,3 +17,9 @@ official sumo via `make_sim_refs.sh`.
 PARKED: official SUMO 1.28.0 exits non-zero for this TextTest row (it validates an erroneous additional-file attribute and checks the error message).
 The run_all harness compares tripinfo/fcd/statistic outputs only, so this row cannot be
 scored meaningfully. Parked rather than deleted to keep the import provenance.
+
+## EXPECTATION OVERRIDE (oc105)
+
+The release texttest expectation was produced with the official -a $SUMO_HOME/data/emissions/... vType
+file. The oracle harness cannot resolve that path and drops it, so the official binary run with the
+harness flags emits the vehicle-type-not-known error recorded in ref.errors. Official binary wins.
