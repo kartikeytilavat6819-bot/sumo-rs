@@ -5,7 +5,9 @@ use utils::common::msg_handler::{write_error, write_message, write_warning};
 
 /// C++ `throw InvalidArgument(msg)`
 fn throw_invalid_argument(msg: String) -> ! {
-    std::panic::panic_any(InvalidArgument(msg))
+    // C++ InvalidArgument derives from ProcessError; keep that payload type so
+    // main's ProcessError handler writes "Error: ..." + "Quitting (on error)."
+    std::panic::panic_any(ProcessError::InvalidArgument(msg))
 }
 
 /// C++ `throw ProcessError(msg)`
