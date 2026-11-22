@@ -1464,6 +1464,12 @@ impl MSBaseVehicle {
         let mut jumps: BTreeSet<i32> = BTreeSet::new();
 
         let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
+        if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
+            sourcePos = self.myParameter.departPos;
+        } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
+            // routing starts on the next edge
+            sourcePos = 0.0;
+        }
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
             let mut lastPos = utils::common::std_defs::INVALID_DOUBLE;
@@ -1591,8 +1597,8 @@ impl MSBaseVehicle {
                     edges.clear();
                     if onInit && source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
                         edges.push(stopEdge);
-                        utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%' with departPos %.",
-                            self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id(), sourcePos));
+                        utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%'.",
+                            self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id()));
                     }
                 } else if source == stopEdge && !stops[idx].stopPar.is_null() && stops[idx].stopPar.endPos >= sourcePos {
                     // special case: no failure on dynamically computed stop position
