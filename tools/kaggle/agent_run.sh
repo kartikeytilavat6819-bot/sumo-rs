@@ -48,6 +48,7 @@ for side in ours pristine; do
     --tripinfo-output "$OUT/17583.$side.ti.xml" \
     --vehroute-output "$OUT/17583.$side.vr.xml" \
     --statistic-output "$OUT/17583.$side.stat.xml" \
+    --fcd-output "$OUT/17583.$side.fcd.xml" \
     >"$OUT/17583.$side.log" 2>&1
   echo "== $side exit=$?"
   echo "-- tripinfos:"
@@ -56,6 +57,20 @@ for side in ours pristine; do
   grep '<vehicles ' "$OUT/17583.$side.stat.xml"
   echo "-- v.25 route replacements (first 12 route tags):"
   grep -E '<route' "$OUT/17583.$side.vr.xml" | head -12
+  echo "-- v.25 FCD path (0.5s samples from t=60, edge/lane changes):"
+  python3 - "$OUT/17583.$side.fcd.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+t = ET.parse(sys.argv[1]).getroot()
+last = -1
+for ts in t.iter('timestep'):
+    sec = float(ts.get('time'))
+    if sec < 60: continue
+    dec = round(sec * 2)
+    for v in ts.iter('vehicle'):
+        if v.get('id') == 'v.25' and dec != last:
+            last = dec
+            print(f"{sec:.1f} spd={v.get('speed')} pos={v.get('pos')} lane={v.get('lane')}")
+PY
 done
 
 # ticket4299: ES1 waitingTime 72.00 (ref) vs 75.80 (ours), step-length 0.1.
