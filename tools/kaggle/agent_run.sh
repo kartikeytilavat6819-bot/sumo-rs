@@ -129,7 +129,7 @@ done
 echo "==== OC98 RAIL STOP-SKIP DECISION"
 for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_short_closing_wait; do
   echo "---- $case"
-  grep 'OC98DBG reroute-stop\|OC98DBG reroute info\|OC98DBG reroute panic\|OC98DBG reroute-about-to-call\|OC98DBG reroute-result\|OC98DBG trigger-state\|OC98DBG pre-affected\|OC98DBG pre-router\|OC98DBG interval\|OC98DBG getClosed\|OC98DBG prohibit\|OC98DBG railEdge\|OC98DBG skipopt\|OC98DBG dijkstra runaway' "$OUT/$case.ours.log" | head -80
+  grep 'OC98DBG reroute-stop\|OC98DBG reroute info\|OC98DBG reroute panic\|OC98DBG reroute-about-to-call\|OC98DBG reroute-result\|OC98DBG trigger-state\|OC98DBG pre-affected\|OC98DBG pre-router\|OC98DBG get_router_tt\|OC98DBG interval\|OC98DBG getClosed\|OC98DBG prohibit\|OC98DBG railEdge\|OC98DBG skipopt\|OC98DBG dijkstra runaway' "$OUT/$case.ours.log" | head -80
 done
 echo "==== OC98 4299 LINK-LEADER FOES"
 grep 'OC98DBG 4299 leader=\|OC98DBG 4299 KEPT\|OC98DBG 4299 adapt\|OC98DBG 4299 redbranch' "$OUT/4299.ours.log" | head -60

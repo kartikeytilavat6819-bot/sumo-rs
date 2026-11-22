@@ -843,14 +843,21 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(rngIndex: i32, svc: SUMOVehicleClass, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSVehicleRouter {
+        let dbg = std::env::var("OC98DBG").is_ok();
+        if dbg { eprintln!("OC98DBG get_router_tt enter svc={:?} prohibitions={}", svc, prohibited.len()); }
         if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
+            if dbg { eprintln!("OC98DBG get_router_tt init provider"); }
             Self::init_weight_update(-1);
             Self::init_edge_weights(svc, -1, -1);
             Self::init_router(Ptr::null());
+            if dbg { eprintln!("OC98DBG get_router_tt init done"); }
         }
         let provider = ROUTER_PROVIDER.with(|p| p.get()).unwrap();
+        if dbg { eprintln!("OC98DBG get_router_tt got provider null={}", provider.is_null()); }
         let router = provider.get_mut().unwrap().get_vehicle_router(svc);
+        if dbg { eprintln!("OC98DBG get_router_tt got router"); }
         router.prohibit(prohibited);
+        if dbg { eprintln!("OC98DBG get_router_tt prohibit done"); }
         router
     }
 
