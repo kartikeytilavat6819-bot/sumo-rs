@@ -52,7 +52,28 @@ timeout 120 "$BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
   >"$OUT/$c.log" 2>&1
 echo "rc=$?"
 python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" 2>&1 | head -20
-python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" 2>&1 | head -20
+python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" 2>&1 | head -60
+# first 12 FCD timesteps where our trip_0 position differs from ref
+python - "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+ref = {t.get('time'): t for t in ET.parse(sys.argv[1]).getroot().iter('timestep')}
+cand = {t.get('time'): t for t in ET.parse(sys.argv[2]).getroot().iter('timestep')}
+shown = 0
+for tm in sorted(ref):
+    if tm not in cand or shown >= 12:
+        continue
+    for rp in ref[tm].iter('vehicle'):
+        if rp.get('id') != 'trip_0':
+            continue
+        for cp in cand[tm].iter('vehicle'):
+            if cp.get('id') == 'trip_0':
+                for a in ('x', 'y', 'angle', 'speed', 'pos', 'lane'):
+                    if rp.get(a) != cp.get(a):
+                        print(f"t={tm} {a}: ref={rp.get(a)} cand={cp.get(a)}")
+                        shown += 1
+                break
+        break
+PY
 
 # ---- oc105: compare our sumo with the official binary on two target rows ----
 OUT=/tmp/oc105
