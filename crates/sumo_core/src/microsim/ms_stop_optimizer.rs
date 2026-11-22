@@ -275,7 +275,12 @@ impl MSStopOptimizer {
 
         // determinism: bestIntermediate is only looked up and inserted into, never iterated, so the map order is not observable.
         let mut bestIntermediate: BTreeMap<Ptr<MSEdge>, Rc<RefCell<MSStopOptimizer_StopPathNode>>> = BTreeMap::new();
+        let mut dbg_iter: u64 = 0;
         while let Some(ptr) = queue.pop() {
+            dbg_iter += 1;
+            if std::env::var("OC98DBG").is_ok() && dbg_iter % 10000 == 0 {
+                eprintln!("OC98DBG skipopt iter={} qSize={}", dbg_iter, queue.len());
+            }
             let succ = MSStopOptimizer_StopPathNode::get_successor(&ptr, &*stops, minSkipped);
             if bestNode.borrow().lt_op(&ptr.borrow()) {
                 let reached = ptr.borrow().reachedPrio;
