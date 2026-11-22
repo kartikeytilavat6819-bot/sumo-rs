@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: cf_model/vehs_per_hour/free_flow/krauss/{errors,output}.sumo

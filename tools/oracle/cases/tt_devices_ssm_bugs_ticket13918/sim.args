@@ -1,1 +1,1 @@
---write-license --default.departspeed 0 --default.departlane first {CLEAR --default.speeddev 0} --step-length=0.25 --extrapolate-departpos=true --device.ssm.file ssm.xml --device.ssm.probability 1 --device.ssm.measures TTC --device.ssm.range 200
+--write-license --default.departspeed 0 --default.departlane first --step-length=0.25 --extrapolate-departpos=true --device.ssm.file ssm.xml --device.ssm.probability 1 --device.ssm.measures TTC --device.ssm.range 200
