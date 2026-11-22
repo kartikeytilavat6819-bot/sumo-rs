@@ -208,11 +208,8 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn dep_hour(&mut self, from: AGPosition, to: AGPosition, arrival: i32) -> i32 {
-        let mut departure = arrival - self.time_to_drive(from, to);
-        if departure < 0 {
-            departure += 24;
-        }
-        departure
+        // C++ does not wrap negative times here (the day-wrap line is commented out in AGActivity.cpp)
+        arrival - self.time_to_drive(from, to)
     }
 
     /// C++: `int AGActivity::arrHour(AGPosition, AGPosition, int)`
