@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T16:42:46.762496-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-22T04:57:32.599448+00:00 by Eclipse SUMO sumo 1.28.0
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -14,16 +14,13 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/ref_simple.net.xml"/>
-        <route-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/routes.rou"/>
+        <net-file value="tools/oracle/cases\tt_output_vtypeprobe_two_vehicles_diff_speed_both\ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases\tt_output_vtypeprobe_two_vehicles_diff_speed_both\routes.rou"/>
         <additional-files value="tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/input_additional.add.xml,tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/input_additional2.add.xml,tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/input_routes.rou.xml"/>
     </input>
 
     <output>
         <write-license value="true"/>
-        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/ref.fcd.xml"/>
-        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/ref.tripinfo.xml"/>
-        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vtypeprobe_two_vehicles_diff_speed_both/ref.stat.xml"/>
     </output>
 
     <time>
