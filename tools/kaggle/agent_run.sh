@@ -132,7 +132,7 @@ for case in tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_shor
   grep 'OC98DBG reroute-stop\|OC98DBG reroute info\|OC98DBG reroute panic\|OC98DBG reroute-about-to-call\|OC98DBG reroute-result\|OC98DBG interval\|OC98DBG getClosed\|OC98DBG prohibit\|OC98DBG railEdge' "$OUT/$case.ours.log" | head -80
 done
 echo "==== OC98 4299 LINK-LEADER FOES"
-grep 'OC98DBG 4299' "$OUT/4299.ours.log" | head -80
+grep 'OC98DBG 4299 leader=\|OC98DBG 4299 KEPT\|OC98DBG 4299 adapt' "$OUT/4299.ours.log" | head -50
 echo "==== OC98 17583 v.25 REROUTES"
 grep 'OC98DBG reroute info=rerouter_1\|OC98DBG reroute panic' "$OUT/17583.ours.log" | head -40
 echo "OC98 DIAGNOSTIC DONE"

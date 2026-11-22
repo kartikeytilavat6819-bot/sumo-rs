@@ -14838,6 +14838,9 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn adapt_to_junction_leader(&self, leaderInfo: (Ptr<MSVehicle>, f64), seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, lane: Ptr<MSLane>, v: &mut f64, vLinkPass: &mut f64, distToCrossing: f64) {
         let me: Ptr<MSVehicle> = Ptr::new(self);
+        let dbg = std::env::var("OC98DBG").is_ok() && self.get_id() == "ES1"
+            && (96900..=97400).contains(&MSNet::get_instance().get_current_time_step());
+        let dbg_v_before = *v;
         if !leaderInfo.0.is_null() {
             if self.ignore_foe(leaderInfo.0.cast::<SUMOTrafficObject>()) {
                 return;
@@ -14889,6 +14892,11 @@ impl MSVehicle {
             }
             *v = min2(*v, vsafeLeader);
             *vLinkPass = min2(*vLinkPass, vsafeLeader);
+            if dbg {
+                eprintln!("OC98DBG 4299 adapt leader={} gap={:.3} vBefore={:.3} vAfter={:.3} vsafeLeader={:.3} distToCrossing={:.3} leaderSpeed={:.3} seen={:.3}",
+                    leaderInfo.0.get_id(), leaderInfo.1, dbg_v_before, *v, vsafeLeader,
+                    distToCrossing, leaderInfo.0.get_speed(), seen);
+            }
         }
     }
 
