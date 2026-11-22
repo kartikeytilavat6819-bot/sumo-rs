@@ -448,6 +448,8 @@ mod tests {
             assert!(help.contains("Examples:"), "no examples section in help: {help}");
             assert!(help.contains("-c <CONFIGURATION>"), "missing -c call example: {help}");
             assert!(help.contains("run routing with options from file"), "missing example description: {help}");
+            // leave a clean OptionsCont: other unit tests register their own options.
+            oc.clear();
         });
     }
 }
