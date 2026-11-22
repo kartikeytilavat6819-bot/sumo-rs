@@ -473,7 +473,7 @@ impl ROLoader {
         if ok {
             let begin = utils::common::time::string2time(&self.myOptions.get_string("begin").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}"));
             self.myLoaders.load_next(begin);
-            if !net.further_stored() {
+            if !net.further_stored() && !net.have_skipped_routes() {
                 if error_informed() {
                     panic!("{}", ProcessError::default_msg());
                 } else {
