@@ -851,7 +851,7 @@ impl NIXMLEdgesHandler {
                 return;
             }
             if !self.myTypeCont.knows(&self.myCurrentType) && !self.myOptions.get_bool("ignore-errors.edge-type").unwrap_or_else(|err| panic!("{err}")) {
-                write_error(&tlf!("Type '%' used by edge '%' was not defined (ignore with option --ignore-errors.edge-type).", self.myCurrentType, self.myCurrentID));
+                write_errorf!("Type '%' used by edge '%' was not defined (ignore with option --ignore-errors.edge-type).", self.myCurrentType, self.myCurrentID);
                 return;
             }
         }
@@ -1190,7 +1190,7 @@ impl NIXMLEdgesHandler {
     pub fn add_lane(&mut self, attrs: &SUMOSAXAttributes) {
         if self.myCurrentEdge.is_null() {
             if !with_options(|oc| oc.is_in_string_vector("remove-edges.explicit", &self.myCurrentID)).unwrap_or_else(|err| panic!("{err}")) {
-                write_error(&tlf!("Additional lane information could not be set - the edge with id '%' is not known.", self.myCurrentID));
+                write_errorf!("Additional lane information could not be set - the edge with id '%' is not known.", self.myCurrentID);
             }
             return;
         }
