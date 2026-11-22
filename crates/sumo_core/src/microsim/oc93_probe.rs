@@ -3,7 +3,7 @@
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
-pub const NAMES: [&str; 12] = [
+pub const NAMES: [&str; 18] = [
     "prohibit",
     "get_router_tt",
     "notify_enter",
@@ -16,9 +16,15 @@ pub const NAMES: [&str; 12] = [
     "railway_prohibit",
     "veh_get_router_tt",
     "railway_compute",
+    "re_reroute",
+    "re_reroute2",
+    "net_effort",
+    "net_ped",
+    "net_intermodal",
+    "re_intermodal_tt",
 ];
 
-static COUNTS: [AtomicU64; 12] = [const { AtomicU64::new(0) }; 12];
+static COUNTS: [AtomicU64; 18] = [const { AtomicU64::new(0) }; 18];
 static ON: OnceLock<bool> = OnceLock::new();
 
 pub fn on() -> bool {
