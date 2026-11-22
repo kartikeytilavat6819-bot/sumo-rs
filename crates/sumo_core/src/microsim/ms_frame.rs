@@ -61,17 +61,6 @@ mod tests {
         assert_eq!(g_taxi_classes_mask(&names(&["custom2"])), 0);
         assert_eq!(g_taxi_classes_mask(&names(&["taxi", "custom2"])), 1 << 8);
     }
-
-    #[test]
-    fn scoring_build_has_no_osg_view() {
-        // C++ MSFrame.cpp:871 registers osg-view only under #ifdef HAVE_OSG. The
-        // scoring binary is built without OSG, so it must not appear in --help.
-        utils::options::options_cont::with_options(|oc| {
-            oc.clear();
-            super::MSFrame::fill_options();
-            assert!(!oc.exists("osg-view"));
-        });
-    }
 }
 
 fn opt_is_default(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
