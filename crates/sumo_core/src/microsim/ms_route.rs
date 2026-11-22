@@ -962,7 +962,7 @@ mod tests {
         // C++ MSRoute::dictionary(id, nullptr) falls back to myDistDict; the
         // calibrator relies on this when its flow references a <routeDistribution>.
         let rd: ConstMSRoutePtr = Rc::new(MSRoute::new("t_dict_dist_r", &vec![edge("x")], true, Ptr::null(), &Vec::new(), -1, -1));
-        let mut dist = utils::distribution::random_distributor::RandomDistributor::<ConstMSRoutePtr>::default();
+        let mut dist = RandomDistributor::<ConstMSRoutePtr>::default();
         assert!(dist.add(rd, 1.0, false));
         assert!(MSRoute::dictionary_2("t_dict_dist", Ptr::from_raw(Box::into_raw(Box::new(dist))), true));
         assert!(!MSRoute::has_route("t_dict_dist"));

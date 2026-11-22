@@ -1741,9 +1741,9 @@ mod tests {
         let edge = Ptr::from_raw(Box::into_raw(Box::new(
             crate::microsim::ms_edge::MSEdge::new("x", 0, SumoXMLEdgeFunc::NORMAL, "", "", "", 0, 0.0),
         )));
-        let route: crate::microsim::ms_route::ConstMSRoutePtr =
+        let route: crate::utils::vehicle::sumo_traffic_object::ConstMSRoutePtr =
             std::rc::Rc::new(crate::microsim::ms_route::MSRoute::new("t_cal_r", &vec![edge], true, Ptr::null(), &Vec::new(), -1, -1));
-        let mut dist = crate::utils::distribution::random_distributor::RandomDistributor::<crate::microsim::ms_route::ConstMSRoutePtr>::default();
+        let mut dist = RandomDistributor::<crate::utils::vehicle::sumo_traffic_object::ConstMSRoutePtr>::default();
         assert!(dist.add(route, 1.0, false));
         assert!(MSRoute::dictionary_2("t_cal_dist", Ptr::from_raw(Box::into_raw(Box::new(dist))), true));
         assert!(!MSRoute::has_route("t_cal_dist"));
