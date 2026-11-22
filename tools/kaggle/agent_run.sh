@@ -13,7 +13,7 @@ for c in OSM_buildings_from_relation OSM_inner_shape OSM_water_incomplete XML_la
   "$SUMO_PRISTINE_BIN/polyconvert" ${a//@DIR@/$d/ref} >$d/ref.log 2>&1; rr=$?
   "$BIN/polyconvert" ${a//@DIR@/$d/cand} >$d/cand.log 2>&1; cr=$?
   echo "-- $c rc ref=$rr cand=$cr $(grep -m1 -A1 'panicked at' $d/cand.log | tr '\n' ' ' | cut -c1-200)"
-  diff <(grep -v 'generated on' $d/ref/routes.rou.xml 2>/dev/null) <(grep -v 'generated on' $d/cand/routes.rou.xml 2>/dev/null) | head -8 | cut -c1-200
+  diff <(grep -v "generated on" $d/ref/routes.rou.xml 2>/dev/null | sed "s#/ref/#/SIDE/#") <(grep -v "generated on" $d/cand/routes.rou.xml 2>/dev/null | sed "s#/cand/#/SIDE/#") | head -8 | cut -c1-200
 done
 for t in duarouter jtrrouter; do
   echo "== $t oracle"
