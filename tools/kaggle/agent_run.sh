@@ -1,22 +1,16 @@
 #!/bin/bash
-# oc105 measurement: compare our sumo with the official binary on two target rows.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-OUT=/tmp/oc105
-mkdir -p "$OUT"
-OUR="$CARGO_TARGET_DIR/debug/sumo"
-OFF="$SUMO_PRISTINE_BIN/sumo"
-for c in tt_devices_ssm_bugs_ticket13918 tt_devices_rerouting_reroute_congestions_exit_times; do
+OUT=/tmp/oc111err
+rm -rf "$OUT"; mkdir -p "$OUT"
+OUR="$CARGO_TARGET_DIR/debug/netconvert"
+OFF="$SUMO_PRISTINE_BIN/netconvert"
+for c in itt_nc_netconvert_errors_invalid_argument_vclass itt_nc_netconvert_errors_false_plain_output itt_nc_netconvert_function_keep_edges_boundary__deprecated_ itt_nc_netconvert_function_keep_edges_boundary_malformed_boundary1 itt_nc_netconvert_function_keep_edges_boundary_malformed_boundary2; do
   D="tools/oracle/cases/$c"
-  FLAGS=$(cat "$D/sim.args")
+  ARGS=$(cat "$D/net.args")
   echo "==== $c"
-  echo "sim.args: $FLAGS"
-  for side in our official; do
-    if [ "$side" = our ]; then BIN="$OUR"; else BIN="$OFF"; fi
-    "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --no-step-log true $FLAGS \
-      >"$OUT/$c.$side.out" 2>"$OUT/$c.$side.err"
-    echo "$side exit=$?"
-    echo "$side stderr:"; head -20 "$OUT/$c.$side.err"
-    echo "$side stdout:"; head -12 "$OUT/$c.$side.out"
-  done
+  $OUR $ARGS -o "$OUT/$c.our.net.xml" >"$OUT/$c.our.log" 2>&1
+  echo "our rc=$? stderr: $(grep -i 'error\|panicked' "$OUT/$c.our.log" | head -2 | tr '\n' ' ')"
+  $OFF $ARGS -o "$OUT/$c.ref.net.xml" >"$OUT/$c.ref.log" 2>&1
+  echo "ref rc=$? stderr: $(grep -i 'error\|panicked' "$OUT/$c.ref.log" | head -2 | tr '\n' ' ')"
 done
