@@ -57,4 +57,36 @@ for side in ours pristine; do
   echo "-- v.25 route replacements (first 12 route tags):"
   grep -E '<route' "$OUT/17583.$side.vr.xml" | head -12
 done
+# ticket4299: ES1 waitingTime 72.00 (ref) vs 75.80 (ours), step-length 0.1.
+# Dump tripinfo and a 1-second ES1 speed/pos/lane trace from t=70 onward so the
+# extra waiting steps can be located on the two sides.
+C=tools/oracle/cases/tt_bugs_4xxx_ticket4299
+echo "################ tt_bugs_4xxx_ticket4299"
+for side in ours pristine; do
+  if [ "$side" = ours ]; then BIN=$OURS; else BIN=$SUMO_PRISTINE_BIN/sumo; fi
+  timeout 300 "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
+    $(cat "$C/sim.args") --no-step-log true \
+    --tripinfo-output "$OUT/4299.$side.ti.xml" \
+    --fcd-output "$OUT/4299.$side.fcd.xml" \
+    >"$OUT/4299.$side.log" 2>&1
+  echo "== $side exit=$?"
+  grep '<tripinfo ' "$OUT/4299.$side.ti.xml"
+  echo "-- warnings:"
+  grep -i 'warn\|collision' "$OUT/4299.$side.log" | head -5
+  echo "-- ES1 trace (t, speed, pos, lane; 1s samples from t=70):"
+  python3 - "$OUT/4299.$side.fcd.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+t = ET.parse(sys.argv[1]).getroot()
+last = -1
+for ts in t.iter('timestep'):
+    sec = float(ts.get('time'))
+    if sec < 70: continue
+    i = int(sec)
+    if i != last and i % 1 == 0:
+        last = i
+        for v in ts.iter('vehicle'):
+            if v.get('id') == 'ES1':
+                print(f"{sec:.1f} spd={v.get('speed')} pos={v.get('pos')} lane={v.get('lane')}")
+PY
+done
 echo "OC98 DIAGNOSTIC DONE"
