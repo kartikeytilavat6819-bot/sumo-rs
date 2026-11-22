@@ -13792,7 +13792,8 @@ impl MSVehicle {
                     }
                 }
                 if !bestJump.is_null() {
-                    let nextEdge = self.get_next_edge_ptr();
+                    // C++: `*(myCurrEdge + 1)` is the next route edge, not the internal edge get_next_edge_ptr() returns
+                    let nextEdge = self.succ_edge(1);
                     for (i, cand) in bestJump.get_link_cont().iter().enumerate() {
                         if Ptr::new(cand.get_lane().get_edge()) == nextEdge {
                             link = i;
