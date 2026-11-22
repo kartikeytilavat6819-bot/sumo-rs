@@ -368,7 +368,7 @@ impl MSDevice_Bluelight {
                 lastStepInfluencedVehicles.remove(v.get_id());
             }
         }
-        if std::env::var_os("OC102_DEBUG").is_some() && (simstep == 25000 || simstep == 26000 || simstep == 27000) {
+        if std::env::var_os("OC102_DEBUG").is_some() && (17000..=27000).contains(&simstep) && simstep % 1000 == 0 {
             let inf = ego.get_influencer_2();
             let lcm = ego.get_lane_change_model_2();
             let lf = &ego.myLFLinkLanes;
@@ -380,11 +380,14 @@ impl MSDevice_Bluelight {
             )).collect::<Vec<_>>());
             let conts = ego.get_best_lanes_continuation().iter().map(|l| l.get_id().to_string()).collect::<Vec<_>>();
             let succ = ego.succ_edge(1);
-            eprintln!("OC102 t={} lane={} pos={:.3} speed={:.3} inflNull={} lcState={} lcManeuver={:.3} lfCount={} lfLane={:?} lf1={:?} conts={:?} curr={} succ1={} bestIdx={} best0={:?}",
-                simstep, ego.get_lane().get_id(), ego.get_position_on_lane(), ego.get_speed(),
-                inf.is_null(), lcm.get_own_state(), lcm.get_maneuver_dist(), lf.len(), lf0, lf1, conts,
-                ego.myCurrEdge, if succ.is_null() { "NULL".to_string() } else { succ.get_id().to_string() },
-                ego.myCurrentLaneInBestLanes, best0);
+            let shadow = lcm.get_shadow_lane();
+            let target = lcm.get_target_lane();
+            eprintln!("OC102 t={} lane={} posLat={:.3} speed={:.3} lcChanging={} completion={:.3} lcDir={} shadow={} target={} lfCount={} lfLane={:?} conts={:?} bestIdx={}",
+                simstep, ego.get_lane().get_id(), ego.get_lateral_position_on_lane(), ego.get_speed(),
+                lcm.is_changing_lanes(), lcm.myLaneChangeCompletion, lcm.get_lane_change_direction(),
+                if shadow.is_null() { "NULL".to_string() } else { shadow.get_id().to_string() },
+                if target.is_null() { "NULL".to_string() } else { target.get_id().to_string() },
+                lf.len(), lf0, conts, ego.myCurrentLaneInBestLanes);
         }
         // reset all vehicles that were in myInfluencedVehicles in the previous step but not in the current step todo refactor
         for vehID in lastStepInfluencedVehicles.iter().cloned().collect::<Vec<String>>() {
