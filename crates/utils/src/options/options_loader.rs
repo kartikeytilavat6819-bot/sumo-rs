@@ -1,12 +1,31 @@
 //! Port of utils/options/OptionsLoader.{h,cpp}
 //! The xerces SAX callbacks are driven by quick-xml in `parse_file` / `parse_str`.
-// shortcut: parser messages come from quick-xml, so their text differs from xerces
 use super::options_cont::OptionsCont;
 use crate::common::msg_handler::{write_error, write_warning};
 use crate::common::util_exceptions::ProcessError;
 use crate::{write_errorf, write_warningf};
 use quick_xml::events::Event;
 use quick_xml::Reader;
+
+/// Reproduce the xerces UTF-8 diagnostic for the first invalid byte (SUMO meta/umlaut).
+fn xerces_utf8_error(bytes: &[u8], e: &std::str::Utf8Error) -> (String, u64) {
+    let pos = e.valid_up_to();
+    let lead = bytes.get(pos).copied().unwrap_or(0);
+    let expected = if lead >= 0xF0 { 4 } else if lead >= 0xE0 { 3 } else if lead >= 0xC0 { 2 } else { 1 };
+    let mut at = 1;
+    while at < expected {
+        let b = bytes.get(pos + at).copied().unwrap_or(0);
+        if b & 0xC0 != 0x80 {
+            break;
+        }
+        at += 1;
+    }
+    let bad = bytes.get(pos + at).copied().unwrap_or(0) as char;
+    let msg = format!("invalid byte '{}' at position {} of a {}-byte sequence", bad, at + 1, expected);
+    // xerces reports the offending line 0-based; error() prints line + 1.
+    let line = bytes[..pos.min(bytes.len())].iter().filter(|&&b| b == b'\n').count() as u64;
+    (msg, line.saturating_sub(1))
+}
 
 pub struct OptionsLoader {
     root_only: bool,
@@ -120,7 +139,15 @@ impl OptionsLoader {
     /// Err only for files that cannot be read (xerces XMLException).
     pub fn parse_file(&mut self, oc: &mut OptionsCont, path: &str, stop_at_root: bool) -> Result<(), ProcessError> {
         let bytes = std::fs::read(path).map_err(|e| ProcessError::new(e.to_string()))?;
-        self.parse_str(oc, &String::from_utf8_lossy(&bytes), stop_at_root);
+        match std::str::from_utf8(&bytes) {
+            Ok(text) => self.parse_str(oc, text, stop_at_root),
+            Err(e) => {
+                // xerces rejects invalid UTF-8 while quick-xml only sees the lossy
+                // replacement; reproduce the xerces message for the first bad byte.
+                let (msg, line) = xerces_utf8_error(&bytes, &e);
+                self.error(&msg, line, 1);
+            }
+        }
         Ok(())
     }
 
@@ -230,6 +257,27 @@ mod tests {
         let mut l = OptionsLoader::new(false);
         l.parse_str(&mut oc, r#"<c><begin value="1"></c>"#, false);
         assert!(l.error_occurred());
+    }
+
+    #[test]
+    fn xerces_utf8_diagnostic() {
+        // C++ OptionsLoader.cpp:142-147 forwards the xerces SAX message and prints
+        // "(At line/column <0-based+1>/<column>)". meta/umlaut expects this shape.
+        // 'n' 0xF6 't' -> xerces reports the bad continuation byte.
+        let bytes = b"<?xml version=\"1.0\"?>\n<net-file value=\"n\xF6t.net.xml\"/>";
+        let e = std::str::from_utf8(bytes).unwrap_err();
+        let (msg, line) = super::xerces_utf8_error(bytes, &e);
+        assert_eq!(msg, "invalid byte 't' at position 2 of a 4-byte sequence");
+        assert_eq!(line, 0); // error() prints line + 1 == 1 (config line 1 here)
+        // 2-byte and 3-byte leads with a bad continuation at the next position
+        let b2 = b"x\xC3t";
+        let e2 = std::str::from_utf8(b2).unwrap_err();
+        assert_eq!(super::xerces_utf8_error(b2, &e2).0,
+                   "invalid byte 't' at position 2 of a 2-byte sequence");
+        let b3 = b"x\xE2\x82t";
+        let e3 = std::str::from_utf8(b3).unwrap_err();
+        assert_eq!(super::xerces_utf8_error(b3, &e3).0,
+                   "invalid byte 't' at position 3 of a 3-byte sequence");
     }
 
     #[test]
