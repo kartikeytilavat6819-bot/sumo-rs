@@ -13850,6 +13850,9 @@ impl MSVehicle {
                 }
             }
             let linkP: Ptr<MSLink> = linkLane.get_link_cont()[link];
+            if self.get_id() == "ES1" && t >= 94000 && t <= 100000 {
+                eprintln!("OC102L t={} lane={} linkLane={} seen={:.2} speed={:.2} v={:.2} haveRed={} haveYellow={} prio={} laneEnd={} link={}", t, lane.get_id(), linkLane.get_id(), seen, self.get_speed(), v, linkP.have_red(), linkP.have_yellow(), linkP.have_priority(), lane.is_link_end(&mut link), linkP.get_via_lane_or_lane().get_id());
+            }
             lateralShift += linkP.get_lateral_shift();
             let yellowOrRed = linkP.have_red() || linkP.have_yellow();
             // We distinguish 3 cases when determining the point at which a vehicle stops:
