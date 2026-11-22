@@ -81,3 +81,16 @@ PY
     python tools/oracle/compare_xml.py "$D/ref.$suf.xml" "$f" 2>&1 | head -12
   done
 done
+
+echo "===== BT ZERO-RP SUMMARY (ours) ====="
+grep '^OC95BT SEEN' /tmp/oc95/out_bt/sumo.log 2>/dev/null | awk '$NF=="rps=0"' | head -60
+echo "===== BT ZERO-RP SUMMARY (ref) ====="
+python - <<'PY'
+import xml.etree.ElementTree as ET
+r=ET.parse('tools/oracle/cases/out_bt/ref.bt.xml').getroot()
+for bt in r.findall('bt'):
+ for s in bt.findall('seen'):
+  if len(s.findall('recognitionPoint'))==0:
+   print('bt=',bt.get('id'),'seen=',s.get('id'),'tBeg=',s.get('tBeg'))
+PY
+echo "AGENT RUN DONE"
