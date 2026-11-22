@@ -10,7 +10,7 @@ OURS="${CARGO_TARGET_DIR:-target}/debug/sumo"
 for c in $(cat .oc_haiku_rows.txt); do
   d="$ROOT/tools/oracle/cases/$c"
   [ -d "$d" ] || { echo "== $c: missing case dir"; continue; }
-  mapfile -t EXTRA < <(python -c 'import shlex,sys; print("\n".join(shlex.split(open(sys.argv[1]).read())))' "$d/sim.args" 2>/dev/null)
+  mapfile -t EXTRA < <(python -c 'import shlex,sys; print("\n".join(a.replace(sys.argv[2], "") for a in shlex.split(open(sys.argv[1]).read())))' "$d/sim.args" "tools/oracle/cases/$c/" 2>/dev/null)
   for side in off ours; do
     bin=$OFF; [ $side = ours ] && bin=$OURS
     rdir="$OUT/$c.$side"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
