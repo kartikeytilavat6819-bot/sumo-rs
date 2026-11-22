@@ -9,7 +9,7 @@ OURS="${CARGO_TARGET_DIR:-target}/debug/sumo"
 for c in $(cat .oc_haiku_rows.txt); do
   d="tools/oracle/cases/$c"
   [ -d "$d" ] || { echo "== $c: missing case dir"; continue; }
-  EXTRA=""; [ -f "$d/sim.args" ] && EXTRA=$(tr -d '\r' < "$d/sim.args")
+  EXTRA=""; [ -f "$d/sim.args" ] && EXTRA=$(tr -d '\r' < "$d/sim.args" | sed "s#tools/oracle#$ROOT/tools/oracle#g")
   for side in off ours; do
     bin=$OFF; [ $side = ours ] && bin=$OURS
     rdir="$OUT/$c.$side"; rm -rf "$rdir"; mkdir -p "$rdir"
