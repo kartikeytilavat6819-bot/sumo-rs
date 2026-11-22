@@ -1,2 +1,0 @@
-official netconvert 1.28.0 exits non-zero (expected-error TextTest row)
-Official expectation: netconvert/errors/false_plain_output/{errors,output}.netconvert

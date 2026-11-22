@@ -1,0 +1,1 @@
+--no-duration-log -a tools/oracle/cases/tt_meta_option_list/input_additional.add.xml,tools/oracle/cases/tt_meta_option_list/input_additional2.add.xml

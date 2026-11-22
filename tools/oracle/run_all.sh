@@ -120,6 +120,11 @@ for dir in tools/oracle/cases/*/; do
   # errors.sumo / output.sumo), not against tripinfo/fcd/statistic. Streams are compared
   # separately, each in order, exactly like texttest. Cases without EXPECT_EXIT are unaffected.
   if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ]; then
+    # netconvert error rows carry net.args, not sim.args/ref_simple.net.xml; they are
+    # scored by the netconvert ITT oracle, not by this SUMO-based error stage.
+    if [ -f "$dir/net.args" ] && [ ! -f "$dir/sim.args" ]; then
+      line "$c" err SKIP "netconvert error row (net.args)"; SKIP=$((SKIP+1)); continue
+    fi
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
         --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
@@ -147,6 +152,58 @@ for dir in tools/oracle/cases/*/; do
     else
       line "$c" err "FAIL $detail"; FAIL=$((FAIL+1))
     fi
+    continue
+  fi
+  # --- config-output stage (oc110): cases that only write a configuration/template/schema and
+  # exit before producing sim outputs. The save-* option value is redirected to a scratch file;
+  # compare the written XML with the official binary's ref.cfg (comments/timestamps ignored).
+  # Cases without EXPECT_CONFIG are unaffected.
+  if [ -f "$dir/EXPECT_CONFIG" ] && [ -f "$dir/ref.cfg" ]; then
+    # Keep the config path relative to the repo root: when it is absolute, SUMO's
+    # fix_relative() rewrites the net/route paths into machine-specific paths and
+    # the committed ref can never match on a different checkout.
+    CFG="cfgout_$c.cfg"
+    EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
+    ARGS=$(printf '%s\n' "$EXTRA" | sed -E \
+      -e "s#(--save-(configuration|template|schema)|-C)[[:space:]]+[^[:space:]]+#\1 $CFG#g" \
+      -e "s#(--save-(configuration|template|schema)|-C)=[^[:space:]]+#\1=$CFG#g")
+    rm -f "$CFG"
+    timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+        --no-step-log true $ARGS >"$OUT/$c.cfg.out" 2>"$OUT/$c.cfg.err"
+    rc=$?
+    if [ $rc -eq 124 ]; then line "$c" cfg-TIMEOUT "no exit after ${SIM_TIMEOUT:-600}s"; FAIL=$((FAIL+1)); continue; fi
+    if [ $rc -ne 0 ]; then
+      line "$c" cfg-PANIC "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.cfg.err" | cut -c1-90)"; FAIL=$((FAIL+1)); continue
+    fi
+    if [ ! -f "$CFG" ]; then line "$c" cfg FAIL "no configuration written"; FAIL=$((FAIL+1)); continue; fi
+    if python tools/oracle/compare_xml.py "$dir/ref.cfg" "$CFG" >"$OUT/$c.cfg.diff" 2>&1; then
+      line "$c" cfg PASS; PASS=$((PASS+1))
+    else
+      line "$c" cfg FAIL "$(head -2 "$OUT/$c.cfg.diff" | tr '\n' ' ' | cut -c1-150)"; FAIL=$((FAIL+1))
+    fi
+    rm -f "$CFG"
+    continue
+  fi
+  # --- stdout stage (oc110): text-only cases (--help / --version / no options) that print and
+  # exit 0 without producing sim outputs. Compare normalised stdout (and stderr) like texttest.
+  # Cases without EXPECT_OUTPUT are unaffected.
+  if [ -f "$dir/EXPECT_OUTPUT" ] && [ -f "$dir/ref.output" ]; then
+    EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
+    timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" $EXTRA >"$OUT/$c.out" 2>"$OUT/$c.out.err"
+    rc=$?
+    if [ $rc -eq 124 ]; then line "$c" out-TIMEOUT "no exit after ${SIM_TIMEOUT:-600}s"; FAIL=$((FAIL+1)); continue; fi
+    if [ $rc -ne 0 ]; then line "$c" out-PANIC "exit $rc"; FAIL=$((FAIL+1)); continue; fi
+    r="PASS"; detail=""
+    if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.output" "$OUT/$c.out" >"$OUT/$c.out.diff" 2>&1; then
+      r="FAIL"; detail="stdout: $(head -2 "$OUT/$c.out.diff" | tr '\n' ' ' | cut -c1-150)"
+    fi
+    if [ -f "$dir/ref.errors" ]; then
+      if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.errors" "$OUT/$c.out.err" >"$OUT/$c.out.err.diff" 2>&1; then
+        r="FAIL"; [ -z "$detail" ] && detail="stderr: $(head -2 "$OUT/$c.out.err.diff" | tr '\n' ' ' | cut -c1-150)"
+      fi
+    fi
+    if [ "$r" = "PASS" ]; then line "$c" out PASS; PASS=$((PASS+1))
+    else line "$c" out FAIL "$detail"; FAIL=$((FAIL+1)); fi
     continue
   fi
   # --- sim stage; one run per committed reference variant (ref.*, ref_<v>.*)

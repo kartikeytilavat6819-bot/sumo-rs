@@ -187,6 +187,35 @@ mod tests {
     }
 
     #[test]
+    fn meta_option_forms() {
+        let setup = |oc: &mut OptionsCont| {
+            oc.do_register_abbr("additional-files", 'a', crate::options::option::SumoOption::file_name());
+            oc.do_register_abbr("save-configuration", 'C', crate::options::option::SumoOption::file_name());
+        };
+        // meta/option_list_equal_sign: -a=FILE (short option with '=')
+        let mut oc = sample();
+        setup(&mut oc);
+        assert!(parse_with(&mut oc, &args(&["-a=a1.xml,a2.xml"]), false));
+        assert_eq!(oc.get_string("additional-files").unwrap(), "a1.xml,a2.xml");
+        // meta/option_list_append: +a appends to an existing list
+        let mut oc = sample();
+        setup(&mut oc);
+        assert!(parse_with(&mut oc, &args(&["-a", "a1.xml"]), false));
+        oc.reset_writable(); // the real parser resets between config and command line
+        assert!(parse_with(&mut oc, &args(&["+a", "a2.xml"]), false));
+        assert_eq!(oc.get_string("additional-files").unwrap(), "a1.xml,a2.xml");
+        // meta config-writing forms: --save-configuration=FILE, -C FILE (alias)
+        let mut oc = sample();
+        setup(&mut oc);
+        assert!(parse_with(&mut oc, &args(&["--save-configuration=cfg.xml"]), false));
+        assert_eq!(oc.get_string("save-configuration").unwrap(), "cfg.xml");
+        let mut oc = sample();
+        setup(&mut oc);
+        assert!(parse_with(&mut oc, &args(&["-C", "cfg.xml"]), false));
+        assert_eq!(oc.get_string("save-configuration").unwrap(), "cfg.xml");
+    }
+
+    #[test]
     fn errors() {
         let mut oc = sample();
         assert!(!parse_with(&mut oc, &args(&["free"]), false));

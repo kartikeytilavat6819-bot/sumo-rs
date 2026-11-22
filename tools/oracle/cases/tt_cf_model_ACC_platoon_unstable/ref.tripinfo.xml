@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-21T16:48:51.869722-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_cf_model_ACC_platoon_unstable/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_cf_model_ACC_platoon_unstable/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_cf_model_ACC_platoon_unstable/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc107/tools/oracle/cases/tt_cf_model_ACC_platoon_unstable/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc107/tools/oracle/cases/tt_cf_model_ACC_platoon_unstable/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc107/tools/oracle/cases/tt_cf_model_ACC_platoon_unstable/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="flow.8" depart="17.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="411.60" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="40.00" duration="394.60" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.46" rerouteNo="0" devices="tripinfo_flow.8 fcd_flow.8" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.7" depart="15.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="581.70" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="40.00" duration="566.70" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="127.09" rerouteNo="0" devices="tripinfo_flow.7 fcd_flow.7" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.6" depart="13.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="633.00" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="18.13" duration="620.00" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="179.29" rerouteNo="0" devices="tripinfo_flow.6 fcd_flow.6" vType="unstable" speedFactor="1.00" vaporized="teleport"/>
+    <tripinfo id="first" depart="0.00" departLane="0_0" departPos="5.10" departSpeed="29.50" departDelay="0.00" arrival="707.30" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="29.50" duration="707.30" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_first fcd_first" vType="leader4" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.0" depart="1.10" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.10" arrival="708.50" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="32.62" duration="707.40" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="207.45" rerouteNo="0" devices="tripinfo_flow.0 fcd_flow.0" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.1" depart="3.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="709.70" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="32.88" duration="706.70" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="206.78" rerouteNo="0" devices="tripinfo_flow.1 fcd_flow.1" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.2" depart="5.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="710.90" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="32.98" duration="705.90" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="206.02" rerouteNo="0" devices="tripinfo_flow.2 fcd_flow.2" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.3" depart="7.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="712.20" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="33.32" duration="705.20" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="205.27" rerouteNo="0" devices="tripinfo_flow.3 fcd_flow.3" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.4" depart="9.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="713.40" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="33.18" duration="704.40" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="204.53" rerouteNo="0" devices="tripinfo_flow.4 fcd_flow.4" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.5" depart="11.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="714.80" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="33.08" duration="703.80" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="203.85" rerouteNo="0" devices="tripinfo_flow.5 fcd_flow.5" vType="unstable" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.9" depart="19.00" departLane="0_0" departPos="5.10" departSpeed="25.50" departDelay="0.00" arrival="716.10" arrivalLane="3_0" arrivalPos="5000.00" arrivalSpeed="30.63" duration="697.10" routeLength="19994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="197.18" rerouteNo="0" devices="tripinfo_flow.9 fcd_flow.9" vType="unstable" speedFactor="1.00" vaporized=""/>
+</tripinfos>
