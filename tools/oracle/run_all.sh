@@ -145,7 +145,7 @@ for dir in tools/oracle/cases/*/; do
     if [ "$r" = "PASS" ]; then
       line "$c" err PASS; PASS=$((PASS+1))
     else
-      line "$c" err FAIL "$detail"; FAIL=$((FAIL+1))
+      line "$c" err "FAIL $detail"; FAIL=$((FAIL+1))
     fi
     continue
   fi

@@ -1,0 +1,2 @@
+official netconvert 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: netconvert/function/keep_edges_boundary/_deprecated_/{errors,output}.netconvert

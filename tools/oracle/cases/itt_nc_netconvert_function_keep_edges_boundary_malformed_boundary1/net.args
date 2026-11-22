@@ -1,0 +1,1 @@
+--write-license --no-internal-links -v --keep-edges.in-boundary -1000,-1000 --edge-files=tools/oracle/cases/itt_nc_netconvert_function_keep_edges_boundary_malformed_boundary1/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_keep_edges_boundary_malformed_boundary1/input_nodes.nod.xml

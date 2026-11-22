@@ -1152,9 +1152,6 @@ impl NBPTLineCont {
             currentWayEdges.clear();
             currentWayMinusEdges.clear();
         }
-        if edges.is_empty() && !currentWayMinusEdges.is_empty() {
-            edges = currentWayMinusEdges.clone();
-        }
         myPTLine.m().set_edges(&edges);
     }
 

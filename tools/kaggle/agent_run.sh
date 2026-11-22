@@ -1,4 +1,3 @@
-#!/bin/bash
 # oc110: measure meta stages: ours vs official 1.28.0 (normalised where texttest does)
 set -u
 OUT=/tmp/oc110
