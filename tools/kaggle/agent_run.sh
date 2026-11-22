@@ -8,7 +8,7 @@ BIN="${CARGO_TARGET_DIR:-/tmp/sumo-rs-target}/debug"
 OUT="/tmp/oc97-fcd-$$"
 mkdir -p "$OUT"
 trace() {
-  c="$1"; vid="$2"; scope="$3"
+  c="$1"; vid="$2"; scope="$3"; foe="${4:-}"
   dir="tools/oracle/cases/$c/"
   echo "=== $c (vehicle $vid) ==="
   EXTRA=""
@@ -27,19 +27,20 @@ trace() {
     echo "  run $side rc=$?"
   done
   echo "  --- posLat cpp | ours ---"
-  python - "$OUT/$c.cpp.xml" "$OUT/$c.ours.xml" "$vid" <<'PY'
+  python - "$OUT/$c.cpp.xml" "$OUT/$c.ours.xml" "$vid" "$foe" <<'PY'
 import re, sys
-cpp, ours, vid = sys.argv[1:4]
+cpp, ours, vid, foe = sys.argv[1:5]
 needle = 'id="%s"' % vid
 
-def extract(path):
+def extract(path, vehicle=None):
+    id_needle = 'id="%s"' % vehicle if vehicle else needle
     out, t = {}, None
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
             m = re.search(r'<timestep\s+time="([^"]+)"', line)
             if m:
                 t = round(float(m.group(1)), 2)
-            if '<vehicle' in line and needle in line:
+            if '<vehicle' in line and id_needle in line:
                 p = re.search(r'posLat="([^"]+)"', line)
                 al = re.search(r'accelerationLat="([^"]+)"', line)
                 v = re.search(r'speed="([^"]+)"', line)
@@ -48,6 +49,16 @@ def extract(path):
     return out
 
 a, b = extract(cpp), extract(ours)
+if foe:
+    af, bf = extract(cpp, foe), extract(ours, foe)
+    for t in sorted(set(af) | set(bf)):
+        if not (411.5 <= t <= 417.5):
+            continue
+        x, y = af.get(t), bf.get(t)
+        if x != y:
+            fmt = lambda q: ("%.4f/%.3f/%.2f" % q) if q is not None else "-"
+            print("  FOE %s t=%6.2f cpp=%s ours=%s <-- DIFF" % (foe, t, fmt(x), fmt(y)))
+    print("  FOE %s last: cpp=%s ours=%s" % (foe, sorted(af.items())[-1:] if af else "-", sorted(bf.items())[-1:] if bf else "-"))
 for t in sorted(set(a) | set(b)):
     if not (137.5 <= t <= 145.5 or 411.5 <= t <= 417.5):
         continue
@@ -62,4 +73,4 @@ PY
 
 trace tt_sublane_model_junction_indirect_left_moped                       flow_0.15 sub
 trace tt_sublane_model_junction_turnAlignment_moped_indirect_left         flow_0.16 sub
-trace tt_junction_model_indirect_left_turn_internal_junction_controlled_moped flow_0.52 jun
+trace tt_junction_model_indirect_left_turn_internal_junction_controlled_moped flow_0.52 jun flow_2.30
