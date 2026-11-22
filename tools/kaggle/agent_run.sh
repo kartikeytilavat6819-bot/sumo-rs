@@ -3,7 +3,7 @@
 OURS=${OURS:-/tmp/target/debug/sumo}
 OUT=/tmp/oc104_fcd
 mkdir -p $OUT
-for C in tools/oracle/cases/tt_devices_fcd-replay_plain tools/oracle/cases/tt_devices_fcd-replay_minimal tools/oracle/cases/tt_devices_fcd-replay_persons; do
+for C in tools/oracle/cases/tt_devices_fcd-replay_plain tools/oracle/cases/tt_devices_fcd-replay_minimal tools/oracle/cases/tt_devices_fcd-replay_persons tools/oracle/cases/tt_devices_fcd-replay_persons_offnet; do
   NAME=$(basename $C)
   EXTRA=$(cat $C/sim.args)
   echo "################ $NAME"
