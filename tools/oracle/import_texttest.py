@@ -417,10 +417,9 @@ def import_one(source, tests_sumo, force=False, include_errors=False):
             join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
     empty_route = False
     if not route_path:
-        if kept_additions:
-            empty_route = True
-        else:
-            return None, "no route input"
+        # Many meta/rail tests only check non-traffic output; the harness still
+        # needs a routes file, so supply an empty one (as for additionals-only tests).
+        empty_route = True
 
     # File-valued behaviour options (e.g. --weight-files): copy their inputs
     # and rewrite the option value to a repo-relative path, since run_all and
