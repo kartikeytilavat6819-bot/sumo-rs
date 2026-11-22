@@ -369,28 +369,10 @@ impl MSDevice_Bluelight {
             }
         }
         // reset all vehicles that were in myInfluencedVehicles in the previous step but not in the current step todo refactor
-        if std::env::var_os("OC102_DEBUG").is_some() {
-            let inf = ego.get_influencer_2();
-            let (prio, redBrake) = if inf.is_null() { (true, true) } else { (inf.get_respect_junction_priority(), inf.get_emergency_brake_red_light()) };
-            let lcm = ego.get_lane_change_model_2();
-            let lf = &ego.myLFLinkLanes;
-            let lf0 = lf.first().map(|d| (d.myLink.get_lane().get_id(), format!("{:?}", d.myLink.get_state()), d.myDistance, d.myVLinkPass, d.myVLinkWait));
-            eprintln!("OC102 t={} egoLane={} egoEdge={} egoPos={:.3} egoSpeed={:.3} inflNull={} prio={} redBrake={} lcState={} lcManeuver={:.3} lfCount={} lf0={:?} upcomingEdges={:?} influenced={:?} toReset={:?}",
-                simstep, ego.get_lane().get_id(), ego.get_lane().get_edge().get_id(),
-                ego.get_position_on_lane(), ego.get_speed(),
-                inf.is_null(), prio, redBrake, lcm.get_own_state(), lcm.get_maneuver_dist(), lf.len(), lf0,
-                upcomingEdges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>(),
-                self.myInfluencedVehicles.iter().cloned().collect::<Vec<_>>(),
-                lastStepInfluencedVehicles.iter().cloned().collect::<Vec<_>>());
-        }
         for vehID in lastStepInfluencedVehicles.iter().cloned().collect::<Vec<String>>() {
             self.myInfluencedVehicles.remove(&vehID);
             let it = self.myInfluencedTypes.get(&vehID).cloned();
             let veh2 = vc.get_vehicle(&vehID).cast::<MSVehicle>();
-            if std::env::var_os("OC102_DEBUG").is_some() {
-                eprintln!("OC102  reset {} target={:?} vehNull={} type={}",
-                    vehID, it, veh2.is_null(), if veh2.is_null() { "-".into() } else { veh2.get_vehicle_type().get_id().to_string() });
-            }
             if !veh2.is_null() {
                 if let Some(targetType) = it {
                     // The vehicle gets back its old VehicleType after the emergency vehicle have passed them
@@ -449,10 +431,6 @@ impl MSDevice_Bluelight {
                     };
                     // todo works only for one second steps
                     if veh2.is_action_step(simstep) && reaction < reactionProb * veh2.get_action_step_length_secs() {
-                        if std::env::var_os("OC102_DEBUG").is_some() {
-                            eprintln!("OC102  influence t={} {} lane={} type={} reaction={:.4} prob={:.4}",
-                                simstep, veh2.get_id(), veh2.get_lane().get_id(), veh2.get_vehicle_type().get_id(), reaction, reactionProb);
-                        }
                         self.myInfluencedVehicles.insert(veh2.get_id().to_string());
                         // std::map::insert keeps an existing entry
                         self.myInfluencedTypes.entry(veh2.get_id().to_string()).or_insert(veh2.get_vehicle_type().get_id().to_string());
@@ -724,10 +702,6 @@ impl MSDevice_Bluelight {
                 influencedBy.remove(pos);
                 // C++ const_cast<SUMOVehicleParameter&>(veh2->getParameter()).setParameter(...)
                 veh2.m().get_parameter_mutable().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
-            }
-            if std::env::var_os("OC102_DEBUG").is_some() {
-                eprintln!("OC102  resetVehicle {} target={} typeNull={} influencedBy={:?} holder={} -> replace={}",
-                    veh2.get_id(), targetTypeID, targetType.is_null(), influencedBy, holderID, influencedBy.is_empty());
             }
             if influencedBy.is_empty() {
                 veh2.m().replace_vehicle_type(targetType);
