@@ -580,6 +580,11 @@ mod tests {
         assert_eq!(get_vehicle_class_names(SVC_PRIVATE, false), "private");
         assert_eq!(get_vehicle_class_id("transport").unwrap(), SVC_TRUCK);
         assert_eq!(get_vehicle_class_id("x").unwrap_err().to_string(), "Unknown vehicle class 'x'.");
+        // TextTest row netconvert/import/dlr_navteq/vclass/*/_deprecated_/* uses ';' as the
+        // --remove-edges.by-vclass separator; the single token is an unknown class. C++
+        // errors with exactly this text before netconvert writes "Quitting (on error).".
+        assert_eq!(get_vehicle_class_id("pedestrian;bicycle").unwrap_err().to_string(),
+                   "Unknown vehicle class 'pedestrian;bicycle'.");
         assert_eq!(get_vehicle_shape_name(SUMOVehicleShape::Truck), "truck");
         assert_eq!(get_vehicle_shape_id("rail/city").unwrap(), SUMOVehicleShape::RailCar);
     }
