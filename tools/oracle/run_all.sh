@@ -120,9 +120,17 @@ for dir in tools/oracle/cases/*/; do
   # errors.sumo / output.sumo), not against tripinfo/fcd/statistic. Streams are compared
   # separately, each in order, exactly like texttest. Cases without EXPECT_EXIT are unaffected.
   if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ]; then
-    EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
-    timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
+    # oc105 records which binary the official TextTest row used in EXPECT_EXIT's first line;
+    # netconvert rows have no sumo net/routes at all, so they need net.args instead.
+    if grep -qi netconvert "$dir/EXPECT_EXIT"; then
+      EXTRA=""; [ -f "$dir/net.args" ] && EXTRA=$(cat "$dir/net.args")
+      timeout "${SIM_TIMEOUT:-600}" "$BIN/netconvert.exe" $EXTRA \
+          >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
+    else
+      EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
+      timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+          --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
+    fi
     rc=$?
     if [ $rc -eq 124 ]; then
       line "$c" err-TIMEOUT "no exit after ${SIM_TIMEOUT:-600}s"; FAIL=$((FAIL+1)); continue
