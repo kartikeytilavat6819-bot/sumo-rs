@@ -17,8 +17,8 @@ OC102_DEBUG=1 timeout 600 "$BIN" -n "$CASE/ref_simple.net.xml" -r "$CASE/routes.
     --tripinfo-output "$OUT/ours.ti.xml" --fcd-output "$CAND" \
     --statistic-output "$OUT/ours.stat.xml" --no-step-log true $EXTRA \
     >"$OUT/ours.log" 2>&1
-echo "sumo rc=$? ; OC102 trace:"
-grep 'OC102' "$OUT/ours.log" 2>/dev/null | tail -80 || true
+echo "sumo rc=$? ; OC102 trace (t=12..27, raw steps 12000..27000):"
+grep -E 'OC102 t=(1[2-9]|2[0-7])000 |OC102  (reset|influence|resetVehicle)' "$OUT/ours.log" 2>/dev/null || true
 
 PY=python3; command -v python3 >/dev/null || PY=python
 "$PY" - "$REF" "$CAND" <<'PYEOF'
