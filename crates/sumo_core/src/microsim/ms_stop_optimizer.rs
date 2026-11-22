@@ -279,7 +279,7 @@ impl MSStopOptimizer {
         while let Some(ptr) = queue.pop() {
             dbg_iter += 1;
             if std::env::var("OC98DBG").is_ok() && dbg_iter % 10000 == 0 {
-                eprintln!("OC98DBG skipopt iter={} qSize={}", dbg_iter, queue.len());
+                eprintln!("OC98DBG skipopt iter={}", dbg_iter);
             }
             let succ = MSStopOptimizer_StopPathNode::get_successor(&ptr, &*stops, minSkipped);
             if bestNode.borrow().lt_op(&ptr.borrow()) {
