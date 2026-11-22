@@ -1734,3 +1734,25 @@ impl NBFrame {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use utils::options::option::SumoOption;
+
+    #[test]
+    fn stop_turn_default_without_sumo_net_file() {
+        // v1_28_0 NBFrame.cpp:857-858 sets railway.topology.repair.stop-turn to true
+        // whenever railway.topology.repair is still default; the dev snapshot added
+        // an extra --sumo-net-file requirement. With a plain edge/node import (no
+        // sumo-net-file) the old code left the default false, so this assertion
+        // would have failed before the fix.
+        let mut oc = OptionsCont::new();
+        NBFrame::fill_options(&mut oc, false);
+        // Options normally registered by other frames that check_options also reads.
+        oc.do_register("default.lanenumber", SumoOption::integer(1));
+        oc.do_register("default.junctions.type", SumoOption::string_with(""));
+        NBFrame::check_options(&mut oc);
+        assert_eq!(oc.get_value_string("railway.topology.repair.stop-turn").unwrap(), "true");
+    }
+}
+
