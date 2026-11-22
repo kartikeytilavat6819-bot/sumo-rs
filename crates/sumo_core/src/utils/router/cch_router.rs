@@ -398,6 +398,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) {
+        crate::microsim::oc93_probe::hit(18);
         self.myProhibited = toProhibit.clone();
         self.myProhibitionActive = !toProhibit.is_empty();
         self.myFallback.m().prohibit(toProhibit);

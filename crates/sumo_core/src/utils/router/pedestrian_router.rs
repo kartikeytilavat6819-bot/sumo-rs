@@ -213,6 +213,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &BTreeMap<Ptr<E>, RouterProhibition>) {
+        crate::microsim::oc93_probe::hit(20);
         let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
         for (edge, prohibition) in toProhibit {
             let dirs = self.myPedNet.get_both_directions(*edge);

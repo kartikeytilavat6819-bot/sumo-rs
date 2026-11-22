@@ -384,6 +384,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &IntermodalRouter__Prohibitions) {
+        crate::microsim::oc93_probe::hit(19);
         self.create_net();
         let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
         for (edge, prohibition) in toProhibit {
