@@ -6,7 +6,7 @@
 OUT=/tmp/oc104; mkdir -p "$OUT"
 ROOT=$(pwd)
 OFF="${SUMO_PRISTINE_BIN:?}/sumo"
-OURS="${CARGO_TARGET_DIR:-target}/debug/sumo"
+OURS=$(readlink -f "${CARGO_TARGET_DIR:-target}/debug/sumo")  # absolute: runs happen inside case copies
 ROWS="
 tt_devices_rerouting_assignment_taz_astar_landmark
 tt_devices_rerouting_assignment_taz_astar_landmark_empty
