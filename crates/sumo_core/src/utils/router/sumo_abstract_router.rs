@@ -1077,6 +1077,31 @@ mod tests {
         assert!(!router.compute(ptrs[3], ptrs[0], Ptr::null(), 0, &mut none, true));
         assert!(none.is_empty());
     }
+
+    /// A closing with a finite end is temporary: the router may still use the edge
+    /// (paying the wait), while `end == MAX` is a hard prohibition. This is the
+    /// distinction the closingReroute `until` cases depend on.
+    #[test]
+    fn finite_prohibition_is_temporary() {
+        let a = edge("A", 0, 10.);
+        let a = Ptr::from_box(a);
+        let op: SUMOAbstractRouter_TypedOperation<TestEdge, TestVeh> = length_effort;
+        let edges = vec![a];
+        let mut router = DijkstraRouter::new(&edges, true, Some(op), None, true, Ptr::null(), false, false);
+        let veh = Ptr::from_box(Box::new(TestVeh));
+
+        let mut prohibitions = SUMOAbstractRouter_Prohibitions::new();
+        prohibitions.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: 200., permissions: SVC_RAIL });
+        router.prohibit(&prohibitions);
+        assert!(!router.is_prohibited(a, veh, 0.));
+        assert_eq!(router.get_effort(a, veh, 0.), 200. + 10.);
+
+        let mut permanent = SUMOAbstractRouter_Prohibitions::new();
+        permanent.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: f64::MAX, permissions: SVC_RAIL });
+        router.prohibit(&permanent);
+        assert!(router.is_prohibited(a, veh, 0.));
+        assert_eq!(router.get_effort(a, veh, 0.), 10.);
+    }
 }
 
 
