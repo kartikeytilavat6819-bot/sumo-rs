@@ -828,6 +828,23 @@ mod tests {
         assert_eq!(types["left.0"], "car");
     }
 
+    // C++ MSDevice_Bluelight.cpp:208-212 sets the ego's speedTimeLine to
+    // (now, currentSpeed) -> (now + TIME2STEPS(2), JM_DRIVE_RED_SPEED=5.56).
+    // MSVehicle::Influencer::influenceSpeed (MSVehicle.cpp:493-520) advances
+    // currentTime by DELTA_T and interpolates; with both endpoints 5.56 the
+    // rescue holds 5.56 m/s rather than decelerating.
+    #[test]
+    fn red_speed_timeline_holds_5_56() {
+        let mut inf = MSVehicle_Influencer::new();
+        inf.set_speed_time_line(&vec![(10_000, 5.56), (12_000, 5.56)]);
+        let out = inf.influence_speed(10_000, 8.0, 100.0, 0.0, 100.0);
+        assert!((out - 5.56).abs() < 1e-9, "got {out}");
+        // a real slowdown endpoint interpolates halfway at the issuing step
+        inf.set_speed_time_line(&vec![(10_000, 8.0), (12_000, 5.56)]);
+        let out = inf.influence_speed(10_000, 8.0, 100.0, 0.0, 100.0);
+        assert!((out - 6.78).abs() < 1e-9, "got {out}");
+    }
+
     // C++ MSBaseVehicle::getSingularType builds the id "<vtype>@<vehicle id>";
     // MSDevice_Bluelight calls it on influenced vehicles to set the rescue-lane
     // alignment, producing ids like "car@straight.4".
