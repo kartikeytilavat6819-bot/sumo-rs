@@ -646,7 +646,12 @@ impl MSTriggeredRerouter {
         let tObject = veh;
         let net = MSNet::get_instance();
         if tObject.get_id() == "reroute_period" {
-            eprintln!("OC108_RR enter reason={:?} applies={} haveUntil={} mode={} ignore={}", reason as i32, self.applies(tObject), self.myHaveClosingUntil, tObject.get_routing_mode(), tObject.ignore_transient_permissions());
+            let now = MSNet::get_instance().get_current_time_step();
+            let rd = self.get_current_reroute(now, tObject);
+            let devNull = if tObject.is_vehicle() {
+                Ptr::from_mut(tObject).cast::<crate::microsim::ms_base_vehicle::MSBaseVehicle>().get_device("rerouting").is_null()
+            } else { true };
+            eprintln!("OC108_RR enter reason={} applies={} haveUntil={} mode={} ignore={} now={} rdNull={} devNull={} intervals={}", reason as i32, self.applies(tObject), self.myHaveClosingUntil, tObject.get_routing_mode(), tObject.ignore_transient_permissions(), now, rd.is_null(), devNull, self.myIntervals.len());
         }
         if !self.applies(tObject) {
             return false;
