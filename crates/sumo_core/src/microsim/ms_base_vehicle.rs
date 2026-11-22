@@ -1565,6 +1565,13 @@ impl MSBaseVehicle {
                     if self.myStops[stopIt].pars.priority >= 0.0 && info != "device.rerouting" {
                         // consider skipping this stop if it cannot be reached in a timely manner
                         let arrival = stops[idx].arrival;
+                        if std::env::var("OC98DBG").is_ok() {
+                            let dbg_delay = startTime - arrival;
+                            eprintln!("OC98DBG reroute-stop info={} idx={} edge={} stopPrio={} arrival={} startTime={} delay={} maxDelay={} skip={}",
+                                info, idx, stopEdge.get_id(), self.myStops[stopIt].pars.priority,
+                                arrival, startTime, dbg_delay, maxDelay,
+                                self.myStops[stopIt].pars.priority >= 0.0 && info != "device.rerouting" && arrival > 0 && dbg_delay > 0 && dbg_delay > maxDelay);
+                        }
                         if arrival > 0 {
                             let delay = startTime - arrival;
                             if delay > 0 && delay > maxDelay {
