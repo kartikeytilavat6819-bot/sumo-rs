@@ -59,6 +59,7 @@ EXTRA_INPUT_OPTS = {
     "--device.ssm.filter-edges.input-file",
     "--fcd-output.filter-edges.input-file",
     "--astar.landmark-distances",
+    "--load-state",
 }
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
@@ -103,7 +104,7 @@ SKIP_MARKERS = (
     "--osg-view", "--netedit", "--duarouter", "--jtrrouter", "--marouter",
     "--od2trips", "--activitygen", "--polyconvert", "--java", "--jar",
     "--fmi", "--parquet", "--vtk", "--p2p", "--sumo-gui", "--gcf",
-    "--saved-state.input", "--load-state", "--sumo-state",
+    "--saved-state.input", "--sumo-state",
     # option removed from SUMO: the official binary itself rejects it
     "--meso-lookahead",
 )
@@ -390,7 +391,11 @@ def import_one(source, tests_sumo, force=False):
             join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
     empty_route = False
     if not route_path:
-        if kept_additions:
+        # A state-only run has no -r/--route-files; the harness still passes a
+        # route file, so give it an empty one (same as additions-only tests).
+        has_state = any(t == "--load-state" or t.startswith("--load-state=")
+                        for t in sim)
+        if kept_additions or has_state:
             empty_route = True
         else:
             return None, "no route input"
