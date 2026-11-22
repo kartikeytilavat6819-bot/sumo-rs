@@ -314,7 +314,13 @@ impl NBEdgeCont {
             self.myVehicleClasses2Keep = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("keep-edges.by-vclass").unwrap()).unwrap_or_else(|e| std::panic::panic_any(e));
         }
         if oc.exists("remove-edges.by-vclass") && oc.is_set("remove-edges.by-vclass", true).unwrap() {
-            self.myVehicleClasses2Remove = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("remove-edges.by-vclass").unwrap()).unwrap_or_else(|e| std::panic::panic_any(e));
+            match utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("remove-edges.by-vclass").unwrap()) {
+                Ok(v) => self.myVehicleClasses2Remove = v,
+                Err(e) => {
+                    // C++ propagates InvalidArgument to main's catch(std::exception).
+                    std::panic::panic_any(e);
+                }
+            }
         }
         if oc.exists("keep-edges.by-type") && oc.is_set("keep-edges.by-type", true).unwrap() {
             let types = oc.get_string_vector("keep-edges.by-type").unwrap().clone();
@@ -348,7 +354,13 @@ impl NBEdgeCont {
                 let poly_s = oc.get_string_vector(key).unwrap().clone();
                 let mut poly: Vec<f64> = Vec::new();
                 for i in poly_s.iter() {
-                    poly.push(utils::common::string_utils::to_double(i).unwrap_or_else(|e| std::panic::panic_any(e))); // !!! may throw something anyhow...
+                    match utils::common::string_utils::to_double(i) {
+                        Ok(v) => poly.push(v),
+                        Err(e) => {
+                            // C++ lets NumberFormatException reach main's catch(std::exception).
+                            std::panic::panic_any(e);
+                        }
+                    }
                 }
                 if poly.len() < 4 {
                     std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
