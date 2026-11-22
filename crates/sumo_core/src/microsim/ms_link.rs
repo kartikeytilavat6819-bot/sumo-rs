@@ -4449,4 +4449,17 @@ mod any_vehicles_tests {
         lane.m().myTmpVehicles.push(b);
         assert_eq!(any_vehicles_of(lane), vec![a, b]);
     }
+
+    #[test]
+    fn conflict_info_defaults_follow_cpp() {
+        let ci = MSLink_ConflictInfo::new(7.5, 3.2, MSLink_ConflictFlag::CONFLICT_DEFAULT);
+        assert_eq!(ci.foeConflictIndex, -1);
+        assert_eq!(ci.get_length_behind_crossing(Ptr::null()), 7.5);
+        // no foe conflict index -> -NO_INTERSECTION, size 0
+        assert_eq!(ci.get_foe_length_behind_crossing(Ptr::null()), -MSLink::NO_INTERSECTION);
+        assert_eq!(ci.get_foe_conflict_size(Ptr::null()), 0.);
+        // dummy merge always reports zero foe length
+        let dm = MSLink_ConflictInfo::new(7.5, 3.2, MSLink_ConflictFlag::CONFLICT_DUMMY_MERGE);
+        assert_eq!(dm.get_foe_length_behind_crossing(Ptr::null()), 0.);
+    }
 }
