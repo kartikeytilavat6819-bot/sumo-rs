@@ -475,6 +475,22 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn file_device_buffers_until_close_all() {
+        // C++ OutputDevice::inform buffers file writes; they reach disk only on
+        // OutputDevice::closeAll(true) (MSNet::clearAll, MSNet.cpp:1088).
+        let dir = std::env::temp_dir().join(format!("sumo_rs_msg_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("buffered.log");
+        let name = path.to_string_lossy().to_string();
+        let _ = std::fs::remove_file(&path);
+        get_device(&name).unwrap();
+        device_inform(&name, "hello", false);
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), 0, "file write must be buffered");
+        flush_devices();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello\n");
+    }
+
+    #[test]
     fn prefix_and_aggregation() {
         // a private handler, so the global ones stay untouched by this test
         let cap = Capture::default();
