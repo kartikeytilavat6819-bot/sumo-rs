@@ -121,7 +121,7 @@ pub fn railway_recompute_costs<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAb
 }
 
 /// The `RailwayRouter::prohibit` reached from the base router's prohibit slot (C++ virtual dispatch)
-pub fn railway_prohibit<E: RouterEdge<V>, V>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
+pub fn railway_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
     Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().prohibit(toProhibit)
 }
 
