@@ -121,8 +121,11 @@ pub fn railway_recompute_costs<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAb
 }
 
 /// The `RailwayRouter::prohibit` reached from the base router's prohibit slot (C++ virtual dispatch)
+// The bound must match the impl that defines RailwayRouter::prohibit (V: RouterVehicle). Without it the
+// inherent method is not a candidate, `.prohibit` auto-derefs to the base SUMOAbstractRouter::prohibit,
+// which dispatches back to this hook forever (one get_router_tt -> billions of prohibit calls).
 pub fn railway_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
-    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().prohibit(toProhibit)
+    RailwayRouter::<E, V>::prohibit(Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m(), toProhibit)
 }
 
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
@@ -248,11 +251,6 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
             let edge: Ptr<E> = (*edge).cast();
             // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped>, cast the address until that typedef is generic
             toProhibitRE.insert(edge.railway_routing_edge().cast(), *prohibition);
-        }
-        if std::env::var("OC98DBG").is_ok() {
-            for (_, p) in toProhibitRE.iter() {
-                eprintln!("OC98DBG prohibit railEdge begin={} end={} perms={}", p.begin, p.end, p.permissions);
-            }
         }
         self.myInternalRouter.m().prohibit(&toProhibitRE);
         self.base.myProhibited = toProhibit.clone();
