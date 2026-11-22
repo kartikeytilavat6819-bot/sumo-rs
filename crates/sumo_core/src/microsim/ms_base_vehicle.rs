@@ -1669,8 +1669,10 @@ impl MSBaseVehicle {
         }
         if std::env::var("OC98DBG").is_ok() {
             let ids: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
-            eprintln!("OC98DBG reroute veh={} info={} onInit={} t={} source={} sink={} edges={:?} cost={} prevCost={} savingsOk={} skipped={}",
-                self.get_id(), info, onInit, t, source.get_id(), sink.get_id(), ids, routeCost, previousCost, savingsOk, hasSkipped);
+            eprintln!("OC98DBG reroute veh={} info={} onInit={} t={} source={} sink={} edges={:?} cost={} prevCost={} savingsOk={} skipped={} departEdge={} myCurrEdge={} routeLen={} oldStart={} oldEdges={:?}",
+                self.get_id(), info, onInit, t, source.get_id(), sink.get_id(), ids, routeCost, previousCost, savingsOk, hasSkipped,
+                self.myParameter.departEdge, self.myCurrEdge, self.myRoute.size(), oldStart,
+                oldEdgesRemaining.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
         }
         if savingsOk {
             self.replace_route_edges(&mut edges, routeCost, savings, info, onInit, false, hasSkipped, Ptr::default());
