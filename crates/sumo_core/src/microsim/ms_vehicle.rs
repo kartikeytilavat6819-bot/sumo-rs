@@ -13850,9 +13850,6 @@ impl MSVehicle {
                 }
             }
             let linkP: Ptr<MSLink> = linkLane.get_link_cont()[link];
-            if self.get_id() == "ES1" && t >= 94000 && t <= 100000 {
-                eprintln!("OC102L t={} lane={} linkLane={} seen={:.2} speed={:.2} v={:.2} haveRed={} haveYellow={} prio={} laneEnd={} link={}", t, lane.get_id(), linkLane.get_id(), seen, self.get_speed(), v, linkP.have_red(), linkP.have_yellow(), linkP.have_priority(), lane.is_link_end(&mut link), linkP.get_via_lane_or_lane().get_id());
-            }
             lateralShift += linkP.get_lateral_shift();
             let yellowOrRed = linkP.have_red() || linkP.have_yellow();
             // We distinguish 3 cases when determining the point at which a vehicle stops:
@@ -13964,9 +13961,6 @@ impl MSVehicle {
             let stopSpeed = cfModel.stop_speed_2(me, self.get_speed(), stopDist, stopDecel, MSCFModel_CalcReason::CURRENT_WAIT);
             let mut vLinkWait = min2(v, stopSpeed);
 
-            if self.get_id() == "ES1" && t >= 94000 && t <= 100000 {
-                eprintln!("OC102R t={} yellowOrRed={} canBrake={} brakeDist={:.2} ignoreRed={} seen={:.2} stopDecel={:.2} stopDist={:.2} stopSpeed={:.2} vLinkWait={:.2} v={:.2}", t, yellowOrRed, canBrakeBeforeStopLine, brakeDist, self.ignore_red(linkP, canBrakeBeforeStopLine), seen, stopDecel, stopDist, stopSpeed, vLinkWait, v);
-            }
             if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
                 if lane.is_internal() {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
