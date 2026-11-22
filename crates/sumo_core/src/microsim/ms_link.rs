@@ -7,6 +7,15 @@ use utils::tlf;
 use utils::geom::POSITION_EPS;
 const VEHPARS_JUNCTIONMODEL_PARAMS_SET: i64 = 2 << 28;
 
+// oc97: temporary trace of internal-junction foe filtering (env OC97_TRACE=jun)
+fn oc97_trace_foe(ego: Ptr<MSVehicle>, leader: &Ptr<MSVehicle>, msg: &str) {
+    if std::env::var("OC97_TRACE").as_deref() != Ok("jun") { return; }
+    if ego.is_null() || ego.get_id() != "flow_0.52" { return; }
+    let t = utils::common::time::steps2time(crate::microsim::ms_net::MSNet::get_instance().get_current_time_step());
+    if !(t >= 411.0 && t <= 417.0) { return; }
+    eprintln!("OC97 t={:.2} foeTrace ego={} leader={} {}", t, ego.get_id(), leader.get_id(), msg);
+}
+
 /// C++ MAX3(a, b, c) = MAX2(c, a > b ? a : b)
 fn max3(a: f64, b: f64, c: f64) -> f64 {
     max2(c, if a > b { a } else { b })
@@ -2677,6 +2686,7 @@ impl MSLink {
                 let isOpposite = leader.get_lane_change_model_2().is_opposite();
                 let avi = foeExitLink.get_approaching(msveh_to_sumo_vehicle(leader));
                 let willPass = avi.willPass || (avi.arrivalTime == INVALID_TIME && sameTarget);
+                oc97_trace_foe(ego, &leader, &format!("foeLane={} dCross={} foeDCross={} sT={} sS={} cont={} foeInd={} pastCP={} enteredCP={} inWay={} cannotIgnore={} willPass={} aviT={} leaderBack={} leaderBackDist={} sagitta={}", foeLane.get_id(), distToCrossing, foeDistToCrossing, sameTarget, sameSource, contLane, foeIndirect, pastTheCrossingPoint, enteredTheCrossingPoint, inTheWay, cannotIgnore, willPass, avi.arrivalTime, leaderBack, leaderBackDist, sagitta));
                 if leader == ego {
                     continue;
                 }

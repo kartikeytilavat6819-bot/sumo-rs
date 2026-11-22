@@ -6,14 +6,15 @@ use utils::geom::POSITION_EPS;
 // oc97: temporary, env-gated trace of indirect-left lateral decisions
 #[inline]
 fn oc97_trace(veh_id: &str, tag: &str, msg: impl std::fmt::Display) {
-    if std::env::var_os("OC97_TRACE").is_none() { return; }
-    if veh_id != "flow_0.15" && veh_id != "flow_0.16" && veh_id != "flow_0.52" { return; }
+    let scope = match std::env::var("OC97_TRACE") { Ok(s) => s, Err(_) => return };
+    if scope != "sub" { return; }
+    if veh_id != "flow_0.15" && veh_id != "flow_0.16" { return; }
+    let t = utils::common::time::steps2time(crate::microsim::ms_net::MSNet::get_instance().get_current_time_step());
+    if !(t >= 139.0 && t <= 148.0) { return; }
     static SEEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     if !SEEN.swap(true, std::sync::atomic::Ordering::Relaxed) {
         eprintln!("OC97 reached sublane veh={}", veh_id);
     }
-    let t = utils::common::time::steps2time(crate::microsim::ms_net::MSNet::get_instance().get_current_time_step());
-    if !((t >= 139.0 && t <= 148.0) || (t >= 410.0 && t <= 418.0)) { return; }
     eprintln!("OC97 t={:.2} {} {} {}", t, veh_id, tag, msg);
 }
 

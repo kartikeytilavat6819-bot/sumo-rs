@@ -7,19 +7,23 @@ cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/tmp/sumo-rs-target}/debug"
 OUT="/tmp/oc97-fcd-$$"
 mkdir -p "$OUT"
-export OC97_TRACE=1
-
 trace() {
-  c="$1"; vid="$2"
+  c="$1"; vid="$2"; scope="$3"
   dir="tools/oracle/cases/$c/"
   echo "=== $c (vehicle $vid) ==="
   EXTRA=""
   [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
   for side in cpp ours; do
     if [ "$side" = cpp ]; then B="${SUMO_PRISTINE_BIN:?no SUMO_PRISTINE_BIN}/sumo"; else B="$BIN/sumo"; fi
-    timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-      --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat \
-      --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
+    if [ "$side" = cpp ]; then
+      timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat \
+        --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
+    else
+      OC97_TRACE="$scope" timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat \
+        --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
+    fi
     echo "  run $side rc=$?"
   done
   echo "  --- posLat cpp | ours ---"
@@ -50,10 +54,10 @@ for t in sorted(set(a) | set(b)):
     print("  t=%6.2f  cpp=%9s  ours=%9s%s" % (
         t, "%.4f" % x if x is not None else "-", "%.4f" % y if y is not None else "-", mark))
 PY
-  echo "  --- our decision trace ---"
-  grep '^OC97 ' "$OUT/$c.ours.log" | head -50 || true
+  echo "  --- our decision trace (csl/lat/align/foeTrace only) ---"
+  grep -E '^OC97 .*(csl|latDone| lat |alignSet|foeTrace)' "$OUT/$c.ours.log" | head -60 || true
 }
 
-trace tt_sublane_model_junction_indirect_left_moped                       flow_0.15
-trace tt_sublane_model_junction_turnAlignment_moped_indirect_left         flow_0.16
-trace tt_junction_model_indirect_left_turn_internal_junction_controlled_moped flow_0.52
+trace tt_sublane_model_junction_indirect_left_moped                       flow_0.15 sub
+trace tt_sublane_model_junction_turnAlignment_moped_indirect_left         flow_0.16 sub
+trace tt_junction_model_indirect_left_turn_internal_junction_controlled_moped flow_0.52 jun

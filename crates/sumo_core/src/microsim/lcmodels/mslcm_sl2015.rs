@@ -32,14 +32,21 @@ const REACT_TO_STOPPED_DISTANCE: f64 = 100.0;
 // oc97: temporary, env-gated trace of indirect-left lateral decisions
 #[inline]
 fn oc97_trace(veh_id: &str, tag: &str, msg: impl std::fmt::Display) {
-    if std::env::var_os("OC97_TRACE").is_none() { return; }
-    if veh_id != "flow_0.15" && veh_id != "flow_0.16" && veh_id != "flow_0.52" { return; }
-    static SEEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    if !SEEN.swap(true, std::sync::atomic::Ordering::Relaxed) {
-        eprintln!("OC97 reached align veh={}", veh_id);
-    }
+    let scope = match std::env::var("OC97_TRACE") { Ok(s) => s, Err(_) => return };
+    if scope == "sub" {
+        if veh_id != "flow_0.15" && veh_id != "flow_0.16" { return; }
+    } else if scope == "jun" {
+        if veh_id != "flow_0.52" { return; }
+    } else { return; }
     let t = utils::common::time::steps2time(crate::microsim::ms_net::MSNet::get_instance().get_current_time_step());
-    if !((t >= 139.0 && t <= 148.0) || (t >= 410.0 && t <= 418.0)) { return; }
+    let in_window = if scope == "sub" { t >= 139.0 && t <= 148.0 } else { t >= 410.0 && t <= 418.0 };
+    if !in_window { return; }
+    static SEEN_SUB: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    static SEEN_JUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    let seen = if scope == "sub" { &SEEN_SUB } else { &SEEN_JUN };
+    if !seen.swap(true, std::sync::atomic::Ordering::Relaxed) {
+        eprintln!("OC97 reached align [{}] veh={}", scope, veh_id);
+    }
     eprintln!("OC97 t={:.2} {} {} {}", t, veh_id, tag, msg);
 }
 
@@ -1496,6 +1503,13 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn compute_speed_lat(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
+        let mBefore = *maneuverDist;
+        let result = self.compute_speed_lat_inner(latDist, maneuverDist, urgent);
+        oc97_trace(self.myVehicle.get_id(), "csl", format!("latDist={} mDist={}->{} urgent={} speedLat={} leftSpace={} safeR={} safeL={} maxLat={} accelLat={} => {}", latDist, mBefore, *maneuverDist, urgent, self.mySpeedLat, self.myLeftSpace, self.mySafeLatDistRight, self.mySafeLatDistLeft, self.myVehicle.get_vehicle_type().get_max_speed_lat(), self.myAccelLat, result));
+        result
+    }
+
+    fn compute_speed_lat_inner(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
         let currentDirection: i32 = if self.mySpeedLat >= 0. { 1 } else { -1 };
         let directionWish: i32 = if latDist >= 0. { 1 } else { -1 };
         let mut maxSpeedLat = self.myVehicle.get_vehicle_type().get_max_speed_lat();
