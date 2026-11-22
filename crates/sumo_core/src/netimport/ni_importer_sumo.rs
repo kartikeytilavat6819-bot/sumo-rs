@@ -2076,6 +2076,12 @@ impl NIImporter_SUMO {
         }
         let mut pos = Self::read_position(attrs, &id, &mut ok);
         NBNetBuilder::transform_coordinate(&mut pos, true, self.myLocation);
+        if pos.is_nan() {
+            // v1_28_0 NIImporter_SUMO.cpp:758: NBNode's constructor throws ProcessError;
+            // XMLSubSys::runParser catches it, writes the error and does not insert the node.
+            write_error(&format!("Invalid position '{}' for node '{}'", pos, id));
+            return;
+        }
         let node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(&id, &pos, type_))));
         if !self.myNodeCont.m().insert_2(node) {
             write_warning(&format!("Junction '{}' occurred at least twice in the input.", id));
