@@ -74,9 +74,6 @@ pub struct RONet {
     pub myDiscardedRouteNo: i32,
     /// The number of written routes
     pub myWrittenRouteNo: i32,
-    /// Whether traffic was excluded by the begin time or processed for output.
-    pub myHaveSkippedRoutes: bool,
-    pub myHaveProcessedRoutes: bool,
     /// Whether the network contains edges which not all vehicles may pass
     pub myHavePermissions: bool,
     /// The vehicle class specific speed restrictions
@@ -436,8 +433,6 @@ impl RONet {
             myReadRouteNo: 0,
             myDiscardedRouteNo: 0,
             myWrittenRouteNo: 0,
-            myHaveSkippedRoutes: false,
-            myHaveProcessedRoutes: false,
             myHavePermissions: false,
             mySpeedRestrictions: BTreeMap::new(),
             myHaveParamRestrictions: false,
@@ -1538,7 +1533,6 @@ impl RONet {
                 break;
             }
             let minTime = min2i(routableTime, containerTime);
-            self.myHaveProcessedRoutes = true;
             if routableTime == minTime {
                 // check whether to print the output
                 if lastTime != routableTime && lastTime != -1 {
@@ -1591,34 +1585,6 @@ impl RONet {
     #[allow(unused_variables)]
     pub fn further_stored(&mut self) -> bool {
         !self.myRoutables.is_empty() || (!self.myFlows.is_empty() && self.myHaveActiveFlows) || !self.myContainers.is_empty()
-    }
-
-    /// C++: `void RONet::routeSkipped()`
-    /// Record routes excluded by the begin time.
-    // void routeSkipped() {
-    //         myHaveSkippedRoutes = true;
-    //     }
-    #[allow(unused_variables)]
-    pub fn route_skipped(&mut self) {
-        self.myHaveSkippedRoutes = true;
-    }
-
-    /// C++: `bool RONet::haveSkippedRoutes() const` [const]
-    // bool haveSkippedRoutes() const {
-    //         return myHaveSkippedRoutes;
-    //     }
-    #[allow(unused_variables)]
-    pub fn have_skipped_routes(&self) -> bool {
-        self.myHaveSkippedRoutes
-    }
-
-    /// C++: `bool RONet::haveProcessedRoutes() const` [const]
-    // bool haveProcessedRoutes() const {
-    //         return myHaveProcessedRoutes;
-    //     }
-    #[allow(unused_variables)]
-    pub fn have_processed_routes(&self) -> bool {
-        self.myHaveProcessedRoutes
     }
 
     /// C++: `void RONet::openOutput(const OptionsCont &)`
@@ -2194,11 +2160,10 @@ impl RONet {
                         newPars.id = format!("{}.{}", pars.id, pars.repetitionsDone);
                         newPars.depart = pars.depart;
                         for stop in newPars.stops.iter_mut() {
+                            // v1_28_0 RONet.cpp:636-638 adjusts only `until`; the
+                            // `arrival` adjustment here was added later.
                             if stop.until >= 0 {
                                 stop.until += pars.depart - origDepart;
-                            }
-                            if stop.arrival >= 0 {
-                                stop.arrival += pars.depart - origDepart;
                             }
                         }
                         pars.m().repetitionsDone += 1;

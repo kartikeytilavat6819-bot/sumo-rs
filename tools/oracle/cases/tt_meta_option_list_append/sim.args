@@ -1,0 +1,1 @@
++a tools/oracle/cases/tt_meta_option_list_append/input_additional2.add.xml --save-configuration config.cfg -c tools/oracle/cases/tt_meta_option_list_append/sumo.sumocfg +w tools/oracle/cases/tt_meta_option_list_append/weights.xml

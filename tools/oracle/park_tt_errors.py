@@ -103,7 +103,7 @@ def normalise(line):
         return None
     if s.startswith("note: run with `RUST_BACKTRACE=1`"):
         return None
-    if s.startswith("Eclipse SUMO ") or s.startswith("Build features"):
+    if s.startswith("Eclipse SUMO ") or s.lstrip().startswith("Build features"):
         return None
     # times (texttest config_all: [0-9.]+ms / spent Xs / Duration Xs)
     # tests/netconvert/config.netconvert: output:done \(.*\)\.{REPLACE done.}

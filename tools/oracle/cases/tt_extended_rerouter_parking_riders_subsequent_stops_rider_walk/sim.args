@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --pedestrian.model nonInteracting -a tools/oracle/cases/tt_extended_rerouter_parking_riders_subsequent_stops_rider_walk/input_additional.add.xml,tools/oracle/cases/tt_extended_rerouter_parking_riders_subsequent_stops_rider_walk/input_additional2.add.xml

@@ -694,8 +694,10 @@ impl NLBuilder {
         utils::options::options_cont::with_options(|oc| {
             oc.clear();
             MSFrame::fill_options();
-            utils::options::options_io::get_options(false).unwrap();
-            if oc.process_meta_options(utils::options::options_io::get_arg_c() < 2).unwrap() {
+            // C++ lets ProcessError propagate as an exception; panicking with the
+            // ProcessError payload keeps sumo_main's clean "Error: ..." reporting.
+            utils::options::options_io::get_options(false).unwrap_or_else(|e| std::panic::panic_any(e));
+            if oc.process_meta_options(utils::options::options_io::get_arg_c() < 2).unwrap_or_else(|e| std::panic::panic_any(e)) {
                 utils::common::system_frame::close();
                 return Ptr::default();
             }
