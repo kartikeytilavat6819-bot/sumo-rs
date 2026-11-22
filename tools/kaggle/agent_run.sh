@@ -26,7 +26,7 @@ for C in tools/oracle/cases/tt_devices_fcd-replay_plain tools/oracle/cases/tt_de
   diff -u $OUT/$NAME.pristine.stat.xml $OUT/$NAME.ours.stat.xml | head -40
 done
 echo "################ PANIC LOCATIONS"
-grep -A8 -h -E 'panicked at' $OUT/*.ours.log | grep -E 'panicked at|sumo_core|utils::' | cut -c1-300
+grep -A20 -h -E 'panicked at' $OUT/*.ours.log | grep -E 'panicked at|sumo_core::|utils::' | cut -c1-300
 
 # oc105 measurement (from wave2): compare our sumo with the official binary on two target rows.
 set -u
