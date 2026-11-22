@@ -821,8 +821,8 @@ mod tests {
         let veh = "straight.4";
         assert_eq!(format!("{}@{}", vtype, veh), "car@straight.4");
         // the device writes StringUtils/myMinGapFactor (default 1) to jmParameter;
-        // C++ toString(1.0) is "1", which f64_to_string must reproduce.
-        assert_eq!(f64_to_string(1.0_f64), "1");
+        // C++ toString(double, gPrecision=2) is fixed-point "1.00" (ToString.h:49-54).
+        assert_eq!(f64_to_string(1.0_f64), "1.00");
     }
 }
 
