@@ -29,7 +29,7 @@ for c in $CASES; do
     echo "-- $side arrival:"
     grep "id=\"$veh\"" "$OUT/$name/$side/trip.xml" | head -1 | cut -c1-200
   done
-  echo "-- first fcd difference for $veh (ref < > ours):"
-  diff <(grep "vehicle id=\"$veh\"" "$OUT/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/$name/ours/fcd.xml") | head -8 | cut -c1-200
+  echo "-- first fcd difference for $veh (< ref, > ours), first 24 diff lines:"
+  diff <(grep "vehicle id=\"$veh\"" "$OUT/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/$name/ours/fcd.xml") | head -24 | cut -c1-200
 done
 echo "AGENT RUN DONE"
