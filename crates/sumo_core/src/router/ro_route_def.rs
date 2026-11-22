@@ -265,7 +265,12 @@ impl RORouteDef {
                         write_warningf!("Repaired route of vehicle '%'.", veh.get_id());
                     }
                     me.myNewRoute.set(true);
-                    let col = me.myAlternatives[0].get_color();
+                    // C++ RORouteDef.cpp:124 copies the color so the new route owns it
+                    let col: Ptr<RGBColor> = if me.myAlternatives[0].get_color().is_null() {
+                        Ptr::null()
+                    } else {
+                        Ptr::from_raw(Box::into_raw(Box::new(*me.myAlternatives[0].get_color())))
+                    };
                     *me.myPrecomputed.borrow_mut() = Some(Rc::new(RORoute::new(self.get_id(), 0.0, me.myAlternatives[0].get_probability(), &newEdges, col, me.myAlternatives[0].get_stops())));
                 } else {
                     *me.myPrecomputed.borrow_mut() = Some(me.myAlternatives[0].clone());
@@ -299,7 +304,12 @@ impl RORouteDef {
                 if existing >= 0 {
                     *me.myPrecomputed.borrow_mut() = Some(me.myAlternatives[existing as usize].clone());
                 } else {
-                    let col = me.myAlternatives[0].get_color();
+                    // C++ RORouteDef.cpp:159 copies the color so the new route owns it
+                    let col: Ptr<RGBColor> = if me.myAlternatives[0].get_color().is_null() {
+                        Ptr::null()
+                    } else {
+                        Ptr::from_raw(Box::into_raw(Box::new(*me.myAlternatives[0].get_color())))
+                    };
                     *me.myPrecomputed.borrow_mut() = Some(Rc::new(RORoute::new(self.get_id(), 0.0, 1.0, &edges, col, me.myAlternatives[0].get_stops())));
                     me.myNewRoute.set(true);
                 }
