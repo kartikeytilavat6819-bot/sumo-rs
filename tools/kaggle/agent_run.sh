@@ -2,6 +2,7 @@
 # oc104 diagnostics: our sumo vs pristine C++ sumo on the fcd-replay cases.
 # sumo's main.rs only runs the default panic hook (which prints file:line) when RUST_BACKTRACE is set.
 export RUST_BACKTRACE=full
+export OC104_NULL_BT=1
 OURS=${OURS:-/tmp/target/debug/sumo}
 OUT=/tmp/oc104_fcd
 mkdir -p $OUT
