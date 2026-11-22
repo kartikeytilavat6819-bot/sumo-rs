@@ -13,6 +13,7 @@ for C in tools/oracle/cases/tt_devices_fcd-replay_plain tools/oracle/cases/tt_de
       --tripinfo-output $OUT/$NAME.$side.ti.xml --fcd-output $OUT/$NAME.$side.fcd.xml \
       --statistic-output $OUT/$NAME.$side.stat.xml > $OUT/$NAME.$side.log 2>&1
     echo "== $NAME $side exit=$?"
+    grep -m3 -E 'panicked at|overflow|Error:' $OUT/$NAME.$side.log | cut -c1-400
     tail -3 $OUT/$NAME.$side.log
   done
   echo "== tripinfo diff (pristine -> ours)"

@@ -7760,10 +7760,14 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_best_lanes_occupation(&mut self, laneIndex: i32, density: f64) {
+        // C++ assert(laneIndex < (int)preb.size()) is compiled out in the official (NDEBUG)
+        // binary; FCD-replay can leave the best-lane list shorter than the changer's lane
+        // list, so keep the in-bounds write only instead of panicking in debug builds.
         let preb = &mut self.myBestLanes[0];
         let idx = laneIndex as usize;
-        assert!(idx < preb.len());
-        preb[idx].occupation = density + preb[idx].nextOccupation;
+        if idx < preb.len() {
+            preb[idx].occupation = density + preb[idx].nextOccupation;
+        }
     }
 
     /// C++: `void MSVehicle::fixPosition()`
