@@ -1143,7 +1143,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             return cs.get_parking_area().get_occupancy() as f64;
         }
-        (cs.get_end_lane_position() - cs.get_last_free_pos(self.myHolder.m(), 0.)) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
+        (cs.get_end_lane_position() - cs.get_last_free_pos_2()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
 
     /// C++: `double MSDevice_StationFinder::getLastStepStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual]
@@ -1162,7 +1162,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             return cs.get_parking_area().get_last_step_occupancy() as f64;
         }
-        (cs.get_end_lane_position() - cs.get_last_free_pos(self.myHolder.m(), 0.)) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
+        (cs.get_end_lane_position() - cs.get_last_free_pos_2()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
 
     /// C++: `double MSDevice_StationFinder::getStoppingPlaceCapacity(MSStoppingPlace *)` [virtual]
@@ -1778,7 +1778,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             (cs.get_parking_area().get_capacity() - cs.get_parking_area().get_occupancy()) as f64
         } else {
-            (cs.get_last_free_pos(self.myHolder.m(), 0.) - cs.get_begin_lane_position()) / self.myHolder.m().get_vehicle_type().get_parameter().length
+            (cs.get_last_free_pos_2() - cs.get_begin_lane_position()) / self.myHolder.m().get_vehicle_type().get_parameter().length
         }
     }
 
