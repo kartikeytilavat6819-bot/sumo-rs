@@ -166,15 +166,14 @@ impl NILoader {
         }
         ok &= self.load_xml(oc);
         // check the loaded structures
-        // C++ throws ProcessError here; main reports it and exits non-zero. Writing the
-        // error and returning lets the same top-level check run without a Rust panic.
+        // C++ throws ProcessError here (NILoader.cpp:1587/1590); main reports it
+        // and exits non-zero. With --ignore-errors the wasInformed check in
+        // netconvert's run() is cleared, so only a thrown ProcessError aborts.
         if self.myNetBuilder.m().get_node_cont().size() == 0 {
-            write_error("No nodes loaded.");
-            return;
+            std::panic::panic_any(ProcessError::new("No nodes loaded."));
         }
         if self.myNetBuilder.m().get_edge_cont().size() == 0 {
-            write_error("No edges loaded.");
-            return;
+            std::panic::panic_any(ProcessError::new("No edges loaded."));
         }
         if !self.myNetBuilder.m().get_edge_cont().check_consistency(self.myNetBuilder.m().get_node_cont()) {
             // C++ throws ProcessError() here; netconvert's catch deliberately suppresses the
