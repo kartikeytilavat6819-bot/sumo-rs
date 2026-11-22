@@ -767,12 +767,12 @@ impl Projection {
     }
 }
 
-/// Spherical Mercator (`+proj=merc`), the projection used by Web Mercator / EPSG:3857 nets.
-/// PROJ's `merc` forward is `x = a * (lon - lon_0) * k + x_0`,
-/// `y = a * ln(tan(pi/4 + lat/2)) * k + y_0` (also written `a * asinh(tan(lat))`).
+/// Spherical Mercator (`+proj=merc`), faithful to PROJ 9.4 `src/projections/merc.cpp`
+/// (`merc_s_forward` / `merc_s_inverse`) plus the fwd_finalize/inv_prepare scaling.
 #[derive(Clone, Copy, Debug)]
 struct Merc {
     a: f64,
+    ra: f64,
     lon0: f64,
     x0: f64,
     y0: f64,
@@ -788,7 +788,7 @@ impl Merc {
         let mut x0 = 0.;
         let mut y0 = 0.;
         let mut k = 1.;
-        let mut lat_ts = 0.;
+        let mut lat_ts = None;
         for tok in proj.split_whitespace() {
             let body = tok.strip_prefix('+')?;
             let (key, val) = body.split_once('=').unwrap_or((body, ""));
@@ -797,34 +797,43 @@ impl Merc {
                 "a" => a = Some(val.parse::<f64>().ok()?),
                 "b" => b = Some(val.parse::<f64>().ok()?),
                 "lon_0" => lon0 = val.parse::<f64>().ok()?,
-                "lat_ts" => lat_ts = val.parse::<f64>().ok()?,
+                "lat_ts" => lat_ts = Some(val.parse::<f64>().ok()?),
                 "k" | "k_0" => k = val.parse::<f64>().ok()?,
                 "x_0" => x0 = val.parse::<f64>().ok()?,
                 "y_0" => y0 = val.parse::<f64>().ok()?,
                 _ => {}
             }
         }
-        if kind? != "merc" || lat_ts != 0. {
-            // ellipsoidal merc / non-equatorial standard parallel: not covered by this port
+        if kind? != "merc" {
             return None;
         }
         let a = a?;
         if b.is_some_and(|b| b != a) {
+            // ellipsoidal merc: not covered by this port
             return None;
         }
-        Some(Merc { a, lon0: deg2rad(lon0), x0, y0, k })
+        // PROJ's PJ_PROJECTION(merc) overrides k0 with cos(lat_ts) for the sphere
+        if let Some(lat_ts) = lat_ts {
+            k = deg2rad(lat_ts).abs().cos();
+        }
+        Some(Merc { a, ra: 1. / a, lon0: deg2rad(lon0), x0, y0, k })
     }
 
+    /// PROJ `merc_s_forward` + `fwd_finalize`: lon/lat (radians) -> metres.
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
-        let x = self.a * (lon - self.lon0);
-        let y = self.a * (0.5 * (0.5 * PI + lat)).tan().ln();
-        (x * self.k + self.x0, y * self.k + self.y0)
+        let lam = adjlon(lon - self.lon0);
+        let x = self.k * lam;
+        let y = self.k * lat.tan().asinh();
+        (self.a * x + self.x0, self.a * y + self.y0)
     }
 
+    /// PROJ `inv_prepare` + `merc_s_inverse` + `inv_finalize`: metres -> lon/lat (radians).
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
-        let lon = (x - self.x0) / (self.a * self.k) + self.lon0;
-        let lat = 2. * ((y - self.y0) / (self.a * self.k)).exp().atan() - 0.5 * PI;
-        (lon, lat)
+        let cx = (x - self.x0) * self.ra;
+        let cy = (y - self.y0) * self.ra;
+        let lam = cx / self.k;
+        let phi = (cy / self.k).sinh().atan();
+        (adjlon(lam + self.lon0), phi)
     }
 }
 
