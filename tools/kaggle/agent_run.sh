@@ -10,6 +10,7 @@ REF="${SUMO_PRISTINE_BIN:?}/sumo"
 export SUMO_HOME="${SUMO_HOME:-}"
 CASES="md_midinterval md_stop md_vtypes out_meandata out_bt elechybrid_overhead"
 ROOT=$(pwd)
+export OC95_TRACE=1
 
 for c in $CASES; do
   src="$ROOT/tools/oracle/cases/$c"
@@ -49,4 +50,6 @@ for c in $CASES; do
     fi
   done
 done
+echo "--- OC95T trace (md_midinterval ours, first 40 lines)"
+grep -h OC95T "$OUT/md_midinterval/ours/stderr.txt" | head -n 40
 echo "PROBE DONE (outputs in $OUT)"
