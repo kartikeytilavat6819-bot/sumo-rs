@@ -29,3 +29,12 @@ echo "==== oc108 closing_until our"
 echo "exit=$?"
 grep -E 'OC108_RR|OC108_REROUTE|incompatible' /tmp/oc108_cu_our.err | head -40
 grep -o 'id="reroute_period"[^>]*arrival="[^"]*"' /tmp/oc108_cu_our.tripinfo.xml | head -2
+# oc108: optimizeStops stop-alternative probe (current branch)
+C=tools/oracle/cases/tt_extended_rerouter_optimizeStops_grid5x10
+FLAGS=$(cat "$C/sim.args")
+echo "==== oc108 optimizeStops our"
+"$OUR" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" --no-step-log true $FLAGS \
+  --tripinfo-output /tmp/oc108_opt_our.tripinfo.xml >/tmp/oc108_opt_our.out 2>/tmp/oc108_opt_our.err
+echo "exit=$?"
+grep -E 'OC108_REPL|replac|skips unreachable' /tmp/oc108_opt_our.err | head -60
+grep -o 'id="t_0"[^>]*arrival="[^"]*"' /tmp/oc108_opt_our.tripinfo.xml | head -2
