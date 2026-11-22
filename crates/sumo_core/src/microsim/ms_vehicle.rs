@@ -5662,6 +5662,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn enter_lane_at_insertion(&mut self, enteredLane: Ptr<MSLane>, pos: f64, speed: f64, posLat: f64, notification: MSMoveReminder_Notification) {
+        crate::microsim::oc93_probe::hit(3);
         let backPos = pos - self.get_vehicle_type().get_length();
         let previousSpeed = if self.has_departed() { self.myState.myPreviousSpeed } else { speed };
         self.myState = MSVehicle_State::new(pos, speed, posLat, backPos, previousSpeed);

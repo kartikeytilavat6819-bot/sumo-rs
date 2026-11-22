@@ -135,6 +135,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn emit_vehicles(&mut self, time: SUMOTime) -> i32 {
+        crate::microsim::oc93_probe::hit(7); crate::microsim::oc93_probe::line("step");
         // check whether any vehicles shall be emitted within this time step
         let havePreChecked = MSRoutingEngine::is_enabled();
         if self.myPendingEmits.is_empty() || (havePreChecked && self.myEmitCandidates.is_empty()) {
@@ -846,6 +847,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn try_insert(&mut self, time: SUMOTime, veh: Ptr<SUMOVehicle>, refusedEmits: &mut MSVehicleContainer_VehicleVector) -> i32 {
+        crate::microsim::oc93_probe::hit(6);
         // C++ `assert(veh->getParameter().depart <= time)` is compiled out in the
         // official (NDEBUG) binary; FCD-replay inserts vehicles with a future depart,
         // so keep the same behaviour instead of panicking in debug builds.

@@ -843,6 +843,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(rngIndex: i32, svc: SUMOVehicleClass, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSVehicleRouter {
+        crate::microsim::oc93_probe::hit(1);
         if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
             Self::init_weight_update(-1);
             Self::init_edge_weights(svc, -1, -1);
