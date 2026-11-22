@@ -1,1 +1,0 @@
-Stationfinder rerouting behaviour differs: vehicles arrive at different times because the station search / charging-strategy logic is not yet faithful. Re-enable when MSDevice_StationFinder search and charging decisions match the C++.
