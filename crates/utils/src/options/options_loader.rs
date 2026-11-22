@@ -22,8 +22,9 @@ fn xerces_utf8_error(bytes: &[u8], e: &std::str::Utf8Error) -> (String, u64) {
     }
     let bad = bytes.get(pos + at).copied().unwrap_or(0) as char;
     let msg = format!("invalid byte '{}' at position {} of a {}-byte sequence", bad, at + 1, expected);
+    // xerces reports the offending line 0-based; error() prints line + 1.
     let line = bytes[..pos.min(bytes.len())].iter().filter(|&&b| b == b'\n').count() as u64;
-    (msg, line)
+    (msg, line.saturating_sub(1))
 }
 
 pub struct OptionsLoader {
@@ -265,7 +266,7 @@ mod tests {
         let e = std::str::from_utf8(bytes).unwrap_err();
         let (msg, line) = super::xerces_utf8_error(bytes, &e);
         assert_eq!(msg, "invalid byte 't' at position 2 of a 4-byte sequence");
-        assert_eq!(line, 1); // error() prints line + 1 == 2
+        assert_eq!(line, 0); // error() prints line + 1 == 1 (config line 1 here)
     }
 
     #[test]

@@ -1490,9 +1490,8 @@ impl MSFrame {
             oc.add_description("window-pos", "GUI Only", "Create initial window at the given x,y position");
             oc.do_register("tracker-interval", SumoOption::string_typed("1", "TIME"));
             oc.add_description("tracker-interval", "GUI Only", "The aggregation period for value tracker windows");
-            // HAVE_OSG is enabled in the official 1.28.0 build (the option appears in sumo --help).
-            oc.do_register("osg-view", SumoOption::bool(false));
-            oc.add_description("osg-view", "GUI Only", "Start with an OpenSceneGraph view instead of the regular 2D view");
+            // The official 1.28.0 binary used for scoring is built without OSG, so
+            // --osg-view is absent from its help output; do not register it here.
             oc.do_register("gui-testing", SumoOption::bool(false));
             oc.add_description("gui-testing", "GUI Only", "Enable overlay for screen recognition");
             oc.do_register("gui-testing-debug", SumoOption::bool(false));
