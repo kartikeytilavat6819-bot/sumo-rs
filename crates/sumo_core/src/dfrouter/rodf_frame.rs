@@ -431,3 +431,21 @@ impl RODFFrame {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // C++ RODFFrame.cpp:47 - fillOptions registers the "-c <CONFIGURATION>" call example.
+    #[test]
+    fn fill_options_registers_config_call_example() {
+        utils::options::options_cont::with_options(|oc| oc.clear());
+        RODFFrame::fill_options();
+        utils::options::options_cont::with_options(|oc| {
+            let mut help = String::new();
+            oc.print_help(&mut help).unwrap();
+            assert!(help.contains("Examples:"), "no examples section in help: {help}");
+            assert!(help.contains("-c <CONFIGURATION>"), "missing -c call example: {help}");
+            assert!(help.contains("run routing with options from file"), "missing example description: {help}");
+        });
+    }
+}
+
