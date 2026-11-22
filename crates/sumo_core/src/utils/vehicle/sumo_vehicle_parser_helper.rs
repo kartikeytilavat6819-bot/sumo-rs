@@ -3918,7 +3918,7 @@ mod tests {
             h.remove_retriever("stderr");
             h.add_retriever("oc98-action-step-capture");
         });
-        let _ = process_action_step_length(1.2);
+        let _ = SUMOVehicleParserHelper::process_action_step_length(1.2);
         with_instance(MsgType::Warning, |h| {
             h.remove_retriever("oc98-action-step-capture");
             h.add_retriever("stderr");
