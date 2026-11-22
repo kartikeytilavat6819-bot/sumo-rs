@@ -88,6 +88,9 @@ run_row() {
   local v=$1 in=$2 opts=$3
   local d=$OUT/$v
   rm -rf "$d"; mkdir -p "$d/cpp_out/plain" "$d/rust_out/plain"
+  local cdir="$ROOT/tools/oracle/cases/$v"
+  local expect_err=0
+  if [ -f "$cdir/EXPECT_EXIT" ] && [ -f "$cdir/ref.errors" ]; then expect_err=1; fi
   local src
   case $in in
     osm:*) src="--simple-projection true --osm-files $C/${in#osm:}/input.osm" ;;
@@ -98,10 +101,37 @@ run_row() {
   local co=${opts//@D/$d\/cpp_out} ro=${opts//@D/$d\/rust_out}
   local -a sa ca ra
   read -ra sa <<< "$src"; read -ra ca <<< "$co"; read -ra ra <<< "$ro"
-  timeout 900 "$RUST" "${sa[@]}" "${ra[@]}" -o "$d/rust.net.xml" > "$d/rust.log" 2>&1
+  if [ $expect_err -eq 1 ]; then
+    # expected-error rows are scored on the two streams separately, like texttest
+    timeout 900 "$RUST" "${sa[@]}" "${ra[@]}" -o "$d/rust.net.xml" > "$d/rust.out" 2> "$d/rust.log"
+  else
+    timeout 900 "$RUST" "${sa[@]}" "${ra[@]}" -o "$d/rust.net.xml" > "$d/rust.log" 2>&1
+  fi
   local rrc=$?
   timeout 900 "$CPP" "${sa[@]}" "${ca[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1
   local crc=$?
+  if [ $expect_err -eq 1 ]; then
+    # --- expected-error stage: official exits non-zero; score exit code and the
+    # verbatim official error/stdout text (ref.errors / ref.output from TextTest).
+    local V D=""
+    if [ $rrc -eq 124 ]; then
+      V=FAIL; D="err-TIMEOUT"
+    elif [ $rrc -eq 0 ]; then
+      V=FAIL; D="err-NOEXIT: official exits non-zero, ours exited 0"
+    else
+      local detail=""
+      if ! python3 "$B/park_tt_errors.py" --compare "$cdir/ref.errors" "$d/rust.log" > "$d/err.diff" 2>&1; then
+        detail="stderr: $(head -2 "$d/err.diff" | tr '\n' ' ' | cut -c1-150)"
+      fi
+      if [ -f "$cdir/ref.output" ] && ! python3 "$B/park_tt_errors.py" --compare "$cdir/ref.output" "$d/rust.out" > "$d/out.diff" 2>&1; then
+        [ -z "$detail" ] && detail="stdout: $(head -2 "$d/out.diff" | tr '\n' ' ' | cut -c1-150)"
+      fi
+      if [ -n "$detail" ]; then V=FAIL; D="$detail"; else V=PASS; D="err PASS"; fi
+    fi
+    printf '%s\t%s\t%s\n' "$v" "$V" "$D" >> "$OUT/summary.tsv"
+    echo "$v $V $D"
+    return
+  fi
   local V D=""
   if grep -q panicked "$d/rust.log"; then
     V=PANIC; D=$(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')
