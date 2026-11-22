@@ -626,3 +626,17 @@ impl MSCFModel_ACC {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn acc_variables_initial_state_matches_release() {
+        // C++ MSCFModel_ACC::createVehicleVariables() sets ACC_ControlMode=0 and
+        // lastUpdateTime=0; the control-mode branch in _v() depends on this.
+        let vars = MSCFModel_ACC_ACCVehicleVariables::new();
+        assert_eq!(vars.ACC_ControlMode, 0);
+        assert_eq!(vars.lastUpdateTime, 0);
+    }
+}
+

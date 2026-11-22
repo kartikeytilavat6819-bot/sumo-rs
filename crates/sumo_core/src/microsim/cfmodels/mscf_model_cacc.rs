@@ -1011,3 +1011,21 @@ impl MSCFModel_CACC {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cacc_variables_initial_state_matches_release() {
+        // C++ MSCFModel_CACC::CACCVehicleVariables() sets CACC_ControlMode(0) and
+        // CACC_CommunicationsOverrideMode(CACC_NO_OVERRIDE); the ACC base carries
+        // ACC_ControlMode(0) and lastUpdateTime(0) from createVehicleVariables().
+        let vars = MSCFModel_CACC_CACCVehicleVariables::new();
+        assert_eq!(vars.CACC_ControlMode, 0);
+        assert_eq!(vars.CACC_CommunicationsOverrideMode,
+                   MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE as i32);
+        assert_eq!(vars.base.ACC_ControlMode, 0);
+        assert_eq!(vars.base.lastUpdateTime, 0);
+    }
+}
+
