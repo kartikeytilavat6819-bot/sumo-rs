@@ -202,6 +202,13 @@ impl Triangle {
 mod tests {
     use super::*;
     #[test]
+    fn invalid_matches_default_constructed_cpp_triangle() {
+        // C++ `Triangle::INVALID = Triangle()` has corners at Position() (0,0,0), not Position::INVALID.
+        assert_eq!(Triangle::INVALID, Triangle::new(Position::new(0., 0.), Position::new(0., 0.), Position::new(0., 0.)));
+        assert_eq!(Triangle::default(), Triangle::INVALID);
+    }
+
+    #[test]
     fn triangle() {
         let t = Triangle::new(Position::new(0., 0.), Position::new(4., 0.), Position::new(0., 4.));
         assert!(t.is_position_within(&Position::new(1., 1.)));
