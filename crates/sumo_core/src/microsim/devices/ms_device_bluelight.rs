@@ -370,8 +370,12 @@ impl MSDevice_Bluelight {
         }
         // reset all vehicles that were in myInfluencedVehicles in the previous step but not in the current step todo refactor
         if std::env::var_os("OC102_DEBUG").is_some() {
-            eprintln!("OC102 t={} egoLane={} egoEdge={} upcomingEdges={:?} influenced={:?} toReset={:?}",
+            let inf = ego.get_influencer_2();
+            let (prio, redBrake) = if inf.is_null() { (true, true) } else { (inf.get_respect_junction_priority(), inf.get_emergency_brake_red_light()) };
+            eprintln!("OC102 t={} egoLane={} egoEdge={} egoPos={:.3} egoSpeed={:.3} inflNull={} prio={} redBrake={} upcomingEdges={:?} influenced={:?} toReset={:?}",
                 simstep, ego.get_lane().get_id(), ego.get_lane().get_edge().get_id(),
+                ego.get_position_on_lane(), ego.get_speed(),
+                inf.is_null(), prio, redBrake,
                 upcomingEdges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>(),
                 self.myInfluencedVehicles.iter().cloned().collect::<Vec<_>>(),
                 lastStepInfluencedVehicles.iter().cloned().collect::<Vec<_>>());
