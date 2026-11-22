@@ -79,8 +79,8 @@ done
 C=tools/oracle/cases/tt_bugs_4xxx_ticket4299
 echo "################ tt_bugs_4xxx_ticket4299"
 for side in ours pristine; do
-  if [ "$side" = ours ]; then BIN=$OURS; else BIN=$SUMO_PRISTINE_BIN/sumo; fi
-  timeout 300 "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
+  if [ "$side" = ours ]; then BIN=$OURS; DBG=OC98DBG=1; else BIN=$SUMO_PRISTINE_BIN/sumo; DBG=; fi
+  timeout 300 env $DBG "$BIN" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" \
     $(cat "$C/sim.args") --no-step-log true \
     --tripinfo-output "$OUT/4299.$side.ti.xml" \
     --fcd-output "$OUT/4299.$side.fcd.xml" \
