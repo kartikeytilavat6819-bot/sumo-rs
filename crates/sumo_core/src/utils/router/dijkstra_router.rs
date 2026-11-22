@@ -305,8 +305,13 @@ impl<E: RouterEdge<V>, V: RouterVehicle> DijkstraRouter<E, V> {
         self.myLastQuery = query;
         // loop
         let mut num_visited: i32 = 0;
+        let mut dbg_iters: u64 = 0;
         while !self.myFrontierList.is_empty() {
             num_visited += 1;
+            dbg_iters += 1;
+            if std::env::var("OC98DBG").is_ok() && dbg_iters % 1000000 == 0 {
+                eprintln!("OC98DBG dijkstra runaway iters={} frontier={}", dbg_iters, self.myFrontierList.len());
+            }
             // use the node with the minimal length
             let minimumInfo = self.myFrontierList[0];
             let minEdge = minimumInfo.edge.cast::<E>();
