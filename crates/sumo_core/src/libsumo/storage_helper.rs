@@ -1036,3 +1036,22 @@ impl StorageHelper {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pair_list_hack_writes_typed_byte_not_unsigned_byte() {
+        // StorageHelper.h:84 writes writeTypedByte for the (string,double,byte)
+        // special case; the type tag on the wire must be TYPE_BYTE (0x08).
+        let v = TraCIStringDoublePairList {
+            base: TraCIResult { result_type: -1 },
+            value: vec![("veh".to_string(), 3.0), ("x".to_string(), 7.0)],
+        };
+        let out = StorageHelper::to_storage(&v.base);
+        let bytes = out.as_bytes();
+        assert_eq!(bytes[bytes.len() - 2], TYPE_BYTE as u8);
+        assert_ne!(bytes[bytes.len() - 2], TYPE_UBYTE as u8);
+    }
+}
+
