@@ -35,7 +35,7 @@ for c in $ROWS; do
   echo "  -- ours stderr:"; head -n 4 "$OUT/$c.ours/err.txt" | cut -c1-200 | sed 's/^/     /'
   if [ "$(cat "$OUT/$c.ours/rc.txt")" = 124 ]; then
     rdir="$OUT/$c.steplog"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --step-log true "${EXTRA[@]}" >out.txt 2>err.txt; true)
+    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou "${EXTRA[@]}" >out.txt 2>err.txt; true)
     echo "  -- ours TIMEOUT: last step-log lines:"; tail -n 4 "$rdir/out.txt" | cut -c1-200 | sed 's/^/     /'
     echo "  -- ours TIMEOUT: last stderr lines:"; tail -n 3 "$rdir/err.txt" | cut -c1-200 | sed 's/^/     /'
   fi
