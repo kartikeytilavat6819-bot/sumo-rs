@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 # oc104 probe: official vs ours on the target rows (SSM, rerouting A* landmark, taxi).
-# Runs from repo root. Outputs under /tmp/oc104. Prints exit codes, first stderr lines,
-# and the first differing lines against the committed refs.
+# Each side runs inside a copy of the case dir (TextTest cwd; relative inputs such as
+# lookuptable resolve there). sim.args is split with shlex, so quoted values survive.
+# Outputs under /tmp/oc104. Prints exit codes, first stderr lines, first diffs vs refs.
 OUT=/tmp/oc104; mkdir -p "$OUT"
 ROOT=$(pwd)
 OFF="${SUMO_PRISTINE_BIN:?}/sumo"
 OURS="${CARGO_TARGET_DIR:-target}/debug/sumo"
 for c in $(cat .oc_haiku_rows.txt); do
-  d="tools/oracle/cases/$c"
+  d="$ROOT/tools/oracle/cases/$c"
   [ -d "$d" ] || { echo "== $c: missing case dir"; continue; }
-  EXTRA=""; [ -f "$d/sim.args" ] && EXTRA=$(tr -d '\r' < "$d/sim.args" | sed "s#tools/oracle#$ROOT/tools/oracle#g")
+  mapfile -t EXTRA < <(python -c 'import shlex,sys; print("\n".join(shlex.split(open(sys.argv[1]).read())))' "$d/sim.args" 2>/dev/null)
   for side in off ours; do
     bin=$OFF; [ $side = ours ] && bin=$OURS
-    rdir="$OUT/$c.$side"; rm -rf "$rdir"; mkdir -p "$rdir"
-    (cd "$rdir" && timeout 600 "$bin" -n "$ROOT/$d/ref_simple.net.xml" -r "$ROOT/$d/routes.rou" \
-        --no-step-log true $EXTRA >out.txt 2>err.txt; echo $? > rc.txt)
+    rdir="$OUT/$c.$side"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+    (cd "$rdir" && timeout 600 "$bin" -n ref_simple.net.xml -r routes.rou --no-step-log true "${EXTRA[@]}" \
+        >out.txt 2>err.txt; echo $? > rc.txt)
   done
-  echo "== $c: exit off=$(cat $OUT/$c.off/rc.txt) ours=$(cat $OUT/$c.ours/rc.txt)"
+  echo "== $c: exit off=$(cat "$OUT/$c.off/rc.txt") ours=$(cat "$OUT/$c.ours/rc.txt")"
   echo "  -- off stderr:"; head -n 4 "$OUT/$c.off/err.txt" | cut -c1-200 | sed 's/^/     /'
   echo "  -- ours stderr:"; head -n 4 "$OUT/$c.ours/err.txt" | cut -c1-200 | sed 's/^/     /'
   if [ -f "$d/ref.errors" ]; then
