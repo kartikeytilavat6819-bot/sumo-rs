@@ -8,8 +8,3 @@ Invalid lane spread type 'dummy'. Using default 'right'
 Type 'a' used by edge 'A1' was not defined (ignore with option --ignore-errors.edge-type).
 Type 'a' used by edge 'A2' was not defined (ignore with option --ignore-errors.edge-type).
 Quitting (on error).
-Parsing types from 'input_types.typ.xml' ...
- done.
-Parsing nodes from 'input_nodes.nod.xml' ... done.
-Parsing edges from 'input_edges.edg.xml' ...
- done.

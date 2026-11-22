@@ -6,7 +6,3 @@ Warning: Discarding unknown compound 'railway.platform' in type 'railway.abandon
 Warning: Discarding unusable type 'railway.abandoned|railway.platform' (first occurrence for edge '10860204').
 Error: No edges loaded.
 Quitting (on error).
-Parsing types from 'input_types.typ.xml' ... done.
-Parsing nodes from osm-file 'osm.xml' ... done.
-Parsing edges from osm-file 'osm.xml' ... done.
-Removing duplicate edges ... done.

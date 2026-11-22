@@ -103,6 +103,8 @@ def normalise(line):
     if s.startswith("Eclipse SUMO ") or s.startswith("Build features"):
         return None
     # times (texttest config_all: [0-9.]+ms / spent Xs / Duration Xs)
+    # tests/netconvert/config.netconvert: output:done \(.*\)\.{REPLACE done.}
+    s = re.sub(r"done \(.*\)\.", "done.", s)
     s = re.sub(r"[0-9.]+ms", "(TIME)", s)
     s = re.sub(r"spent [0-9.]+s", "spent (TIME)", s)
     s = re.sub(r"Duration [0-9.]+s", "Duration (TIME)", s)

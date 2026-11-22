@@ -10,5 +10,3 @@ Attribute 'id' is missing in definition of a node.
 Attribute 'lon' is missing in definition of node '-122'.
 Error: No nodes loaded.
 Quitting (on error).
-Parsing types from '/home/behr_mi/sumo/data/typemap/osmNetconvert.typ.xml' ... done.
-Parsing nodes from osm-file 'osm.xml' ...
