@@ -98,6 +98,8 @@ impl PCLoaderXML {
     #[allow(unused_variables)]
     pub fn new(toFill: &mut PCPolyContainer, tm: &mut PCTypeMap, oc: &mut OptionsCont) -> Self {
         let mut base = ShapeHandler::new("xml-poi-definition", &mut toFill.base, Ptr::null());
+        // v1_28_0 PCLoaderXML.cpp: getLanePos is virtual; wire the subclass override so
+        // ShapeHandler's Parsed-POI lane/pos path does not hit the pure-virtual base.
         base.get_lane_pos_override = Some(get_lane_pos_virtual);
         PCLoaderXML {
             base,

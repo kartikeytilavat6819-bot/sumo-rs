@@ -120,6 +120,11 @@ for dir in tools/oracle/cases/*/; do
   # errors.sumo / output.sumo), not against tripinfo/fcd/statistic. Streams are compared
   # separately, each in order, exactly like texttest. Cases without EXPECT_EXIT are unaffected.
   if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ]; then
+    # netconvert error rows carry net.args, not sim.args/ref_simple.net.xml; they are
+    # scored by the netconvert ITT oracle, not by this SUMO-based error stage.
+    if [ -f "$dir/net.args" ] && [ ! -f "$dir/sim.args" ]; then
+      line "$c" err SKIP "netconvert error row (net.args)"; SKIP=$((SKIP+1)); continue
+    fi
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
         --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"

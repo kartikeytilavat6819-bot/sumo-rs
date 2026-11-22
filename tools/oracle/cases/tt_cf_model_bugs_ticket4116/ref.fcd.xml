@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-21T21:51:40.263963-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_cf_model_bugs_ticket4116/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_cf_model_bugs_ticket4116/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc107/tools/oracle/cases/tt_cf_model_bugs_ticket4116/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc107/tools/oracle/cases/tt_cf_model_bugs_ticket4116/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc107/tools/oracle/cases/tt_cf_model_bugs_ticket4116/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <emergency-insert value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="brakingVeh" x="5.10" y="0.00" angle="90.00" type="braker" speed="13.00" pos="5.10" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.10">
+        <vehicle id="brakingVeh" x="6.35" y="0.00" angle="90.00" type="braker" speed="12.55" pos="6.35" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.20">
+        <vehicle id="brakingVeh" x="7.56" y="0.00" angle="90.00" type="braker" speed="12.10" pos="7.56" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.30">
+        <vehicle id="brakingVeh" x="8.73" y="0.00" angle="90.00" type="braker" speed="11.65" pos="8.73" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.40">
+        <vehicle id="brakingVeh" x="9.85" y="0.00" angle="90.00" type="braker" speed="11.20" pos="9.85" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.50">
+        <vehicle id="brakingVeh" x="10.93" y="0.00" angle="90.00" type="braker" speed="10.75" pos="10.93" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.60">
+        <vehicle id="brakingVeh" x="11.96" y="0.00" angle="90.00" type="braker" speed="10.30" pos="11.96" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.70">
+        <vehicle id="brakingVeh" x="12.94" y="0.00" angle="90.00" type="braker" speed="9.85" pos="12.94" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.80">
+        <vehicle id="brakingVeh" x="13.88" y="0.00" angle="90.00" type="braker" speed="9.40" pos="13.88" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="0.90">
+        <vehicle id="brakingVeh" x="14.78" y="0.00" angle="90.00" type="braker" speed="8.95" pos="14.78" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="brakingVeh" x="15.63" y="0.00" angle="90.00" type="braker" speed="8.50" pos="15.63" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.10">
+        <vehicle id="brakingVeh" x="16.43" y="0.00" angle="90.00" type="braker" speed="8.05" pos="16.43" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.20">
+        <vehicle id="brakingVeh" x="17.19" y="0.00" angle="90.00" type="braker" speed="7.60" pos="17.19" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.30">
+        <vehicle id="brakingVeh" x="17.91" y="0.00" angle="90.00" type="braker" speed="7.15" pos="17.91" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.40">
+        <vehicle id="brakingVeh" x="18.58" y="0.00" angle="90.00" type="braker" speed="6.70" pos="18.58" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.50">
+        <vehicle id="brakingVeh" x="19.20" y="0.00" angle="90.00" type="braker" speed="6.25" pos="19.20" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.60">
+        <vehicle id="brakingVeh" x="19.78" y="0.00" angle="90.00" type="braker" speed="5.80" pos="19.78" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.70">
+        <vehicle id="brakingVeh" x="20.32" y="0.00" angle="90.00" type="braker" speed="5.35" pos="20.32" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.80">
+        <vehicle id="brakingVeh" x="20.81" y="0.00" angle="90.00" type="braker" speed="4.90" pos="20.81" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.90">
+        <vehicle id="brakingVeh" x="21.25" y="0.00" angle="90.00" type="braker" speed="4.45" pos="21.25" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="brakingVeh" x="21.65" y="0.00" angle="90.00" type="braker" speed="4.00" pos="21.65" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.10">
+        <vehicle id="brakingVeh" x="22.01" y="0.00" angle="90.00" type="braker" speed="3.55" pos="22.01" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.20">
+        <vehicle id="brakingVeh" x="22.32" y="0.00" angle="90.00" type="braker" speed="3.10" pos="22.32" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.30">
+        <vehicle id="brakingVeh" x="22.58" y="0.00" angle="90.00" type="braker" speed="2.65" pos="22.58" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.40">
+        <vehicle id="brakingVeh" x="22.80" y="0.00" angle="90.00" type="braker" speed="2.20" pos="22.80" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.50">
+        <vehicle id="brakingVeh" x="22.98" y="0.00" angle="90.00" type="braker" speed="1.75" pos="22.98" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.60">
+        <vehicle id="brakingVeh" x="23.11" y="0.00" angle="90.00" type="braker" speed="1.30" pos="23.11" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.70">
+        <vehicle id="brakingVeh" x="23.19" y="0.00" angle="90.00" type="braker" speed="0.85" pos="23.19" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.80">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.40" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.90">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.10">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.20">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.30">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.40">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.50">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.60">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.70">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.80">
+        <vehicle id="brakingVeh" x="23.23" y="0.00" angle="90.00" type="braker" speed="0.00" pos="23.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.90">
+        <vehicle id="brakingVeh" x="23.26" y="0.00" angle="90.00" type="braker" speed="0.26" pos="23.26" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="brakingVeh" x="23.31" y="0.00" angle="90.00" type="braker" speed="0.52" pos="23.31" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.10">
+        <vehicle id="brakingVeh" x="23.38" y="0.00" angle="90.00" type="braker" speed="0.76" pos="23.38" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.20">
+        <vehicle id="brakingVeh" x="23.48" y="0.00" angle="90.00" type="braker" speed="0.97" pos="23.48" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.30">
+        <vehicle id="brakingVeh" x="23.60" y="0.00" angle="90.00" type="braker" speed="1.21" pos="23.60" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.40">
+        <vehicle id="brakingVeh" x="23.75" y="0.00" angle="90.00" type="braker" speed="1.46" pos="23.75" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.50">
+        <vehicle id="brakingVeh" x="23.92" y="0.00" angle="90.00" type="braker" speed="1.70" pos="23.92" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.60">
+        <vehicle id="brakingVeh" x="24.11" y="0.00" angle="90.00" type="braker" speed="1.91" pos="24.11" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.70">
+        <vehicle id="brakingVeh" x="24.32" y="0.00" angle="90.00" type="braker" speed="2.14" pos="24.32" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.80">
+        <vehicle id="brakingVeh" x="24.55" y="0.00" angle="90.00" type="braker" speed="2.30" pos="24.55" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.90">
+        <vehicle id="brakingVeh" x="24.81" y="0.00" angle="90.00" type="braker" speed="2.55" pos="24.81" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="brakingVeh" x="25.08" y="0.00" angle="90.00" type="braker" speed="2.72" pos="25.08" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.10">
+        <vehicle id="brakingVeh" x="25.37" y="0.00" angle="90.00" type="braker" speed="2.89" pos="25.37" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.20">
+        <vehicle id="brakingVeh" x="25.68" y="0.00" angle="90.00" type="braker" speed="3.07" pos="25.68" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.30">
+        <vehicle id="brakingVeh" x="26.00" y="0.00" angle="90.00" type="braker" speed="3.24" pos="26.00" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.40">
+        <vehicle id="brakingVeh" x="26.34" y="0.00" angle="90.00" type="braker" speed="3.38" pos="26.34" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.50">
+        <vehicle id="brakingVeh" x="26.69" y="0.00" angle="90.00" type="braker" speed="3.52" pos="26.69" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.60">
+        <vehicle id="brakingVeh" x="27.07" y="0.00" angle="90.00" type="braker" speed="3.74" pos="27.07" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.70">
+        <vehicle id="brakingVeh" x="27.46" y="0.00" angle="90.00" type="braker" speed="3.93" pos="27.46" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.80">
+        <vehicle id="brakingVeh" x="27.87" y="0.00" angle="90.00" type="braker" speed="4.12" pos="27.87" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.90">
+        <vehicle id="brakingVeh" x="28.31" y="0.00" angle="90.00" type="braker" speed="4.36" pos="28.31" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="brakingVeh" x="28.76" y="0.00" angle="90.00" type="braker" speed="4.49" pos="28.76" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.10">
+        <vehicle id="brakingVeh" x="29.23" y="0.00" angle="90.00" type="braker" speed="4.73" pos="29.23" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.20">
+        <vehicle id="brakingVeh" x="29.72" y="0.00" angle="90.00" type="braker" speed="4.91" pos="29.72" lane="gneE0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.30"/>
+</fcd-export>

@@ -1011,3 +1011,36 @@ impl MSCFModel_CACC {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cacc_variables_initial_state_matches_release() {
+        // C++ MSCFModel_CACC::CACCVehicleVariables() sets CACC_ControlMode(0) and
+        // CACC_CommunicationsOverrideMode(CACC_NO_OVERRIDE); the ACC base carries
+        // ACC_ControlMode(0) and lastUpdateTime(0) from createVehicleVariables().
+        let vars = MSCFModel_CACC_CACCVehicleVariables::new();
+        assert_eq!(vars.CACC_ControlMode, 0);
+        assert_eq!(vars.CACC_CommunicationsOverrideMode,
+                   MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE as i32);
+        assert_eq!(vars.base.ACC_ControlMode, 0);
+        assert_eq!(vars.base.lastUpdateTime, 0);
+    }
+
+    #[test]
+    fn cacc_gains_match_release() {
+        // MSCFModel_CACC.cpp:56-68 (SUMO 1.28.0): custom gains in the platoon tests
+        // must map onto these defaults when not overridden.
+        assert_eq!(DEFAULT_SC_GAIN_CACC, -0.4);
+        assert_eq!(DEFAULT_GCC_GAIN_GAP_CACC, 0.005);
+        assert_eq!(DEFAULT_GCC_GAIN_GAP_DOT_CACC, 0.05);
+        assert_eq!(DEFAULT_GC_GAIN_GAP_CACC, 0.45);
+        assert_eq!(DEFAULT_GC_GAIN_GAP_DOT_CACC, 0.0125);
+        assert_eq!(DEFAULT_CA_GAIN_GAP_CACC, 0.45);
+        assert_eq!(DEFAULT_CA_GAIN_GAP_DOT_CACC, 0.05);
+        assert_eq!(DEFAULT_HEADWAYTIME_ACC, 1.0);
+        assert_eq!(DEFAULT_SC_MIN_GAP, 1.66);
+    }
+}
+
