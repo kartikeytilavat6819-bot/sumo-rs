@@ -5031,6 +5031,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
+        if std::env::var("OC98DBG").is_ok() && self.get_id() == "v.25" {
+            eprintln!("OC98ORIGIN v.25 currEdge={} routeSize={} lane_null={} pos={} internal={} changeProh={}",
+                self.myCurrEdge, self.myRoute.size(), self.myLane.is_null(), self.myState.myPos,
+                !self.myLane.is_null() && self.myLane.is_internal(),
+                !self.myLane.is_null() && self.myLane.get_edge().has_change_prohibitions(self.get_v_class(), self.myLane.get_index()));
+        }
         // too close to the next junction, so avoid an emergency brake here
         if !self.myLane.is_null() && self.myCurrEdge + 1 != self.myRoute.size() as usize && !utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) {
             if self.myLane.is_internal() {
