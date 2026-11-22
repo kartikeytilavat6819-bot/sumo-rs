@@ -17,12 +17,12 @@ trace() {
     if [ "$side" = cpp ]; then B="${SUMO_PRISTINE_BIN:?no SUMO_PRISTINE_BIN}/sumo"; else B="$BIN/sumo"; fi
     if [ "$side" = cpp ]; then
       timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat \
-        --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
+        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat,x,y,speed,pos,lane,accel,accelLat \
+        --fcd-output.acceleration true --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
     else
       OC97_TRACE="$scope" timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat \
-        --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
+        --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat,x,y,speed,pos,lane,accel,accelLat \
+        --fcd-output.acceleration true --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
     fi
     echo "  run $side rc=$?"
   done
@@ -41,8 +41,10 @@ def extract(path):
                 t = round(float(m.group(1)), 2)
             if '<vehicle' in line and needle in line:
                 p = re.search(r'posLat="([^"]+)"', line)
+                al = re.search(r'accelLat="([^"]+)"', line)
+                v = re.search(r'speed="([^"]+)"', line)
                 if p and t is not None:
-                    out[t] = float(p.group(1))
+                    out[t] = (float(p.group(1)), float(al.group(1)) if al else 0.0, float(v.group(1)) if v else 0.0)
     return out
 
 a, b = extract(cpp), extract(ours)
@@ -51,8 +53,8 @@ for t in sorted(set(a) | set(b)):
         continue
     x, y = a.get(t), b.get(t)
     mark = "" if x == y else "   <-- DIFF"
-    print("  t=%6.2f  cpp=%9s  ours=%9s%s" % (
-        t, "%.4f" % x if x is not None else "-", "%.4f" % y if y is not None else "-", mark))
+    fmt = lambda q: ("%.4f/%.3f/%.2f" % q) if q is not None else "-"
+    print("  t=%6.2f  cpp[posLat/accLat/v]=%16s  ours=%16s%s" % (t, fmt(x), fmt(y), mark))
 PY
   echo "  --- our decision trace (csl/lat/align/foeTrace only) ---"
   grep -E '^OC97 .*(csl|latDone| lat |alignSet|foeTrace)' "$OUT/$c.ours.log" | head -60 || true
