@@ -8,6 +8,17 @@ BIN="$CARGO_TARGET_DIR/debug/sumo"
 OUT=/tmp/oc95
 rm -rf "$OUT"; mkdir -p "$OUT"
 
+for c in tt_output_emission-output_MMPEVEM_BMW_i3 tt_output_rawdump_one_vehicle tt_output_vtypeprobe_one_vehicle; do
+  D="tools/oracle/cases/$c"
+  R="$OUT/$c"; mkdir -p "$R"
+  EXTRA=$(cat "$D/sim.args")
+  timeout 300 "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --no-step-log true $EXTRA >"$R/err.out" 2>"$R/err.log"
+  echo "===== ERR CASE $c rc=$? ====="
+  echo "--- ref.errors ---"; cat "$D/ref.errors"
+  echo "--- our stderr ---"; head -30 "$R/err.log"
+  echo "--- compare ---"; python tools/oracle/park_tt_errors.py --compare "$D/ref.errors" "$R/err.log" 2>&1 | head -8
+done
+
 for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
   D="tools/oracle/cases/$c"
   R="$OUT/$c"; mkdir -p "$R"
