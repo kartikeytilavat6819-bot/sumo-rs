@@ -881,6 +881,10 @@ impl MSTriggeredRerouter {
                     net.get_router_tt(v.get_rng_index(), &routerProhibited)
                 };
                 let mut ok = false;
+                if std::env::var("OC98DBG").is_ok() {
+                    eprintln!("OC98DBG reroute-about-to-call info={} newEdge={} canChangeDest={} hasReroutingDevice={}",
+                        self.base.get_id(), newEdge.get_id(), canChangeDest, hasReroutingDevice);
+                }
                 // C++ wraps this in try { ... } catch (ProcessError&) {}: a failed reroute leaves the route unchanged
                 ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     v.reroute(now, self.base.get_id(), router, false, false, canChangeDest, newEdge)
@@ -931,6 +935,9 @@ impl MSTriggeredRerouter {
                             false
                         });
                     }
+                }
+                if std::env::var("OC98DBG").is_ok() {
+                    eprintln!("OC98DBG reroute-result ok={}", ok);
                 }
                 self.reset_closed_edges(hasReroutingDevice, tObject);
                 if ok {
