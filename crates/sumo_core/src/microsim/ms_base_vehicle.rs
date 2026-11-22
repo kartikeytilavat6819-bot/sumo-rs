@@ -1997,6 +1997,9 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, newRoute: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addRouteStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+        if self.get_id() == "t_0" {
+            eprintln!("OC108_REPLROUTE enter info={} onInit={} offset={} addStops={} removeStops={} edges={:?}", info, onInit, offset, addRouteStops, removeStops, newRoute.get_edges().iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
+        }
         // rebuild in-vehicle route information
         if onInit {
             self.myCurrEdge = 0;
