@@ -845,6 +845,25 @@ mod tests {
         assert!((out - 6.78).abs() < 1e-9, "got {out}");
     }
 
+    // C++ MSDevice_Bluelight.cpp:259 writes jmParameter[SUMO_ATTR_JM_STOPLINE_GAP]
+    // via const_cast<SUMOVTypeParameter&>(t.getParameter()); the Rust port writes
+    // through the public mutable field so the value is observably identical through
+    // getParameter(). (A regression test cannot fail on the old UB path: writing
+    // through a &-derived pointer happened to reach the same object.)
+    #[test]
+    fn stopline_gap_write_visible_through_vtype_accessor() {
+        use crate::microsim::ms_vehicle_type::MSVehicleType;
+        use crate::utils::vehicle::sumov_type_parameter::SUMOVTypeParameter;
+        use utils::common::sumo_vehicle_class::SVC_PASSENGER;
+        let params = SUMOVTypeParameter::new("car", SVC_PASSENGER);
+        let mut vt = MSVehicleType::new(&params);
+        vt.myParameter.jmParameter.insert(SUMO_ATTR_JM_STOPLINE_GAP, f64_to_string(1.0));
+        assert_eq!(
+            vt.get_parameter().jmParameter.get(&SUMO_ATTR_JM_STOPLINE_GAP).map(String::as_str),
+            Some("1.00")
+        );
+    }
+
     // C++ MSBaseVehicle::getSingularType builds the id "<vtype>@<vehicle id>";
     // MSDevice_Bluelight calls it on influenced vehicles to set the rescue-lane
     // alignment, producing ids like "car@straight.4".
