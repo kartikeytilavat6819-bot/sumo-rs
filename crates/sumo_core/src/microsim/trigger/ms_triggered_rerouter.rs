@@ -2853,3 +2853,49 @@ static MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT: MSStoppingPlaceRerouter
     // C++ MSTriggeredRerouter does not override getRouter; inherit the base body
     get_router: MSStoppingPlaceRerouter::get_router_base,
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn interval(closed: BTreeMap<Ptr<MSEdge>, (SVCPermissions, f64)>) -> MSTriggeredRerouter_RerouteInterval {
+        MSTriggeredRerouter_RerouteInterval {
+            id: 0,
+            begin: 0,
+            end: 250,
+            closed,
+            closedLanes: Default::default(),
+            closedLanesAffected: Vec::new(),
+            edgeProbs: Default::default(),
+            routeProbs: Default::default(),
+            parkProbs: Default::default(),
+            isVia: false,
+            permissionsAllowAll: false,
+            overtakeLocations: Vec::new(),
+            stopAlternatives: Vec::new(),
+        }
+    }
+
+    /// A closing with a known `until` must keep the finite end: the router uses
+    /// `end == MAX` to distinguish a permanent prohibition from a temporary one.
+    #[test]
+    fn get_closed_keeps_finite_end() {
+        let mut closed = BTreeMap::new();
+        closed.insert(Ptr::<MSEdge>::default(), (SVC_AUTHORITY, 200.0));
+        let prohibitions = interval(closed).get_closed();
+        let p = prohibitions.values().next().unwrap();
+        assert_eq!(p.begin, 0.0);
+        assert_eq!(p.end, 200.0);
+        assert_eq!(p.permissions, SVC_AUTHORITY);
+    }
+
+    /// Without `until`, the end stays at MAX (permanent prohibition).
+    #[test]
+    fn get_closed_defaults_to_permanent() {
+        let mut closed = BTreeMap::new();
+        closed.insert(Ptr::<MSEdge>::default(), (SVC_AUTHORITY, -1.0));
+        let prohibitions = interval(closed).get_closed();
+        let p = prohibitions.values().next().unwrap();
+        assert_eq!(p.end, f64::MAX);
+    }
+}
