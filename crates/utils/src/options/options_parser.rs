@@ -196,14 +196,12 @@ mod tests {
         let mut oc = sample();
         setup(&mut oc);
         assert!(parse_with(&mut oc, &args(&["-a=a1.xml,a2.xml"]), false));
-        assert_eq!(oc.get_string_vector("additional-files").unwrap(),
-                   &vec!["a1.xml".to_string(), "a2.xml".to_string()]);
+        assert_eq!(oc.get_string("additional-files").unwrap(), "a1.xml,a2.xml");
         // meta/option_list_append: +a appends to an existing list
         let mut oc = sample();
         setup(&mut oc);
         assert!(parse_with(&mut oc, &args(&["-a", "a1.xml", "+a", "a2.xml"]), false));
-        assert_eq!(oc.get_string_vector("additional-files").unwrap(),
-                   &vec!["a1.xml".to_string(), "a2.xml".to_string()]);
+        assert_eq!(oc.get_string("additional-files").unwrap(), "a1.xml,a2.xml");
         // meta config-writing forms: --save-configuration=FILE, -C FILE (alias)
         let mut oc = sample();
         setup(&mut oc);
