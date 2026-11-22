@@ -13,12 +13,12 @@ BIN="${CARGO_TARGET_DIR:?CARGO_TARGET_DIR must be set}/debug/sumo"
 if [ ! -x "$BIN" ] && [ -x "$BIN.exe" ]; then BIN="$BIN.exe"; fi
 
 EXTRA=$(cat "$CASE/sim.args")
-timeout 600 "$BIN" -n "$CASE/ref_simple.net.xml" -r "$CASE/routes.rou" \
+OC102_DEBUG=1 timeout 600 "$BIN" -n "$CASE/ref_simple.net.xml" -r "$CASE/routes.rou" \
     --tripinfo-output "$OUT/ours.ti.xml" --fcd-output "$CAND" \
     --statistic-output "$OUT/ours.stat.xml" --no-step-log true $EXTRA \
     >"$OUT/ours.log" 2>&1
-echo "sumo rc=$? ; log tail:"
-tail -5 "$OUT/ours.log" 2>/dev/null || true
+echo "sumo rc=$? ; OC102 trace:"
+grep 'OC102' "$OUT/ours.log" 2>/dev/null | tail -80 || true
 
 PY=python3; command -v python3 >/dev/null || PY=python
 "$PY" - "$REF" "$CAND" <<'PYEOF'

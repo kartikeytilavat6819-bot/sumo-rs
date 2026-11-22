@@ -369,10 +369,21 @@ impl MSDevice_Bluelight {
             }
         }
         // reset all vehicles that were in myInfluencedVehicles in the previous step but not in the current step todo refactor
+        if std::env::var_os("OC102_DEBUG").is_some() {
+            eprintln!("OC102 t={} egoLane={} egoEdge={} upcomingEdges={:?} influenced={:?} toReset={:?}",
+                simstep, ego.get_lane().get_id(), ego.get_lane().get_edge().get_id(),
+                upcomingEdges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>(),
+                self.myInfluencedVehicles.iter().cloned().collect::<Vec<_>>(),
+                lastStepInfluencedVehicles.iter().cloned().collect::<Vec<_>>());
+        }
         for vehID in lastStepInfluencedVehicles.iter().cloned().collect::<Vec<String>>() {
             self.myInfluencedVehicles.remove(&vehID);
             let it = self.myInfluencedTypes.get(&vehID).cloned();
             let veh2 = vc.get_vehicle(&vehID).cast::<MSVehicle>();
+            if std::env::var_os("OC102_DEBUG").is_some() {
+                eprintln!("OC102  reset {} target={:?} vehNull={} type={}",
+                    vehID, it, veh2.is_null(), if veh2.is_null() { "-".into() } else { veh2.get_vehicle_type().get_id().to_string() });
+            }
             if !veh2.is_null() {
                 if let Some(targetType) = it {
                     // The vehicle gets back its old VehicleType after the emergency vehicle have passed them
@@ -702,6 +713,10 @@ impl MSDevice_Bluelight {
                 influencedBy.remove(pos);
                 // C++ const_cast<SUMOVehicleParameter&>(veh2->getParameter()).setParameter(...)
                 Ptr::new(veh2.get_parameter()).m().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
+            }
+            if std::env::var_os("OC102_DEBUG").is_some() {
+                eprintln!("OC102  resetVehicle {} target={} typeNull={} influencedBy={:?} holder={} -> replace={}",
+                    veh2.get_id(), targetTypeID, targetType.is_null(), influencedBy, holderID, influencedBy.is_empty());
             }
             if influencedBy.is_empty() {
                 veh2.m().replace_vehicle_type(targetType);
