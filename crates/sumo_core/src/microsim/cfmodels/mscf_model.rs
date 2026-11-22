@@ -2686,4 +2686,12 @@ mod tests {
         // euler: t = (5 - 0) / 10 = 0.5, clamped to [0, TS]
         assert!((MSCFModel::passing_time(0., 5., 10., 10., 10.) - 0.5).abs() < 1e-9);
     }
+
+    #[test]
+    fn avoid_arrival_accel_other_branches() {
+        // MSCFModel.cpp:554: time*speed > 2*dist -> stop before dist
+        assert!((MSCFModel::avoid_arrival_accel(10., 20., 2., 3.) - (-0.2)).abs() < 1e-9);
+        // dist <= 0 -> -maxDecel
+        assert_eq!(MSCFModel::avoid_arrival_accel(0., 1., 2., 3.), -3.);
+    }
 }
