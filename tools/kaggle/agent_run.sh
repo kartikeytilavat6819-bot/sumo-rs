@@ -86,6 +86,38 @@ for vid in sorted(set(ra) | set(cb)):
     print("  CAND %s" % cb.get(vid, "<absent>"))
 PYEOF
 
+# First FCD difference for the other bluelight target cases (same root cause?).
+for c in tt_devices_bluelight_3lanes_right tt_devices_bluelight_3lanes_straight_blocked tt_devices_bluelight_3lanes_straight_blocked_default tt_devices_bluelight_turnlane_blocked tt_devices_bluelight_bugs_ticket9310 tt_devices_bluelight_opposite_multiple2; do
+  D=tools/oracle/cases/$c
+  [ -f "$D/ref.fcd.xml" ] || continue
+  FLAGS=$(cat "$D/sim.args" 2>/dev/null)
+  timeout 300 "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" \
+      --fcd-output "$OUT/$c.fcd.xml" --no-step-log true $FLAGS >"$OUT/$c.log" 2>&1
+  echo "====FCDDIFF $c rc=$?"
+  "$PY" - "$D/ref.fcd.xml" "$OUT/$c.fcd.xml" <<'PYEOF2'
+import re,sys
+def parse(p):
+    d={}; t=None
+    with open(p,encoding="utf-8",errors="replace") as f:
+        for l in f:
+            m=re.search(r'<timestep time="([^"]+)"',l)
+            if m: t=round(float(m.group(1)),2); d.setdefault(t,{}); continue
+            m=re.search(r'<vehicle id="([^"]+)"',l)
+            if m and t is not None: d[t][m.group(1)]=l.strip()
+    return d
+a,b=parse(sys.argv[1]),parse(sys.argv[2])
+for t in sorted(set(a)|set(b)):
+    ra,rb=a.get(t,{}),b.get(t,{})
+    for v in sorted(set(ra)|set(rb)):
+        if ra.get(v)!=rb.get(v):
+            print("FIRST t=%s veh=%s"%(t,v))
+            print(" REF ",ra.get(v,"<absent>"))
+            print(" CAND",rb.get(v,"<absent>"))
+            sys.exit(0)
+print("NO DIFF")
+PYEOF2
+done
+
 # oc105 measurement (merged from wave2): compare our sumo with the official binary.
 OUT=/tmp/oc105
 mkdir -p "$OUT"
