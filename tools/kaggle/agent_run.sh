@@ -16,6 +16,6 @@ for c in $CASES; do
     head -n 3 "$OUT/$c.$side.stderr"
   done
   echo "-- first differing tripinfo lines:"
-  diff "$OUT/$c.off.tripinfo.xml" "$OUT/$c.ours.tripinfo.xml" 2>&1 | head -n 6
+  diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.off.tripinfo.xml" 2>/dev/null) <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.ours.tripinfo.xml" 2>/dev/null) 2>&1 | head -n 12
 done
 echo "AGENT RUN DONE"
