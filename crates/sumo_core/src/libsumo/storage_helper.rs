@@ -155,7 +155,7 @@ impl StorageHelper {
                     if tisb {
                         Self::write_typed_int(&mut result, (pl[0].1 + 0.5) as i32);
                         Self::write_typed_string(&mut result, &pl[0].0);
-                        Self::write_typed_unsigned_byte(&mut result, (pl[1].1 + 0.5) as i32);
+                        Self::write_typed_byte(&mut result, (pl[1].1 + 0.5) as i32);
                     } else {
                         Self::write_typed_double(&mut result, pl[0].1);
                         Self::write_typed_double(&mut result, pl[1].1);
