@@ -309,9 +309,7 @@ impl MSStopOptimizer {
                 queue.push(succ);
             }
         }
-        eprintln!("OC108_OPTI start src={} nStops={} minSkipped={} totalPrio={}", source.get_id(), stops.len(), minSkipped, totalPrio);
         for stop in stops.iter_mut() {
-            eprintln!("OC108_OPTI in stop={} prio={} skipped={} routeIndex={} name={:?}", stop.edge.get_id(), stop.priority, stop.skipped, stop.routeIndex, stop.nameTag);
             // init true and later set false for all used stops
             if !stop.skipped {
                 stop.backtracked = true;
@@ -338,10 +336,6 @@ impl MSStopOptimizer {
             }
             bestEdges.splice(0..0, n.edges.iter().cloned());
             cur = n.prev.clone();
-        }
-        eprintln!("OC108_OPTI result bestStopIndex={} edges={:?}", bestNode.borrow().stopIndex, bestEdges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
-        for stop in stops.iter() {
-            eprintln!("OC108_OPTI out stop={} skipped={} backtracked={} orig={}", stop.edge.get_id(), stop.skipped, stop.backtracked, if stop.origEdge.is_null() { "-".to_string() } else { stop.origEdge.get_id().to_string() });
         }
         bestEdges
     }

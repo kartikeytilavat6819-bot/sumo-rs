@@ -239,7 +239,17 @@ fn my_leftover_vehicle_parameters() -> &'static mut Vec<Ptr<SUMOVehicleParameter
 
 /// C++ `MSRoute::dictionary(id)`: None where C++ returns nullptr
 fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
-    if MSRoute::has_route(id) { Some(MSRoute::dictionary_3(id, Ptr::null())) } else { None }
+    if MSRoute::has_route(id) {
+        return Some(MSRoute::dictionary_3(id, Ptr::null()));
+    }
+    // C++ MSRoute::dictionary(id, rng=nullptr) falls back to myDistDict and samples
+    // a route from a named <routeDistribution> (MSRoute.cpp:142-155). The old
+    // has_route-only lookup returned None for calibrators fed by a routeDistribution.
+    let dist = MSRoute::dist_dictionary(id);
+    if !dist.is_null() && dist.get_overall_prob() > 0.0 {
+        return (*dist).get(None).ok();
+    }
+    None
 }
 
 /// C++ `new VehicleRemover(lane, parent, undo)` kept alive in myLeftoverReminders; its MSMoveReminder ctor adds it to the lane
