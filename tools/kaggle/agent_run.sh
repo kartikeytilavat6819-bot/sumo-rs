@@ -9,8 +9,29 @@ ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$ROOT" || exit 1
 PRISTINE="${SUMO_PRISTINE_BIN:-}/sumo"
 OURS="${CARGO_TARGET_DIR:-$ROOT/target}/debug/sumo"
-ROWS=".oc_haiku_rows.txt"
-[ -f "$ROWS" ] || { echo "no $ROWS"; exit 0; }
+ROWS="$OUT/rows.txt"
+# Row list is inlined: .oc_haiku_rows.txt is untracked and absent on the gate VM.
+cat > "$ROWS" <<'ROWLIST'
+tt_output_route_probe_devnull_output
+tt_output_route_probe_null_output
+tt_output_route_probe_odd_interval
+tt_output_route_probe_two_same
+tt_output_route_probe_two_same_b5
+tt_output_route_probe_two_same_begin
+tt_output_route_probe_vTypes
+tt_output_tripinfo_one_vehicle_subsecond
+tt_output_tripinfo_probability_by_type
+tt_output_tripinfo_teleport
+tt_output_tripinfo_teleport_multihop
+tt_output_tripinfo_write_undeparted
+tt_output_vehroutes_dua
+tt_output_vehroutes_route_dist
+tt_output_vehroutes_transportable_write_unfinished_person
+tt_output_vehroutes_with_stops
+tt_output_vehroutes_with_stops_priorEdges
+tt_output_vehroutes_with_stops_started_ended
+tt_output_vehroutes_write_unfinished_stops
+ROWLIST
 
 first_diff() { # ref file, got file
   diff <(grep -v '^\s*$' "$1") <(grep -v '^\s*$' "$2") | head -3 | cut -c1-160
