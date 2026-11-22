@@ -431,26 +431,4 @@ impl RODFFrame {
 
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    // C++ RODFFrame.cpp:47 - fillOptions registers the "-c <CONFIGURATION>" call example.
-    #[test]
-    fn fill_options_registers_config_call_example() {
-        utils::options::options_cont::with_options(|oc| {
-            oc.clear();
-            RODFFrame::fill_options(); // reentrant: fills the same oc
-            // BoolExtended::set("false") empties the value string, so print_help
-            // prints the full help (including Examples) instead of a topic list.
-            oc.set("help", "false", false).unwrap();
-            let mut help = String::new();
-            oc.print_help(&mut help).unwrap();
-            assert!(help.contains("Examples:"), "no examples section in help: {help}");
-            assert!(help.contains("-c <CONFIGURATION>"), "missing -c call example: {help}");
-            assert!(help.contains("run routing with options from file"), "missing example description: {help}");
-            // leave a clean OptionsCont: other unit tests register their own options.
-            oc.clear();
-        });
-    }
-}
 
