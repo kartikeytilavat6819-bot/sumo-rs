@@ -47,9 +47,6 @@ impl<T: ?Sized> Ptr<T> {
     /// Mutable access through a shared pointer, like calling a non-const method via `T*`.
     #[allow(clippy::mut_from_ref)]
     pub fn m(&self) -> &mut T {
-        if self.0.is_null() && std::env::var_os("OC104_NULL_BT").is_some() {
-            eprintln!("OC104 NULL PTR m() BACKTRACE: {:?}", std::backtrace::Backtrace::force_capture());
-        }
         debug_assert!(!self.0.is_null(), "null Ptr dereference");
         unsafe { &mut *self.0 }
     }
@@ -77,20 +74,12 @@ impl<T> Default for Ptr<T> {
 impl<T: ?Sized> Deref for Ptr<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        // Diagnostics only: with OC104_NULL_BT set, capture the real call site of a null deref.
-        // Inert otherwise (no output, no behaviour change) so gate rows are unaffected.
-        if self.0.is_null() && std::env::var_os("OC104_NULL_BT").is_some() {
-            eprintln!("OC104 NULL PTR BACKTRACE: {:?}", std::backtrace::Backtrace::force_capture());
-        }
         debug_assert!(!self.0.is_null(), "null Ptr dereference");
         unsafe { &*self.0 }
     }
 }
 impl<T: ?Sized> DerefMut for Ptr<T> {
     fn deref_mut(&mut self) -> &mut T {
-        if self.0.is_null() && std::env::var_os("OC104_NULL_BT").is_some() {
-            eprintln!("OC104 NULL PTR MUT BACKTRACE: {:?}", std::backtrace::Backtrace::force_capture());
-        }
         debug_assert!(!self.0.is_null(), "null Ptr dereference");
         unsafe { &mut *self.0 }
     }
