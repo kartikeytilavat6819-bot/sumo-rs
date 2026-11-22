@@ -959,6 +959,14 @@ mod tests {
         assert_eq!(MSRoute::dictionary_3("t_dict_r", Ptr::null()).size(), 1);
         // unknown id: C++ returns nullptr; the Rust stand-in is a leaked empty route
         assert_eq!(MSRoute::dictionary_3("t_dict_none", Ptr::null()).size(), 0);
+        // C++ MSRoute::dictionary(id, nullptr) falls back to myDistDict; the
+        // calibrator relies on this when its flow references a <routeDistribution>.
+        let rd: ConstMSRoutePtr = Rc::new(MSRoute::new("t_dict_dist_r", &vec![edge("x")], true, Ptr::null(), &Vec::new(), -1, -1));
+        let mut dist = utils::distribution::random_distributor::RandomDistributor::<ConstMSRoutePtr>::default();
+        assert!(dist.add(rd, 1.0, false));
+        assert!(MSRoute::dictionary_2("t_dict_dist", Ptr::from_raw(Box::into_raw(Box::new(dist))), true));
+        assert!(!MSRoute::has_route("t_dict_dist"));
+        assert_eq!(MSRoute::dictionary_3("t_dict_dist", Ptr::null()).size(), 1);
         MSRoute::clear();
         assert!(!MSRoute::has_route("t_dict_r"));
         assert!(MSRoute::dist_dictionary("t_dict_r").is_null());
