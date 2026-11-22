@@ -480,7 +480,9 @@ impl NBRailwaySignalGuesser {
                         if ec.split_at_2(dc, stopEdge, n, &stopEdgeID, &edgeID, stopEdge.get_num_lanes(), stopEdge.get_num_lanes(), -1.0, 1.0, 0) {
                             if !bidi.is_null() {
                                 let edgeID2 = ec.create_unused_id(&format!("{}.{}", bidi.get_id(), splitPos as i32), "#");
-                                ec.split_at_2(dc, bidi, n, bidi.get_id(), &edgeID2, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
+                                // v1_28_0 NBAlgorithms_Railway.cpp:1431 passes (edgeID2, bidiID)
+                                // here, unlike the second split branch which passes (bidiID, edgeID2).
+                                ec.split_at_2(dc, bidi, n, &edgeID2, bidi.get_id(), bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
                             }
                             addedSignals += 1;
                             item.m().find_lane_and_compute_bus_stop_extent_2(stopEdge);
@@ -1983,9 +1985,9 @@ impl NBRailwayTopologyAnalyzer {
     //     }
     //     return numReversed;
     // }
-    // C++ NBAlgorithms_Railway.cpp:589-593: the ptline-edge check belongs at the top of the
-    // `for (NBEdge* start : outRail)` loop, before allBroken. It must not repeat inside the
-    // while loop, where a line edge later in the sequence would truncate the sequence.
+    // C++ v1_28_0 src/netbuild/NBAlgorithms_Railway.cpp:587-593: the ptline-edge check
+    // sits at the top of the outRail loop, before allBroken; the snapshot later moved it
+    // into the while loop and added an OSM_DIRECTION break, neither of which is in the release.
     fn is_ptline_start<T: Ord>(start: &T, line_edges: &BTreeSet<T>) -> bool {
         line_edges.contains(start)
     }
@@ -2007,7 +2009,7 @@ impl NBRailwayTopologyAnalyzer {
             Self::get_rail_edges(*n, &mut inRail, &mut outRail);
             for mut start in outRail.clone() {
                 if Self::is_ptline_start(&start, &lineEdges) {
-                    // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
+                    // ptline edges should never be reversed. They are fixed by a different algorithm require their original ids and orientation
                     continue;
                 }
                 // only reverse edges where the node would be unbroken afterwards
@@ -3308,18 +3310,14 @@ mod tests {
 
     #[test]
     fn ptline_start_is_skipped_at_top_of_out_rail_loop() {
-        // C++ NBAlgorithms_Railway.cpp:589-593 (reverseEdges, outRail loop):
+        // v1_28_0 NBAlgorithms_Railway.cpp:587-593 (reverseEdges, outRail loop):
         //   for (NBEdge* start : outRail) {
-        //       if (lineEdges.count(start)) {
-        //           // ptline edges should never be reversed...
-        //           continue;
-        //       }
+        //       if (lineEdges.count(start)) { continue; }
         //       ...
         //   }
-        // The check must use the initial `start`, at the top of the loop, before
-        // allBroken — never the re-assigned `start` inside the while loop.
-        // Use plain ids so the test never builds an NBEdge/NBNode (which read the
-        // process-global OptionsCont, uninitialised in unit tests).
+        // The check uses the initial `start`, at the top of the loop, before allBroken —
+        // never the re-assigned `start` inside the while loop (as in the dev snapshot).
+        // Plain ids avoid constructing NBEdge/NBNode, which read global OptionsCont.
         let mut line_edges: BTreeSet<String> = BTreeSet::new();
         let line_edge = "lineEdge".to_string();
         let other_edge = "otherEdge".to_string();
