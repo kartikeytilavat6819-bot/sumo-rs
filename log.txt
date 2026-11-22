@@ -1,6 +1,0 @@
-[2026-11-22T10:02:58.271736+00:00] [PID: 70076] Loading net-file from 'tools/oracle/cases\tt_meta_with_log_timestamps_pid\ref_simple.net.xml' ... done (3ms).
-[2026-11-22T10:02:58.279278+00:00] [PID: 70076] Loading route-files incrementally from 'tools/oracle/cases\tt_meta_with_log_timestamps_pid\routes.rou'
-[2026-11-22T10:02:58.279324+00:00] [PID: 70076] Loading done.
-[2026-11-22T10:02:58.280668+00:00] [PID: 70076] Simulation version v1.28.0-0000000000 started with time: 0.00.
-[2026-11-22T10:02:58.283176+00:00] [PID: 70076] Simulation ended at time: 100.00.
-[2026-11-22T10:02:58.283208+00:00] [PID: 70076] Reason: The final simulation step has been reached.
