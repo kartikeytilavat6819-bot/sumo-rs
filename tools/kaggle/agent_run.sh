@@ -20,21 +20,3 @@ for c in tt_devices_ssm_bugs_ticket13918 tt_devices_rerouting_reroute_congestion
     echo "$side stdout:"; head -12 "$OUT/$c.$side.out"
   done
 done
-# oc108: closing_until mode-8 probe (current branch)
-C=tools/oracle/cases/tt_extended_rerouter_errors_closing_until_mode8_trip
-FLAGS=$(cat "$C/sim.args")
-echo "==== oc108 closing_until our"
-"$OUR" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" --no-step-log true $FLAGS \
-  --tripinfo-output /tmp/oc108_cu_our.tripinfo.xml >/tmp/oc108_cu_our.out 2>/tmp/oc108_cu_our.err
-echo "exit=$?"
-grep -E 'OC108_RR|OC108_REROUTE|incompatible' /tmp/oc108_cu_our.err | head -40
-grep -o 'id="reroute_period"[^>]*arrival="[^"]*"' /tmp/oc108_cu_our.tripinfo.xml | head -2
-# oc108: optimizeStops stop-alternative probe (current branch)
-C=tools/oracle/cases/tt_extended_rerouter_optimizeStops_grid5x10
-FLAGS=$(cat "$C/sim.args")
-echo "==== oc108 optimizeStops our"
-"$OUR" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" --no-step-log true $FLAGS \
-  --tripinfo-output /tmp/oc108_opt_our.tripinfo.xml >/tmp/oc108_opt_our.out 2>/tmp/oc108_opt_our.err
-echo "exit=$?"
-grep -E 'OC108_PRECHECK|OC108_REROUTE|OC108_REPLROUTE|OC108_REPLCHECK|OC108_REPL|replac|skips unreachable' /tmp/oc108_opt_our.err | head -80
-grep -o 'id="t_0"[^>]*arrival="[^"]*"' /tmp/oc108_opt_our.tripinfo.xml | head -2

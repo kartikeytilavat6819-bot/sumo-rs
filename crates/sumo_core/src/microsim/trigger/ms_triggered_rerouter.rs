@@ -645,14 +645,6 @@ impl MSTriggeredRerouter {
     pub fn trigger_routing(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification) -> bool {
         let tObject = veh;
         let net = MSNet::get_instance();
-        if tObject.get_id() == "reroute_period" {
-            let now = MSNet::get_instance().get_current_time_step();
-            let rd = self.get_current_reroute(now, tObject);
-            let devNull = if tObject.is_vehicle() {
-                Ptr::from_mut(tObject).cast::<crate::microsim::ms_base_vehicle::MSBaseVehicle>().get_device("rerouting").is_null()
-            } else { true };
-            eprintln!("OC108_RR enter reason={} applies={} haveUntil={} mode={} ignore={} now={} rdNull={} devNull={} intervals={}", reason as i32, self.applies(tObject), self.myHaveClosingUntil, tObject.get_routing_mode(), tObject.ignore_transient_permissions(), now, rd.is_null(), devNull, self.myIntervals.len());
-        }
         if !self.applies(tObject) {
             return false;
         }
@@ -869,7 +861,6 @@ impl MSTriggeredRerouter {
                 if !self.myHaveClosingUntil {
                     tObject.set_routing_mode(tObject.get_routing_mode() & !ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS);
                 } else if hasReroutingDevice && routingDevice.cast::<MSDevice_Routing>().get_period() > 0 {
-                    if tObject.get_id() == "reroute_period" { eprintln!("OC108_RR until-warning veh={} haveUntil={} mode={}", tObject.get_id(), self.myHaveClosingUntil, tObject.get_routing_mode()); }
                     utils::common::msg_handler::write_warning(&utils::tlf!("Periodic rerouting and rerouting mode 8 for vehicle '%' are incompatible with closingReroute attribute 'until' in rerouter (vehicle may return to an invalid route.", tObject.get_id(), self.base.get_id()));
                 }
             }

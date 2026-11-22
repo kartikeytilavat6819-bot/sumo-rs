@@ -1627,9 +1627,6 @@ impl MSBaseVehicle {
         }
 
         // router.setHint(myCurrEdge, myRoute->end(), this, t);
-        if self.get_id() == "t_0" {
-            eprintln!("OC108_PRECHECK info={} onInit={} silent={} edgesEmpty={} nEdges={} hasSkipped={}", info, onInit, silent, edges.is_empty(), edges.len(), hasSkipped);
-        }
         if edges.is_empty() && silent {
             return false;
         }
@@ -1638,9 +1635,6 @@ impl MSBaseVehicle {
         }
         if !edges.is_empty() && edges.last().unwrap().is_taz_connector() {
             edges.pop();
-        }
-        if self.get_id() == "reroute_period" || self.get_id() == "t_0" {
-            eprintln!("OC108_REROUTE veh={} info={} mode={} ignore={} savingsOk={} hasSkipped={} edges={:?}", self.get_id(), info, self.get_routing_mode() as i32, self.ignore_transient_permissions(), savingsOk, hasSkipped, edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
         }
         let routeCost = router.recompute_costs(&edges, Ptr::from_mut(&mut self.base), t, Ptr::default());
         // trips have no loaded route to compare against when routed on insertion
@@ -2000,9 +1994,6 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, newRoute: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addRouteStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
-        if self.get_id() == "t_0" {
-            eprintln!("OC108_REPLROUTE enter info={} onInit={} offset={} addStops={} removeStops={} edges={:?}", info, onInit, offset, addRouteStops, removeStops, newRoute.get_edges().iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
-        }
         // rebuild in-vehicle route information
         if onInit {
             self.myCurrEdge = 0;
@@ -2104,9 +2095,6 @@ impl MSBaseVehicle {
                 lastPos = endPos;
 
                 self.myStops[iter].edge = (searchStart..edgeCount).find(|&i| self.myRoute.get_edges()[i] == stopEdge).unwrap_or(edgeCount);
-                if self.get_id() == "t_0" {
-                    eprintln!("OC108_REPLCHECK stop={} found={}/{} prio={} name={:?} start={}", stopEdge.get_id(), self.myStops[iter].edge, edgeCount, self.myStops[iter].pars.priority, self.myStops[iter].get_stopping_place_name(), searchStart);
-                }
                 if self.myStops[iter].edge == edgeCount && self.myStops[iter].pars.priority >= 0.0 {
                     let oldEdge = self.myStops[iter].pars.edge.clone();
                     let oldName = self.myStops[iter].get_stopping_place_name().0;
@@ -6135,7 +6123,6 @@ impl MSBaseVehicle {
     // }
     pub fn replace_with_alternative(&mut self, iter: usize, searchStart: MSRouteIterator, end: MSRouteIterator) -> bool {
         let nameTag = self.myStops[iter].get_stopping_place_name();
-        if self.get_id() == "t_0" { eprintln!("OC108_REPL enter iter={} name={:?} searchStart={} end={}", iter, nameTag, searchStart, end); }
         if !nameTag.0.is_empty() {
             let alternatives: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().get_stopping_place_alternatives(&nameTag.0, nameTag.1).clone();
             for alt in alternatives {
@@ -6144,19 +6131,16 @@ impl MSBaseVehicle {
                 let same = altEdge == Ptr::new(self.myStops[iter].lane.get_edge());
                 let allows = altLane.allows_vehicle_class(self.get_v_class());
                 let found = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge);
-                if self.get_id() == "t_0" { eprintln!("OC108_REPL alt={} edge={} same={} allows={} found={:?}", alt.get_id(), altEdge.get_id(), same, allows, found); }
                 if same || !allows {
                     continue;
                 }
                 self.myStops[iter].edge = found.unwrap_or(end);
                 if self.myStops[iter].edge != end {
                     self.myStops[iter].replace_stopping_place(alt);
-                    if self.get_id() == "t_0" { eprintln!("OC108_REPL SUCCESS edge={}", self.myStops[iter].edge); }
                     return true;
                 }
             }
         }
-        if self.get_id() == "t_0" { eprintln!("OC108_REPL FAIL"); }
         false
     }
 
