@@ -756,6 +756,22 @@ mod tests {
         assert_eq!(MSDevice::get_device_name("bluelight_rescue"), "bluelight");
     }
 
+    // C++ MSDevice_Bluelight.cpp:233: influenced vehicles get setLaneChangeMode(1605).
+    // MSVehicle::Influencer::setLaneChangeMode decodes 1605 = 1024+512+64+4+1:
+    // strategic/cooperative/right-drive/sublane = 1 (LC_NOCONFLICT),
+    // speed-gain = 0 (LC_NEVER), traci priority = 2 (LCP_URGENT).
+    #[test]
+    fn influenced_lane_change_mode_1605_decoding() {
+        let mut inf = MSVehicle_Influencer::new();
+        inf.set_lane_change_mode(1605);
+        assert_eq!(inf.myStrategicLC.0, 1);
+        assert_eq!(inf.myCooperativeLC.0, 1);
+        assert_eq!(inf.mySpeedGainLC.0, 0);
+        assert_eq!(inf.myRightDriveLC.0, 1);
+        assert_eq!(inf.mySublaneLC.0, 1);
+        assert_eq!(inf.myTraciLaneChangePriority as i32, 2);
+    }
+
     // C++ MSDevice_Bluelight.cpp:255-259: influencedBy is a space-separated
     // StringTokenizer list of holder IDs; resetVehicle erases this holder and
     // restores the original vtype only when nothing else influenced the car.
