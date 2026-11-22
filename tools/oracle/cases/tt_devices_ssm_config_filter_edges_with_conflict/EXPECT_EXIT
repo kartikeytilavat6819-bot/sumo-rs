@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: devices/ssm/config/filter_edges_with_conflict/{errors,output}.sumo

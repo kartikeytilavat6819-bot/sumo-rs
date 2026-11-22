@@ -1,2 +1,0 @@
-Official sumo exits 1 (error-only test): TLS 'x' to switch in WAUT 'w1' was not yet defined.
-No tripinfo/fcd output, so it cannot be an oracle row.
