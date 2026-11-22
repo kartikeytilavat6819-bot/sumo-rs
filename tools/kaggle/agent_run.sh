@@ -134,5 +134,5 @@ done
 echo "==== OC98 4299 LINK-LEADER FOES"
 grep 'OC98DBG 4299 leader=\|OC98DBG 4299 KEPT\|OC98DBG 4299 adapt' "$OUT/4299.ours.log" | head -50
 echo "==== OC98 17583 v.25 REROUTES"
-grep 'OC98DBG reroute info=rerouter_1\|OC98DBG reroute panic' "$OUT/17583.ours.log" | head -40
+grep 'OC98DBG reroute veh=.*info=rerouter_1\|OC98DBG reroute panic' "$OUT/17583.ours.log" | head -40
 echo "OC98 DIAGNOSTIC DONE"
