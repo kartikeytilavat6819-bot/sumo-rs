@@ -454,7 +454,7 @@ mod tests {
         let mut o = SumoOption::string();
         o.set("", "", false).unwrap();
         o.reset_default();
-        // v1.28.0: resetDefault only restores the default flag; isSet stays true (snapshot cleared it for empty value strings).
+        // Release Option.cpp:195-201 - resetDefault sets only myHaveTheDefaultValue; isSet stays true for empty value strings.
         assert!(o.is_set() && o.is_default());
     }
 }

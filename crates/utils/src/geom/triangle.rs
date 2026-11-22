@@ -203,7 +203,7 @@ mod tests {
     use super::*;
     #[test]
     fn invalid_matches_default_constructed_cpp_triangle() {
-        // C++ `Triangle::INVALID = Triangle()` has corners at Position() (0,0,0), not Position::INVALID.
+        // Release Triangle.cpp:22 - `const Triangle Triangle::INVALID = Triangle();` gives corners at Position() (0,0,0), not Position::INVALID.
         assert_eq!(Triangle::INVALID, Triangle::new(Position::new(0., 0.), Position::new(0., 0.), Position::new(0., 0.)));
         assert_eq!(Triangle::default(), Triangle::INVALID);
     }
