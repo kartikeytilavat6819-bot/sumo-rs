@@ -2686,7 +2686,7 @@ impl MSLink {
                 let isOpposite = leader.get_lane_change_model_2().is_opposite();
                 let avi = foeExitLink.get_approaching(msveh_to_sumo_vehicle(leader));
                 let willPass = avi.willPass || (avi.arrivalTime == INVALID_TIME && sameTarget);
-                oc97_trace_foe(ego, &leader, &format!("foeLane={} dCross={} foeDCross={} sT={} sS={} cont={} foeInd={} pastCP={} enteredCP={} inWay={} cannotIgnore={} willPass={} aviT={} leaderBack={} leaderBackDist={} sagitta={}", foeLane.get_id(), distToCrossing, foeDistToCrossing, sameTarget, sameSource, contLane, foeIndirect, pastTheCrossingPoint, enteredTheCrossingPoint, inTheWay, cannotIgnore, willPass, avi.arrivalTime, leaderBack, leaderBackDist, sagitta));
+                oc97_trace_foe(ego, &leader, &format!("sagitta={} pastCP={} dCross={} fDCross={} lBackDist={} inWay={} sT={} sS={} cont={} cannotIgnore={} willPass={} aviT={} foeLane={} radius={}", sagitta, pastTheCrossingPoint, distToCrossing, foeDistToCrossing, leaderBackDist, inTheWay, sameTarget, sameSource, contLane, cannotIgnore, willPass, avi.arrivalTime, foeLane.get_id(), self.myRadius));
                 if leader == ego {
                     continue;
                 }
