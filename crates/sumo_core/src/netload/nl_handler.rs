@@ -973,6 +973,12 @@ impl NLHandler {
             calibrator.m().my_end_element(element);
             if element == SUMO_TAG_CALIBRATOR {
                 self.myTriggerBuilder.m().myChildCalibrator = Ptr::null();
+                // C++ MSCalibrator::myEndElement calls callParentEnd(element) on the
+                // closing tag. Forward it so SUMORouteHandler pops the calibrator from
+                // myElementStack; otherwise the next top-level <flow> is mistaken for a
+                // calibrator child and its vehicles are never built (cf_model
+                // ACC/CACC platoon_unstable).
+                let _ = utils::xml::generic_sax_handler::SaxHandler::my_end_element(&mut self.base, element);
             }
             return;
         }

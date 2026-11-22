@@ -1,0 +1,1 @@
+--no-duration-log -X auto -a tools/oracle/cases/tt_meta_xml_invalid_schema/input_routes.rou.xml
