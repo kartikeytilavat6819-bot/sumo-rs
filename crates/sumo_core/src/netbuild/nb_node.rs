@@ -107,7 +107,7 @@ fn nbnode_validate_new(id: &str, position: &Position) {
         panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
     }
     if position.is_nan() {
-        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", position, id)));
+        std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", position, id)));
     }
 }
 
