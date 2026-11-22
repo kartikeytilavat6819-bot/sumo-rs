@@ -849,6 +849,11 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) where E: RouterEdgeInfo {
+        // C++ does two empty loops and reassigns an empty map, i.e. a no-op. Skipping it avoids
+        // re-entering the virtual prohibit callback for every getRouterTT() call (ticket9812).
+        if toProhibit.is_empty() && self.myProhibited.is_empty() {
+            return;
+        }
         if let Some(prohibit) = self.myProhibit {
             return prohibit(self, toProhibit);
         }
