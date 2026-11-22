@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-/// Trampoline for the C++ virtual `PCLoaderXML::getLanePos`.
+/// Trampoline for the C++ virtual `PCLoaderXML::getLanePos` (PCLoaderXML.h:65).
 fn get_lane_pos_virtual(base: &mut ShapeHandler, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
     // SAFETY: PCLoaderXML is #[repr(C)] and base is its first field.
     let this = unsafe { &mut *(base as *mut ShapeHandler as *mut PCLoaderXML) };
