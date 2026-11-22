@@ -20,7 +20,7 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CASES = os.path.join(REPO, "tools", "oracle", "cases")
-DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
+DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\release-1.28.0\tests\sumo"
 PARK_REASON = ("PARKED: official SUMO 1.28.0 exits non-zero for this TextTest row "
                "(it validates an erroneous additional-file attribute and checks the error message).\n"
                "The run_all harness compares tripinfo/fcd/statistic outputs only, so this row cannot be\n"
