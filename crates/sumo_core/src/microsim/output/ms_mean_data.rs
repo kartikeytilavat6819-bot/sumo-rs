@@ -543,6 +543,16 @@ impl MSMeanData {
             }
         }
         let partialInterval = startTime < self.myInitTime;
+        if std::env::var("OC95_TRACE").is_ok() {
+            eprintln!("OC95MD write start={startTime} stop={stopTime} numReady={numReady} pending={} track={}", self.myPendingIntervals.len(), self.myTrackVehicles);
+            for (ei, list) in self.myMeasures.iter().enumerate() {
+                for v in list.iter() {
+                    let t = as_tracker(*v);
+                    let entries: Vec<(i32, i32, f64)> = t.m().myCurrentData.iter().map(|x| (x.myNumVehicleEntered.get(), x.myNumVehicleLeft.get(), x.myValues.get_samples())).collect();
+                    eprintln!("OC95MD edge[{ei}] ready={} entries={:?}", t.m().get_num_ready(), entries);
+                }
+            }
+        }
         if numReady == 0 || self.myTrackVehicles || partialInterval {
             self.reset_only(stopTime);
         }
