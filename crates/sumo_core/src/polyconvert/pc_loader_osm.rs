@@ -2,7 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use std::sync::LazyLock;
-use std::sync::atomic::Ordering;
 use utils::common::file_helpers::is_readable;
 use utils::common::msg_handler::{progress_begin_message, progress_time_message, with_instance, MsgType};
 use utils::common::string_utils::{escape_xml, parse_dist};
@@ -13,7 +12,6 @@ use utils::xml::xml_sub_sys::run_parser;
 
 // C++ static members of PCLoaderOSM (see AGENTS.md: module-level statics)
 static MY_KEYS_TO_INCLUDE: LazyLock<BTreeSet<String>> = LazyLock::new(PCLoaderOSM::init_my_keys_to_include);
-static MY_FULL_TYPE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 // owned objects that C++ allocates with new and frees with delete
 fn leak_box<T>(v: T) -> Ptr<T> {
@@ -767,7 +765,6 @@ impl PCLoaderOSM {
         // load nodes, first
         let mut nodes: BTreeMap<i64, Ptr<PCLoaderOSM_PCOSMNode>> = BTreeMap::new();
         let withAttributes = or_panic(oc.get_bool("all-attributes"));
-        MY_FULL_TYPE.store(or_panic(oc.get_bool("osm.keep-full-type")), Ordering::Relaxed);
         let m: Ptr<MsgHandler> = if get_bool("ignore-errors") {
             with_instance(MsgType::Warning, |h| Ptr::from_mut(h))
         } else {
@@ -1034,7 +1031,8 @@ impl PCLoaderOSM {
         let baseName = if useName && edge.name != "" { edge.name.clone() } else { edge.id.to_string() };
         let id = format!("{}{}{}", def.prefix, baseName, idSuffix);
         let fill = matches!(def.allowFill, PCTypeMap_Filltype::FORCE) || (matches!(def.allowFill, PCTypeMap_Filltype::FILL) && closedShape);
-        let typeName = if MY_FULL_TYPE.load(Ordering::Relaxed) { fullType } else { def.id.as_str() };
+        // v1_28_0 PCLoaderOSM.cpp:350 reads the option at the call site rather than caching it.
+        let typeName = if get_bool("osm.keep-full-type") { fullType } else { def.id.as_str() };
         let empty: BTreeMap<String, String> = BTreeMap::new();
         let poly = leak_box(SUMOPolygon::new(
             &escape_xml(&id, false),
@@ -1093,7 +1091,8 @@ impl PCLoaderOSM {
         let idSuffix = if index == 0 { String::new() } else { format!("#{}", index) };
         let baseName = if useName && node.name != "" { node.name.clone() } else { node.id.to_string() };
         let id = format!("{}{}{}", def.prefix, baseName, idSuffix);
-        let typeName = if MY_FULL_TYPE.load(Ordering::Relaxed) { fullType } else { def.id.as_str() };
+        // v1_28_0 PCLoaderOSM.cpp:350 reads the option at the call site rather than caching it.
+        let typeName = if get_bool("osm.keep-full-type") { fullType } else { def.id.as_str() };
         let empty: BTreeMap<String, String> = BTreeMap::new();
         let poi = leak_box(PointOfInterest::new(
             &escape_xml(&id, false),
