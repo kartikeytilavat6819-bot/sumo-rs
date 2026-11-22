@@ -374,9 +374,12 @@ impl MSDevice_Bluelight {
             let lf = &ego.myLFLinkLanes;
             let lf0 = lf.first().map(|d| if d.myLink.is_null() { "NULL".to_string() } else { d.myLink.get_lane().get_id().to_string() });
             let lf1 = lf.first().map(|d| (d.myDistance, d.myVLinkPass, d.myVLinkWait, d.mySetRequest));
-            eprintln!("OC102 t={} lane={} pos={:.3} speed={:.3} inflNull={} lcState={} lcManeuver={:.3} lfCount={} lfLane={:?} lf1={:?}",
+            let conts = ego.get_best_lanes_continuation().iter().map(|l| l.get_id().to_string()).collect::<Vec<_>>();
+            let succ = ego.succ_edge(1);
+            eprintln!("OC102 t={} lane={} pos={:.3} speed={:.3} inflNull={} lcState={} lcManeuver={:.3} lfCount={} lfLane={:?} lf1={:?} conts={:?} curr={} succ1={}",
                 simstep, ego.get_lane().get_id(), ego.get_position_on_lane(), ego.get_speed(),
-                inf.is_null(), lcm.get_own_state(), lcm.get_maneuver_dist(), lf.len(), lf0, lf1);
+                inf.is_null(), lcm.get_own_state(), lcm.get_maneuver_dist(), lf.len(), lf0, lf1, conts,
+                ego.myCurrEdge, if succ.is_null() { "NULL".to_string() } else { succ.get_id().to_string() });
         }
         // reset all vehicles that were in myInfluencedVehicles in the previous step but not in the current step todo refactor
         for vehID in lastStepInfluencedVehicles.iter().cloned().collect::<Vec<String>>() {
