@@ -1,0 +1,1 @@
+--no-duration-log -a tools/oracle/cases/tt_basic_personFlow_walk_busStop_walk/input_additional.add.xml
