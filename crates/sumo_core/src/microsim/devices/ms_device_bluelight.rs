@@ -459,7 +459,7 @@ impl MSDevice_Bluelight {
                         if self.myMinGapFactor != 1. {
                             // TODO this is a permanent change to the vtype!
                             let vt = vc.get_v_type(veh2.get_vehicle_type().get_id(), Ptr::null(), false);
-                            Ptr::new(vt.m().get_car_follow_model()).m().set_collision_min_gap_factor(self.myMinGapFactor);
+                            vt.m().get_car_follow_model_2().set_collision_min_gap_factor(self.myMinGapFactor);
                         }
 
                         // Vehicle gets a new Vehicletype to change the alignment and the lanechange options
@@ -473,13 +473,13 @@ impl MSDevice_Bluelight {
                         let minGap = t.get_min_gap() * self.myMinGapFactor;
                         t.set_min_gap(&minGap);
                         // C++ const_cast<SUMOVTypeParameter&>(t.getParameter()).jmParameter[SUMO_ATTR_JM_STOPLINE_GAP] = toString(myMinGapFactor)
-                        Ptr::new(t.get_parameter()).m().jmParameter.insert(SUMO_ATTR_JM_STOPLINE_GAP, f64_to_string(self.myMinGapFactor));
+                        t.myParameter.jmParameter.insert(SUMO_ATTR_JM_STOPLINE_GAP, f64_to_string(self.myMinGapFactor));
                         // disable strategic lane-changing
                         let mut tokenizer = StringTokenizer::new(&veh2.get_parameter().get_parameter(INFLUENCED_BY, ""));
                         let mut influencedBy: Vec<String> = tokenizer.get_vector();
                         if !influencedBy.contains(&holderID) {
                             influencedBy.push(holderID.clone());
-                            Ptr::new(veh2.get_parameter()).m().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
+                            veh2.m().get_parameter_mutable().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
                         }
                         veh2.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM), "-1");
                     }
@@ -723,7 +723,7 @@ impl MSDevice_Bluelight {
             if let Some(pos) = influencedBy.iter().position(|s| *s == holderID) {
                 influencedBy.remove(pos);
                 // C++ const_cast<SUMOVehicleParameter&>(veh2->getParameter()).setParameter(...)
-                Ptr::new(veh2.get_parameter()).m().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
+                veh2.m().get_parameter_mutable().set_parameter(INFLUENCED_BY, &influencedBy.join(" "));
             }
             if std::env::var_os("OC102_DEBUG").is_some() {
                 eprintln!("OC102  resetVehicle {} target={} typeNull={} influencedBy={:?} holder={} -> replace={}",
