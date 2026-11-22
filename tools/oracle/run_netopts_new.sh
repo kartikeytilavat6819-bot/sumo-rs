@@ -89,8 +89,12 @@ run_row() {
   local d=$OUT/$v
   rm -rf "$d"; mkdir -p "$d/cpp_out/plain" "$d/rust_out/plain"
   local cdir="$ROOT/tools/oracle/cases/$v"
-  local expect_err=0
+  local expect_err=0 strict_err=0
   if [ -f "$cdir/EXPECT_EXIT" ] && [ -f "$cdir/ref.errors" ]; then expect_err=1; fi
+  # CASE.md means the case was imported with its official TextTest provenance and its
+  # ref.errors/ref.output were split per stream; legacy error cases only have exit-code
+  # expectations (their text was captured with a different -o path / environment).
+  if [ $expect_err -eq 1 ] && [ -f "$cdir/CASE.md" ]; then strict_err=1; fi
   local src
   case $in in
     osm:*) src="--simple-projection true --osm-files $C/${in#osm:}/input.osm" ;;
@@ -118,6 +122,9 @@ run_row() {
       V=FAIL; D="err-TIMEOUT"
     elif [ $rrc -eq 0 ]; then
       V=FAIL; D="err-NOEXIT: official exits non-zero, ours exited 0"
+    elif [ $strict_err -eq 0 ]; then
+      # legacy case: only the non-zero exit code is comparable
+      if [ $rrc -ne 0 ] && [ $crc -ne 0 ]; then V=PASS; D="both exit $rrc"; else V=FAIL; D="exit rust=$rrc cpp=$crc"; fi
     else
       local detail=""
       if ! python3 "$B/park_tt_errors.py" --compare "$cdir/ref.errors" "$d/rust.log" > "$d/err.diff" 2>&1; then
