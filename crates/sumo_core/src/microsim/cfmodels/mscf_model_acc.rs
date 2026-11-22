@@ -638,5 +638,20 @@ mod tests {
         assert_eq!(vars.ACC_ControlMode, 0);
         assert_eq!(vars.lastUpdateTime, 0);
     }
+
+    #[test]
+    fn acc_gains_and_thresholds_match_release() {
+        // MSCFModel_ACC.cpp:58-72 (SUMO 1.28.0): these drive the control-mode branches in _v().
+        assert_eq!(GAP_THRESHOLD_SPEEDCTRL, 120.);
+        assert_eq!(GAP_THRESHOLD_GAPCTRL, 100.);
+        assert_eq!(DEFAULT_SC_GAIN, -0.4);
+        assert_eq!(DEFAULT_GCC_GAIN_SPEED, 0.8);
+        assert_eq!(DEFAULT_GCC_GAIN_SPACE, 0.04);
+        assert_eq!(DEFAULT_GC_GAIN_SPEED, 0.07);
+        assert_eq!(DEFAULT_GC_GAIN_SPACE, 0.23);
+        assert_eq!(DEFAULT_CA_GAIN_SPEED, 0.23);
+        assert_eq!(DEFAULT_CA_GAIN_SPACE, 0.8);
+        assert_eq!(DEFAULT_EMERGENCY_OVERRIDE_THRESHOLD, 2.0);
+    }
 }
 
