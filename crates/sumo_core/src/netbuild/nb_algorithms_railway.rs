@@ -1986,8 +1986,8 @@ impl NBRailwayTopologyAnalyzer {
     // C++ NBAlgorithms_Railway.cpp:589-593: the ptline-edge check belongs at the top of the
     // `for (NBEdge* start : outRail)` loop, before allBroken. It must not repeat inside the
     // while loop, where a line edge later in the sequence would truncate the sequence.
-    fn is_ptline_start(start: Ptr<NBEdge>, line_edges: &EdgeSet) -> bool {
-        line_edges.contains(&start)
+    fn is_ptline_start<T: Ord>(start: &T, line_edges: &BTreeSet<T>) -> bool {
+        line_edges.contains(start)
     }
 
     #[allow(unused_variables)]
@@ -2006,7 +2006,7 @@ impl NBRailwayTopologyAnalyzer {
             let mut outRail = EdgeVector::new();
             Self::get_rail_edges(*n, &mut inRail, &mut outRail);
             for mut start in outRail.clone() {
-                if Self::is_ptline_start(start, &lineEdges) {
+                if Self::is_ptline_start(&start, &lineEdges) {
                     // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
                     continue;
                 }
@@ -3318,35 +3318,15 @@ mod tests {
         //   }
         // The check must use the initial `start`, at the top of the loop, before
         // allBroken — never the re-assigned `start` inside the while loop.
-        let from = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(
-            "n1",
-            &Position::new(0., 0.),
-            SumoXMLNodeType::UNKNOWN,
-        ))));
-        let to = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(
-            "n2",
-            &Position::new(100., 0.),
-            SumoXMLNodeType::UNKNOWN,
-        ))));
-        let line_edge = Ptr::from_raw(Box::into_raw(NBEdge::new(
-            "lineEdge",
-            from,
-            to,
-            "railway.rail".to_string(),
-            10.,
-            1.,
-            1,
-            1,
-            1.,
-            0.,
-            LaneSpreadFunction::CENTER,
-            "",
-        )));
-
-        let mut line_edges: EdgeSet = EdgeSet::new();
-        assert!(!NBRailwayTopologyAnalyzer::is_ptline_start(line_edge, &line_edges));
-        line_edges.insert(line_edge);
-        assert!(NBRailwayTopologyAnalyzer::is_ptline_start(line_edge, &line_edges));
+        // Use plain ids so the test never builds an NBEdge/NBNode (which read the
+        // process-global OptionsCont, uninitialised in unit tests).
+        let mut line_edges: BTreeSet<String> = BTreeSet::new();
+        let line_edge = "lineEdge".to_string();
+        let other_edge = "otherEdge".to_string();
+        assert!(!NBRailwayTopologyAnalyzer::is_ptline_start(&line_edge, &line_edges));
+        line_edges.insert(line_edge.clone());
+        assert!(NBRailwayTopologyAnalyzer::is_ptline_start(&line_edge, &line_edges));
+        assert!(!NBRailwayTopologyAnalyzer::is_ptline_start(&other_edge, &line_edges));
     }
 }
 
