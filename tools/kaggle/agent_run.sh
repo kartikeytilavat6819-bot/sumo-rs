@@ -56,8 +56,8 @@ a=ET.parse(sys.argv[1]).getroot(); b=ET.parse(sys.argv[2]).getroot()
 for x,y in zip(a.findall('bt'), b.findall('bt')):
     sa,sb=x.findall('seen'),y.findall('seen')
     for i in range(max(len(sa),len(sb))):
-        ra = None if i>=len(sa) else (sa[i].get('id'), sa[i].get('tBeg'), len(sa[i].findall('recognitionPoint')))
-        rb = None if i>=len(sb) else (sb[i].get('id'), sb[i].get('tBeg'), len(sb[i].findall('recognitionPoint')))
+        ra = None if i>=len(sa) else (sa[i].get('id'), sa[i].get('tBeg'), sa[i].get('tEnd'), len(sa[i].findall('recognitionPoint')))
+        rb = None if i>=len(sb) else (sb[i].get('id'), sb[i].get('tBeg'), sb[i].get('tEnd'), len(sb[i].findall('recognitionPoint')))
         if ra!=rb:
             print('bt=',x.get('id'),'idx=',i,'ref=',ra,'ours=',rb); sys.exit()
 PY
