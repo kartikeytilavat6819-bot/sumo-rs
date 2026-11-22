@@ -38,6 +38,11 @@ for c in $ROWS; do
     (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou "${EXTRA[@]}" >out.txt 2>err.txt; true)
     echo "  -- ours TIMEOUT: last step-log lines:"; tail -n 4 "$rdir/out.txt" | cut -c1-200 | sed 's/^/     /'
     echo "  -- ours TIMEOUT: last stderr lines:"; tail -n 3 "$rdir/err.txt" | cut -c1-200 | sed 's/^/     /'
+    for E in 5 50 500; do
+      rdir="$OUT/$c.end$E"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+      (cd "$rdir" && timeout 120 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e $E "${EXTRA[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
+      echo "  -- ours with --end $E: exit $(cat "$rdir/rc.txt")"
+    done
   fi
   if [ -f "$d/ref.errors" ]; then
     if diff -q "$d/ref.errors" "$OUT/$c.ours/err.txt" >/dev/null; then echo "  ref.errors: MATCH"
