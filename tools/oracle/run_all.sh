@@ -115,6 +115,40 @@ for dir in tools/oracle/cases/*/; do
       fi
     done < "$dir/net_outputs.txt"
   fi
+  # --- expected-error stage: the official SUMO exits non-zero for this TextTest row. Score the
+  # exit code and the error/warning lines against the committed ref.errors / ref.output (from
+  # errors.sumo / output.sumo), not against tripinfo/fcd/statistic. Streams are compared
+  # separately, each in order, exactly like texttest. Cases without EXPECT_EXIT are unaffected.
+  if [ -f "$dir/EXPECT_EXIT" ] && [ -f "$dir/ref.errors" ]; then
+    EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
+    timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+        --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
+    rc=$?
+    if [ $rc -eq 124 ]; then
+      line "$c" err-TIMEOUT "no exit after ${SIM_TIMEOUT:-600}s"; FAIL=$((FAIL+1)); continue
+    fi
+    if [ $rc -eq 0 ]; then
+      line "$c" err-NOEXIT "official exits non-zero, ours exited 0"; FAIL=$((FAIL+1)); continue
+    fi
+    r="PASS"; detail=""
+    # -f, not -s: an empty official stream expects an empty stream from us, so compare it too.
+    if [ -f "$dir/ref.errors" ]; then
+      if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.errors" "$OUT/$c.err.log" >"$OUT/$c.err.diff" 2>&1; then
+        r="FAIL"; detail="stderr: $(head -2 "$OUT/$c.err.diff" | tr '\n' ' ' | cut -c1-150)"
+      fi
+    fi
+    if [ -f "$dir/ref.output" ]; then
+      if ! python tools/oracle/park_tt_errors.py --compare "$dir/ref.output" "$OUT/$c.err.out" >"$OUT/$c.out.diff" 2>&1; then
+        r="FAIL"; [ -z "$detail" ] && detail="stdout: $(head -2 "$OUT/$c.out.diff" | tr '\n' ' ' | cut -c1-150)"
+      fi
+    fi
+    if [ "$r" = "PASS" ]; then
+      line "$c" err PASS; PASS=$((PASS+1))
+    else
+      line "$c" err "FAIL $detail"; FAIL=$((FAIL+1))
+    fi
+    continue
+  fi
   # --- sim stage; one run per committed reference variant (ref.*, ref_<v>.*)
   # output-prefix/suffix cases keep those applied to their ref names (pre_ref.tripinfo.xml,
   # ref.tripinfo_suf.xml); SUMO writes our outputs the same way, so copy them back to the fixed
