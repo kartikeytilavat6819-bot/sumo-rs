@@ -31,5 +31,15 @@ for c in $CASES; do
   done
   echo "-- first fcd difference for $veh (< ref, > ours), first 24 diff lines:"
   diff <(grep "vehicle id=\"$veh\"" "$OUT/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/$name/ours/fcd.xml") | head -24 | cut -c1-200
+  # occupants of the internal junction lane at the first differing timestep of the named vehicle
+  ext() { awk -v v="$veh" '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} index($0,"vehicle id=\""v"\"")>0{print t}' "$1"; }
+  line=$(diff <(grep "vehicle id=\"$veh\"" "$OUT/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/$name/ours/fcd.xml") | head -1 | grep -oE '^[0-9]+')
+  if [ -n "$line" ]; then
+    T=$(ext "$OUT/$name/ours/fcd.xml" | sed -n "${line}p")
+    for side in ref ours; do
+      echo "-- $side lanes :C_9_* at t=$T (id lane pos speed):"
+      awk -v T="$T" '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} t==T && /lane=":C_9/' "$OUT/$name/$side/fcd.xml" | sed -E 's/.*id="([^"]*)".* speed="([^"]*)" pos="([^"]*)" lane="([^"]*)".*/\1 \4 \3 \2/' | head -12
+    done
+  fi
 done
 echo "AGENT RUN DONE"
