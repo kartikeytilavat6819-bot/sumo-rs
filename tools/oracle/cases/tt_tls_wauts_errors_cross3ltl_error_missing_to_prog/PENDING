@@ -1,2 +1,0 @@
-Official sumo exits 1 (error-only test): missing required attribute 'to'
-No tripinfo/fcd output, so it cannot be an oracle row.

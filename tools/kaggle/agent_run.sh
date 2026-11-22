@@ -1,18 +1,22 @@
 #!/bin/bash
-# oc108: probe optimizeStops stop replacement (Rust vs official C++).
+# oc105 measurement: compare our sumo with the official binary on two target rows.
 set -u
-OUT=/tmp/oc108
+cd "$(dirname "$0")/../.." || exit 1
+OUT=/tmp/oc105
 mkdir -p "$OUT"
-C=tools/oracle/cases/tt_extended_rerouter_optimizeStops_grid5x10
-FLAGS="--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -v --device.rerouting.mode 8 -a $C/input_additional.add.xml,$C/input_additional2.add.xml --no-step-log true"
-echo "=== RUST ==="
-${CARGO_TARGET_DIR}/debug/sumo -n "$C/ref_simple.net.xml" -r "$C/routes.rou" $FLAGS \
-    --tripinfo-output "$OUT/rust.tripinfo.xml" >"$OUT/rust.log" 2>&1 || echo "rust exit $?"
-grep -E 'OC108_OPTI|OC108_REPL|OC108_REROUTE|skip|replac|could not assign|Error' "$OUT/rust.log" | head -160
-echo "=== CPP ==="
-${SUMO_PRISTINE_BIN}/sumo -n "$C/ref_simple.net.xml" -r "$C/routes.rou" $FLAGS \
-    --tripinfo-output "$OUT/cpp.tripinfo.xml" >"$OUT/cpp.log" 2>&1 || echo "cpp exit $?"
-grep -E 'skip|replac|could not assign|Error' "$OUT/cpp.log" | head -60
-echo "=== ARRIVALS ==="
-grep -o 'arrival="[^"]*"' "$OUT/rust.tripinfo.xml" | head -3
-grep -o 'arrival="[^"]*"' "$OUT/cpp.tripinfo.xml" | head -3
+OUR="$CARGO_TARGET_DIR/debug/sumo"
+OFF="$SUMO_PRISTINE_BIN/sumo"
+for c in tt_devices_ssm_bugs_ticket13918 tt_devices_rerouting_reroute_congestions_exit_times; do
+  D="tools/oracle/cases/$c"
+  FLAGS=$(cat "$D/sim.args")
+  echo "==== $c"
+  echo "sim.args: $FLAGS"
+  for side in our official; do
+    if [ "$side" = our ]; then BIN="$OUR"; else BIN="$OFF"; fi
+    "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --no-step-log true $FLAGS \
+      >"$OUT/$c.$side.out" 2>"$OUT/$c.$side.err"
+    echo "$side exit=$?"
+    echo "$side stderr:"; head -20 "$OUT/$c.$side.err"
+    echo "$side stdout:"; head -12 "$OUT/$c.$side.out"
+  done
+done

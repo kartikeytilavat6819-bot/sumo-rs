@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: output/e1/errors/nextEdges_invalid/{errors,output}.sumo
