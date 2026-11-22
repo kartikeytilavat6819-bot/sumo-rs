@@ -267,6 +267,15 @@ mod tests {
         let (msg, line) = super::xerces_utf8_error(bytes, &e);
         assert_eq!(msg, "invalid byte 't' at position 2 of a 4-byte sequence");
         assert_eq!(line, 0); // error() prints line + 1 == 1 (config line 1 here)
+        // 2-byte and 3-byte leads with a bad continuation at the next position
+        let b2 = b"x\xC3t";
+        let e2 = std::str::from_utf8(b2).unwrap_err();
+        assert_eq!(super::xerces_utf8_error(b2, &e2).0,
+                   "invalid byte 't' at position 2 of a 2-byte sequence");
+        let b3 = b"x\xE2\x82t";
+        let e3 = std::str::from_utf8(b3).unwrap_err();
+        assert_eq!(super::xerces_utf8_error(b3, &e3).0,
+                   "invalid byte 't' at position 3 of a 3-byte sequence");
     }
 
     #[test]
