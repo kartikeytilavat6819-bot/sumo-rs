@@ -3889,6 +3889,7 @@ mod tests {
     use std::io::Write;
     use std::sync::{Arc, Mutex};
     use utils::common::msg_handler::{register_device, with_instance, MsgType};
+    use utils::common::time::set_delta_t;
     use utils::options::option::SumoOption;
 
     #[derive(Clone, Default)]
@@ -3907,6 +3908,9 @@ mod tests {
     /// A fixed two-decimal format ("1.20"/"-1.10") is wrong.
     #[test]
     fn action_step_length_warning_uses_cpp_float_format() {
+        // Other tests may have changed the global step length; pin it to 1 s (1000 ms)
+        // so the warning assertion is deterministic under parallel test execution.
+        set_delta_t(1000);
         utils::options::options_cont::with_options(|oc| {
             if !oc.exists("step-length") {
                 oc.do_register("step-length", SumoOption::string_typed("1", "TIME"));
