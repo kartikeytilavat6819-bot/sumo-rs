@@ -1610,6 +1610,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn get_follow_speed(vehID: &str, speed: f64, gap: f64, leaderSpeed: f64, leaderMaxDecel: f64, leaderID: &str) -> f64 {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("getFollowSpeed not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
         let leader = micro_veh(MSNet::get_instance().get_vehicle_control().get_vehicle(leaderID).cast::<MSBaseVehicle>());
         veh.get_car_follow_model().follow_speed(veh, speed, gap, leaderSpeed, leaderMaxDecel, leader, MSCFModel_CalcReason::FUTURE)
     }
@@ -1630,6 +1634,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn get_secure_gap(vehID: &str, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64, leaderID: &str) -> f64 {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("getSecureGap not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
         let leader = micro_veh(MSNet::get_instance().get_vehicle_control().get_vehicle(leaderID).cast::<MSBaseVehicle>());
         veh.get_car_follow_model().get_secure_gap(veh, leader, speed, leaderSpeed, leaderMaxDecel)
     }
@@ -1640,6 +1648,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn get_stop_speed(vehID: &str, speed: f64, gap: f64) -> f64 {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("getStopSpeed not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
         veh.get_car_follow_model().stop_speed(veh, speed, gap, MSCFModel_CalcReason::FUTURE)
     }
 
