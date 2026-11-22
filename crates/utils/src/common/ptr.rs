@@ -85,6 +85,9 @@ impl<T: ?Sized> Deref for Ptr<T> {
 }
 impl<T: ?Sized> DerefMut for Ptr<T> {
     fn deref_mut(&mut self) -> &mut T {
+        if self.0.is_null() && std::env::var_os("OC104_NULL_BT").is_some() {
+            eprintln!("OC104 NULL PTR MUT BACKTRACE: {:?}", std::backtrace::Backtrace::force_capture());
+        }
         debug_assert!(!self.0.is_null(), "null Ptr dereference");
         unsafe { &mut *self.0 }
     }
