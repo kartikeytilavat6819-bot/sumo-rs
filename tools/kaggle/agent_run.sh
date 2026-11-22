@@ -15,8 +15,11 @@ for c in tt_output_emission-output_MMPEVEM_BMW_i3 tt_output_rawdump_one_vehicle 
   timeout 300 "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --no-step-log true $EXTRA >"$R/err.out" 2>"$R/err.log"
   echo "===== ERR CASE $c rc=$? ====="
   echo "--- ref.errors ---"; cat "$D/ref.errors"
-  echo "--- our stderr ---"; head -30 "$R/err.log"
-  echo "--- compare ---"; python tools/oracle/park_tt_errors.py --compare "$D/ref.errors" "$R/err.log" 2>&1 | head -8
+  echo "--- our stderr (numbered) ---"; python - "$R/err.log" <<'PY'
+import sys
+for i,l in enumerate(open(sys.argv[1]).read().splitlines()): print(i, repr(l))
+PY
+  echo "--- compare (full) ---"; python tools/oracle/park_tt_errors.py --compare "$D/ref.errors" "$R/err.log" 2>&1
 done
 
 for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
