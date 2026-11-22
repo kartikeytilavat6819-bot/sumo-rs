@@ -1,6 +1,6 @@
 #!/bin/bash
-# oc101 probe: where do the two ticket9812 rail-taxi cases spin in our binary,
-# and what error does the official sumo emit? Runs on the Linux gate VM.
+# oc101 probe v2: locate the ticket9812 rail-taxi spin precisely.
+# Runs on the Linux gate VM; writes only under /tmp.
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
 BIN="${CARGO_TARGET_DIR:-/tmp/target}/debug"
@@ -11,15 +11,22 @@ CASES="tt_devices_taxi_bugs_ticket9812_railRouter tt_devices_taxi_bugs_ticket981
 for c in $CASES; do
   d="tools/oracle/cases/$c"
   EXTRA=$(cat "$d/sim.args")
-  echo "===== $c : OURS (gdb, 25s SIGINT) ====="
-  timeout -s INT 25 gdb -q -batch \
-    -ex run -ex 'thread apply all bt 50' \
-    --args "$BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
-      --tripinfo-output "$OUT/$c.ti.xml" --fcd-output "$OUT/$c.fcd.xml" \
-      --statistic-output "$OUT/$c.stat.xml" --no-step-log true $EXTRA \
-    >"$OUT/$c.gdb" 2>&1
-  grep -m 1 -E 'Program received signal|SIGINT' "$OUT/$c.gdb" || true
-  tail -90 "$OUT/$c.gdb"
+  for secs in 8 20; do
+    echo "===== $c : OURS (gdb, ${secs}s SIGINT) ====="
+    timeout -s INT "$secs" gdb -q -batch \
+      -ex 'set debuginfod enabled off' -ex 'set pagination off' \
+      -ex run -ex 'bt 60' -ex 'info symbol $pc' -ex 'x/24i $pc-48' \
+      --args "$BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
+        --tripinfo-output "$OUT/$c.ti.xml" --fcd-output "$OUT/$c.fcd.xml" \
+        --statistic-output "$OUT/$c.stat.xml" --no-step-log true $EXTRA \
+      >"$OUT/$c.$secs.gdb" 2>&1
+    grep -m 1 -E 'Program received signal|SIGINT' "$OUT/$c.$secs.gdb" || true
+    grep -m 1 -E '^0x[0-9a-f]+ in' "$OUT/$c.$secs.gdb" || true
+    grep -m 1 'No connection between stop' "$OUT/$c.$secs.gdb" || true
+    # print the first 25 frames and the disassembly block
+    sed -n '/^#0 /,/^#25 /p' "$OUT/$c.$secs.gdb" | head -30
+    grep -A 26 -m 1 '^   0x.*:' "$OUT/$c.$secs.gdb" | head -28
+  done
   echo "===== $c : OFFICIAL (error text) ====="
   if [ -x "$SUMO_PRISTINE_BIN/sumo" ]; then
     timeout 60 "$SUMO_PRISTINE_BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
