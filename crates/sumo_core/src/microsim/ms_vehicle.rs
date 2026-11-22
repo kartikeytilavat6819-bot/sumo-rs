@@ -5031,12 +5031,6 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
-        if std::env::var("OC98DBG").is_ok() && self.get_id() == "v.25" {
-            eprintln!("OC98ORIGIN v.25 currEdge={} routeSize={} lane_null={} pos={} internal={} changeProh={}",
-                self.myCurrEdge, self.myRoute.size(), self.myLane.is_null(), self.myState.myPos,
-                !self.myLane.is_null() && self.myLane.is_internal(),
-                !self.myLane.is_null() && self.myLane.get_edge().has_change_prohibitions(self.get_v_class(), self.myLane.get_index()));
-        }
         // too close to the next junction, so avoid an emergency brake here
         if !self.myLane.is_null() && self.myCurrEdge + 1 != self.myRoute.size() as usize && !utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) {
             if self.myLane.is_internal() {
@@ -13967,12 +13961,6 @@ impl MSVehicle {
             let stopSpeed = cfModel.stop_speed_2(me, self.get_speed(), stopDist, stopDecel, MSCFModel_CalcReason::CURRENT_WAIT);
             let mut vLinkWait = min2(v, stopSpeed);
 
-            if std::env::var("OC98DBG").is_ok() && self.get_id() == "ES1"
-                && (96900..=97400).contains(&MSNet::get_instance().get_current_time_step()) {
-                eprintln!("OC98DBG 4299 redbranch link={} yellowOrRed={} canBrake={} seen={:.3} mustSee={:.3} stopDist={:.3} v={:.3} vLinkWait={:.3}",
-                    linkP.get_via_lane_or_lane().get_id(), yellowOrRed, canBrakeBeforeStopLine,
-                    seen, mustSeeBeforeReversal, stopDist, v, vLinkWait);
-            }
             if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
                 if lane.is_internal() {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
@@ -14854,9 +14842,6 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn adapt_to_junction_leader(&self, leaderInfo: (Ptr<MSVehicle>, f64), seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, lane: Ptr<MSLane>, v: &mut f64, vLinkPass: &mut f64, distToCrossing: f64) {
         let me: Ptr<MSVehicle> = Ptr::new(self);
-        let dbg = std::env::var("OC98DBG").is_ok() && self.get_id() == "ES1"
-            && (96900..=97400).contains(&MSNet::get_instance().get_current_time_step());
-        let dbg_v_before = *v;
         if !leaderInfo.0.is_null() {
             if self.ignore_foe(leaderInfo.0.cast::<SUMOTrafficObject>()) {
                 return;
@@ -14908,11 +14893,6 @@ impl MSVehicle {
             }
             *v = min2(*v, vsafeLeader);
             *vLinkPass = min2(*vLinkPass, vsafeLeader);
-            if dbg {
-                eprintln!("OC98DBG 4299 adapt leader={} gap={:.3} vBefore={:.3} vAfter={:.3} vsafeLeader={:.3} distToCrossing={:.3} leaderSpeed={:.3} seen={:.3}",
-                    leaderInfo.0.get_id(), leaderInfo.1, dbg_v_before, *v, vsafeLeader,
-                    distToCrossing, leaderInfo.0.get_speed(), seen);
-            }
         }
     }
 

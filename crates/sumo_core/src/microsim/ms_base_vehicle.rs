@@ -1565,13 +1565,6 @@ impl MSBaseVehicle {
                     if self.myStops[stopIt].pars.priority >= 0.0 && info != "device.rerouting" {
                         // consider skipping this stop if it cannot be reached in a timely manner
                         let arrival = stops[idx].arrival;
-                        if std::env::var("OC98DBG").is_ok() {
-                            let dbg_delay = startTime - arrival;
-                            eprintln!("OC98DBG reroute-stop info={} idx={} edge={} stopPrio={} arrival={} startTime={} delay={} maxDelay={} skip={}",
-                                info, idx, stopEdge.get_id(), self.myStops[stopIt].pars.priority,
-                                arrival, startTime, dbg_delay, maxDelay,
-                                self.myStops[stopIt].pars.priority >= 0.0 && info != "device.rerouting" && arrival > 0 && dbg_delay > 0 && dbg_delay > maxDelay);
-                        }
                         if arrival > 0 {
                             let delay = startTime - arrival;
                             if delay > 0 && delay > maxDelay {
@@ -1665,18 +1658,6 @@ impl MSBaseVehicle {
                     // the old route is prohibted (i.e. due to temporary permission changes)
                     savingsOk = true;
                 }
-            }
-        }
-        if std::env::var("OC98DBG").is_ok() {
-            let ids: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
-            eprintln!("OC98DBG reroute veh={} info={} onInit={} t={} source={} sink={} edges={:?} cost={} prevCost={} savingsOk={} skipped={} departEdge={} myCurrEdge={} routeLen={} oldStart={} oldEdges={:?}",
-                self.get_id(), info, onInit, t, source.get_id(), sink.get_id(), ids, routeCost, previousCost, savingsOk, hasSkipped,
-                self.myParameter.departEdge, self.myCurrEdge, self.myRoute.size(), oldStart,
-                oldEdgesRemaining.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
-            if std::env::var("OC98DBG").is_ok() && self.get_id() == "v.25" {
-                eprintln!("OC98DBG 17583 v25 route id={} allEdges={:?}",
-                    self.myRoute.get_id(),
-                    self.myRoute.get_edges().iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
             }
         }
         if savingsOk {

@@ -654,21 +654,6 @@ impl MSTriggeredRerouter {
         // check whether the vehicle shall be rerouted
         let now = net.get_current_time_step();
         let rerouteDef = self.get_current_reroute(now, tObject);
-        if std::env::var("OC98DBG").is_ok() && !rerouteDef.is_null() {
-            for (e, s) in rerouteDef.closed.iter() {
-                eprintln!("OC98DBG interval id={} begin={} end={} closed={} perm={} until={}", rerouteDef.id, rerouteDef.begin, rerouteDef.end, e.get_id(), s.0, s.1);
-            }
-            eprintln!("OC98DBG getClosed={:?}", rerouteDef.get_closed().iter().map(|(e, p)| (e.get_id().to_string(), p.begin, p.end, p.permissions)).collect::<Vec<_>>());
-        }
-        if std::env::var("OC98DBG").is_ok() && !rerouteDef.is_null() {
-            let dbg_prob = if self.myAmInUserMode { self.myUserProbability } else { self.myProbability };
-            eprintln!("OC98DBG trigger-state reason={:?} prob={} threshold={} waitF={} waitT={} park={} overtake={} stopAlt={} routeProbs={} edgeProbs={}",
-                reason, dbg_prob, self.myTimeThreshold,
-                tObject.get_waiting_time(false), tObject.get_waiting_time(true),
-                rerouteDef.parkProbs.get_overall_prob(), rerouteDef.overtakeLocations.len(),
-                rerouteDef.stopAlternatives.len(), rerouteDef.routeProbs.get_overall_prob(),
-                rerouteDef.edgeProbs.get_overall_prob());
-        }
         if rerouteDef.is_null() {
             return true; // an active interval could appear later
         }
@@ -870,11 +855,6 @@ impl MSTriggeredRerouter {
         // we have a new destination, let's replace the route (if it is affected)
         let prohibited = rerouteDef.get_closed();
         let routerProhibited = router_prohibitions(&prohibited);
-        if std::env::var("OC98DBG").is_ok() {
-            eprintln!("OC98DBG pre-affected closedEmpty={} destUnreachable={} affected={} isVehicle={}",
-                rerouteDef.closed.is_empty(), destUnreachable,
-                Self::affected(&tObject.get_upcoming_edge_i_ds(), &closed), tObject.is_vehicle());
-        }
         if rerouteDef.closed.is_empty() || destUnreachable || Self::affected(&tObject.get_upcoming_edge_i_ds(), &closed) {
             if tObject.ignore_transient_permissions() {
                 // after learning about network changes, the driver must no longer forget them
@@ -889,36 +869,16 @@ impl MSTriggeredRerouter {
                 let v = vehp.m();
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
-                if std::env::var("OC98DBG").is_ok() {
-                    eprintln!("OC98DBG pre-router hasReroutingDevice={} vClass={:?} prohibitions={}",
-                        hasReroutingDevice, v.get_v_class(), routerProhibited.len());
-                }
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
                     MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)
                 } else {
                     net.get_router_tt(v.get_rng_index(), &routerProhibited)
                 };
                 let mut ok = false;
-                if std::env::var("OC98DBG").is_ok() {
-                    eprintln!("OC98DBG reroute-about-to-call info={} newEdge={} canChangeDest={} hasReroutingDevice={}",
-                        self.base.get_id(), newEdge.get_id(), canChangeDest, hasReroutingDevice);
-                }
                 // C++ wraps this in try { ... } catch (ProcessError&) {}: a failed reroute leaves the route unchanged
                 ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     v.reroute(now, self.base.get_id(), router, false, false, canChangeDest, newEdge)
-                })).unwrap_or_else(|e| {
-                    if std::env::var("OC98DBG").is_ok() {
-                        let msg = if let Some(s) = e.downcast_ref::<String>() {
-                            s.clone()
-                        } else if let Some(s) = e.downcast_ref::<&str>() {
-                            (*s).to_string()
-                        } else {
-                            format!("{:?}", e)
-                        };
-                        eprintln!("OC98DBG reroute panic (first attempt): {}", msg);
-                    }
-                    false
-                });
+                })).unwrap_or(false);
                 if !ok && !keepDestination && canChangeDest {
                     // destination unreachable due to closed intermediate edges. pick among alternative targets
                     let mut edgeProbs2 = rerouteDef.edgeProbs.clone();
@@ -939,23 +899,8 @@ impl MSTriggeredRerouter {
                         }
                         ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                             v.reroute(now, self.base.get_id(), router, false, false, true, newEdge)
-                        })).unwrap_or_else(|e| {
-                            if std::env::var("OC98DBG").is_ok() {
-                                let msg = if let Some(s) = e.downcast_ref::<String>() {
-                                    s.clone()
-                                } else if let Some(s) = e.downcast_ref::<&str>() {
-                                    (*s).to_string()
-                                } else {
-                                    format!("{:?}", e)
-                                };
-                                eprintln!("OC98DBG reroute panic (alt target): {}", msg);
-                            }
-                            false
-                        });
+                        })).unwrap_or(false);
                     }
-                }
-                if std::env::var("OC98DBG").is_ok() {
-                    eprintln!("OC98DBG reroute-result ok={}", ok);
                 }
                 self.reset_closed_edges(hasReroutingDevice, tObject);
                 if ok {
@@ -2902,7 +2847,6 @@ static MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT: MSStoppingPlaceRerouter
     // C++ MSTriggeredRerouter does not override getRouter; inherit the base body
     get_router: MSStoppingPlaceRerouter::get_router_base,
 };
-
 #[cfg(test)]
 mod tests {
     use super::*;
