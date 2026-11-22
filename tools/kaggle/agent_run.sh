@@ -31,6 +31,11 @@ for c in $CASES; do
   done
   echo "-- first fcd difference for $veh (< ref, > ours), first 24 diff lines:"
   diff <(grep "vehicle id=\"$veh\"" "$OUT/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/$name/ours/fcd.xml") | head -24 | cut -c1-200
+  # trajectory of flow_0.15 (blocks flow_0.16 on SC_0 in turnAlignment): first 12 fcd lines per side
+  for side in ref ours; do
+    echo "-- $side flow_0.15 fcd (first 12):"
+    grep 'vehicle id="flow_0.15"' "$OUT/$name/$side/fcd.xml" | head -12 | cut -c1-160
+  done
   # occupants of the internal junction lane at the first differing timestep of the named vehicle
   ext() { awk -v v="$veh" '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} index($0,"vehicle id=\""v"\"")>0{print t}' "$1"; }
   line=$(diff <(grep "vehicle id=\"$veh\"" "$OUT/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/$name/ours/fcd.xml") | head -1 | grep -oE '^[0-9]+')
