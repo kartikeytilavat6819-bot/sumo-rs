@@ -1,7 +1,7 @@
 //! Port of netwrite/NWWriter_XML.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::msg_handler::{write_error, write_warning};
+use utils::common::msg_handler::write_warning;
 use utils::common::std_defs::{g_precision, g_precision_geo, NETWORK_VERSION};
 use utils::common::string_utils::escape_xml;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, write_permissions, SVCPermissions, SVC_ALL, SVC_IGNORING, SVC_PEDESTRIAN, SVC_UNSPECIFIED};
@@ -33,11 +33,8 @@ fn get_device(name: &str) -> OutputDeviceRef {
     match OutputDevice::get_device(name, true) {
         Ok(d) => d,
         Err(e) => {
-            // C++ throws ProcessError, which main catches and reports before exiting
-            // non-zero. Write the error here and keep going with a throw-away device;
-            // main's was_informed() check then quits, without a Rust panic.
-            write_error(&e.to_string());
-            std::rc::Rc::new(std::cell::RefCell::new(OutputDevice::new_string(0)))
+            // C++ throws ProcessError here; main's catch reports it and exits 1.
+            std::panic::panic_any(e);
         }
     }
 }
@@ -218,10 +215,6 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_config(oc: &OptionsCont, prefix: &str, haveTypes: bool) {
-        if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| h.was_informed()) {
-            // C++ aborts on the first IO error; an earlier writer already reported it.
-            return;
-        }
         if !oc.exists("node-files") {
             // do not write configuration for netgen
             return;
@@ -240,13 +233,10 @@ impl NWWriter_XML {
 
         let configPath = format!("{prefix}.netccfg");
         // v1_28_0 NWWriter_XML.cpp:213 throws ProcessError when the config file cannot be
-        // created; report the failure and return so main exits non-zero without a Rust panic.
+        // created; main's catch reports it and exits 1.
         let mut out = match std::fs::File::create(&configPath) {
             Ok(f) => f,
-            Err(_) => {
-                write_error(&format!("Could not save configuration to '{configPath}'"));
-                return;
-            }
+            Err(_) => std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Could not save configuration to '{configPath}'"))),
         };
         let mut os = String::new();
         or_panic(tmp.write_configuration(&mut os, true, false, false, "", false, false, ""));
