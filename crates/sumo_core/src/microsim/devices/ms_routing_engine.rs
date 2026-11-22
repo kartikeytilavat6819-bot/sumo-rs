@@ -850,7 +850,12 @@ impl MSRoutingEngine {
         }
         let provider = ROUTER_PROVIDER.with(|p| p.get()).unwrap();
         let router = provider.get_mut().unwrap().get_vehicle_router(svc);
-        router.prohibit(prohibited);
+        // C++ getRouterTT always calls prohibit(prohibited). An empty prohibition is a no-op
+        // on an unprohibited router; skip it so the virtual (callback) path is not re-entered
+        // on every taxi dispatch (ticket9812 rail router).
+        if !prohibited.is_empty() {
+            router.prohibit(prohibited);
+        }
         router
     }
 
