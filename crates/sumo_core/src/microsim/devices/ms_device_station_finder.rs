@@ -1482,9 +1482,10 @@ impl MSDevice_StationFinder {
                     // what if the charging station is skipped due to long waiting time?
                     if self.myReplacePlannedStop > 0. && self.myHolder.m().has_stops() && self.myHolder.m().get_next_stop_parameter().chargingStation.is_empty() {
                         // compare the distance to the original target
-                        if scores["distfrom"] < self.myDistanceToOriginalStop {
+                        // C++ scores["distfrom"] uses std::map::operator[] (default 0.; the key is never written in C++)
+                        if *scores.entry("distfrom".to_string()).or_insert(0.) < self.myDistanceToOriginalStop {
                             // compute the arrival time at the original stop
-                            let timeToOriginalStop = time2steps(scores["timefrom"]);
+                            let timeToOriginalStop = time2steps(*scores.entry("timefrom".to_string()).or_insert(0.));
                             let originalUntil = self.myHolder.m().get_next_stop_parameter().until;
                             if timeToOriginalStop + self.myLastSearch < originalUntil {
                                 let delta = originalUntil - (timeToOriginalStop + self.myLastSearch);
@@ -1496,7 +1497,7 @@ impl MSDevice_StationFinder {
                                 // optionally implement a charging strategy by adjusting the accepted charging rates
                                 if self.myChargingStrategy != MSDevice_StationFinder_ChargingStrategy::CHARGINGSTRATEGY_NONE {
                                     // the charging strategy should actually only be computed at the arrival at the charging station
-                                    self.implement_charging_strategy(self.myLastSearch + time2steps(scores["timeto"]), stopPar.until, expectedConsumption, cs);
+                                    self.implement_charging_strategy(self.myLastSearch + time2steps(*scores.entry("timeto".to_string()).or_insert(0.)), stopPar.until, expectedConsumption, cs);
                                 }
                             }
                         }
