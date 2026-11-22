@@ -437,9 +437,9 @@ mod tests {
     // C++ RODFFrame.cpp:47 - fillOptions registers the "-c <CONFIGURATION>" call example.
     #[test]
     fn fill_options_registers_config_call_example() {
-        utils::options::options_cont::with_options(|oc| oc.clear());
-        RODFFrame::fill_options();
         utils::options::options_cont::with_options(|oc| {
+            oc.clear();
+            RODFFrame::fill_options(); // reentrant: fills the same oc
             let mut help = String::new();
             oc.print_help(&mut help).unwrap();
             assert!(help.contains("Examples:"), "no examples section in help: {help}");
