@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model nonInteracting -e 600 --no-duration-log --railsignal-moving-block -a tools/oracle/cases/tt_basic_personFlow_unboarding_curved/input_additional.add.xml

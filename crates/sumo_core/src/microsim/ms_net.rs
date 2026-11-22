@@ -2920,7 +2920,11 @@ impl MSNet {
         self.clear_state(newTime, false);
         // load state
         let mut h = MSStateHandler::new(fileName, 0);
-        let _ = utils::xml::xml_sub_sys::run_parser(&mut h, fileName, false, false, false, catchExceptions);
+        // C++ XMLSubSys::runParser rethrows the ProcessError when catchExceptions is false;
+        // preserve it so Simulation::loadState can wrap it with the version-mismatch prefix.
+        if let Err(e) = utils::xml::xml_sub_sys::run_parser(&mut h, fileName, false, false, false, catchExceptions) {
+            std::panic::panic_any(e);
+        }
         if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |m| m.was_informed()) {
             panic!("{}", ProcessError::new(utils::tlf!("Loading state from '%' failed.", fileName)));
         }
