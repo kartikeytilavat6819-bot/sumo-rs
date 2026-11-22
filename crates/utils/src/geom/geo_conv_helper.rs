@@ -826,14 +826,7 @@ impl Merc {
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
         let lam = adjlon(lon - self.lon0);
         let x = self.k * lam;
-        // PROJ 6.3.2 merc_s_forward uses logtanpfpim1, not 9.4's asinh(tan(phi)).
-        const FORTPI: f64 = PI / 4.;
-        let logtan = if lat.abs() <= f64::EPSILON {
-            lat.ln_1p()
-        } else {
-            (FORTPI + 0.5 * lat).tan().ln()
-        };
-        let y = self.k * logtan;
+        let y = self.k * lat.tan().asinh();
         (self.a * x + self.x0, self.a * y + self.y0)
     }
 
