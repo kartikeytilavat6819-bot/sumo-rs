@@ -1175,10 +1175,22 @@ impl MSActuatedTrafficLightLogic {
         // @note any vehicles which arrived during the previous phases which are now waiting between the detector and the stop line are not
         // considere here. RiLSA recommends to set minDuration in a way that lets all vehicles pass the detector
         let now = MSNet::get_instance().get_current_time_step();
+        // C++ executeAssignments(myAssignments, myConditions) passes the member by reference:
+        // each assignment sees updates made by earlier assignments in the same step.
+        // A cloned map evaluated through &self would read stale values instead.
         let assignments = self.myAssignments.clone();
-        let mut conditions = self.myConditions.clone();
-        self.execute_assignments(&assignments, &mut conditions, &BTreeMap::new());
-        self.myConditions = conditions;
+        for assignment in assignments.iter() {
+            if self.eval_expression(&assignment.1) != 0.0 {
+                let id = assignment.0.clone();
+                let val = self.eval_expression(&assignment.2);
+                if self.myConditions.contains_key(&id) {
+                    self.myConditions.insert(id, utils::common::to_string::to_string(&val));
+                } else {
+                    // forbidden is empty in trySwitch: a new id goes on the stack
+                    self.myStack.borrow_mut().last_mut().unwrap().insert(id, val);
+                }
+            }
+        }
         if self.myLinkGreenTimes.len() > 0 {
             // constraints exist, record green time durations for each link
             let state = self.get_current_phase_def().get_state().to_string();

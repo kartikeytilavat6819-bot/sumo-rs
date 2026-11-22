@@ -1,5 +1,5 @@
 #!/bin/bash
-# oc95 diagnostic: our binary only. Set OC95_TRACE so ms_mean_data.rs prints tracker state. Linux gate.
+# oc95 diagnostic: our binary only. Set OC95_TRACE for tracker/BT state. Linux gate.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/sumo-rs-target}
@@ -14,7 +14,6 @@ for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
   EXTRA=$(cat "$D/sim.args")
   XOUT=""
   [ -f "$D/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; XOUT="$XOUT $opt $R/x.$suf.xml"; done < "$D/extra_outputs.txt"
-  # clear stale additional-file outputs (case dir, run dir, cwd)
   [ -f "$D/add_outputs.txt" ] && while read -r af suf; do af=${af%$'\r'}; rm -f "$D/$af" "$R/$af" "$af"; done < "$D/add_outputs.txt"
   echo "===== CASE $c ====="
   timeout 300 "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" \
@@ -28,8 +27,10 @@ for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
   echo "--- TRACE (last 80) ---"
   grep '^OC95' "$R/sumo.log" | tail -80
   if [ "$c" = out_bt ]; then
-    echo "--- BT TRACE (first 120) ---"
-    grep '^OC95BT' "$R/sumo.log" | head -120
+    echo "--- BT SEEN counts ---"
+    grep '^OC95BT SEEN' "$R/sumo.log" | head -200
+    echo "--- BT OUTPUT lines ---"
+    grep '^OC95BT OUTPUT' "$R/sumo.log" | head -80
     echo "--- BT TRACE (t 4..9) ---"
     grep '^OC95BT' "$R/sumo.log" | awk '{for(i=1;i<=NF;i++) if($i ~ /^step=/){split($i,a,"="); if(a[2]>=4 && a[2]<=9) print}}' | head -80
     echo "--- OUR bt.xml (first 60) ---"
