@@ -8,7 +8,11 @@ CASE=tools/oracle/cases/tt_devices_bluelight_3lanes_left
 BIN="${CARGO_TARGET_DIR:?}/debug/sumo"
 if [ ! -x "$BIN" ] && [ -x "$BIN.exe" ]; then BIN="$BIN.exe"; fi
 FLAGS=$(tr -d '\r' < "$CASE/sim.args")
+echo "BIN=$BIN FLAGS=$FLAGS"
 OC102_DEBUG=1 timeout 300 "$BIN" -n "$CASE/ref_simple.net.xml" -r "$CASE/routes.rou" \
     --fcd-output "$OUT/fcd.xml" --no-step-log true $FLAGS >"$OUT/log" 2>&1
 echo "rc=$?"
-grep 'OC102' "$OUT/log" || true
+echo "--- stderr tail ---"
+tail -20 "$OUT/log" 2>/dev/null || true
+echo "--- OC102 lines ---"
+grep 'OC102' "$OUT/log" 2>/dev/null || true
