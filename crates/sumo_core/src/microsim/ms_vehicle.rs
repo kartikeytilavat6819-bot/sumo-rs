@@ -13957,6 +13957,12 @@ impl MSVehicle {
             let stopSpeed = cfModel.stop_speed_2(me, self.get_speed(), stopDist, stopDecel, MSCFModel_CalcReason::CURRENT_WAIT);
             let mut vLinkWait = min2(v, stopSpeed);
 
+            if std::env::var("OC98DBG").is_ok() && self.get_id() == "ES1"
+                && (96900..=97400).contains(&MSNet::get_instance().get_current_time_step()) {
+                eprintln!("OC98DBG 4299 redbranch link={} yellowOrRed={} canBrake={} seen={:.3} mustSee={:.3} stopDist={:.3} v={:.3} vLinkWait={:.3}",
+                    linkP.get_via_lane_or_lane().get_id(), yellowOrRed, canBrakeBeforeStopLine,
+                    seen, mustSeeBeforeReversal, stopDist, v, vLinkWait);
+            }
             if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
                 if lane.is_internal() {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
