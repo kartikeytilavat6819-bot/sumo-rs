@@ -56,6 +56,21 @@ for c in $ROWS; do
     done
     (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOPT[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
     echo "  -- ours without taxi/persontrip/additional options, --end 5: exit $(cat "$rdir/rc.txt")"
+    for variant in noadd nopersontrip; do
+      case $variant in
+        noadd) pat='-a|--additional-files' ;;
+        nopersontrip) pat='--persontrip.*' ;;
+      esac
+      rdir="$OUT/$c.$variant"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+      VARG=(); skip=0
+      for a in "${EXTRA[@]}"; do
+        if [[ "$a" =~ ^($pat)$ || "$a" == --persontrip.* && $variant = nopersontrip ]]; then skip=1; continue; fi
+        if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
+        skip=0; VARG+=("$a")
+      done
+      (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${VARG[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
+      echo "  -- ours without $variant, --end 5: exit $(cat "$rdir/rc.txt")"; head -n 2 "$rdir/err.txt" | cut -c1-160 | sed 's/^/     /'
+    done
     for E in 5 50 500; do
       rdir="$OUT/$c.end$E"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
       (cd "$rdir" && timeout 120 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e $E "${EXTRA[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
