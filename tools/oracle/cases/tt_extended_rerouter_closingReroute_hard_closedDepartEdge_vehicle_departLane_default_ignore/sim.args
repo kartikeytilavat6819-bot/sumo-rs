@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 800 --ignore-route-errors -v -a tools/oracle/cases/tt_extended_rerouter_closingReroute_hard_closedDepartEdge_vehicle_departLane_default_ignore/input_additional.add.xml
