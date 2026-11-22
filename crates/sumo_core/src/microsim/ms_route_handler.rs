@@ -2056,7 +2056,9 @@ impl MSRouteHandler {
                 self.myVehicleParameter.vtypeid, self.myVehicleParameter.id
             ));
         }
-        if self.myVehicleParameter.routeid.starts_with('!') && !MSRoute::has_route(&self.myVehicleParameter.routeid) {
+        // C++ uses MSRoute::dictionary(routeid, &myParsingRNG), which resolves a route
+        // distribution to a sampled route; has_route() only checks the plain-route dict.
+        if self.myVehicleParameter.routeid.starts_with('!') && lookup_route(&self.myVehicleParameter.routeid).is_none() {
             self.myVehicleParameter.m().parametersSet |= VEHPARS_FORCE_REROUTE;
             self.close_route(true);
         }

@@ -1,0 +1,3 @@
+Warning: Raw netstate dumps are deprecated. Use fcd-output instead.
+Error: Another vehicle type (or distribution) with the id 'DEFAULT_VEHTYPE' exists.
+Quitting (on error).
