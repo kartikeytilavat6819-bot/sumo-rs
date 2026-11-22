@@ -177,12 +177,13 @@ impl NILoader {
             return;
         }
         if !self.myNetBuilder.m().get_edge_cont().check_consistency(self.myNetBuilder.m().get_node_cont()) {
-            write_error(&ProcessError::default_msg().to_string());
-            return;
+            // C++ throws ProcessError() here; netconvert's catch deliberately suppresses the
+            // "Process Error" message and only prints "Quitting (on error)." with exit code 1.
+            // Route it through the port's throw mechanism so main's filter handles it.
+            std::panic::panic_any(ProcessError::default_msg());
         }
         if !ok && !throw(oc.get_bool("ignore-errors")) {
-            write_error(&ProcessError::default_msg().to_string());
-            return;
+            std::panic::panic_any(ProcessError::default_msg());
         }
         // configure default values that depend on other values
         self.myNetBuilder.m().get_node_cont().apply_conditional_defaults();
