@@ -1,8 +1,7 @@
 #!/bin/bash
-# Trace the first FCD divergence for the three oc97 moped indirect-left rows.
-# Runs our Rust sumo with --fcd-output (same invocation as tools/oracle/run_all.sh)
-# and compares the named vehicle's FCD lines against the case's ref.fcd.xml.
-# Prints, per case, the first differing timestep and both full vehicle lines.
+# oc97: sharper probe -- per-step posLat, C++ vs ours, for the three moped indirect-left cases.
+# Runs both binaries with --fcd-output.attributes posLat and prints the named vehicle's
+# lateral position around the divergence, plus our env-gated decision trace.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/tmp/sumo-rs-target}/debug"
@@ -10,12 +9,23 @@ OUT="/tmp/oc97-fcd-$$"
 mkdir -p "$OUT"
 export OC97_TRACE=1
 
-# Emit, for one vehicle id, a map timestep -> stripped <vehicle> line, then the
-# first timestep where the two maps differ (including presence/absence).
-first_diff() {
-  python - "$1" "$2" "$3" <<'PY'
+trace() {
+  c="$1"; vid="$2"
+  dir="tools/oracle/cases/$c/"
+  echo "=== $c (vehicle $vid) ==="
+  EXTRA=""
+  [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
+  for side in cpp ours; do
+    if [ "$side" = cpp ]; then B="${SUMO_PRISTINE_BIN:?no SUMO_PRISTINE_BIN}/sumo"; else B="$BIN/sumo"; fi
+    timeout 240 "$B" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+      --fcd-output "$OUT/$c.$side.xml" --fcd-output.attributes posLat \
+      --no-step-log true $EXTRA > "$OUT/$c.$side.log" 2>&1
+    echo "  run $side rc=$?"
+  done
+  echo "  --- posLat cpp | ours ---"
+  python - "$OUT/$c.cpp.xml" "$OUT/$c.ours.xml" "$vid" <<'PY'
 import re, sys
-ref_path, our_path, vid = sys.argv[1], sys.argv[2], sys.argv[3]
+cpp, ours, vid = sys.argv[1:4]
 needle = 'id="%s"' % vid
 
 def extract(path):
@@ -24,45 +34,24 @@ def extract(path):
         for line in f:
             m = re.search(r'<timestep\s+time="([^"]+)"', line)
             if m:
-                t = m.group(1)
+                t = round(float(m.group(1)), 2)
             if '<vehicle' in line and needle in line:
-                out[t] = " ".join(line.split())
+                p = re.search(r'posLat="([^"]+)"', line)
+                if p and t is not None:
+                    out[t] = float(p.group(1))
     return out
 
-ref, our = extract(ref_path), extract(our_path)
-for t in sorted(set(ref) | set(our), key=float):
-    a, b = ref.get(t), our.get(t)
-    if a != b:
-        print("  FIRST DIFF t=%s" % t)
-        print("    REF : %s" % (a if a is not None else "<absent>"))
-        print("    OURS: %s" % (b if b is not None else "<absent>"))
-        break
-else:
-    print("  NO DIFF in the named vehicle's FCD lines")
+a, b = extract(cpp), extract(ours)
+for t in sorted(set(a) | set(b)):
+    if not (137.5 <= t <= 145.5 or 411.5 <= t <= 417.5):
+        continue
+    x, y = a.get(t), b.get(t)
+    mark = "" if x == y else "   <-- DIFF"
+    print("  t=%6.2f  cpp=%9s  ours=%9s%s" % (
+        t, "%.4f" % x if x is not None else "-", "%.4f" % y if y is not None else "-", mark))
 PY
-}
-
-trace() {
-  c="$1"; vid="$2"
-  dir="tools/oracle/cases/$c/"
-  echo "=== $c (vehicle $vid) ==="
-  if [ ! -f "$dir/ref.fcd.xml" ]; then echo "  no ref.fcd.xml"; return; fi
-  if [ ! -x "$BIN/sumo" ]; then echo "  no $BIN/sumo"; return; fi
-  EXTRA=""
-  [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
-  OC97_TRACE=1 timeout 240 "$BIN/sumo" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-      --fcd-output "$OUT/$c.fcd.xml" --no-step-log true $EXTRA \
-      >"$OUT/$c.sumo.log" 2>&1
-  rc=$?
-  if [ $rc -ne 0 ]; then
-    echo "  SUMO FAILED rc=$rc: $(grep -m1 -E 'panicked at|Error:' "$OUT/$c.sumo.log" | cut -c1-120)"
-    return
-  fi
-  if [ ! -s "$OUT/$c.fcd.xml" ]; then echo "  EMPTY/MISSING our fcd"; return; fi
-  echo "  --- trace ---"
-  grep '^OC97 ' "$OUT/$c.sumo.log" || true
-  echo "  --- first diff ---"
-  first_diff "$dir/ref.fcd.xml" "$OUT/$c.fcd.xml" "$vid"
+  echo "  --- our decision trace ---"
+  grep '^OC97 ' "$OUT/$c.ours.log" | head -50 || true
 }
 
 trace tt_sublane_model_junction_indirect_left_moped                       flow_0.15
