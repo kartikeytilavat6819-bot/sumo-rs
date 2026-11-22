@@ -254,13 +254,13 @@ impl NWWriter_SUMO {
             attrs.insert(SUMO_ATTR_LIMIT_TURN_SPEED, to_str_f64(oc.get_float("junctions.limit-turn-speed").unwrap()));
         }
         if !oc.is_default("check-lane-foes.all") {
-            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ALL, oc.get_bool("check-lane-foes.all").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ALL, cxx_bool_str(oc.get_bool("check-lane-foes.all").unwrap()).to_string());
         }
         if !oc.is_default("check-lane-foes.roundabout") {
-            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ROUNDABOUT, oc.get_bool("check-lane-foes.roundabout").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ROUNDABOUT, cxx_bool_str(oc.get_bool("check-lane-foes.roundabout").unwrap()).to_string());
         }
         if !oc.is_default("tls.ignore-internal-junction-jam") {
-            attrs.insert(SUMO_ATTR_TLS_IGNORE_INTERNAL_JUNCTION_JAM, oc.get_bool("tls.ignore-internal-junction-jam").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_TLS_IGNORE_INTERNAL_JUNCTION_JAM, cxx_bool_str(oc.get_bool("tls.ignore-internal-junction-jam").unwrap()).to_string());
         }
         if defaultSpread != LaneSpreadFunction::RIGHT {
             attrs.insert(SUMO_ATTR_SPREADTYPE, oc.get_string("default.spreadtype").unwrap());
@@ -271,16 +271,16 @@ impl NWWriter_SUMO {
             attrs.insert(SUMO_ATTR_AVOID_OVERLAP, cxx_bool_str(v).to_string());
         }
         if oc.exists("junctions.higher-speed") && oc.get_bool("junctions.higher-speed").unwrap() {
-            attrs.insert(SUMO_ATTR_HIGHER_SPEED, oc.get_bool("junctions.higher-speed").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_HIGHER_SPEED, cxx_bool_str(oc.get_bool("junctions.higher-speed").unwrap()).to_string());
         }
         if oc.exists("internal-junctions.vehicle-width") && !oc.is_default("internal-junctions.vehicle-width") {
             attrs.insert(SUMO_ATTR_INTERNAL_JUNCTIONS_VEHICLE_WIDTH, to_str_f64(oc.get_float("internal-junctions.vehicle-width").unwrap()));
         }
         if !oc.is_default("junctions.minimal-shape") {
-            attrs.insert(SUMO_ATTR_JUNCTIONS_MINIMAL_SHAPE, oc.get_bool("junctions.minimal-shape").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_JUNCTIONS_MINIMAL_SHAPE, cxx_bool_str(oc.get_bool("junctions.minimal-shape").unwrap()).to_string());
         }
         if !oc.is_default("junctions.endpoint-shape") {
-            attrs.insert(SUMO_ATTR_JUNCTIONS_ENDPOINT_SHAPE, oc.get_bool("junctions.endpoint-shape").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_JUNCTIONS_ENDPOINT_SHAPE, cxx_bool_str(oc.get_bool("junctions.endpoint-shape").unwrap()).to_string());
         }
         into.write_xml_header("net", "net_file.xsd", attrs, true); // street names may contain non-ascii chars
         into.lf();
