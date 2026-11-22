@@ -870,6 +870,11 @@ impl MSTriggeredRerouter {
         // we have a new destination, let's replace the route (if it is affected)
         let prohibited = rerouteDef.get_closed();
         let routerProhibited = router_prohibitions(&prohibited);
+        if std::env::var("OC98DBG").is_ok() {
+            eprintln!("OC98DBG pre-affected closedEmpty={} destUnreachable={} affected={} isVehicle={}",
+                rerouteDef.closed.is_empty(), destUnreachable,
+                Self::affected(&tObject.get_upcoming_edge_i_ds(), &closed), tObject.is_vehicle());
+        }
         if rerouteDef.closed.is_empty() || destUnreachable || Self::affected(&tObject.get_upcoming_edge_i_ds(), &closed) {
             if tObject.ignore_transient_permissions() {
                 // after learning about network changes, the driver must no longer forget them
@@ -884,6 +889,10 @@ impl MSTriggeredRerouter {
                 let v = vehp.m();
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
+                if std::env::var("OC98DBG").is_ok() {
+                    eprintln!("OC98DBG pre-router hasReroutingDevice={} vClass={:?} prohibitions={}",
+                        hasReroutingDevice, v.get_v_class(), routerProhibited.len());
+                }
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
                     MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)
                 } else {
