@@ -157,7 +157,7 @@ for dir in tools/oracle/cases/*/; do
     # Keep the config path relative to the repo root: when it is absolute, SUMO's
     # fix_relative() rewrites the net/route paths into machine-specific paths and
     # the committed ref can never match on a different checkout.
-    CFG="oc110_$c.cfg"
+    CFG="cfgout_$c.cfg"
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     ARGS=$(printf '%s\n' "$EXTRA" | sed -E \
       -e "s#(--save-(configuration|template|schema)|-C)[[:space:]]+[^[:space:]]+#\1 $CFG#g" \
