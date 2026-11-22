@@ -15418,9 +15418,6 @@ impl MSVehicle {
                 }
             }
         }
-        // C++ MSVehicle.cpp:3717 — propagate the foe-constrained speed to vLinkWait,
-        // which drives the final speed in the red-light branch (processLinkApproaches).
-        *vLinkWait = min2(*vLinkWait, *v);
     }
 
     /// C++: `void MSVehicle::adaptToLeaders(const MSLeaderInfo &, double, const double, DriveProcessItem *const, const MSLane *const, double &, double &) const` [const, protected]
