@@ -74,16 +74,20 @@ for side in ours pristine; do
   grep '<tripinfo ' "$OUT/4299.$side.ti.xml"
   echo "-- warnings:"
   grep -i 'warn\|collision' "$OUT/4299.$side.log" | head -5
-  echo "-- ES1 fine trace (every 0.1s step in t=94..102):"
-  python3 - "$OUT/4299.$side.fcd.xml" <<'PY'
+  echo "-- ES1 fine trace (0.2s samples in t=94..102):"
+  python3 - "$side" "$OUT/4299.$side.fcd.xml" <<'PY'
 import sys, xml.etree.ElementTree as ET
-t = ET.parse(sys.argv[1]).getroot()
+side = sys.argv[1]
+t = ET.parse(sys.argv[2]).getroot()
+shown = -1
 for ts in t.iter('timestep'):
     sec = float(ts.get('time'))
     if not (94 <= sec <= 102): continue
+    dec = round(sec * 5)
     for v in ts.iter('vehicle'):
-        if v.get('id') == 'ES1':
-            print(f"{sec:.1f} spd={v.get('speed')} pos={v.get('pos')} lane={v.get('lane')}")
+        if v.get('id') == 'ES1' and dec != shown:
+            shown = dec
+            print(f"{side} {sec:.1f} spd={v.get('speed')} pos={v.get('pos')} lane={v.get('lane')}")
 PY
 done
 
