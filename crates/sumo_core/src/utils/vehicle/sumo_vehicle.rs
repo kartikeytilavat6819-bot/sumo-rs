@@ -556,7 +556,10 @@ impl crate::utils::router::router_edge::RouterVehicle for SUMOVehicle {
         self.base.get_chosen_speed_factor()
     }
     fn ignore_transient_permissions(&self) -> bool {
-        false
+        // C++ MSBaseVehicle.cpp:206-207: (getRoutingMode() & ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS) != 0.
+        // The DijkstraRouter calls this through SUMOVehicle* (DijkstraRouter.h:129); hardcoding false
+        // made mode-8 vehicles route on the closed (current) permissions instead of the original ones.
+        (self.base.get_routing_mode() & utils::traci::traci_constants::ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS) != 0
     }
     fn length(&self) -> f64 {
         self.get_length()
