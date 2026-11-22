@@ -53,26 +53,20 @@ timeout 120 "$BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
 echo "rc=$?"
 python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" 2>&1 | head -20
 python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" 2>&1 | head -60
-# first 12 FCD timesteps where our trip_0 position differs from ref
+# timeline of trip_0 at key timesteps on both sides (shows gaps / jumps)
 python - "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" <<'PY'
 import sys, xml.etree.ElementTree as ET
-ref = {t.get('time'): t for t in ET.parse(sys.argv[1]).getroot().iter('timestep')}
-cand = {t.get('time'): t for t in ET.parse(sys.argv[2]).getroot().iter('timestep')}
-shown = 0
-for tm in sorted(ref):
-    if tm not in cand or shown >= 12:
-        continue
-    for rp in ref[tm].iter('vehicle'):
-        if rp.get('id') != 'trip_0':
-            continue
-        for cp in cand[tm].iter('vehicle'):
-            if cp.get('id') == 'trip_0':
-                for a in ('x', 'y', 'angle', 'speed', 'pos', 'lane'):
-                    if rp.get(a) != cp.get(a):
-                        print(f"t={tm} {a}: ref={rp.get(a)} cand={cp.get(a)}")
-                        shown += 1
-                break
-        break
+def states(path):
+    out = {}
+    for t in ET.parse(path).getroot().iter('timestep'):
+        for v in t.iter('vehicle'):
+            if v.get('id') == 'trip_0':
+                out[t.get('time')] = (v.get('lane'), v.get('pos'), v.get('x'), v.get('y'))
+    return out
+ref, cand = states(sys.argv[1]), states(sys.argv[2])
+print('timesteps ref=%d cand=%d' % (len(ref), len(cand)))
+for tm in ['630.00','631.00','632.00','640.00','700.00','900.00','995.00','999.00','1000.00','1001.00']:
+    print('t=%s ref=%s cand=%s' % (tm, ref.get(tm,'-'), cand.get(tm,'-')))
 PY
 
 # ---- oc105: compare our sumo with the official binary on two target rows ----
