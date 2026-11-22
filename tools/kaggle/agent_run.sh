@@ -51,6 +51,8 @@ timeout 120 "$BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
   --statistic-output "$OUT/$c.stat.xml" --no-step-log true $EXTRA \
   >"$OUT/$c.log" 2>&1
 echo "rc=$?"
+echo "OUR STDERR FOR IDLING CASE:"
+grep -E 'Warning|Error|teleport' "$OUT/$c.log" | head -20 || true
 python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" 2>&1 | head -20
 python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" 2>&1 | head -60
 # timeline of trip_0 at key timesteps on both sides (shows gaps / jumps)
