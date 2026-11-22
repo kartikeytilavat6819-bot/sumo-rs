@@ -7,7 +7,10 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
 
-use super::geom_helper::{deg2rad, rad2deg};
+use super::geom_helper::deg2rad;
+
+/// PROJ's `RAD_TO_DEG` constant (`x * RAD_TO_DEG`, not `(x * 180) / PI`).
+const RAD_TO_DEG: f64 = 180. / PI;
 use super::{Boundary, Position};
 use crate::common::msg_handler::{write_error, write_warning};
 use crate::common::std_defs::{g_precision, g_precision_geo};
@@ -325,7 +328,9 @@ impl GeoConvHelper {
         }
         if let Some(p) = self.projection {
             let (lon, lat) = p.inv(cartesian.x(), cartesian.y());
-            cartesian.set(rad2deg(lon), rad2deg(lat));
+            // proj_todeg multiplies by the precomputed RAD_TO_DEG constant, not (x*180)/PI.
+            // At a 6-decimal rounding boundary this one-ULP difference decides the side.
+            cartesian.set(lon * RAD_TO_DEG, lat * RAD_TO_DEG);
         }
     }
 
@@ -380,7 +385,7 @@ impl GeoConvHelper {
         // is a Gauss-Krueger easting/northing and must become lon/lat before the UTM forward step.
         if let Some(inv) = &self.dhdn_inverse {
             let (lon, lat) = inv.inv(from.x(), from.y());
-            from.set(rad2deg(lon), rad2deg(lat));
+            from.set(lon * RAD_TO_DEG, lat * RAD_TO_DEG);
         }
         // perform conversion
         let ok = self.x2cartesian_const(from);
