@@ -849,6 +849,12 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) where E: RouterEdgeInfo {
+        // oc98 probe: count calls and show the first ones (remove after measuring)
+        static OC98_PROHIBIT_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let oc98_n = OC98_PROHIBIT_CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if oc98_n < 5 || oc98_n % 100_000_000 == 0 {
+            eprintln!("OC98PROBE prohibit n={} self={:p} hook={:?} type={}", oc98_n, self as *const _, self.myProhibit.map(|f| f as usize), std::any::type_name::<E>());
+        }
         if let Some(prohibit) = self.myProhibit {
             return prohibit(self, toProhibit);
         }
