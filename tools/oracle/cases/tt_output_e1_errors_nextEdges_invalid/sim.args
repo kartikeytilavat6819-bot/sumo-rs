@@ -1,1 +1,1 @@
---xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 1000 -a tools/oracle/cases/tt_output_e1_errors_nextEdges_invalid/input_additional.add.xml
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 1000 -a tools/oracle/cases/tt_output_e1_errors_nextEdges_invalid/input_additional.add.xml
