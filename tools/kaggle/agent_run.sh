@@ -33,7 +33,12 @@ for c in $ROWS; do
   echo "== $c: exit off=$(cat "$OUT/$c.off/rc.txt") ours=$(cat "$OUT/$c.ours/rc.txt")"
   echo "  -- off stderr:"; head -n 4 "$OUT/$c.off/err.txt" | cut -c1-200 | sed 's/^/     /'
   echo "  -- ours stderr:"; head -n 4 "$OUT/$c.ours/err.txt" | cut -c1-200 | sed 's/^/     /'
-  if [ "$(cat "$OUT/$c.ours/rc.txt")" = 124 ]; then echo "  -- ours TIMEOUT tail out:"; tail -n 3 "$OUT/$c.ours/out.txt" | cut -c1-200 | sed 's/^/     /'; fi
+  if [ "$(cat "$OUT/$c.ours/rc.txt")" = 124 ]; then
+    rdir="$OUT/$c.steplog"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --step-log true "${EXTRA[@]}" >out.txt 2>err.txt; true)
+    echo "  -- ours TIMEOUT: last step-log lines:"; tail -n 4 "$rdir/out.txt" | cut -c1-200 | sed 's/^/     /'
+    echo "  -- ours TIMEOUT: last stderr lines:"; tail -n 3 "$rdir/err.txt" | cut -c1-200 | sed 's/^/     /'
+  fi
   if [ -f "$d/ref.errors" ]; then
     if diff -q "$d/ref.errors" "$OUT/$c.ours/err.txt" >/dev/null; then echo "  ref.errors: MATCH"
     else echo "  ref.errors vs ours (first diff):"; diff "$d/ref.errors" "$OUT/$c.ours/err.txt" | head -n 6 | cut -c1-200 | sed 's/^/     /'; fi
