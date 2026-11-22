@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-21T21:51:24.311351-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closingReroute_destProbReroute_closing_disconnects_dest_disallow_destProb/ref_simple.net.xml"/>
+        <route-files value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closingReroute_destProbReroute_closing_disconnects_dest_disallow_destProb/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_rerouter_closingReroute_destProbReroute_closing_disconnects_dest_disallow_destProb/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closingReroute_destProbReroute_closing_disconnects_dest_disallow_destProb/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closingReroute_destProbReroute_closing_disconnects_dest_disallow_destProb/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closingReroute_destProbReroute_closing_disconnects_dest_disallow_destProb/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="onRerouterEdgeAtClose" depart="0.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="50.00" arrivalLane="beg2left_0" arrivalPos="368.10" arrivalSpeed="13.90" duration="50.00" routeLength="865.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.39" rerouteNo="1" devices="tripinfo_onRerouterEdgeAtClose fcd_onRerouterEdgeAtClose" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.0" depart="60.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="84.00" arrivalLane="beg2left_0" arrivalPos="6.70" arrivalSpeed="13.90" duration="24.00" routeLength="503.60" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.39" rerouteNo="1" devices="tripinfo_insertedWhileClosed.0 fcd_insertedWhileClosed.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.1" depart="62.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="86.00" arrivalLane="beg2left_0" arrivalPos="5.17" arrivalSpeed="13.90" duration="24.00" routeLength="502.07" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.44" rerouteNo="1" devices="tripinfo_insertedWhileClosed.1 fcd_insertedWhileClosed.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.4" depart="68.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="92.00" arrivalLane="beg2left_0" arrivalPos="1.53" arrivalSpeed="13.90" duration="24.00" routeLength="498.43" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.57" rerouteNo="1" devices="tripinfo_insertedWhileClosed.4 fcd_insertedWhileClosed.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.7" depart="74.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="98.00" arrivalLane="beg2left_0" arrivalPos="0.48" arrivalSpeed="13.90" duration="24.00" routeLength="497.38" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.61" rerouteNo="1" devices="tripinfo_insertedWhileClosed.7 fcd_insertedWhileClosed.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.8" depart="76.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="100.00" arrivalLane="beg2left_0" arrivalPos="1.03" arrivalSpeed="13.90" duration="24.00" routeLength="497.93" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.59" rerouteNo="1" devices="tripinfo_insertedWhileClosed.8 fcd_insertedWhileClosed.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="beforeRerouterEdgeAtClose" depart="40.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="553.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="513.00" routeLength="3509.26" waitingTime="301.00" waitingCount="1" stopTime="0.00" timeLoss="312.02" rerouteNo="0" devices="tripinfo_beforeRerouterEdgeAtClose fcd_beforeRerouterEdgeAtClose" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.2" depart="64.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="856.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="792.00" routeLength="3509.26" waitingTime="578.00" waitingCount="2" stopTime="0.00" timeLoss="590.93" rerouteNo="0" devices="tripinfo_insertedWhileClosed.2 fcd_insertedWhileClosed.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.3" depart="66.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1149.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="1083.00" routeLength="3509.26" waitingTime="868.00" waitingCount="3" stopTime="0.00" timeLoss="883.54" rerouteNo="0" devices="tripinfo_insertedWhileClosed.3 fcd_insertedWhileClosed.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.5" depart="70.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1151.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="1081.00" routeLength="3509.26" waitingTime="865.00" waitingCount="3" stopTime="0.00" timeLoss="881.81" rerouteNo="0" devices="tripinfo_insertedWhileClosed.5 fcd_insertedWhileClosed.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.6" depart="72.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1153.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="1081.00" routeLength="3509.26" waitingTime="865.00" waitingCount="3" stopTime="0.00" timeLoss="881.95" rerouteNo="0" devices="tripinfo_insertedWhileClosed.6 fcd_insertedWhileClosed.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="insertedWhileClosed.9" depart="78.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="1156.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="1078.00" routeLength="3509.26" waitingTime="860.00" waitingCount="3" stopTime="0.00" timeLoss="878.07" rerouteNo="0" devices="tripinfo_insertedWhileClosed.9 fcd_insertedWhileClosed.9" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>
