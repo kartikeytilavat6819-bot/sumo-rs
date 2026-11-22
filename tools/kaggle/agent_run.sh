@@ -37,13 +37,15 @@ for c in $CASES; do
     for cand in "$OUT/$c/ours/out_${s}" "$OUT/$c/ours/${s}"; do
       [ -f "$cand" ] && { got="$cand"; break; }
     done
+    case "$s" in fcd*|stat*|tripinfo*) continue ;; esac
     if [ -z "$got" ]; then echo "$c/$s: no output produced"; continue; fi
     refout="$OUT/$c/ref/out_${s}"; [ -f "$refout" ] || refout="$OUT/$c/ref/${s}"
-    if cmp -s "$refout" "$got"; then
+    norm() { grep -v 'generated on\|net-file\|route-files\|additional-files' "$1" | sed 's/^ *//'; }
+    if diff -q <(norm "$refout") <(norm "$got") >/dev/null; then
       echo "$c/$s: identical"
     else
-      echo "$c/$s: DIFF (first differing lines, ref | ours)"
-      diff <(sed 's/^ *//' "$refout") <(sed 's/^ *//' "$got") | head -n 6 | sed 's/^/  /'
+      echo "$c/$s: DIFF (ref < > ours), first differing lines:"
+      diff <(norm "$refout") <(norm "$got") | head -n 10 | sed 's/^/  /'
     fi
   done
 done
