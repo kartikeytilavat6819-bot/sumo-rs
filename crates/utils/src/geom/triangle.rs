@@ -27,8 +27,9 @@ impl PartialEq for Triangle {
 }
 
 impl Triangle {
+    /// C++ `const Triangle Triangle::INVALID = Triangle();` — default-constructed corners at (0,0,0), not `Position::INVALID`.
     pub const INVALID: Triangle =
-        Triangle { a: Position::INVALID, b: Position::INVALID, c: Position::INVALID, boundary: Boundary::new() };
+        Triangle { a: Position::new(0., 0.), b: Position::new(0., 0.), c: Position::new(0., 0.), boundary: Boundary::new() };
 
     pub fn new(a: Position, b: Position, c: Position) -> Self {
         let mut boundary = Boundary::new();
