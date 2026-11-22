@@ -291,11 +291,13 @@ impl MSDevice_FCDReplay_FCDHandler {
                             append = true;
                         }
                         if append {
-                            person.m().append_stage(stage, 0);
+                            // C++ appendStage(stage) uses the default next=-1 (push_back)
+                            person.m().append_stage(stage, -1);
                         }
                         // else: C++ deletes the stage here; the port leaves it allocated (shortcut: stage ownership is not ported)
                     }
-                    person.m().remove_stage(stageIndex, false);
+                    // C++ removeStage(stageIndex) uses the default stayInSim=true
+                    person.m().remove_stage(stageIndex, true);
                     // C++ `delete plan`: the plan vector is not freed here (shortcut: plan ownership is not ported)
                 } else {
                     let vehicle = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&id);
@@ -601,7 +603,7 @@ impl MSDevice_FCDReplay_FCDHandler {
                         let s: &mut MSStageWalking = Box::leak(Box::new(MSStageWalking::new(&params.id, &subRoute, finalStop, -1, params.departSpeed, params.departPos, 0., 0., -1, "")));
                         plan.push(Ptr::from_mut(&mut s.base.base));
                     } else {
-                        let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, prevEdge, Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", 0)));
+                        let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, prevEdge, Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", -1)));
                         plan.push(Ptr::from_mut(&mut s.base));
                     }
                     start = MSEdge::dictionary_2(&t[stageStart.trajectoryOffset as usize].edgeOrLane);
@@ -626,7 +628,7 @@ impl MSDevice_FCDReplay_FCDHandler {
                 plan.push(Ptr::from_mut(&mut s.base.base));
             }
         } else {
-            let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, *route.last().unwrap(), Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", 0)));
+            let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, *route.last().unwrap(), Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", -1)));
             plan.push(Ptr::from_mut(&mut s.base));
         }
         Ptr::from_raw(Box::into_raw(Box::new(plan)))
