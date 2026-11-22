@@ -1729,3 +1729,27 @@ impl MSCalibrator_VehicleRemover {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lookup_route_samples_named_route_distribution() {
+        // C++ MSRoute.cpp:142-155: dictionary(id, nullptr) falls back to myDistDict
+        // and samples a route from a <routeDistribution>. A calibrator whose flow
+        // references such a distribution must not report "No valid routes".
+        let edge = Ptr::from_raw(Box::into_raw(Box::new(
+            crate::microsim::ms_edge::MSEdge::new("x", 0, SumoXMLEdgeFunc::NORMAL, "", "", "", 0, 0.0),
+        )));
+        let route: crate::microsim::ms_route::ConstMSRoutePtr =
+            std::rc::Rc::new(crate::microsim::ms_route::MSRoute::new("t_cal_r", &vec![edge], true, Ptr::null(), &Vec::new(), -1, -1));
+        let mut dist = crate::utils::distribution::random_distributor::RandomDistributor::<crate::microsim::ms_route::ConstMSRoutePtr>::default();
+        assert!(dist.add(route, 1.0, false));
+        assert!(MSRoute::dictionary_2("t_cal_dist", Ptr::from_raw(Box::into_raw(Box::new(dist))), true));
+        assert!(!MSRoute::has_route("t_cal_dist"));
+        let sampled = lookup_route("t_cal_dist").expect("route distribution must be sampled");
+        assert_eq!(sampled.size(), 1);
+        MSRoute::clear();
+    }
+}
+

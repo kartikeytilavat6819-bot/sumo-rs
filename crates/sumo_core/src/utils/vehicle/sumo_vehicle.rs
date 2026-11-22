@@ -1299,5 +1299,18 @@ mod vt_dispatch_tests {
         v.vt = Box::leak(Box::new(SUMOVehicleVt { is_stopped: stopped_true, ..DEFAULT_SUMO_VEHICLE_VT }));
         assert!(v.is_stopped());
     }
+
+    #[test]
+    fn router_vehicle_ignores_transient_permissions_only_in_mode_8() {
+        // C++ MSBaseVehicle.cpp:206-207: (getRoutingMode() & ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS) != 0;
+        // DijkstraRouter.h:129 calls this through SUMOVehicle*, so the RouterVehicle impl must agree.
+        use crate::utils::router::router_edge::RouterVehicle;
+        use crate::utils::vehicle::sumo_traffic_object::{SUMOTrafficObjectVt, DEFAULT_SUMO_TRAFFIC_OBJECT_VT};
+        let mut v = SUMOVehicle::new("v");
+        v.base.vt = Box::leak(Box::new(SUMOTrafficObjectVt { get_routing_mode: |_| 0x08, ..DEFAULT_SUMO_TRAFFIC_OBJECT_VT }));
+        assert!(v.ignore_transient_permissions());
+        v.base.vt = Box::leak(Box::new(SUMOTrafficObjectVt { get_routing_mode: |_| 0x00, ..DEFAULT_SUMO_TRAFFIC_OBJECT_VT }));
+        assert!(!v.ignore_transient_permissions());
+    }
 }
 
