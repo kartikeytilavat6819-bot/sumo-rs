@@ -13613,7 +13613,7 @@ impl MSVehicle {
                             // should be negated (subtract twice to compensate)
                             latOffset = (self.myLane.get_width() + shadowLane.get_width()) * 0.5 - 2.0 * self.get_lateral_position_on_lane();
                         }
-                        let mut shadowLeaders = shadowLane.get_last_vehicle_information(me, latOffset, leaderLane.get_length() - seen, true, Ptr::null());
+                        let mut shadowLeaders = shadowLane.get_last_vehicle_information(me, latOffset, lane.get_length() - seen, true, Ptr::null());
                         if self.myLaneChangeModel.is_opposite() {
                             // ignore oncoming vehicles on the shadow lane
                             shadowLeaders.remove_opposite(shadowLane);
