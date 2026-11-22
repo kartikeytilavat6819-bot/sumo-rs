@@ -1,1 +1,0 @@
-Official sumo exits 1 for this test (error-expecting case, or an astar-landmark case that needs a precomputed lookuptable from an earlier TextTest step), so the oracle harness cannot generate references. Parked with a PENDING marker.
