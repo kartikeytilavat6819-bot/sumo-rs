@@ -226,9 +226,6 @@ impl NBPTStopCont {
         let items: Vec<(String, Ptr<NBPTStop>)> = self.myPTStops.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         for (key, stop) in items {
             let edge = cont.get_by_id(&stop.get_edge_id().to_string());
-            if !edge.is_null() {
-                eprintln!("DEBUG genbidi stop={} edge={} isBidiRail={}", stop.get_id(), edge.get_id(), edge.is_bidi_rail(false));
-            }
             if !edge.is_null() && edge.is_bidi_rail(false) {
                 let bidiEdge = edge.get_turn_destination(true);
                 debug_assert!(!bidiEdge.is_null());

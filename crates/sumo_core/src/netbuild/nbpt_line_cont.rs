@@ -603,12 +603,6 @@ impl NBPTLineCont {
             return;
         }
         let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
-        if line.get_line_id() == "13058433" {
-            eprintln!("DBGREV line={} ways={} route={} stops={}", line.get_line_id(), waysIds.len(), line.get_route().len(), stops.len());
-            for s in stops.iter() {
-                eprintln!("DBGREV stop={} edge={} orig={} loose={}", s.get_id(), s.get_edge_id(), s.get_orig_edge_id(), s.is_loose());
-            }
-        }
         let mut stopsRevised: Vec<bool> = Vec::new();
         for stop0 in stops {
             stopsRevised.push(false);
@@ -820,7 +814,6 @@ impl NBPTLineCont {
                     minDist = dist;
                 }
             }
-            eprintln!("DEBUG find_way stop={} minDist={} best={} matchdist={}", stop.get_id(), minDist, if best.is_null() { "".to_string() } else { best.get_id().to_string() }, get_float("ptline.match-dist"));
             if minDist < get_float("ptline.match-dist") {
                 let wayID = Self::get_way_id(best.get_id());
                 if stop.get_edge_id().is_empty() {
@@ -1158,9 +1151,6 @@ impl NBPTLineCont {
             }
             currentWayEdges.clear();
             currentWayMinusEdges.clear();
-        }
-        if edges.is_empty() && !currentWayMinusEdges.is_empty() {
-            edges = currentWayMinusEdges.clone();
         }
         myPTLine.m().set_edges(&edges);
     }
