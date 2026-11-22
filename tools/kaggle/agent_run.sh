@@ -56,15 +56,15 @@ for c in $ROWS; do
     done
     (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOPT[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
     echo "  -- ours without taxi/persontrip/additional options, --end 5: exit $(cat "$rdir/rc.txt")"
-    for variant in noadd nopersontrip; do
+    for variant in notaxiwalk nowalktaxi; do
       case $variant in
-        noadd) pat='-a|--additional-files' ;;
-        nopersontrip) pat='--persontrip.*' ;;
+        notaxiwalk) pat='--persontrip.transfer.taxi-walk' ;;
+        nowalktaxi) pat='--persontrip.transfer.walk-taxi' ;;
       esac
       rdir="$OUT/$c.$variant"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
       VARG=(); skip=0
       for a in "${EXTRA[@]}"; do
-        if [[ "$a" =~ ^($pat)$ || "$a" == --persontrip.* && $variant = nopersontrip ]]; then skip=1; continue; fi
+        if [[ "$a" =~ ^($pat)$ ]]; then skip=1; continue; fi
         if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
         skip=0; VARG+=("$a")
       done
