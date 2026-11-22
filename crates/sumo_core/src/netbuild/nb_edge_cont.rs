@@ -348,7 +348,7 @@ impl NBEdgeCont {
                 let poly_s = oc.get_string_vector(key).unwrap().clone();
                 let mut poly: Vec<f64> = Vec::new();
                 for i in poly_s.iter() {
-                    poly.push(utils::common::string_utils::to_double(i).unwrap()); // !!! may throw something anyhow...
+                    poly.push(utils::common::string_utils::to_double(i).unwrap_or_else(|e| std::panic::panic_any(e))); // !!! may throw something anyhow...
                 }
                 if poly.len() < 4 {
                     panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
