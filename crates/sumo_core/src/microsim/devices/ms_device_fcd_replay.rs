@@ -202,11 +202,14 @@ impl MSDevice_FCDReplay_FCDHandler {
             let t: Ptr<MSDevice_FCDReplay_Trajectory> = Ptr::from_mut(&mut **self.myTrajectories.entry(id.clone()).or_default());
             if t[0].time >= intervalStart {
                 // new vehicle or person
-                let mut params = SUMOVehicleParameter::new();
-                params.id = id.clone();
-                params.depart = depart;
-                params.departPos = t[0].lanePos;
-                params.departSpeed = t[0].speed;
+                // C++ allocates a fresh SUMOVehicleParameter per vehicle/person and the built
+                // object owns it; a per-iteration heap allocation keeps each pointer stable
+                // when the loop moves on to the next id.
+                let params = Ptr::from_mut(Box::leak(Box::new(SUMOVehicleParameter::new())));
+                params.m().id = id.clone();
+                params.m().depart = depart;
+                params.m().departPos = t[0].lanePos;
+                params.m().departSpeed = t[0].speed;
                 // params->arrivalPos = t.back().lanePos;
                 let mut vType = vType0.clone();
                 if vType == "" {
@@ -225,8 +228,8 @@ impl MSDevice_FCDReplay_FCDHandler {
                     continue;
                 }
                 if isPerson {
-                    let plan = self.make_plan(&params, &routeEdges, &stages, &*t);
-                    let person = MSNet::get_instance().m().get_person_control().build_person(Ptr::from_mut(&mut params), vehicleType, plan, Ptr::null());
+                    let plan = self.make_plan(&*params, &routeEdges, &stages, &*t);
+                    let person = MSNet::get_instance().m().get_person_control().build_person(params, vehicleType, plan, Ptr::null());
                     person.m().get_singular_type().set_v_class(SVC_IGNORING);
                     if !MSNet::get_instance().m().get_person_control().add(person) {
                         panic!("Duplicate person '{}'.", id);
@@ -245,11 +248,11 @@ impl MSDevice_FCDReplay_FCDHandler {
                         panic!("Could not add route '{}'.", dummyRouteID);
                     }
                     if t[0].edgeOrLane != "" {
-                        params.departPosProcedure = DepartPosDefinition::GIVEN;
-                        params.departLaneProcedure = DepartLaneDefinition::GIVEN;
-                        params.departLane = utils::xml::sumo_xml_definitions::get_index_from_lane(&t[0].edgeOrLane).unwrap_or_else(|e| panic!("{}", e));
+                        params.m().departPosProcedure = DepartPosDefinition::GIVEN;
+                        params.m().departLaneProcedure = DepartLaneDefinition::GIVEN;
+                        params.m().departLane = utils::xml::sumo_xml_definitions::get_index_from_lane(&t[0].edgeOrLane).unwrap_or_else(|e| panic!("{}", e));
                     }
-                    let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(Ptr::from_mut(&mut params), route, vehicleType, false, MSVehicleControl_VehicleDefinitionSource::OTHER, true);
+                    let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route, vehicleType, false, MSVehicleControl_VehicleDefinitionSource::OTHER, true);
                     if !MSNet::get_instance().m().get_vehicle_control().add_vehicle(&id, vehicle) {
                         panic!("Duplicate vehicle '{}'.", id);
                     }
