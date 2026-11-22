@@ -7090,3 +7090,28 @@ impl MSLCM_SL2015 {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_lca_matches_cpp() {
+        // MSLCM_SL2015::getLCA: no reason or zero distance -> LCA_NONE,
+        // negative -> LCA_RIGHT, positive -> LCA_LEFT.
+        let reason = LCA_SPEEDGAIN as i32;
+        assert_eq!(MSLCM_SL2015::get_lca(reason, 0.), LCA_NONE);
+        assert_eq!(MSLCM_SL2015::get_lca(0, -2.4), LCA_NONE);
+        assert_eq!(MSLCM_SL2015::get_lca(reason, -2.4), LCA_RIGHT);
+        assert_eq!(MSLCM_SL2015::get_lca(reason, 1.2), LCA_LEFT);
+    }
+
+    #[test]
+    fn overlap_uses_numerical_epsilon_boundaries() {
+        // C++: left2 >= right + EPS && left >= right2 + EPS
+        let e = utils::geom::NUMERICAL_EPS;
+        assert!(MSLCM_SL2015::overlap(0., 2., 1. + e, 3.));
+        assert!(!MSLCM_SL2015::overlap(0., 2., 2., 3.));
+        assert!(!MSLCM_SL2015::overlap(0., 1., 2., 3.));
+    }
+}
+
