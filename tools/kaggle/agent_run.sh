@@ -23,3 +23,5 @@ for C in tools/oracle/cases/tt_devices_fcd-replay_plain tools/oracle/cases/tt_de
   echo "== stat diff (pristine -> ours)"
   diff -u $OUT/$NAME.pristine.stat.xml $OUT/$NAME.ours.stat.xml | head -40
 done
+echo "################ PANIC LOCATIONS"
+grep -h -E 'panicked at|attempt to|assertion failed' $OUT/*.ours.log | cut -c1-400
