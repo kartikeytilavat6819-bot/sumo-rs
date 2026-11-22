@@ -38,6 +38,15 @@ for c in $ROWS; do
     (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou "${EXTRA[@]}" >out.txt 2>err.txt; true)
     echo "  -- ours TIMEOUT: last step-log lines:"; tail -n 4 "$rdir/out.txt" | cut -c1-200 | sed 's/^/     /'
     echo "  -- ours TIMEOUT: last stderr lines:"; tail -n 3 "$rdir/err.txt" | cut -c1-200 | sed 's/^/     /'
+    rdir="$OUT/$c.notaxi"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+    NOTAXI=(); skip=0
+    for a in "${EXTRA[@]}"; do
+      case "$a" in --device.taxi.*) skip=1; continue;; esac
+      if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
+      skip=0; NOTAXI+=("$a")
+    done
+    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOTAXI[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
+    echo "  -- ours without --device.taxi.* options, --end 5: exit $(cat "$rdir/rc.txt")"
     for E in 5 50 500; do
       rdir="$OUT/$c.end$E"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
       (cd "$rdir" && timeout 120 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e $E "${EXTRA[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
