@@ -36,5 +36,5 @@ echo "==== oc108 optimizeStops our"
 "$OUR" -n "$C/ref_simple.net.xml" -r "$C/routes.rou" --no-step-log true $FLAGS \
   --tripinfo-output /tmp/oc108_opt_our.tripinfo.xml >/tmp/oc108_opt_our.out 2>/tmp/oc108_opt_our.err
 echo "exit=$?"
-grep -E 'OC108_REROUTE|OC108_REPLROUTE|OC108_REPLCHECK|OC108_REPL|replac|skips unreachable' /tmp/oc108_opt_our.err | head -80
+grep -E 'OC108_PRECHECK|OC108_REROUTE|OC108_REPLROUTE|OC108_REPLCHECK|OC108_REPL|replac|skips unreachable' /tmp/oc108_opt_our.err | head -80
 grep -o 'id="t_0"[^>]*arrival="[^"]*"' /tmp/oc108_opt_our.tripinfo.xml | head -2
