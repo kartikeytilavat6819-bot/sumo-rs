@@ -645,6 +645,9 @@ impl MSTriggeredRerouter {
     pub fn trigger_routing(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification) -> bool {
         let tObject = veh;
         let net = MSNet::get_instance();
+        if tObject.get_id() == "reroute_period" {
+            eprintln!("OC108_RR enter reason={:?} applies={} haveUntil={} mode={} ignore={}", reason as i32, self.applies(tObject), self.myHaveClosingUntil, tObject.get_routing_mode(), tObject.ignore_transient_permissions());
+        }
         if !self.applies(tObject) {
             return false;
         }
@@ -861,7 +864,7 @@ impl MSTriggeredRerouter {
                 if !self.myHaveClosingUntil {
                     tObject.set_routing_mode(tObject.get_routing_mode() & !ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS);
                 } else if hasReroutingDevice && routingDevice.cast::<MSDevice_Routing>().get_period() > 0 {
-                    eprintln!("OC108_RR until-warning veh={} haveUntil={} mode={}", tObject.get_id(), self.myHaveClosingUntil, tObject.get_routing_mode());
+                    if tObject.get_id() == "reroute_period" { eprintln!("OC108_RR until-warning veh={} haveUntil={} mode={}", tObject.get_id(), self.myHaveClosingUntil, tObject.get_routing_mode()); }
                     utils::common::msg_handler::write_warning(&utils::tlf!("Periodic rerouting and rerouting mode 8 for vehicle '%' are incompatible with closingReroute attribute 'until' in rerouter (vehicle may return to an invalid route.", tObject.get_id(), self.base.get_id()));
                 }
             }

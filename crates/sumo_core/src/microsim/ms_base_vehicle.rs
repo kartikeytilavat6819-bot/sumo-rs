@@ -1636,7 +1636,9 @@ impl MSBaseVehicle {
         if !edges.is_empty() && edges.last().unwrap().is_taz_connector() {
             edges.pop();
         }
-        eprintln!("OC108_REROUTE veh={} info={} mode={} ignore={} edges={:?}", self.get_id(), info, self.get_routing_mode() as i32, self.ignore_transient_permissions(), edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
+        if self.get_id() == "reroute_period" || self.get_id() == "t_0" {
+            eprintln!("OC108_REROUTE veh={} info={} mode={} ignore={} savingsOk={} hasSkipped={} edges={:?}", self.get_id(), info, self.get_routing_mode() as i32, self.ignore_transient_permissions(), savingsOk, hasSkipped, edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>());
+        }
         let routeCost = router.recompute_costs(&edges, Ptr::from_mut(&mut self.base), t, Ptr::default());
         // trips have no loaded route to compare against when routed on insertion
         let previousCost = if onInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
@@ -2096,6 +2098,9 @@ impl MSBaseVehicle {
                 lastPos = endPos;
 
                 self.myStops[iter].edge = (searchStart..edgeCount).find(|&i| self.myRoute.get_edges()[i] == stopEdge).unwrap_or(edgeCount);
+                if self.get_id() == "t_0" {
+                    eprintln!("OC108_REPLCHECK stop={} found={}/{} prio={} name={:?} start={}", stopEdge.get_id(), self.myStops[iter].edge, edgeCount, self.myStops[iter].pars.priority, self.myStops[iter].get_stopping_place_name(), searchStart);
+                }
                 if self.myStops[iter].edge == edgeCount && self.myStops[iter].pars.priority >= 0.0 {
                     let oldEdge = self.myStops[iter].pars.edge.clone();
                     let oldName = self.myStops[iter].get_stopping_place_name().0;
@@ -6124,7 +6129,7 @@ impl MSBaseVehicle {
     // }
     pub fn replace_with_alternative(&mut self, iter: usize, searchStart: MSRouteIterator, end: MSRouteIterator) -> bool {
         let nameTag = self.myStops[iter].get_stopping_place_name();
-        eprintln!("OC108_REPL enter iter={} name={:?} searchStart={} end={}", iter, nameTag, searchStart, end);
+        if self.get_id() == "t_0" { eprintln!("OC108_REPL enter iter={} name={:?} searchStart={} end={}", iter, nameTag, searchStart, end); }
         if !nameTag.0.is_empty() {
             let alternatives: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().get_stopping_place_alternatives(&nameTag.0, nameTag.1).clone();
             for alt in alternatives {
@@ -6133,19 +6138,19 @@ impl MSBaseVehicle {
                 let same = altEdge == Ptr::new(self.myStops[iter].lane.get_edge());
                 let allows = altLane.allows_vehicle_class(self.get_v_class());
                 let found = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge);
-                eprintln!("OC108_REPL alt={} edge={} same={} allows={} found={:?}", alt.get_id(), altEdge.get_id(), same, allows, found);
+                if self.get_id() == "t_0" { eprintln!("OC108_REPL alt={} edge={} same={} allows={} found={:?}", alt.get_id(), altEdge.get_id(), same, allows, found); }
                 if same || !allows {
                     continue;
                 }
                 self.myStops[iter].edge = found.unwrap_or(end);
                 if self.myStops[iter].edge != end {
                     self.myStops[iter].replace_stopping_place(alt);
-                    eprintln!("OC108_REPL SUCCESS edge={}", self.myStops[iter].edge);
+                    if self.get_id() == "t_0" { eprintln!("OC108_REPL SUCCESS edge={}", self.myStops[iter].edge); }
                     return true;
                 }
             }
         }
-        eprintln!("OC108_REPL FAIL");
+        if self.get_id() == "t_0" { eprintln!("OC108_REPL FAIL"); }
         false
     }
 
