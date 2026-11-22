@@ -5,8 +5,6 @@ use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetect
 use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
-fn oc95_trace() -> bool { std::env::var("OC95_TRACE").is_ok() }
-
 fn g_use_meso_sim() -> bool {
     crate::microsim::ms_globals::use_meso_sim()
 }
@@ -515,17 +513,6 @@ impl MSMeanData {
             }
         }
         let partialInterval = startTime < self.myInitTime;
-        if oc95_trace() {
-            eprintln!("OC95 write start={startTime} stop={stopTime} numReady={numReady} pending={} partial={partialInterval} track={}", self.myPendingIntervals.len(), self.myTrackVehicles);
-            for (ei, list) in self.myMeasures.iter().enumerate() {
-                for t in list.iter() {
-                    let tp = as_tracker(*t);
-                    let tr = tp.m();
-                    let entries: Vec<(i32, i32)> = tr.myCurrentData.iter().map(|x| (x.myNumVehicleEntered.get(), x.myNumVehicleLeft.get())).collect();
-                    eprintln!("OC95   edge[{ei}] ready={} entries={:?}", tr.get_num_ready(), entries);
-                }
-            }
-        }
         if numReady == 0 || self.myTrackVehicles || partialInterval {
             self.reset_only(stopTime);
         }
@@ -1520,11 +1507,13 @@ impl MSMeanData_MeanDataValueTracker {
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         let key = Ptr::from_mut(&mut *veh);
-        if oc95_trace() {
-            let own = self.myTrackedData.get(&key).map(|e| (e.myNumVehicleEntered.get(), e.myNumVehicleLeft.get()));
-            eprintln!("OC95 leave rem={} reason={:?} own={:?} front={:?} key={}", self.base.base.myDescription, reason, own, self.myCurrentData.front().map(|e| (e.myNumVehicleEntered.get(), e.myNumVehicleLeft.get())), key.as_raw() as usize);
-        }
-        if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
+        // Internal junction lanes are not part of an edge-based data set (myDumpInternal is
+        // false), so a leave towards an internal lane must not close a real edge's entry.
+        let crosses_internal = reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION
+            && self.base.base.myLane.is_null()
+            && !enteredLane.is_null()
+            && enteredLane.get_edge().is_internal();
+        if !crosses_internal && (self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT) {
             let entry = self.myTrackedData[&key].clone();
             entry.myNumVehicleLeft.set(entry.myNumVehicleLeft.get() + 1);
         }
@@ -1562,8 +1551,14 @@ impl MSMeanData_MeanDataValueTracker {
             return true;
         }
         let key = Ptr::from_mut(&mut *veh);
-        if oc95_trace() {
-            eprintln!("OC95 enter rem={} reason={:?} tracked={} steps={} key={}", self.base.base.myDescription, reason, self.myTrackedData.contains_key(&key), self.myCurrentData.len(), key.as_raw() as usize);
+        // An edge-based tracker must not open an entry when the vehicle moves onto an
+        // internal junction lane: those edges are not part of the data set.
+        if reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION
+            && self.base.base.myLane.is_null()
+            && !enteredLane.is_null()
+            && enteredLane.get_edge().is_internal()
+        {
+            return true;
         }
         if self.myParent.base.vehicle_applies(veh) && !self.myTrackedData.contains_key(&key) {
             let entry = self.myCurrentData.back().unwrap().clone();
