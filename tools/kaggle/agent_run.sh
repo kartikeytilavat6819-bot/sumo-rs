@@ -47,6 +47,15 @@ for c in $ROWS; do
     done
     (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOTAXI[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
     echo "  -- ours without --device.taxi.* options, --end 5: exit $(cat "$rdir/rc.txt")"
+    rdir="$OUT/$c.nopersontrip"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+    NOPT=(); skip=0
+    for a in "${NOTAXI[@]}"; do
+      case "$a" in --device.taxi.*|--persontrip.*|-a|--additional-files) skip=1; continue;; esac
+      if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
+      skip=0; NOPT+=("$a")
+    done
+    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOPT[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
+    echo "  -- ours without taxi/persontrip/additional options, --end 5: exit $(cat "$rdir/rc.txt")"
     for E in 5 50 500; do
       rdir="$OUT/$c.end$E"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
       (cd "$rdir" && timeout 120 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e $E "${EXTRA[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
