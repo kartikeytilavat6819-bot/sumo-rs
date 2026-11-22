@@ -311,10 +311,10 @@ impl NBEdgeCont {
             self.myEdges2Remove.extend(edges);
         }
         if oc.exists("keep-edges.by-vclass") && oc.is_set("keep-edges.by-vclass", true).unwrap() {
-            self.myVehicleClasses2Keep = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("keep-edges.by-vclass").unwrap()).unwrap();
+            self.myVehicleClasses2Keep = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("keep-edges.by-vclass").unwrap()).unwrap_or_else(|e| std::panic::panic_any(e));
         }
         if oc.exists("remove-edges.by-vclass") && oc.is_set("remove-edges.by-vclass", true).unwrap() {
-            self.myVehicleClasses2Remove = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("remove-edges.by-vclass").unwrap()).unwrap();
+            self.myVehicleClasses2Remove = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("remove-edges.by-vclass").unwrap()).unwrap_or_else(|e| std::panic::panic_any(e));
         }
         if oc.exists("keep-edges.by-type") && oc.is_set("keep-edges.by-type", true).unwrap() {
             let types = oc.get_string_vector("keep-edges.by-type").unwrap().clone();
