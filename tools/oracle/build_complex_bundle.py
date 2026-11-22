@@ -148,6 +148,35 @@ connection/parallelConnection
 connection/repeatedConnection
 connection/tracing
 contextSubscriptions
+contextSubscriptions/elevated
+contextSubscriptions/matrix_test
+contextSubscriptions/simulation_5
+edge/edge
+edge/permissions_cch_reroute
+edge/permissions_internal_lane
+inductionloop/inductionloop
+inductionloop/intervalData
+inductionloop/override
+inductionloop/persons_internalDet
+inductionloop/persons_walk
+inductionloop/persons_walk_wrongType
+junction/junction
+lanearea/intervalData
+lanearea/lanearea
+lanearea/override
+meandata/meandata
+meandata/meandata_vectorized
+meandata/meandata_vectorized_lanes
+multientryexit/multientryexit
+overheadwire/overheadwire
+parkingarea/parkingarea
+poi/poi
+polygon/add_large
+polygon/polygon
+polygon/polygon_dynamics
+route/route
+vehicletype/save_and_load_vtype_params
+vehicletype/vehicletype
 """.split()
 
 SKIP_NAMES = re.compile(r"\.complex(\..*)?$|^testsuite\.complex$|^update_states\.sh$|\.pyc$")
