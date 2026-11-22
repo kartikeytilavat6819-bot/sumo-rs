@@ -1538,7 +1538,6 @@ impl RONet {
                 break;
             }
             let minTime = min2i(routableTime, containerTime);
-            self.myHaveProcessedRoutes = true;
             if routableTime == minTime {
                 // check whether to print the output
                 if lastTime != routableTime && lastTime != -1 {
