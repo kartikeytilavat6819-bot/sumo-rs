@@ -261,7 +261,9 @@ mod tests {
 
     #[test]
     fn xerces_utf8_diagnostic() {
-        // meta/umlaut: 'n' 0xF6 't' -> xerces reports the bad continuation byte.
+        // C++ OptionsLoader.cpp:142-147 forwards the xerces SAX message and prints
+        // "(At line/column <0-based+1>/<column>)". meta/umlaut expects this shape.
+        // 'n' 0xF6 't' -> xerces reports the bad continuation byte.
         let bytes = b"<?xml version=\"1.0\"?>\n<net-file value=\"n\xF6t.net.xml\"/>";
         let e = std::str::from_utf8(bytes).unwrap_err();
         let (msg, line) = super::xerces_utf8_error(bytes, &e);

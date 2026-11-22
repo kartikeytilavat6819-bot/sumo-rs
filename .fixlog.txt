@@ -1,0 +1,32 @@
+d3d99cf6c oc110: merge prep - drop leftover stat file
+3e40ed401 oc110: merge prep - drop probe/temp artifacts
+72af82512 oc110: merge prep - neutralise scratch filename
+5d9073015 oc110: final - remove agent_run.sh
+3de60872b oc110: drop speculative fix_relative test that failed on gate
+b9d38f046 oc110: pin fix_relative with absolute config + relative file (FileHelpers.cpp:221)
+7dfef0744 oc110: fix meta_option_forms test (reset_writable between -a and +a)
+6a6304b24 oc110: import rail cases from release suite; allow empty-route tests
+71b71e197 oc110: fix gate regressions (normaliser build-features line, config comment parsing, ProcessError propagation, robust unit test)
+340857958 Merge branch 'wave2' into worktree-agent-oc110
+2335fc7b6 oc110: import meta percent case (official refs)
+1891d8fb3 oc110: pin RouteCostCalculator::keepRoute boundaries (RouteCostCalculator.h:69)
+daf2c080a oc110: wire PCLoaderXML::getLanePos override (PCLoaderXML.h:65)
+121c8c7c4 oc110: pin xerces UTF-8 diagnostics for 2/3/4-byte sequences
+25b1f9c55 oc110: document HAVE_OSG/_DEBUG option guards vs scoring build
+b9beef076 oc110: pin meta option forms (short '=', +append, -C) with unit tests
+26756c00c oc110: make config refs machine-independent (relative scratch path)
+cb02de5ca oc110: measure config/stdout stages in agent_run.sh
+a87f45407 oc110: import meta space_input sim case with official refs
+527a526d3 oc110: import option_list_append and rel_path config cases
+9a351d2ab oc110: fix umlaut line number, drop OSG-only option, park XSD-validation cases
+fb1b6d8da oc110: import meta config/stdout cases with official refs for new stages
+2e8903ede oc110: add marker-gated CONFIG-output and STDOUT stages to run_all
+865404ba2 oc110: emit xerces-style invalid-UTF8 error when loading config (umlaut)
+fbacbadb8 oc110: add agent_run.sh measuring meta help/version/config/error output
+d1bdcaa21 oc110: drop stray config.cfg from meta ref run
+104e6bfc5 oc110: import meta error-exit chunk (xml validation, umlaut) via EXPECT_EXIT
+c26c59733 oc110: drop stray root ref-run artifacts
+281d12bf5 oc110: import meta chunk 1 (option lists, with_log, write_config, xml root)
+d6d71f65b oc110: bring in oc105 expected-error (EXPECT_EXIT) harness staging
+4b46c8490 oc105: make expected-error comparison order-sensitive like texttest
+d4e573366 oc105: add expected-error scoring; convert two tt_basic rows
