@@ -1094,13 +1094,13 @@ mod tests {
         let mut prohibitions = SUMOAbstractRouter_Prohibitions::new();
         prohibitions.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: 200., permissions: SVC_RAIL });
         router.prohibit(&prohibitions);
-        assert!(!router.is_prohibited(a, veh, 0.));
-        assert_eq!(router.get_effort(a, veh, 0.), 200. + 10.);
+        assert!(!router.is_prohibited(a, veh, 0.), "finite end must not be hard-prohibited");
+        assert_eq!(router.get_effort(a, veh, 0.), 200. + 10., "finite end must add the wait time");
 
         let mut permanent = SUMOAbstractRouter_Prohibitions::new();
         permanent.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: f64::MAX, permissions: SVC_RAIL });
         router.prohibit(&permanent);
-        assert!(router.is_prohibited(a, veh, 0.));
+        assert!(router.is_prohibited(a, veh, 0.), "MAX end must be hard-prohibited");
         // getEffort() would return MAX + effort here; C++ never calls it for a
         // hard-prohibited edge because isProhibited() excludes it first.
     }
