@@ -57,8 +57,9 @@ for side in ours pristine; do
   echo "-- v.25 route replacements (first 12 route tags):"
   grep -E '<route' "$OUT/17583.$side.vr.xml" | head -12
 done
+
 # ticket4299: ES1 waitingTime 72.00 (ref) vs 75.80 (ours), step-length 0.1.
-# Dump tripinfo and a 1-second ES1 speed/pos/lane trace from t=70 onward so the
+# Dump tripinfo and a fine ES1 speed/pos/lane trace around t=94..102 so the
 # extra waiting steps can be located on the two sides.
 C=tools/oracle/cases/tt_bugs_4xxx_ticket4299
 echo "################ tt_bugs_4xxx_ticket4299"
@@ -84,5 +85,24 @@ for ts in t.iter('timestep'):
         if v.get('id') == 'ES1':
             print(f"{sec:.1f} spd={v.get('speed')} pos={v.get('pos')} lane={v.get('lane')}")
 PY
+done
+
+# oc105 expected-error measurement (from wave2): compare our sumo with the
+# official binary on the SSM and rerouting expected-error rows.
+OC105_OUT=/tmp/agent_run_oc105
+mkdir -p "$OC105_OUT"
+for c in tt_devices_ssm_bugs_ticket13918 tt_devices_rerouting_reroute_congestions_exit_times; do
+  D="tools/oracle/cases/$c"
+  FLAGS=$(cat "$D/sim.args")
+  echo "==== $c"
+  echo "sim.args: $FLAGS"
+  for side in our official; do
+    if [ "$side" = our ]; then BIN="$OURS"; else BIN="$REF"; fi
+    "$BIN" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --no-step-log true $FLAGS \
+      >"$OC105_OUT/$c.$side.out" 2>"$OC105_OUT/$c.$side.err"
+    echo "$side exit=$?"
+    echo "$side stderr:"; head -20 "$OC105_OUT/$c.$side.err"
+    echo "$side stdout:"; head -12 "$OC105_OUT/$c.$side.out"
+  done
 done
 echo "OC98 DIAGNOSTIC DONE"

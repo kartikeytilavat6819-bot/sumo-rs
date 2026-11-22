@@ -1983,6 +1983,13 @@ impl NBRailwayTopologyAnalyzer {
     //     }
     //     return numReversed;
     // }
+    // C++ NBAlgorithms_Railway.cpp:589-593: the ptline-edge check belongs at the top of the
+    // `for (NBEdge* start : outRail)` loop, before allBroken. It must not repeat inside the
+    // while loop, where a line edge later in the sequence would truncate the sequence.
+    fn is_ptline_start<T: Ord>(start: &T, line_edges: &BTreeSet<T>) -> bool {
+        line_edges.contains(start)
+    }
+
     #[allow(unused_variables)]
     pub fn reverse_edges(ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, lc: &mut NBPTLineCont) -> i32 {
         // determinism: C++ iterates std::set<NBNode*> (pointer order) for brokenNodes
@@ -1999,6 +2006,10 @@ impl NBRailwayTopologyAnalyzer {
             let mut outRail = EdgeVector::new();
             Self::get_rail_edges(*n, &mut inRail, &mut outRail);
             for mut start in outRail.clone() {
+                if Self::is_ptline_start(&start, &lineEdges) {
+                    // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
+                    continue;
+                }
                 // only reverse edges where the node would be unbroken afterwards
                 if !Self::all_broken(*n, start, &inRail, &outRail) || (inRail.len() == 1 && outRail.len() == 1) {
                     continue;
@@ -2006,13 +2017,6 @@ impl NBRailwayTopologyAnalyzer {
                 let mut forward = true;
                 let mut seq: EdgeVector = EdgeVector::new();
                 while forward {
-                    if lineEdges.contains(&start) {
-                        // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
-                        break;
-                    } else if start.base2.has_parameter(OSM_DIRECTION) {
-                        // do not reverse edges where direction was explicitly set in OSM (including via signal direction)
-                        break;
-                    }
                     seq.push(start);
                     //std::cout << " seq=" << toString(seq) << "\n";
                     let n2 = start.get_to_node();
@@ -3295,6 +3299,34 @@ impl RouterEdge<NBVehicle> for NBRailwayTopologyAnalyzer_Track {
     }
     fn travel_time_static(edge: Ptr<Self>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
         NBRailwayTopologyAnalyzer::get_travel_time_static(edge, veh, time)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ptline_start_is_skipped_at_top_of_out_rail_loop() {
+        // C++ NBAlgorithms_Railway.cpp:589-593 (reverseEdges, outRail loop):
+        //   for (NBEdge* start : outRail) {
+        //       if (lineEdges.count(start)) {
+        //           // ptline edges should never be reversed...
+        //           continue;
+        //       }
+        //       ...
+        //   }
+        // The check must use the initial `start`, at the top of the loop, before
+        // allBroken — never the re-assigned `start` inside the while loop.
+        // Use plain ids so the test never builds an NBEdge/NBNode (which read the
+        // process-global OptionsCont, uninitialised in unit tests).
+        let mut line_edges: BTreeSet<String> = BTreeSet::new();
+        let line_edge = "lineEdge".to_string();
+        let other_edge = "otherEdge".to_string();
+        assert!(!NBRailwayTopologyAnalyzer::is_ptline_start(&line_edge, &line_edges));
+        line_edges.insert(line_edge.clone());
+        assert!(NBRailwayTopologyAnalyzer::is_ptline_start(&line_edge, &line_edges));
+        assert!(!NBRailwayTopologyAnalyzer::is_ptline_start(&other_edge, &line_edges));
     }
 }
 

@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: output/meanhbefa_lanebased/errors/broken_number/{errors,output}.sumo

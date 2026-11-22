@@ -1,2 +1,0 @@
-Official sumo exits 1 (error-only test): value '0GggrrrrGGggrrrr' does not match regular expression facet '[ruyYgGoOs]+'
-No tripinfo/fcd output, so it cannot be an oracle row.
