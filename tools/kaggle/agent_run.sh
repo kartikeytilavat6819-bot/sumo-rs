@@ -27,6 +27,14 @@ for c in md_midinterval md_vtypes md_stop out_bt elechybrid_overhead; do
   grep '^OC95' "$R/sumo.log" | head -80
   echo "--- TRACE (last 80) ---"
   grep '^OC95' "$R/sumo.log" | tail -80
+  if [ "$c" = out_bt ]; then
+    echo "--- BT TRACE (first 120) ---"
+    grep '^OC95BT' "$R/sumo.log" | head -120
+    echo "--- BT TRACE (t 4..9) ---"
+    grep '^OC95BT' "$R/sumo.log" | awk '{for(i=1;i<=NF;i++) if($i ~ /^step=/){split($i,a,"="); if(a[2]>=4 && a[2]<=9) print}}' | head -80
+    echo "--- OUR bt.xml (first 60) ---"
+    head -60 "$R/x.bt.xml" 2>/dev/null || echo MISSING
+  fi
   echo "--- DIFF meandata/bt/elec vs ref ---"
   if [ -f "$D/add_outputs.txt" ]; then
     while read -r af suf; do

@@ -3,6 +3,8 @@
 use crate::prelude::*;
 use std::cell::{Cell, RefCell};
 
+fn oc95_trace() -> bool { std::env::var("OC95_TRACE").is_ok() }
+
 thread_local! {
     /// C++ `static bool MSDevice_BTreceiver::myWasInitialised`
     static MY_WAS_INITIALISED: Cell<bool> = const { Cell::new(false) };
@@ -279,7 +281,16 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
                     // seeing oneself? skip
                     continue;
                 }
+                if oc95_trace() {
+                    let rd = v.updates.last().map(|s| s.position);
+                    let sd = svi.m().updates.last().map(|s| s.position);
+                    let dist = match (rd, sd) { (Some(a), Some(b)) => a.distance_to(&b), _ => -1. };
+                    eprintln!("OC95BT step={} rec={} send={} dist={} range={} seen={}", simtime(), id, vid, dist, v.range, v.currentlySeen.contains_key(&vid));
+                }
                 self.update_visibility(v, svi.m());
+                if oc95_trace() {
+                    eprintln!("OC95BT after rec={} send={} seen={} recorded={}", id, vid, v.currentlySeen.contains_key(&vid), v.seen.get(&vid).map_or(0, |l| l.len()));
+                }
             }
 
             if v.haveArrived {
@@ -393,6 +404,9 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
         let mp = MSDevice_BTreceiver_MeetingPoint::new(simtime() + atOffset, receiverState, senderState);
         let sd = Ptr::from_mut(Box::leak(Box::new(MSDevice_BTreceiver_SeenDevice::new(&mp))));
         currentlySeen.insert(senderID.to_string(), sd);
+        if oc95_trace() {
+            eprintln!("OC95BT ENTER t={} send={}", simtime(), senderID);
+        }
         self.add_recognition_point(simtime(), receiverState, senderState, sd);
     }
 
@@ -431,6 +445,9 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
         let end = (senderState.routePos + 1) as usize;
         sd.m().senderRoute = route_string(&senderInfo.route, begin, end);
         receiverInfo.seen.entry(senderID.clone()).or_default().push(sd);
+        if oc95_trace() {
+            eprintln!("OC95BT LEAVE t={} send={} recorded={}", simtime(), senderID, receiverInfo.seen.get(&senderID).map_or(0, |l| l.len()));
+        }
         receiverInfo.currentlySeen.remove(&senderID);
     }
 
@@ -472,6 +489,9 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
     pub fn write_output(&mut self, id: &str, seen: &BTreeMap<String, Vec<Ptr<MSDevice_BTreceiver_SeenDevice>>>, allRecognitions: bool) {
         let os = OutputDevice::get_device_by_option("bt-output").unwrap();
         let mut os = os.borrow_mut();
+        if oc95_trace() {
+            eprintln!("OC95BT OUTPUT bt id={} seen_keys={} nseen={}", id, seen.len(), seen.values().map(|v| v.len()).sum::<usize>());
+        }
         os.open_tag("bt").write_attr("id", id);
         for (itemID, devices) in seen {
             for device in devices {
