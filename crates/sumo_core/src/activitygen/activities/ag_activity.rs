@@ -259,3 +259,24 @@ impl AGActivity {
 
 }
 
+
+#[cfg(test)]
+mod dep_hour_tests {
+    use super::*;
+
+    fn pos(x: f64, y: f64) -> AGPosition {
+        AGPosition { street: Ptr::null(), position: 0., pos2d: utils::geom::position::Position::new(x, y) }
+    }
+
+    // C++ AGActivity.cpp:110-116 (depHour): returns arrival - timeToDrive(from, to); the day-wrap is commented out, so no +24
+    #[test]
+    fn dep_hour_does_not_wrap_negative_times() {
+        let mut das = AGDataAndStatistics::new();
+        das.speedTimePerKm = 360.0;
+        let mut act = AGActivity::new(Ptr::null(), Ptr::from_mut(&mut das), Ptr::null(), 0);
+        // same place: timeToDrive is 0, so the departure equals a negative arrival unchanged
+        assert_eq!(act.dep_hour(pos(0., 0.), pos(0., 0.), -100), -100);
+        // 1000 m at 360 s/km: timeToDrive = (int)(360 * 1000 / 1000) = 360
+        assert_eq!(act.dep_hour(pos(0., 0.), pos(1000., 0.), 100), -260);
+    }
+}
