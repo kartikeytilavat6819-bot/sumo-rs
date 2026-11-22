@@ -13965,7 +13965,7 @@ impl MSVehicle {
             let mut vLinkWait = min2(v, stopSpeed);
 
             if self.get_id() == "ES1" && t >= 94000 && t <= 100000 {
-                eprintln!("OC102R t={} yellowOrRed={} canBrake={} brakeDist={:.2} stopOff={:.2} ignoreRed={} mustSee={:.2} seen={:.2} stopDecel={:.2}", t, yellowOrRed, canBrakeBeforeStopLine, brakeDist, lane.get_vehicle_stop_offset(me), self.ignore_red(linkP, canBrakeBeforeStopLine), mustSeeBeforeReversal, seen, stopDecel);
+                eprintln!("OC102R t={} yellowOrRed={} canBrake={} brakeDist={:.2} ignoreRed={} seen={:.2} stopDecel={:.2} stopDist={:.2} stopSpeed={:.2} vLinkWait={:.2} v={:.2}", t, yellowOrRed, canBrakeBeforeStopLine, brakeDist, self.ignore_red(linkP, canBrakeBeforeStopLine), seen, stopDecel, stopDist, stopSpeed, vLinkWait, v);
             }
             if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
                 if lane.is_internal() {
