@@ -442,6 +442,10 @@ impl MSDevice_Bluelight {
                     };
                     // todo works only for one second steps
                     if veh2.is_action_step(simstep) && reaction < reactionProb * veh2.get_action_step_length_secs() {
+                        if std::env::var_os("OC102_DEBUG").is_some() {
+                            eprintln!("OC102  influence t={} {} lane={} type={} reaction={:.4} prob={:.4}",
+                                simstep, veh2.get_id(), veh2.get_lane().get_id(), veh2.get_vehicle_type().get_id(), reaction, reactionProb);
+                        }
                         self.myInfluencedVehicles.insert(veh2.get_id().to_string());
                         // std::map::insert keeps an existing entry
                         self.myInfluencedTypes.entry(veh2.get_id().to_string()).or_insert(veh2.get_vehicle_type().get_id().to_string());
