@@ -5,7 +5,7 @@ RUST=${RUST_NETCONVERT:-$CARGO_TARGET_DIR/debug/netconvert}
 CPP=${CPP_NETCONVERT:-$SUMO_PRISTINE_BIN/netconvert}
 export SUMO_HOME=${SUMO_HOME:-$SUMO_PRISTINE_BIN/..}
 OUT=/tmp/oc113; mkdir -p "$OUT"
-TARGETS=$(cat .oc_haiku_rows.txt)
+TARGETS="itt_nc_netconvert_bugs_0xxx_2468327 itt_nc_netconvert_function_crossings_guessed_invalid_options itt_nc_netconvert_function_crossings_specified_error_empty_edges itt_nc_netconvert_function_keep_edges__deprecated_ itt_nc_netconvert_function_keep_edges_boundary__deprecated_ itt_nc_netconvert_function_keep_edges_boundary_malformed_boundary1 itt_nc_netconvert_function_keep_edges_boundary_malformed_boundary2 itt_nc_netconvert_function_opposites_different_loadedLengths_nofix itt_nc_netconvert_function_tls_programs_green_time0 itt_nc_netconvert_meta_depending_option"
 PLAIN="--node-files tools/oracle/cases/vtypes/plain/net.nod.xml --edge-files tools/oracle/cases/vtypes/plain/net.edg.xml --connection-files tools/oracle/cases/vtypes/plain/net.con.xml --type-files tools/oracle/cases/vtypes/plain/net.typ.xml --tllogic-files tools/oracle/cases/vtypes/plain/net.tll.xml"
 # collect rows (name, input, options) with the same row() shape as run_netopts_new.sh
 declare -A RIN ROPT
