@@ -39,3 +39,16 @@ for c in $CASES; do
     echo "no official binary at $SUMO_PRISTINE_BIN/sumo"
   fi
 done
+
+# numeric divergence: idling_randomCircling_rerouting
+c=tt_devices_taxi_idling_randomCircling_rerouting
+d="tools/oracle/cases/$c"
+EXTRA=$(cat "$d/sim.args")
+echo "===== $c : OURS vs REF (first diffs) ====="
+timeout 120 "$BIN/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
+  --tripinfo-output "$OUT/$c.ti.xml" --fcd-output "$OUT/$c.fcd.xml" \
+  --statistic-output "$OUT/$c.stat.xml" --no-step-log true $EXTRA \
+  >"$OUT/$c.log" 2>&1
+echo "rc=$?"
+python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.ti.xml" 2>&1 | head -20
+python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" 2>&1 | head -20
