@@ -8,7 +8,7 @@ ARGS=$(cat sim.args)
 echo "ours rc=$?"
 "$SUMO_PRISTINE_BIN/sumo" $ARGS -n net.net.xml -r input_routes.rou.xml --tripinfo-output "$OUT/ref.tripinfo.xml" 2> "$OUT/ref.err" >/dev/null
 echo "ref rc=$?"
-echo "--- ours"; grep -i -e "collision" -e "OC102R" -e "OC102L" "$OUT/ours.err" | head -80
+echo "--- ours"; grep -i -e "collision" -e "OC102R t=9[7-9]" -e "OC102R t=100" "$OUT/ours.err" | head -80
 echo "--- ref";  grep -i "collision" "$OUT/ref.err" | head -20
 echo "--- tripinfo diff"; diff <(grep -o 'tripinfo id="[^"]*" depart="[^"]*"[^>]*arrival="[^"]*"' "$OUT/ref.tripinfo.xml") <(grep -o 'tripinfo id="[^"]*" depart="[^"]*"[^>]*arrival="[^"]*"' "$OUT/ours.tripinfo.xml") | head -20
 echo "AGENT RUN DONE"
