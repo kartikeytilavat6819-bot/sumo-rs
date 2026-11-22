@@ -67,8 +67,8 @@ for t in sorted(set(a) | set(b)):
     fmt = lambda q: ("%.4f/%.3f/%.2f" % q) if q is not None else "-"
     print("  t=%6.2f  cpp[posLat/accLat/v]=%16s  ours=%16s%s" % (t, fmt(x), fmt(y), mark))
 PY
-  echo "  --- our decision trace (csl/lat/align/foeTrace only) ---"
-  grep -E '^OC97 .*(csl|latDone| lat |alignSet|foeTrace)' "$OUT/$c.ours.log" | head -60 || true
+  echo "  --- our decision trace (t=143..145 / 414..416) ---"
+  grep -E '^OC97 t=(143|144|145|414|415|416)\.' "$OUT/$c.ours.log" | head -120 || true
 }
 
 trace tt_sublane_model_junction_indirect_left_moped                       flow_0.15 sub
