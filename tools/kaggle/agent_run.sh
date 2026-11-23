@@ -65,6 +65,15 @@ for t in newStop_fast_forced newStop_fast_forced2; do
     echo "-- $t $side console (first 14 lines):"; grep -a -v "^Retrying\|UserWarning" "$f" 2>/dev/null | head -n 14 | cut -c1-260 | sed 's/^/     /'
   done
 done
+# oc98: setStop_default_state / stopDelay_waypoint: debug-build overflow panic after the instantStopping dispatch fix. Print both consoles + backtrace.
+echo "== COMPLEX setStop_default_state / stopDelay_waypoint"
+for t in vehicle/setStop_default_state vehicle/stopDelay_waypoint; do
+  COMPLEX_OUT="$OUT/complex2" COMPLEX_FILTER="$t" RUST_BACKTRACE=1 bash tools/oracle/run_complex_suite.sh 2>&1 | tail -n 3 | cut -c1-300
+  for side in official ours; do
+    f="$OUT/complex2/$t/$side/console.txt"
+    echo "-- $t $side console (first 24 lines):"; grep -a -v "^Retrying\|UserWarning" "$f" 2>/dev/null | head -n 24 | cut -c1-260 | sed 's/^/     /'
+  done
+done
 echo "== 17583 v.25 FCD first differing samples (official vs ours):"
 diff <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.off.fcd.xml" 2>/dev/null) <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.ours.fcd.xml" 2>/dev/null) | head -n 8
 echo "== 17583 ours reroute/origin lines for v.25:"
