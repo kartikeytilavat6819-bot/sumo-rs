@@ -21,7 +21,7 @@ for c in "${CASES[@]}"; do
     if [ -f "$OUT/$c.off/$k.xml" ] && [ -f "$OUT/$c.ours/$k.xml" ]; then
       F="grep -v -e generated -e -output"; n=$(diff <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | grep -c "^[<>]")
       echo "$c $k difflines=$n"
-      diff <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | head -6 | cut -c1-200
+      diff -U2 <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | head -12 | cut -c1-200
     else
       echo "$c $k missing output"
     fi
