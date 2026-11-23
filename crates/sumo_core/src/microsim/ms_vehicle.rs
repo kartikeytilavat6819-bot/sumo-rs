@@ -16165,7 +16165,8 @@ impl MSVehicle {
             arrivalTime = t - delta_t() + cfModel.get_minimal_arrival_time(seen, self.myState.mySpeed, arrivalSpeed);
         }
         if self.is_stopped() {
-            arrivalTime += std::cmp::max(0, self.myStops.front().unwrap().duration);
+            // a stop with the default duration has SUMOTime_MAX (libsumo Helper::buildStopParameters); C++ signed overflow wraps on x86-64
+            arrivalTime = arrivalTime.wrapping_add(std::cmp::max(0, self.myStops.front().unwrap().duration));
         }
         arrivalTime
     }
