@@ -15412,6 +15412,9 @@ impl MSVehicle {
                 }
             }
         }
+        // if this is the link between two internal lanes we may have to slow down for pedestrians
+        // (MSVehicle.cpp:3717) the foe-limited v must reach vLinkWait, which is the final speed of a link item without request
+        *vLinkWait = min2(*vLinkWait, *v);
     }
 
     /// C++: `void MSVehicle::adaptToLeaders(const MSLeaderInfo &, double, const double, DriveProcessItem *const, const MSLane *const, double &, double &) const` [const, protected]
