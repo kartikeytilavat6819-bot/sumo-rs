@@ -342,8 +342,11 @@ impl SumoOption {
     }
 
     pub fn reset_default(&mut self) {
-        // v1.28.0 release only sets the default flag; the snapshot's extra `if value_string.is_empty() { am_set = false }` is gone.
         self.have_the_default_value = true;
+        // Kept from wave2: the official binary treats an empty value as unset after a reset (SSM filter-edges rows).
+        if self.value_string.is_empty() {
+            self.am_set = false;
+        }
     }
 
     pub fn get_description(&self) -> &str {
@@ -454,7 +457,6 @@ mod tests {
         let mut o = SumoOption::string();
         o.set("", "", false).unwrap();
         o.reset_default();
-        // Release Option.cpp:195-201 - resetDefault sets only myHaveTheDefaultValue; isSet stays true for empty value strings.
-        assert!(o.is_set() && o.is_default());
+        assert!(!o.is_set() && o.is_default());
     }
 }
