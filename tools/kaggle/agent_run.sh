@@ -140,15 +140,6 @@ if not shown:
     print("no difference in the compared attributes")
 PYEOF3
 
-echo "--- ours elechybrid_overhead: first solver calls with a huge solution (|x| > 1e12)"
-c=elechybrid_overhead; src="$ROOT/tools/oracle/cases/$c"; w="$OUT/dumprun"; mkdir -p "$w"; cp -r "$src/." "$w/"
-a=$(sed "s#tools/oracle/cases/$c#$w#g" "$src/sim.args")
-[ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; a="$a $opt $w/out_$suf.xml"; done < "$src/extra_outputs.txt"
-# shellcheck disable=SC2086
-(cd "$w" && OC95_DUMP=1 timeout 300 "$OURS" $a --net-file "$w/ref_simple.net.xml" --route-files "$w/routes.rou" >/dev/null 2>"$w/dump.log")
-echo "huge-solution calls: $(grep -c '^OC95Q' "$w/dump.log")"
-grep '^OC95Q' "$w/dump.log" | head -n 3
-
 # Measure the official binary's vehicle-sized malloc/free sequence (address reuse) on md_stop.
 echo "--- official md_stop: vehicle-sized malloc/free address-reuse sequence"
 mkdir -p "$OUT/shim"

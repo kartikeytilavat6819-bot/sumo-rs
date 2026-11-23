@@ -3,9 +3,10 @@
 //! dependency of this port, so Eigen 3.4.0 is written out here with its exact evaluation order
 //! (sources: ColPivHouseholderQR.h computeInPlace/_solve_impl, Householder.h, Redux.h,
 //! products/GeneralMatrixVector.h, products/TriangularSolverVector.h).
-//! The official sumo binary evaluates every vectorised reduction with SSE2 packets of two doubles
-//! and no FMA (measured: this order reproduces its rank-deficient circuit solutions bit for bit,
-//! packets of four doubles do not). On well-conditioned systems the result is the same to
+//! The official sumo binary evaluates every vectorised reduction with SSE2 packets of two doubles and
+//! fuses the explicit `pmadd` of Eigen's gemv kernels into one FMA (measured: this order reproduces its
+//! rank-deficient circuit solutions bit for bit, packets of four doubles or no FMA do not; fusing the
+//! outer-product update or other plain expressions does not either, so only `pmadd` is fused). On well-conditioned systems the result is the same to
 //! rounding; on the rank-deficient overhead-wire circuits only this order gives its solutions.
 
 use std::ops::Range;
@@ -136,8 +137,9 @@ fn gemv_dot(e: &[f64], col: &[f64]) -> f64 {
     let mut lanes = [0.0f64; 2];
     let mut j = 0;
     while j + 2 <= m {
-        lanes[0] = e[j] * col[j] + lanes[0];
-        lanes[1] = e[j + 1] * col[j + 1] + lanes[1];
+        // pmadd(a, b, c) of the packet kernel: one fused multiply-add per lane
+        lanes[0] = e[j].mul_add(col[j], lanes[0]);
+        lanes[1] = e[j + 1].mul_add(col[j + 1], lanes[1]);
         j += 2;
     }
     let mut cc = lanes[0] + lanes[1];
@@ -300,10 +302,17 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
                 }
             }
         }
+        // general_matrix_vector_product<ColMajor>: rows are processed in packets of two (pmadd, fused);
+        // a remaining odd last row is scalar (`c0 += a * b`, not fused)
+        let packet_rows = (start / 2) * 2;
         for r in 0..start {
             let mut acc = 0.0;
             for jcol in start..pi {
-                acc = qr.get(r, jcol) * c[jcol] + acc;
+                acc = if r < packet_rows {
+                    qr.get(r, jcol).mul_add(c[jcol], acc)
+                } else {
+                    qr.get(r, jcol) * c[jcol] + acc
+                };
             }
             c[r] += -1.0 * acc;
         }
@@ -313,10 +322,6 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
     let mut x = vec![0.0; cols];
     for i in 0..rank {
         x[perm[i]] = c[i];
-    }
-    if std::env::var_os("OC95_DUMP").is_some() && x.iter().any(|v| v.abs() > 1e12) {
-        // probe only (removed before the final commit): solver calls with huge solutions
-        eprintln!("OC95Q {} rank={} {:?} {:?} {:?}", rows, rank, a.data, b, x);
     }
     x
 }
@@ -389,11 +394,35 @@ mod tests {
         ];
         let b = [0.0, 0.0, 0.0, 0.0, 0.0, -289.9208221058896, -289.9208221058896, 600.0];
         let x = col_piv_householder_qr_solve(&DenseMatrix::from_row_major(8, 8, a), &b);
-        // values from the offline emulation of Eigen 3.4.0 with SSE2 packets (oc95 probe, gate 11be5ab4f)
+        // values from the offline emulation of Eigen 3.4.0 with SSE2 packets and fused pmadd (oc95 probe)
         assert_eq!(x[3], 0.0);
-        assert_eq!(x[6], -5.338741180252296);
-        assert_eq!(x[2], -4.12527178091163);
-        assert_eq!(x[0], 600.0000000000003);
+        assert_eq!(x[6], -5.338741180252343);
+        assert_eq!(x[2], -4.1252717809116835);
+        assert_eq!(x[0], 600.0000000000007);
+    }
+
+    /// Captured initial solve of the same circuit a few steps later: nearly singular, the solution is dominated
+    /// by rounding (~1.56e16). The official sumo binary prints circuitVoltage 15627729533009616 (test1) and
+    /// 15627729533009614 (test3) for x[6] and x[7]; only SSE2 packets with fused pmadd give those digits.
+    #[test]
+    fn near_singular_overhead_wire_circuit_matches_eigen_digits() {
+        #[rustfmt::skip]
+        let a = vec![
+            -14.749262536873157, 58.63758595233775, 0.0, 0.0, -22.11283738661643, -21.775486028848164, 0.0, 0.0,
+            0.0, 0.0, 53.09309768492857, 0.0, 0.0, 0.0, 0.0, -53.09309768492857,
+            0.0, 0.0, 0.0, 56.903019046578486, 0.0, 0.0, -56.903019046578486, 0.0,
+            0.0, -22.11283738661643, 0.0, 0.0, 22.11283738661643, 0.0, 0.0, 0.0,
+            0.0, -21.775486028848164, 0.0, 0.0, 0.0, 21.775486028848164, 0.0, 0.0,
+            0.0, 0.0, 0.0, -56.903019046578486, 0.0, 0.0, 88.75887765753563, -31.855858610957156,
+            0.0, 0.0, -53.09309768492857, 0.0, 0.0, 0.0, -31.855858610957156, 84.94895629588572,
+            1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ];
+        let b = [0.0, 0.0, 0.0, 0.0, 0.0, -289.9208221058896, -289.9208221058896, 600.0];
+        let x = col_piv_householder_qr_solve(&DenseMatrix::from_row_major(8, 8, a), &b);
+        assert_eq!(x[6], 15627729533009616.0);
+        assert_eq!(x[7], 15627729533009614.0);
+        assert_eq!(x[2], 15627729533009612.0);
+        assert_eq!(x[3], 15627729533009618.0);
     }
 
     #[test]
