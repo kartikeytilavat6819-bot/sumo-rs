@@ -4,5 +4,5 @@ OUT=/tmp/oc102; mkdir -p "$OUT"
 cd tools/oracle/cases/tt_bugs_4xxx_ticket4299 || exit 1
 "$CARGO_TARGET_DIR/debug/sumo" $(cat sim.args) -n net.net.xml -r input_routes.rou.xml --tripinfo-output "$OUT/ours.tripinfo.xml" 2> "$OUT/ours.err" >/dev/null
 echo "ours rc=$?"
-grep -e "collision" -e "OC102A" "$OUT/ours.err" | head -200
+grep -e "collision" -e "OC102A" -e "OC102D" "$OUT/ours.err" | head -200
 echo "AGENT RUN DONE"
