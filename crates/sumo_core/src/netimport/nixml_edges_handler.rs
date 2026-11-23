@@ -851,6 +851,7 @@ impl NIXMLEdgesHandler {
                 return;
             }
             if !self.myTypeCont.knows(&self.myCurrentType) && !self.myOptions.get_bool("ignore-errors.edge-type").unwrap_or_else(|err| panic!("{err}")) {
+                // C++ WRITE_ERRORF: keep the format string as the aggregation key (NIXMLEdgesHandler.cpp:634)
                 write_errorf!("Type '%' used by edge '%' was not defined (ignore with option --ignore-errors.edge-type).", self.myCurrentType, self.myCurrentID);
                 return;
             }
@@ -1190,6 +1191,7 @@ impl NIXMLEdgesHandler {
     pub fn add_lane(&mut self, attrs: &SUMOSAXAttributes) {
         if self.myCurrentEdge.is_null() {
             if !with_options(|oc| oc.is_in_string_vector("remove-edges.explicit", &self.myCurrentID)).unwrap_or_else(|err| panic!("{err}")) {
+                // C++ WRITE_ERRORF: keep the format string as the aggregation key (NIXMLEdgesHandler.cpp:1105)
                 write_errorf!("Additional lane information could not be set - the edge with id '%' is not known.", self.myCurrentID);
             }
             return;

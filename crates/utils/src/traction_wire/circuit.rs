@@ -19,7 +19,7 @@ use crate::common::msg_handler::{write_error, write_warning};
 use crate::common::to_string::f64_to_string_prec;
 use crate::{write_errorf, write_warningf};
 
-use super::col_piv_householder_qr::{DenseMatrix, col_piv_householder_qr_solve};
+use super::col_piv_householder_qr::{DenseMatrix, col_piv_householder_qr_solve, eigen_norm};
 use super::element::{ElemIdx, Element, ElementType};
 use super::node::{Node, NodeIdx};
 
@@ -843,7 +843,7 @@ impl Circuit {
                 // residual A * x - b
                 let ax = a.mul_vec(&x);
                 let residual: Vec<f64> = (0..numofeqs).map(|r| ax[r] - vals[r]).collect();
-                let residual_norm = residual.iter().map(|r| r * r).sum::<f64>().sqrt();
+                let residual_norm = eigen_norm(&residual); // Circuit.cpp: (A * x - b).norm()
 
                 if residual_norm < 1e-6 {
                     // current limits
