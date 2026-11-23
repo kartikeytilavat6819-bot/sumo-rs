@@ -57,3 +57,22 @@ for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
   (cd "$IS_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m6 "^FINDROUTE|Error|Traceback|line [0-9]+, in <module>") | sed "s/^/$side: /"
 done
+
+# distance_after_reroute: per-step lane/pos/speed/route around the route switch, both binaries
+DR_DIR="$OUT/distance_probe"
+rm -rf "$DR_DIR"; mkdir -p "$DR_DIR"
+cp -r tools/oracle/complex_bundle/vehicle/distance_after_reroute/. "$DR_DIR/"
+python3 - "$DR_DIR/runner.py" <<'PY'
+import sys
+p = sys.argv[1]
+src = open(p, encoding="utf-8").read()
+marker = "        traci.simulationStep()\n"
+probe = ('        if 119 <= step <= 124:\n'
+         '            print("STATE", step, traci.vehicle.getLaneID("Stapler_00"), round(traci.vehicle.getLanePosition("Stapler_00"), 2), '
+         'round(traci.vehicle.getSpeed("Stapler_00"), 2), traci.vehicle.getRoute("Stapler_00")[:6])\n')
+open(p, "w", encoding="utf-8").write(src.replace(marker, marker + probe, 1))
+PY
+for side in official ours; do
+  if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
+  (cd "$DR_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m12 "^STATE|Error|Traceback") | sed "s/^/$side: /"
+done
