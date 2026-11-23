@@ -94,3 +94,22 @@ for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
   (cd "$BL_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m8 "^BEST|Error|Traceback") | sed "s/^/$side: /"
 done
+
+# distance_after_reroute: the links leaving ed1_0 and ed1_1 (network connections), both binaries
+LK_DIR="$OUT/links_probe"
+rm -rf "$LK_DIR"; mkdir -p "$LK_DIR"
+cp -r tools/oracle/complex_bundle/vehicle/distance_after_reroute/. "$LK_DIR/"
+python3 - "$LK_DIR/runner.py" <<'PY'
+import sys
+p = sys.argv[1]
+src = open(p, encoding="utf-8").read()
+marker = "        traci.simulationStep()\n"
+probe = ('        if step == 124:\n'
+         '            for ln in ("ed1_0", "ed1_1"):\n'
+         '                print("LINKS", ln, [(l[0], l[1]) for l in traci.lane.getLinks(ln)])\n')
+open(p, "w", encoding="utf-8").write(src.replace(marker, marker + probe, 1))
+PY
+for side in official ours; do
+  if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
+  (cd "$LK_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m4 "^LINKS|Error|Traceback") | sed "s/^/$side: /"
+done
