@@ -48,4 +48,20 @@ for c in $CASES; do
 done
 echo "-- lane-change trace (ours, temp), lines: $(wc -l < "$OUT/lc_trace.txt" 2>/dev/null)"
 grep "speed=0.000000 " "$OUT/lc_trace.txt" 2>/dev/null | grep -v "off=0 " | head -20
+# oc97 rail rerouter rows (new assignment): run both binaries, print first stderr/tripinfo differences
+RAIL="tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter_overtaking_follower_delay_high tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high tt_rail_rerouter_overtaking_follower_delay_low tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_short_closing_wait tt_rail_rail_signal_moving_block_protect_bidi"
+for name in $RAIL; do
+  d="$ROOT/tools/oracle/cases/$name"
+  if [ ! -d "$d" ]; then echo "missing $name"; continue; fi
+  args=$(sed "s#tools/oracle/cases/$name/##g" "$d/sim.args")
+  for side in ref ours; do
+    if [ $side = ref ]; then BIN="$SUMO_PRISTINE_BIN/sumo"; else BIN="$CARGO_TARGET_DIR/debug/sumo"; fi
+    o="$OUT/rail/$name/$side"
+    mkdir -p "$o"
+    (cd "$d" && "$BIN" $args --net-file net.net.xml --route-files input_routes.rou.xml --tripinfo-output "$o/trip.xml" --fcd-output "$o/fcd.xml" --no-step-log > "$o/stdout" 2> "$o/stderr"; echo $? > "$o/exit")
+  done
+  echo "== $name exit ref=$(cat "$OUT/rail/$name/ref/exit") ours=$(cat "$OUT/rail/$name/ours/exit")"
+  diff "$OUT/rail/$name/ref/stderr" "$OUT/rail/$name/ours/stderr" | head -4 | cut -c1-200
+  diff "$OUT/rail/$name/ref/trip.xml" "$OUT/rail/$name/ours/trip.xml" | head -6 | cut -c1-200
+done
 echo "AGENT RUN DONE"
