@@ -923,6 +923,19 @@ mod tests {
         }
     }
 
+    /// Official SUMO 1.28.0 (PROJ 9.4.0 etmerc) writes 52.428498 at precision 6 for the
+    /// OSM input 52.4284985: the round-trip must land just below the exact `.5` boundary.
+    /// The Kruger-series port landed above it and wrote 52.428499.
+    #[test]
+    fn utm_geo_roundtrip_halfway_boundary() {
+        let h = GeoConvHelper::new(&utm_proj(33), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(13.5275234, 52.4284985);
+        assert!(h.x2cartesian_const(&mut p));
+        h.cartesian2geo(&mut p);
+        assert!((p.y() - 52.42849849999999634).abs() < 1e-15, "lat {}", p.y());
+        assert!((p.x() - 13.52752339999999975).abs() < 1e-15, "lon {}", p.x());
+    }
+
     #[test]
     fn utm_zone_from_first_point() {
         let mut h = GeoConvHelper::new("UTM", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
