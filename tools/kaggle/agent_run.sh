@@ -37,6 +37,25 @@ for c in tt_rail_rail_signal_siding_deadend tt_rail_routing_reverse_on_short_sta
   echo "   official stderr:"; head -n 4 "$OUT/$c.e.off.err" | sed 's/^/     /'
   [ "$same" = SAME ] || { echo "   ours stderr:"; head -n 4 "$OUT/$c.e.ours.err" | sed 's/^/     /'; }
 done
+# oc98: the REAL overtaking scenario. The imported cases drop the parent's `-a input_additional.add.xml,input_routes.rou.xml`
+# (overtakingReroute rerouter + vTypes + routes); SUMO runs it as the union with the child's -a/-r. Compare official vs ours.
+PK=tools/kaggle/oc98_overtaking
+for c in tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter_overtaking_follower_delay_high tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high tt_rail_rerouter_overtaking_follower_delay_low; do
+  d="tools/oracle/cases/$c"
+  a="$(sed -E 's/(^| )-a [^ ]+//' "$d/sim.args")"
+  for side in off ours; do
+    bin=$OFF; [ "$side" = ours ] && bin=$OURS
+    timeout 300 "$bin" $a -n "$d/net.net.xml" -a "$PK/input_additional.add.xml,$PK/input_routes.rou.xml,$d/input_additional2.add.xml" -r "$d/input_routes2.rou.xml"       --no-step-log true --tripinfo-output "$OUT/$c.r.$side.trip.xml" --stop-output "$OUT/$c.r.$side.stop.xml" --vehroute-output "$OUT/$c.r.$side.veh.xml" > "$OUT/$c.r.$side.out" 2> "$OUT/$c.r.$side.err"
+    echo $? > "$OUT/$c.r.$side.rc"
+  done
+  echo "== REAL $c official_rc=$(cat $OUT/$c.r.off.rc) ours_rc=$(cat $OUT/$c.r.ours.rc)  official_trips=$(grep -c '<tripinfo ' $OUT/$c.r.off.trip.xml 2>/dev/null) ours_trips=$(grep -c '<tripinfo ' $OUT/$c.r.ours.trip.xml 2>/dev/null)"
+  [ -s "$OUT/$c.r.off.err" ] && { echo "   official stderr:"; head -n 3 "$OUT/$c.r.off.err" | sed 's/^/     /'; }
+  [ -s "$OUT/$c.r.ours.err" ] && { echo "   ours stderr:"; head -n 3 "$OUT/$c.r.ours.err" | sed 's/^/     /'; }
+  for k in trip stop veh; do
+    dd=$(diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.r.off.$k.xml" 2>/dev/null) <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.r.ours.$k.xml" 2>/dev/null) | head -n 6 | cut -c1-260)
+    if [ -z "$dd" ]; then echo "   $k: SAME"; else echo "   $k: DIFF"; echo "$dd" | sed 's/^/     /'; fi
+  done
+done
 echo "== 17583 v.25 FCD first differing samples (official vs ours):"
 diff <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.off.fcd.xml" 2>/dev/null) <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.ours.fcd.xml" 2>/dev/null) | head -n 8
 echo "== 17583 ours reroute/origin lines for v.25:"
