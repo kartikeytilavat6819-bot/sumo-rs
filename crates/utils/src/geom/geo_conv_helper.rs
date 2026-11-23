@@ -552,7 +552,7 @@ impl Etmerc {
             4583. * n5 / 161280. - 108847. * n6 / 3991680.,
             20648693. * n6 / 638668800.,
         ];
-        Etmerc { lon0, x0, y0, qn: k0 * big_a, e, alpha, beta }
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
     }
 
     /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
@@ -596,11 +596,9 @@ impl Etmerc {
                 if !(1..=60).contains(&zone) {
                     return None;
                 }
-                // PROJ utm: lam0 = (zone0 + .5) * PI / 30 - PI with the 0-based zone
-                let lam0 = (zone as f64 - 0.5) * PI / 30. - PI;
-                Some(Etmerc::new(a, rf, 0.9996, lam0, 500000., if south { 10000000. } else { 0. }))
+                Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }))
             }
-            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0 * DEG_TO_RAD, x0, y0)),
+            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0, x0, y0)),
             _ => None,
         }
     }
