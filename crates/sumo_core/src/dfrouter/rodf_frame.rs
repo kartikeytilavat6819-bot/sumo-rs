@@ -219,6 +219,8 @@ impl RODFFrame {
     #[allow(unused_variables)]
     pub fn fill_options() {
         utils::options::options_cont::with_options(|oc| {
+            oc.add_call_example("-c <CONFIGURATION>", "run routing with options from file");
+
             // insert options sub-topics
             utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");

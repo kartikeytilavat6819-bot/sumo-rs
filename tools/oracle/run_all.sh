@@ -211,9 +211,18 @@ for dir in tools/oracle/cases/*/; do
     continue
   fi
   # --- sim stage; one run per committed reference variant (ref.*, ref_<v>.*)
-  if [ -f "$dir/routes.rou" ] && [ -f "$dir/ref_simple.net.xml" ] && [ -f "$dir/ref.tripinfo.xml" ]; then
-    for ref in "$dir"ref*.tripinfo.xml; do
-      tag=$(basename "$ref" .tripinfo.xml)          # ref or ref_<v>
+  # output-prefix/suffix cases keep those applied to their ref names (pre_ref.tripinfo.xml,
+  # ref.tripinfo_suf.xml); SUMO writes our outputs the same way, so copy them back to the fixed
+  # names used by the comparisons below.
+  PFX=""; SFX=""
+  if [ -f "$dir/sim.args" ]; then
+    PFX=$(tr -d '\r' < "$dir/sim.args" | sed -n 's/.*--output-prefix[ =]\([^ ]*\).*/\1/p')
+    SFX=$(tr -d '\r' < "$dir/sim.args" | sed -n 's/.*--output-suffix[ =]\([^ ]*\).*/\1/p')
+  fi
+  if [ -f "$dir/routes.rou" ] && [ -f "$dir/ref_simple.net.xml" ] && ls "$dir"*ref*.tripinfo.xml >/dev/null 2>&1; then
+    for ref in "$dir"*ref*.tripinfo.xml; do
+      tag=$(basename "$ref" .xml)                   # ref or ref_<v>
+      tag=${tag%$SFX}; tag=${tag%.tripinfo}; tag=${tag#$PFX}   # strip suffix/.tripinfo/prefix
       if [ "$tag" = "ref" ]; then
         EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
       else
@@ -244,6 +253,12 @@ for dir in tools/oracle/cases/*/; do
         line "$c/$tag" sim-PANIC "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.$tag.sumo.log" | cut -c1-90)"; FAIL=$((FAIL+1))
         continue
       fi
+      if [ -n "$PFX$SFX" ]; then
+        for k in ti fcd stat; do
+          a="$OUT/$PFX$c.$tag.$k$SFX.xml"
+          [ -f "$a" ] && mv -f "$a" "$OUT/$c.$tag.$k.xml"
+        done
+      fi
       r="PASS"
       python tools/oracle/compare_sim.py --tripinfo "$ref" "$OUT/$c.$tag.ti.xml" >"$OUT/$c.$tag.ti.log" 2>&1 || r="FAIL"
       if [ -n "$SIMOUT" ]; then
@@ -252,11 +267,11 @@ for dir in tools/oracle/cases/*/; do
           python tools/oracle/compare_xml.py "$sf" "$SIMOUT/$n" >"$SIMOUT/$n.log" 2>&1 || r="FAIL"
         done
       fi
-      if [ -f "$dir/$tag.fcd.xml" ]; then
-        python tools/oracle/compare_sim.py --fcd "$dir/$tag.fcd.xml" "$OUT/$c.$tag.fcd.xml" >"$OUT/$c.$tag.fcd.log" 2>&1 || r="FAIL"
+      if [ -f "$dir/$PFX$tag.fcd$SFX.xml" ]; then
+        python tools/oracle/compare_sim.py --fcd "$dir/$PFX$tag.fcd$SFX.xml" "$OUT/$c.$tag.fcd.xml" >"$OUT/$c.$tag.fcd.log" 2>&1 || r="FAIL"
       fi
-      if [ -f "$dir/$tag.stat.xml" ]; then
-        python tools/oracle/compare_stat.py "$dir/$tag.stat.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
+      if [ -f "$dir/$PFX$tag.stat$SFX.xml" ]; then
+        python tools/oracle/compare_stat.py "$dir/$PFX$tag.stat$SFX.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
       fi
       xd=""
       [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}  # git archive (core.autocrlf) gives the VM CRLF .txt files

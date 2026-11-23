@@ -219,6 +219,12 @@ impl MSLCHelper {
         if Ptr::new(veh).m().get_lane_change_model().is_opposite() {
             return 0.0;
         }
+        // The official build only ever passes real lanes here; FCD-replay can leave a stale
+        // best-lane entry. Treat that as "no roundabout bonus" instead of dereferencing null
+        // (all the C++ no-bonus paths return 0 as well).
+        if veh.get_lane().is_null() || curr.lane.is_null() || neigh.lane.is_null() || best.lane.is_null() {
+            return 0.0;
+        }
         let inner: &MSVehicle_LaneQ = if neigh.lane.get_index() > curr.lane.get_index() { neigh } else { curr };
         if neigh.lane == inner.lane && curr.bestContinuations.len() < neigh.bestContinuations.len() {
             // the current lane does not continue to the roundabout and we need a strategic change first.
@@ -234,6 +240,10 @@ impl MSLCHelper {
             let mut lane: Ptr<MSLane> = best.bestContinuations[i];
             if lane.is_null() {
                 lane = veh.get_lane();
+            }
+            if lane.is_null() {
+                // C++ would dereference a null lane here; the official inputs never produce one.
+                return 0.0;
             }
             if (!enteredRoundabout || lane.get_edge().is_roundabout()) && i >= inner.bestContinuations.len() {
                 // no bonus if we cannot continue on the inner lane until leaving the roundabout
@@ -305,6 +315,9 @@ impl MSLCHelper {
             }
             if i < inner.bestContinuations.len() {
                 let innerLane: Ptr<MSLane> = inner.bestContinuations[i];
+                if innerLane.is_null() {
+                    continue;
+                }
                 occupancyInner += upstreamDiscount * innerLane.get_brutto_veh_len_sum();
                 if !prevInner.is_null() {
                     for &link in prevInner.get_link_cont().iter() {

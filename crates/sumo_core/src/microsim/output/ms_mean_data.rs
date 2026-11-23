@@ -47,6 +47,36 @@ fn min2(a: f64, b: f64) -> f64 {
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
 }
+
+#[cfg(test)]
+mod tracker_tests {
+    use super::*;
+    fn entry(e: i32, l: i32) -> Rc<MeanDataValueTracker_TrackerEntry> {
+        let x = MeanDataValueTracker_TrackerEntry::new(Ptr::null());
+        x.myNumVehicleEntered.set(e);
+        x.myNumVehicleLeft.set(l);
+        Rc::new(x)
+    }
+    // C++ MSMeanData.cpp:377-387 - only the balanced prefix is ready.
+    #[test]
+    fn num_ready_stops_at_first_unbalanced_entry() {
+        let t = MSMeanData_MeanDataValueTracker {
+            base: MSMeanData_MeanDataValues::new(Ptr::null(), 100., true, Ptr::null()),
+            myTrackedData: BTreeMap::new(),
+            myCurrentData: VecDeque::from(vec![entry(2, 2), entry(1, 0), entry(3, 3)]),
+        };
+        assert_eq!(t.get_num_ready(), 1);
+    }
+    #[test]
+    fn num_ready_all_balanced() {
+        let t = MSMeanData_MeanDataValueTracker {
+            base: MSMeanData_MeanDataValues::new(Ptr::null(), 100., true, Ptr::null()),
+            myTrackedData: BTreeMap::new(),
+            myCurrentData: VecDeque::from(vec![entry(0, 0), entry(4, 4)]),
+        };
+        assert_eq!(t.get_num_ready(), 2);
+    }
+}
 fn min4(a: f64, b: f64, c: f64, d: f64) -> f64 {
     min2(min2(a, b), min2(c, d))
 }
