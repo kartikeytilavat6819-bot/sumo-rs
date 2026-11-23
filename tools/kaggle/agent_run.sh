@@ -21,7 +21,7 @@ for c in $CASES; do
 done
 # oc98: the 7 expected-error rows. Run exactly like run_all.sh (-n ref_simple.net.xml -r routes.rou + sim.args)
 # and compare official vs ours: exit code, stderr, stdout. ref.errors is empty on these rows (TextTest errors.sumo is empty).
-for c in tt_rail_rail_signal_siding_deadend tt_rail_routing_reverse_on_short_start tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter_overtaking_follower_delay_high tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high tt_rail_rerouter_overtaking_follower_delay_low; do
+for c in tt_spec_arrival_errors_lane_given10 tt_spec_arrival_errors_speed_given100 tt_spec_flow_errors_poisson_invalid tt_devices_ssm_bugs_ticket5231 tt_rail_rail_signal_siding_deadend tt_rail_routing_reverse_on_short_start tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter_overtaking_follower_delay_high tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high tt_rail_rerouter_overtaking_follower_delay_low; do
   d="tools/oracle/cases/$c"
   a="$(cat "$d/sim.args" 2>/dev/null)"
   for side in off ours; do
@@ -35,6 +35,8 @@ for c in tt_rail_rail_signal_siding_deadend tt_rail_routing_reverse_on_short_sta
   cmp -s "$OUT/$c.e.off.out" "$OUT/$c.e.ours.out" || same="$same DIFF-stdout"
   echo "== ERRROW $c official_rc=$(cat $OUT/$c.e.off.rc) ours_rc=$(cat $OUT/$c.e.ours.rc) -> $same"
   echo "   official stderr:"; head -n 4 "$OUT/$c.e.off.err" | sed 's/^/     /'
+  echo "   ref.errors ($(wc -c < "$d/ref.errors" 2>/dev/null) bytes):"; head -n 4 "$d/ref.errors" 2>/dev/null | sed 's/^/     /'
+  echo "   official stdout $(wc -c < "$OUT/$c.e.off.out") bytes, ours $(wc -c < "$OUT/$c.e.ours.out") bytes, ref.output $(wc -c < "$d/ref.output" 2>/dev/null) bytes"
   [ "$same" = SAME ] || { echo "   ours stderr:"; head -n 4 "$OUT/$c.e.ours.err" | sed 's/^/     /'; }
 done
 # oc98: the REAL overtaking scenario. The imported cases drop the parent's `-a input_additional.add.xml,input_routes.rou.xml`
