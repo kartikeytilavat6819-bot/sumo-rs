@@ -10955,6 +10955,9 @@ impl MSVehicle {
                     }
                 }
                 // vehicles should decelerate when approaching a minor link
+                if self.get_id() == "ES1" && self.myLane.is_internal() {
+                    eprintln!("OC102O t={} opened={} yellow={} red={} setRequest={} prio={} cont={} ignoreRed={} vLinkPass={:.3} vLinkWait={:.3} dist={:.3}", MSNet::get_instance().get_current_time_step(), opened, yellow, link.have_red(), dSetRequest, link.have_priority(), link.is_cont(), ignoreRedLink, dVLinkPass, dVLinkWait, dDistance);
+                }
                 let visibilityDistance = link.get_foe_visibility_distance();
                 let determinedFoePresence = dDistance <= visibilityDistance;
                 if opened && !influencerPrio && !link.have_priority() && !link.last_was_cont_major() && !link.is_cont() && !ignoreRedLink {
