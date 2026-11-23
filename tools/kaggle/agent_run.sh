@@ -63,5 +63,6 @@ for name in $RAIL; do
   echo "== $name exit ref=$(cat "$OUT/rail/$name/ref/exit") ours=$(cat "$OUT/rail/$name/ours/exit")"
   diff "$OUT/rail/$name/ref/stderr" "$OUT/rail/$name/ours/stderr" | head -4 | cut -c1-200
   diff "$OUT/rail/$name/ref/trip.xml" "$OUT/rail/$name/ours/trip.xml" | head -6 | cut -c1-200
+  for veh in WE1 v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -6 | cut -c1-200; done
 done
 echo "AGENT RUN DONE"
