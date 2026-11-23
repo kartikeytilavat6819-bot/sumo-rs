@@ -56,6 +56,15 @@ for c in tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter
     if [ -z "$dd" ]; then echo "   $k: SAME"; else echo "   $k: DIFF"; echo "$dd" | sed 's/^/     /'; fi
   done
 done
+# oc98: newStop_fast_forced(2) complex TraCI rows: official vs ours console (+ OC98DBG addStop lines on our side)
+echo "== COMPLEX newStop_fast_forced*"
+COMPLEX_OUT="$OUT/complex" COMPLEX_FILTER="setStop/newStop_fast_forced" OC98DBG=1 bash tools/oracle/run_complex_suite.sh 2>&1 | tail -n 4
+for t in newStop_fast_forced newStop_fast_forced2; do
+  for side in official ours; do
+    f="$OUT/complex/vehicle/setStop/$t/$side/console.txt"
+    echo "-- $t $side console (first 14 lines):"; grep -a -v "^Retrying\|UserWarning" "$f" 2>/dev/null | head -n 14 | cut -c1-260 | sed 's/^/     /'
+  done
+done
 echo "== 17583 v.25 FCD first differing samples (official vs ours):"
 diff <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.off.fcd.xml" 2>/dev/null) <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.ours.fcd.xml" 2>/dev/null) | head -n 8
 echo "== 17583 ours reroute/origin lines for v.25:"
