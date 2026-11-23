@@ -11,10 +11,17 @@ for side in off ours; do
   bin=$OFF; [ "$side" = ours ] && bin=$OURS
   timeout 300 "$bin" $(cat "$d/sim.args") -n "$d/net.net.xml" -r "$d/input_routes.rou.xml" --fcd-output "$OUT/$c.$side.fcd.xml" > /dev/null 2> "$OUT/$c.$side.err"
 done
-echo "== 4299 ES1 FCD diff (official '<' vs ours '>'):"
-diff -U2 <(grep 'id="ES1"' "$OUT/$c.off.fcd.xml") <(grep 'id="ES1"' "$OUT/$c.ours.fcd.xml") | head -n 14 | cut200
-echo "== 4299 vehicles with a different FCD line count:"
-diff <(grep -o 'id="[^"]*"' "$OUT/$c.off.fcd.xml" | sort | uniq -c) <(grep -o 'id="[^"]*"' "$OUT/$c.ours.fcd.xml" | sort | uniq -c) | head -n 6
+ES1='/<timestep/{match($0,/time="[^"]*"/);t=substr($0,RSTART+6,RLENGTH-7)} /id="ES1"/{match($0,/speed="[^"]*"/);s=substr($0,RSTART+7,RLENGTH-8);match($0,/pos="[^"]*"/);p=substr($0,RSTART+5,RLENGTH-6);match($0,/lane="[^"]*"/);l=substr($0,RSTART+6,RLENGTH-7);print t" "s" "p" "l}'
+paste -d'|' <(awk "$ES1" "$OUT/$c.off.fcd.xml") <(awk "$ES1" "$OUT/$c.ours.fcd.xml") > "$OUT/$c.es1.cmp"
+echo "== 4299 ES1 'time speed pos lane' official | ours (3 lines before the first difference, then the first 14 differing):"
+awk -F'|' '$1!=$2{print NR; exit}' "$OUT/$c.es1.cmp" > "$OUT/$c.es1.first"
+f=$(cat "$OUT/$c.es1.first"); [ -n "$f" ] && sed -n "$((f>3?f-3:1)),$((f+13))p" "$OUT/$c.es1.cmp" | cut200
+T=$(sed -n "${f}p" "$OUT/$c.es1.cmp" | cut -d' ' -f1)
+echo "== 4299 all vehicles at time $T (official then ours: id lane pos speed):"
+for side in off ours; do
+  awk -v T="$T" '/<timestep/{match($0,/time="[^"]*"/);cur=substr($0,RSTART+6,RLENGTH-7)} cur==T && /<vehicle /{match($0,/id="[^"]*"/);i=substr($0,RSTART+4,RLENGTH-5);match($0,/lane="[^"]*"/);l=substr($0,RSTART+6,RLENGTH-7);match($0,/pos="[^"]*"/);p=substr($0,RSTART+5,RLENGTH-6);match($0,/speed="[^"]*"/);s=substr($0,RSTART+7,RLENGTH-8);print "   "i" "l" "p" "s}' "$OUT/$c.$side.fcd.xml" | head -n 8
+  echo "   --"
+done
 echo "== 4299 stderr official / ours:"; head -n 3 "$OUT/$c.off.err" | cut200; echo "  --"; head -n 5 "$OUT/$c.ours.err" | cut200
 
 # 2) assigned expected-error rows, run exactly like run_all.sh (-n ref_simple.net.xml -r routes.rou + sim.args)
