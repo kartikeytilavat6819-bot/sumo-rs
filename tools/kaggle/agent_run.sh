@@ -106,10 +106,12 @@ while read -r c; do
       --tripinfo-output "$OUT/$c.$who.ti.xml" --fcd-output "$OUT/$c.$who.fcd.xml" --statistic-output "$OUT/$c.$who.stat.xml" --no-step-log true $EXTRA >"$OUT/$c.$who.sim.log" 2>&1
     echo "$?" >"$OUT/$c.$who.simrc"
     python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.$who.ti.xml" >"$OUT/$c.$who.cmp" 2>&1
+    [ -f "$d/ref.stat.xml" ] && python tools/oracle/compare_stat.py "$d/ref.stat.xml" "$OUT/$c.$who.stat.xml" >"$OUT/$c.$who.stat.cmp" 2>&1 || true
     [ -f "$d/ref.fcd.xml" ] && python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.$who.fcd.xml" >"$OUT/$c.$who.fcd.cmp" 2>&1 || true
     echo "$?" >"$OUT/$c.$who.cmprc"
   done
   echo "== $c official rc=$(cat "$OUT/$c.pristine.simrc") cmp=$(cat "$OUT/$c.pristine.cmprc") | ours rc=$(cat "$OUT/$c.ours.simrc") cmp=$(cat "$OUT/$c.ours.cmprc")"
   [ "$(cat "$OUT/$c.ours.cmprc")" = 0 ] || echo "   ours diff: $(grep -v '^\s*$' "$OUT/$c.ours.cmp" | head -1 | cut -c1-220)"
+  [ -s "$OUT/$c.ours.stat.cmp" ] && echo "   ours stat: $(grep -v '^\s*$' "$OUT/$c.ours.stat.cmp" | head -1 | cut -c1-220)"
   [ -f "$OUT/$c.ours.fcd.cmp" ] && [ -s "$OUT/$c.ours.fcd.cmp" ] && echo "   ours fcd: $(grep -v '^\s*$' "$OUT/$c.ours.fcd.cmp" | head -1 | cut -c1-220)"
 done < "$RAILROWS"
