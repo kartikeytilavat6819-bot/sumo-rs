@@ -10042,6 +10042,9 @@ impl MSVehicle {
                         egoET = self.myJunctionConflictEntryTime;
                     }
                 }
+                if self.get_id() == "ES1" {
+                    eprintln!("OC102J t={} foe={} egoET={} foeET={} gap={:.3} egoConf={} foeConf={}", MSNet::get_instance().get_current_time_step(), veh.get_id(), egoET, foeET, gap, self.myJunctionConflictEntryTime, veh.myJunctionConflictEntryTime);
+                }
                 if egoET == foeET {
                     // try to use speed as tie braker
                     if self.get_speed() == veh.get_speed() {
