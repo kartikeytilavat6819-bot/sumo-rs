@@ -42,6 +42,9 @@ run_case() {
   crc=$?
   if grep -q 'panicked at' "$sub/cand.log"; then
     verdict=PANIC; detail=$(grep -m1 -A1 'panicked at' "$sub/cand.log" | tr -d '\r' | tr '\n' ' ' | cut -c1-160)
+  elif [ $crc -ne 0 ] && [ $rrc -ne 0 ] && [ "$(grep -m1 -iE 'error' "$sub/ref.log" | tr -d '\r')" = "$(grep -m1 -iE 'error' "$sub/cand.log" | tr -d '\r')" ]; then
+    # error parity: both sides exit non-zero with the same first error line
+    verdict=PASS; detail="error parity"
   elif [ $crc -ne 0 ]; then
     verdict=ERROR; detail="cand exit $crc: $(grep -m1 -iE 'error' "$sub/cand.log" | tr -d '\r' | cut -c1-140)"
   elif [ $rrc -ne 0 ]; then
