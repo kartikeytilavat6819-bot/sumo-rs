@@ -76,3 +76,21 @@ for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
   (cd "$DR_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m40 "^STATE|Error|Traceback") | sed "s/^/$side: /"
 done
+
+# distance_after_reroute: the vehicle's best-lane list for steps 124-126 (lane-change model input), both binaries
+BL_DIR="$OUT/bestlanes_probe"
+rm -rf "$BL_DIR"; mkdir -p "$BL_DIR"
+cp -r tools/oracle/complex_bundle/vehicle/distance_after_reroute/. "$BL_DIR/"
+python3 - "$BL_DIR/runner.py" <<'PY'
+import sys
+p = sys.argv[1]
+src = open(p, encoding="utf-8").read()
+marker = "        traci.simulationStep()\n"
+probe = ('        if 124 <= step <= 126:\n'
+         '            print("BEST", step, [(b[0], round(b[1], 2), b[2], b[3], b[4]) for b in traci.vehicle.getBestLanes("Stapler_00")])\n')
+open(p, "w", encoding="utf-8").write(src.replace(marker, marker + probe, 1))
+PY
+for side in official ours; do
+  if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
+  (cd "$BL_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m8 "^BEST|Error|Traceback") | sed "s/^/$side: /"
+done
