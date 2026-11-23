@@ -47,5 +47,5 @@ for c in $CASES; do
   fi
 done
 echo "-- lane-change trace (ours, temp), lines: $(wc -l < "$OUT/lc_trace.txt" 2>/dev/null)"
-head -15 "$OUT/lc_trace.txt" 2>/dev/null
+grep "speed=0.000000 " "$OUT/lc_trace.txt" 2>/dev/null | grep -v "off=0 " | head -20
 echo "AGENT RUN DONE"
