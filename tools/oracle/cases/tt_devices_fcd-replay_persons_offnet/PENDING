@@ -1,1 +1,0 @@
-FCD-replay device is incompletely ported: vehicle mapping, person tripinfo accumulation and depart-time handling differ from the C++ (panics / departDelay divergence). Re-enable when MSDevice_FCDReplay is fully ported.
