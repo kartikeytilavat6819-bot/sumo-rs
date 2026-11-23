@@ -76,6 +76,11 @@ for t in vehicle/setStop_default_state vehicle/stopDelay_waypoint; do
     echo "-- $t $side console (first 24 lines):"; grep -a -v "^Retrying\|UserWarning" "$f" 2>/dev/null | head -n 24 | cut -c1-260 | sed 's/^/     /'
   done
 done
+# oc98: ticket4299 ES1 trajectory, first differing samples with context (official '<' vs ours '>')
+echo "== 4299 ES1 FCD first differing samples (official vs ours):"
+diff -U2 <(grep 'id="ES1"' "$OUT/tt_bugs_4xxx_ticket4299.off.fcd.xml" 2>/dev/null) <(grep 'id="ES1"' "$OUT/tt_bugs_4xxx_ticket4299.ours.fcd.xml" 2>/dev/null) | head -n 16 | cut -c1-230
+echo "== 4299 who else differs (vehicle ids with any FCD difference):"
+diff <(grep -o 'id="[^"]*"[^/]*' "$OUT/tt_bugs_4xxx_ticket4299.off.fcd.xml" 2>/dev/null | sort | uniq -c) <(grep -o 'id="[^"]*"[^/]*' "$OUT/tt_bugs_4xxx_ticket4299.ours.fcd.xml" 2>/dev/null | sort | uniq -c) | grep -o 'id="[^"]*"' | sort | uniq -c | head
 echo "== 17583 v.25 FCD first differing samples (official vs ours):"
 diff <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.off.fcd.xml" 2>/dev/null) <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.ours.fcd.xml" 2>/dev/null) | head -n 8
 echo "== 17583 ours reroute/origin lines for v.25:"
