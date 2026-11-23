@@ -10955,9 +10955,6 @@ impl MSVehicle {
                     }
                 }
                 // vehicles should decelerate when approaching a minor link
-                if self.get_id() == "ES1" && self.myLane.is_internal() {
-                    eprintln!("OC102O t={} opened={} yellow={} red={} setRequest={} prio={} cont={} ignoreRed={} vLinkPass={:.3} vLinkWait={:.3} dist={:.3}", MSNet::get_instance().get_current_time_step(), opened, yellow, link.have_red(), dSetRequest, link.have_priority(), link.is_cont(), ignoreRedLink, dVLinkPass, dVLinkWait, dDistance);
-                }
                 let visibilityDistance = link.get_foe_visibility_distance();
                 let determinedFoePresence = dDistance <= visibilityDistance;
                 if opened && !influencerPrio && !link.have_priority() && !link.last_was_cont_major() && !link.is_cont() && !ignoreRedLink {
@@ -11024,9 +11021,6 @@ impl MSVehicle {
                 }
                 // we have: i->link == 0 || !i->setRequest
                 *vSafe = dVLinkWait;
-                if self.get_id() == "ES1" && self.myLane.is_internal() {
-                    eprintln!("OC102V t={} lane={} vSafe={:.3} vLinkWait={:.3} speed={:.3} stopDist={:.3} linkNull={}", MSNet::get_instance().get_current_time_step(), self.myLane.get_id(), *vSafe, dVLinkWait, self.get_speed(), self.myStopDist, link.is_null());
-                }
                 if !link.is_null() || self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) {
                     if *vSafe < self.get_speed() {
                         self.myHaveToWaitOnNextLink = true;
