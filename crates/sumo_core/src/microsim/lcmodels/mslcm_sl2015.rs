@@ -2876,6 +2876,11 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn wants_change_sublane_2(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, maneuverDist: &mut f64, blocked: &mut i32) -> i32 {
+        // oc97-TEMP-TRACE (remove after measuring)
+        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/lc_trace.txt") {
+            use std::io::Write;
+            let _ = writeln!(tf, "LC type={} speed={:.6} pos={:.6} lat={:.6} off={} ownState={}", self.myVehicle.get_vehicle_type().get_id(), self.myVehicle.get_speed(), self.myVehicle.get_position_on_lane(), self.myVehicle.get_lateral_position_on_lane(), laneOffset, self.myOwnState);
+        }
         if laneOffset != 0 {
             // update mySafeLatDist w.r.t. the direction being checkd
             let halfWidth = self.get_width() * 0.5;

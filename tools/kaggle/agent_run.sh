@@ -4,6 +4,7 @@
 OUT=/tmp/oc97
 ROOT=$(pwd)
 mkdir -p "$OUT"
+rm -f "$OUT/lc_trace.txt"
 CASES="tt_junction_model_indirect_left_turn_internal_junction_controlled_moped:flow_0.52 tt_sublane_model_junction_indirect_left_moped:flow_0.15 tt_sublane_model_junction_turnAlignment_moped_indirect_left:flow_0.16"
 
 for c in $CASES; do
@@ -45,4 +46,6 @@ for c in $CASES; do
     done
   fi
 done
+echo "-- lane-change trace (ours, temp), lines: $(wc -l < "$OUT/lc_trace.txt" 2>/dev/null)"
+head -15 "$OUT/lc_trace.txt" 2>/dev/null
 echo "AGENT RUN DONE"
