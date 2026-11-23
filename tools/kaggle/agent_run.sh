@@ -65,3 +65,49 @@ while read -r c; do
     [ -n "$diff_out" ] && echo "   first diff vs ref.output: $(echo "$diff_out" | head -1)"
   fi
 done < "$ROWS"
+
+# --- rail/TLS regression stage (oc112): tripinfo of both binaries against ref.tripinfo.xml
+RAILROWS="$OUT/railrows.txt"
+cat > "$RAILROWS" <<'RAILLIST'
+tt_rail_deadlocks_loadHints_loop_4veh3
+tt_rail_deadlocks_loadHints_triangle_6veh
+tt_rail_deadlocks_loop_4veh3
+tt_rail_rail_signal_driveway_variants
+tt_rail_rail_signal_end_block_mode_end_after_bidi
+tt_rail_rail_signal_end_block_mode_end_within_bidi
+tt_rail_rail_signal_indirect_guard_route_conflict2
+tt_rail_rail_signal_indirect_guard_route_conflict3
+tt_rail_rail_signal_indirect_guard_route_conflict_reroute
+tt_rail_rail_signal_moving_block_protect_reversal2
+tt_rail_rail_signal_moving_block_protect_reversal_noSignal
+tt_rail_rail_signal_moving_block_protect_selfintersecting
+tt_rail_rail_signal_moving_block_protect_selfintersecting2
+tt_rail_rail_signal_siding_deadend
+tt_rail_reversal_subdriveway_reversal
+tt_rail_routing_reverse_on_short_start
+tt_rail_siding_long_siding_occupied_wait3
+tt_rail_siding_loop_3veh
+tt_rail_siding_sidingShort_deadlock
+tt_rail_siding_siding_deadlock
+tt_rail_siding_siding_deadlock_approaching_limit
+tt_rail_siding_siding_deadlock_intermediate_dw
+tt_rail_siding_siding_noSignal
+tt_rail_siding_siding_noSignal2
+tt_rail_tram_bidi_conflict_insertion_tls
+tt_tls_NEMA_errors_customDetectorsMissing
+RAILLIST
+while read -r c; do
+  d="tools/oracle/cases/$c"
+  [ -f "$d/ref.tripinfo.xml" ] || { echo "$c: no ref"; continue; }
+  EXTRA=""; [ -f "$d/sim.args" ] && EXTRA=$(cat "$d/sim.args")
+  for who in pristine ours; do
+    bin=$PRISTINE; [ "$who" = ours ] && bin=$OURS
+    timeout 600 "$bin" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
+      --tripinfo-output "$OUT/$c.$who.ti.xml" --no-step-log true $EXTRA >"$OUT/$c.$who.sim.log" 2>&1
+    echo "$?" >"$OUT/$c.$who.simrc"
+    python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.$who.ti.xml" >"$OUT/$c.$who.cmp" 2>&1
+    echo "$?" >"$OUT/$c.$who.cmprc"
+  done
+  echo "== $c official rc=$(cat "$OUT/$c.pristine.simrc") cmp=$(cat "$OUT/$c.pristine.cmprc") | ours rc=$(cat "$OUT/$c.ours.simrc") cmp=$(cat "$OUT/$c.ours.cmprc")"
+  [ "$(cat "$OUT/$c.ours.cmprc")" = 0 ] || echo "   ours diff: $(grep -v '^\s*$' "$OUT/$c.ours.cmp" | head -1 | cut -c1-220)"
+done < "$RAILROWS"
