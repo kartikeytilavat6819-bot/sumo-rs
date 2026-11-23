@@ -38,13 +38,15 @@ for c in $ROWS; do
     # and interrupt it after 15s to print every thread's stack.
     rdir="$OUT/$c.stack"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
     (cd "$rdir"
-      gdb -batch -ex "set pagination off" -ex "run" -ex "thread apply all bt 25" --args "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${EXTRA[@]}" >gdb.txt 2>&1 &
+      gdb -batch -ex "set pagination off" -ex "run" -ex "thread apply all bt 25" -ex "echo ===DISAS
+" -ex "disassemble" --args "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${EXTRA[@]}" >gdb.txt 2>&1 &
       gpid=$!
       sleep 15
       pkill -INT -n -f "debug/sumo -n ref_simple" 2>/dev/null
       sleep 10
       echo "  -- gdb stacks of the blocked process:"
       grep -E '^#|^Thread|received signal|SIGINT' gdb.txt | cut -c1-230 | head -80
+      echo "  -- disassembly around the stopped instruction (=>):"; sed -n '/===DISAS/,$p' gdb.txt | grep -B45 -A14 -- '=>' | cut -c1-200
       pkill -9 -f "debug/sumo -n ref_simple" 2>/dev/null; kill -9 $gpid 2>/dev/null; wait $gpid 2>/dev/null)
   fi
   if [ -f "$d/ref.errors" ]; then
