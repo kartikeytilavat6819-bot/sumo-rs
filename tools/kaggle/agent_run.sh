@@ -33,6 +33,7 @@ for c in "${CASES[@]}"; do
       if [ -f "$dir/$ref" ]; then
         d=$(diff <(tr -d '\r' < "$dir/$ref") "$OUT/$c.$tag/$s" | head -6 | cut -c1-200)
         echo "$c $tag $s vs $ref: ${d:-SAME}"
+        echo "$c $tag $s tail:"; tail -n 3 "$OUT/$c.$tag/$s" | cut -c1-200
       fi
     done
   done
