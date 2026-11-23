@@ -34,48 +34,18 @@ for c in $ROWS; do
   echo "  -- off stderr:"; head -n 4 "$OUT/$c.off/err.txt" | cut -c1-200 | sed 's/^/     /'
   echo "  -- ours stderr:"; head -n 4 "$OUT/$c.ours/err.txt" | cut -c1-200 | sed 's/^/     /'
   if [ "$(cat "$OUT/$c.ours/rc.txt")" = 124 ]; then
-    rdir="$OUT/$c.steplog"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou "${EXTRA[@]}" >out.txt 2>err.txt; true)
-    echo "  -- ours TIMEOUT: last step-log lines:"; tail -n 4 "$rdir/out.txt" | cut -c1-200 | sed 's/^/     /'
-    echo "  -- ours TIMEOUT: last stderr lines:"; tail -n 3 "$rdir/err.txt" | cut -c1-200 | sed 's/^/     /'
-    rdir="$OUT/$c.notaxi"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-    NOTAXI=(); skip=0
-    for a in "${EXTRA[@]}"; do
-      case "$a" in --device.taxi.*) skip=1; continue;; esac
-      if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
-      skip=0; NOTAXI+=("$a")
-    done
-    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOTAXI[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
-    echo "  -- ours without --device.taxi.* options, --end 5: exit $(cat "$rdir/rc.txt")"
-    rdir="$OUT/$c.nopersontrip"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-    NOPT=(); skip=0
-    for a in "${NOTAXI[@]}"; do
-      case "$a" in --device.taxi.*|--persontrip.*|-a|--additional-files) skip=1; continue;; esac
-      if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
-      skip=0; NOPT+=("$a")
-    done
-    (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${NOPT[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
-    echo "  -- ours without taxi/persontrip/additional options, --end 5: exit $(cat "$rdir/rc.txt")"
-    for variant in notaxiwalk nowalktaxi; do
-      case $variant in
-        notaxiwalk) pat='--persontrip.transfer.taxi-walk' ;;
-        nowalktaxi) pat='--persontrip.transfer.walk-taxi' ;;
-      esac
-      rdir="$OUT/$c.$variant"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-      VARG=(); skip=0
-      for a in "${EXTRA[@]}"; do
-        if [[ "$a" =~ ^($pat)$ ]]; then skip=1; continue; fi
-        if [ $skip = 1 ] && [[ "$a" != -* ]]; then continue; fi
-        skip=0; VARG+=("$a")
-      done
-      (cd "$rdir" && timeout 60 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${VARG[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
-      echo "  -- ours without $variant, --end 5: exit $(cat "$rdir/rc.txt")"; head -n 2 "$rdir/err.txt" | cut -c1-160 | sed 's/^/     /'
-    done
-    for E in 5 50 500; do
-      rdir="$OUT/$c.end$E"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-      (cd "$rdir" && timeout 120 "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e $E "${EXTRA[@]}" >out.txt 2>err.txt; echo $? > rc.txt)
-      echo "  -- ours with --end $E: exit $(cat "$rdir/rc.txt")"
-    done
+    # hang: attach a debugger to a fresh copy and print where it spins
+    rdir="$OUT/$c.stack"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
+    echo "  -- debugger tools: gdb=$(command -v gdb) eu-stack=$(command -v eu-stack) pstack=$(command -v pstack) lldb=$(command -v lldb) ptrace_scope=$(cat /proc/sys/kernel/yama/ptrace_scope 2>/dev/null)"
+    (cd "$rdir" && "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${EXTRA[@]}" >out.txt 2>err.txt & pid=$!
+      sleep 15
+      echo "  -- ours still running after 15s: $(kill -0 $pid 2>/dev/null && echo yes || echo no); cpu: $(ps -o %cpu= -p $pid 2>/dev/null)"
+      if command -v gdb >/dev/null; then
+        gdb -p $pid -batch -ex "thread apply all bt 30" 2>&1 | grep -E '^#|^Thread|ptrace|Operation not permitted' | cut -c1-230 | head -70
+      elif command -v eu-stack >/dev/null; then eu-stack -p $pid 2>&1 | cut -c1-230 | head -50
+      elif command -v pstack >/dev/null; then pstack $pid 2>&1 | cut -c1-230 | head -50
+      fi
+      kill -9 $pid 2>/dev/null; wait $pid 2>/dev/null)
   fi
   if [ -f "$d/ref.errors" ]; then
     if diff -q "$d/ref.errors" "$OUT/$c.ours/err.txt" >/dev/null; then echo "  ref.errors: MATCH"
