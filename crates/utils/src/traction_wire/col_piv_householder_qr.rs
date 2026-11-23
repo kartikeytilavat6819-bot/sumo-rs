@@ -1,8 +1,8 @@
 //! Replacement for Eigen's `ColPivHouseholderQR` (`A.colPivHouseholderQr().solve(b)`), which
 //! Circuit.cpp uses for every dense solve. There is no C++ file for this one: Eigen is not a
 //! dependency of this port, so the Eigen 3.4 unblocked algorithm is written out here:
-//! Householder QR with column pivoting, rank threshold `diagSize * eps` relative to the largest
-//! pivot, and a solve that sets the components beyond the numerical rank to zero.
+//! Householder QR with column pivoting, rank detection through `abs2(maxColNorm * eps) / rows`
+//! (ColPivHouseholderQR.h:511), and a solve that sets the components beyond the numerical rank to zero.
 //! Not bit-exact with Eigen's vectorised/blocked kernels, only the same algorithm.
 
 use std::ops::Range;
@@ -131,9 +131,9 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
     let mut col_norms_updated: Vec<f64> = (0..cols).map(|j| col_norm(&qr, j, 0)).collect();
     let mut col_norms_direct = col_norms_updated.clone();
     let max_norm = col_norms_updated.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    // Eigen 3.4 computeInPlace: threshold() = epsilon * diagonalSize, applied to the column norms
-    let threshold = eps * size as f64;
-    let threshold_helper = (max_norm * threshold) * (max_norm * threshold) / rows as f64;
+    // Eigen 3.4.0 ColPivHouseholderQR.h:511 computeInPlace: abs2(maxCoeff * epsilon) / rows
+    // (the epsilon * diagonalSize factor belongs to rank()/threshold(), not to m_nonzero_pivots)
+    let threshold_helper = (max_norm * eps) * (max_norm * eps) / rows as f64;
     let norm_downdate_threshold = eps.sqrt();
     // number of meaningful pivots (m_nonzero_pivots), fixed at the first column whose norm is too small
     let mut nonzero_pivots = size;
@@ -251,6 +251,16 @@ mod tests {
         let x = col_piv_householder_qr_solve(&a, &[2.0, 2.0]);
         assert!((x[0] - 2.0).abs() < 1e-12, "x0 = {}", x[0]);
         assert_eq!(x[1], 0.0);
+    }
+
+    #[test]
+    fn rank_threshold_has_no_diag_size_factor() {
+        // Eigen 3.4.0: threshold_helper = abs2(1 * eps) / 2 = 2.465e-32, so the column norm 2.5e-16
+        // (squared 6.25e-32) is above it and counts as a nonzero pivot: x = [1, 1 / 2.5e-16].
+        let a = DenseMatrix::from_row_major(2, 2, vec![1.0, 0.0, 0.0, 2.5e-16]);
+        let x = col_piv_householder_qr_solve(&a, &[1.0, 1.0]);
+        assert_eq!(x[0], 1.0);
+        assert!((x[1] / 4.0e15 - 1.0).abs() < 1e-12, "x1 = {}", x[1]);
     }
 
     #[test]
