@@ -10898,6 +10898,9 @@ impl MSVehicle {
                 (dpi.myLink, dpi.mySetRequest, dpi.myVLinkPass, dpi.myVLinkWait, dpi.myDistance, dpi.myArrivalTime, dpi.myArrivalSpeed, dpi.get_leave_speed())
             };
 
+            if self.get_id() == "ES1" && MSNet::get_instance().get_current_time_step() >= 94000 && MSNet::get_instance().get_current_time_step() <= 100000 {
+                eprintln!("OC102I t={} i={} lane={} linkNull={} setReq={} red={} dist={:.3} vPass={:.3} vWait={:.3}", MSNet::get_instance().get_current_time_step(), i, self.myLane.get_id(), link.is_null(), dSetRequest, if link.is_null() { false } else { link.have_red() }, dDistance, dVLinkPass, dVLinkWait);
+            }
             // the vehicle must change the lane on one of the next lanes (XXX: refs to code further below???, Leo)
             if !link.is_null() && dSetRequest {
                 let ls = link.get_state();
