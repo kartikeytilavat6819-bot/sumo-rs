@@ -1,88 +1,46 @@
 #!/usr/bin/env bash
-# oc98 probe: run official and our sumo on the target cases, compare tripinfo.
+# oc98 probe (compact): official $SUMO_PRISTINE_BIN vs ours on the assigned rows.
 OUT=/tmp/oc98; mkdir -p "$OUT"
 OURS="${CARGO_TARGET_DIR:-/tmp/none}/debug/sumo"
 OFF="${SUMO_PRISTINE_BIN:-/tmp/none}/sumo"
-CASES="tt_rail_rerouter_closing_detour_onInit tt_rail_rerouter_closing_short_closing_wait tt_bugs_17xxx_ticket17583 tt_bugs_4xxx_ticket4299 tt_rail_routing_reverse_on_short_start tt_rail_rail_signal_siding_deadend"
-for c in $CASES; do
-  d="tools/oracle/cases/$c"
-  net=$d/net.net.xml; [ -f "$net" ] || net=$d/ref_simple.net.xml
-  rou=$d/routes.rou; for f in input_routes2.rou.xml input_routes.rou.xml; do [ -f "$d/$f" ] && rou=$d/$f && break; done
-  args="$(cat "$d/sim.args" 2>/dev/null) -n $net -r $rou"
-  for side in off ours; do
-    bin=$OFF; [ "$side" = ours ] && bin=$OURS
-    dbg=""; [ "$side" = ours ] && dbg="OC98DBG=1"
-    env $dbg timeout 300 "$bin" $args --tripinfo-output "$OUT/$c.$side.tripinfo.xml" --fcd-output "$OUT/$c.$side.fcd.xml" > "$OUT/$c.$side.stdout" 2> "$OUT/$c.$side.stderr"
-    echo "== $c $side exit=$?"
-    head -n 3 "$OUT/$c.$side.stderr"
-  done
-  echo "-- first differing tripinfo lines:"
-  diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.off.tripinfo.xml" 2>/dev/null) <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.ours.tripinfo.xml" 2>/dev/null) 2>&1 | head -n 12
+cut200() { cut -c1-200; }
+
+# 1) tt_bugs_4xxx_ticket4299: ES1 trajectory, first differing samples with context ('<' official, '>' ours)
+c=tt_bugs_4xxx_ticket4299; d=tools/oracle/cases/$c
+for side in off ours; do
+  bin=$OFF; [ "$side" = ours ] && bin=$OURS
+  timeout 300 "$bin" $(cat "$d/sim.args") -n "$d/net.net.xml" -r "$d/input_routes.rou.xml" --fcd-output "$OUT/$c.$side.fcd.xml" > /dev/null 2> "$OUT/$c.$side.err"
 done
-# oc98: the 7 expected-error rows. Run exactly like run_all.sh (-n ref_simple.net.xml -r routes.rou + sim.args)
-# and compare official vs ours: exit code, stderr, stdout. ref.errors is empty on these rows (TextTest errors.sumo is empty).
-for c in tt_spec_arrival_errors_lane_given10 tt_spec_arrival_errors_speed_given100 tt_spec_flow_errors_poisson_invalid tt_devices_ssm_bugs_ticket5231 tt_rail_rail_signal_siding_deadend tt_rail_routing_reverse_on_short_start tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter_overtaking_follower_delay_high tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high tt_rail_rerouter_overtaking_follower_delay_low; do
-  d="tools/oracle/cases/$c"
-  a="$(cat "$d/sim.args" 2>/dev/null)"
+echo "== 4299 ES1 FCD diff (official '<' vs ours '>'):"
+diff -U2 <(grep 'id="ES1"' "$OUT/$c.off.fcd.xml") <(grep 'id="ES1"' "$OUT/$c.ours.fcd.xml") | head -n 14 | cut200
+echo "== 4299 vehicles with a different FCD line count:"
+diff <(grep -o 'id="[^"]*"' "$OUT/$c.off.fcd.xml" | sort | uniq -c) <(grep -o 'id="[^"]*"' "$OUT/$c.ours.fcd.xml" | sort | uniq -c) | head -n 6
+echo "== 4299 stderr official / ours:"; head -n 3 "$OUT/$c.off.err" | cut200; echo "  --"; head -n 5 "$OUT/$c.ours.err" | cut200
+
+# 2) assigned expected-error rows, run exactly like run_all.sh (-n ref_simple.net.xml -r routes.rou + sim.args)
+for c in tt_spec_flow_errors_poisson_invalid tt_spec_arrival_errors_lane_given10 tt_spec_arrival_errors_speed_given100 tt_devices_ssm_bugs_ticket5231; do
+  d=tools/oracle/cases/$c; a="$(cat "$d/sim.args" 2>/dev/null)"
   for side in off ours; do
     bin=$OFF; [ "$side" = ours ] && bin=$OURS
     timeout 300 "$bin" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" --no-step-log true $a > "$OUT/$c.e.$side.out" 2> "$OUT/$c.e.$side.err"
     echo $? > "$OUT/$c.e.$side.rc"
   done
-  same=SAME
-  cmp -s "$OUT/$c.e.off.rc" "$OUT/$c.e.ours.rc" || same=DIFF-rc
-  cmp -s "$OUT/$c.e.off.err" "$OUT/$c.e.ours.err" || same="$same DIFF-stderr"
-  cmp -s "$OUT/$c.e.off.out" "$OUT/$c.e.ours.out" || same="$same DIFF-stdout"
-  echo "== ERRROW $c official_rc=$(cat $OUT/$c.e.off.rc) ours_rc=$(cat $OUT/$c.e.ours.rc) -> $same"
-  echo "   official stderr:"; head -n 4 "$OUT/$c.e.off.err" | sed 's/^/     /'
-  echo "   ref.errors ($(wc -c < "$d/ref.errors" 2>/dev/null) bytes):"; head -n 4 "$d/ref.errors" 2>/dev/null | sed 's/^/     /'
-  echo "   official stdout $(wc -c < "$OUT/$c.e.off.out") bytes, ours $(wc -c < "$OUT/$c.e.ours.out") bytes, ref.output $(wc -c < "$d/ref.output" 2>/dev/null) bytes"
-  [ "$same" = SAME ] || { echo "   ours stderr:"; head -n 4 "$OUT/$c.e.ours.err" | sed 's/^/     /'; }
-done
-# oc98: the REAL overtaking scenario. The imported cases drop the parent's `-a input_additional.add.xml,input_routes.rou.xml`
-# (overtakingReroute rerouter + vTypes + routes); SUMO runs it as the union with the child's -a/-r. Compare official vs ours.
-PK=tools/kaggle/oc98_overtaking
-for c in tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter_overtaking_follower_delay_high tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high tt_rail_rerouter_overtaking_follower_delay_low; do
-  d="tools/oracle/cases/$c"
-  a="$(sed -E 's/(^| )-a [^ ]+//' "$d/sim.args")"
-  for side in off ours; do
-    bin=$OFF; [ "$side" = ours ] && bin=$OURS
-    timeout 300 "$bin" $a -n "$d/net.net.xml" -a "$PK/input_additional.add.xml,$PK/input_routes.rou.xml,$d/input_additional2.add.xml" -r "$d/input_routes2.rou.xml"       --no-step-log true --tripinfo-output "$OUT/$c.r.$side.trip.xml" --stop-output "$OUT/$c.r.$side.stop.xml" --vehroute-output "$OUT/$c.r.$side.veh.xml" > "$OUT/$c.r.$side.out" 2> "$OUT/$c.r.$side.err"
-    echo $? > "$OUT/$c.r.$side.rc"
+  echo "== ERRROW $c rc official=$(cat $OUT/$c.e.off.rc) ours=$(cat $OUT/$c.e.ours.rc)"
+  for k in err out; do
+    if cmp -s "$OUT/$c.e.off.$k" "$OUT/$c.e.ours.$k"; then echo "   std$k: SAME ($(wc -l < "$OUT/$c.e.off.$k") lines)"; else
+      echo "   std$k DIFF  official:"; grep -a -v "^Loading\|^ *$" "$OUT/$c.e.off.$k" | head -n 5 | cut200 | sed 's/^/      /'
+      echo "              ours:";     grep -a -v "^Loading\|^ *$" "$OUT/$c.e.ours.$k" | head -n 5 | cut200 | sed 's/^/      /'
+    fi
   done
-  echo "== REAL $c official_rc=$(cat $OUT/$c.r.off.rc) ours_rc=$(cat $OUT/$c.r.ours.rc)  official_trips=$(grep -c '<tripinfo ' $OUT/$c.r.off.trip.xml 2>/dev/null) ours_trips=$(grep -c '<tripinfo ' $OUT/$c.r.ours.trip.xml 2>/dev/null)"
-  [ -s "$OUT/$c.r.off.err" ] && { echo "   official stderr:"; head -n 3 "$OUT/$c.r.off.err" | sed 's/^/     /'; }
-  [ -s "$OUT/$c.r.ours.err" ] && { echo "   ours stderr:"; head -n 3 "$OUT/$c.r.ours.err" | sed 's/^/     /'; }
-  for k in trip stop veh; do
-    dd=$(diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.r.off.$k.xml" 2>/dev/null) <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.r.ours.$k.xml" 2>/dev/null) | head -n 6 | cut -c1-260)
-    if [ -z "$dd" ]; then echo "   $k: SAME"; else echo "   $k: DIFF"; echo "$dd" | sed 's/^/     /'; fi
-  done
+  echo "   ref.errors:"; head -n 3 "$d/ref.errors" 2>/dev/null | cut200 | sed 's/^/      /'
+  echo "   ref.output: $(wc -c < "$d/ref.output" 2>/dev/null) bytes: $(head -c 120 "$d/ref.output" 2>/dev/null | tr '\n' '|')"
 done
-# oc98: newStop_fast_forced(2) complex TraCI rows: official vs ours console (+ OC98DBG addStop lines on our side)
-echo "== COMPLEX newStop_fast_forced*"
-COMPLEX_OUT="$OUT/complex" COMPLEX_FILTER="setStop/newStop_fast_forced" bash tools/oracle/run_complex_suite.sh 2>&1 | tail -n 4
-for t in newStop_fast_forced newStop_fast_forced2; do
-  for side in official ours; do
-    f="$OUT/complex/vehicle/setStop/$t/$side/console.txt"
-    echo "-- $t $side console (first 14 lines):"; grep -a -v "^Retrying\|UserWarning" "$f" 2>/dev/null | head -n 14 | cut -c1-260 | sed 's/^/     /'
-  done
+
+# 3) tt_bugs_17xxx_ticket17583: should be clean (prefix fix)
+c=tt_bugs_17xxx_ticket17583; d=tools/oracle/cases/$c
+for side in off ours; do
+  bin=$OFF; [ "$side" = ours ] && bin=$OURS
+  timeout 300 "$bin" $(cat "$d/sim.args") -n "$d/net.net.xml" -r "$d/input_routes.rou.xml" --tripinfo-output "$OUT/$c.$side.trip.xml" > /dev/null 2>&1
 done
-# oc98: setStop_default_state / stopDelay_waypoint: debug-build overflow panic after the instantStopping dispatch fix. Print both consoles + backtrace.
-echo "== COMPLEX setStop_default_state / stopDelay_waypoint"
-for t in vehicle/setStop_default_state vehicle/stopDelay_waypoint; do
-  COMPLEX_OUT="$OUT/complex2" COMPLEX_FILTER="$t" RUST_BACKTRACE=1 bash tools/oracle/run_complex_suite.sh 2>&1 | tail -n 3 | cut -c1-300
-  for side in official ours; do
-    f="$OUT/complex2/$t/$side/console.txt"
-    echo "-- $t $side console (first 24 lines):"; grep -a -v "^Retrying\|UserWarning" "$f" 2>/dev/null | head -n 24 | cut -c1-260 | sed 's/^/     /'
-  done
-done
-# oc98: ticket4299 ES1 trajectory, first differing samples with context (official '<' vs ours '>')
-echo "== 4299 ES1 FCD first differing samples (official vs ours):"
-diff -U2 <(grep 'id="ES1"' "$OUT/tt_bugs_4xxx_ticket4299.off.fcd.xml" 2>/dev/null) <(grep 'id="ES1"' "$OUT/tt_bugs_4xxx_ticket4299.ours.fcd.xml" 2>/dev/null) | head -n 16 | cut -c1-230
-echo "== 4299 who else differs (vehicle ids with any FCD difference):"
-diff <(grep -o 'id="[^"]*"[^/]*' "$OUT/tt_bugs_4xxx_ticket4299.off.fcd.xml" 2>/dev/null | sort | uniq -c) <(grep -o 'id="[^"]*"[^/]*' "$OUT/tt_bugs_4xxx_ticket4299.ours.fcd.xml" 2>/dev/null | sort | uniq -c) | grep -o 'id="[^"]*"' | sort | uniq -c | head
-echo "== 17583 v.25 FCD first differing samples (official vs ours):"
-diff <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.off.fcd.xml" 2>/dev/null) <(grep 'id="v.25"' "$OUT/tt_bugs_17xxx_ticket17583.ours.fcd.xml" 2>/dev/null) | head -n 8
-echo "== 17583 ours reroute/origin lines for v.25:"
-grep -a "OC98ORIGIN\|reroute veh=v.25" "$OUT/tt_bugs_17xxx_ticket17583.ours.stderr" | head -n 8
+echo "== 17583 tripinfo diff lines: $(diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.off.trip.xml") <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.ours.trip.xml") | grep -c '^[<>]')"
 echo "AGENT RUN DONE"
