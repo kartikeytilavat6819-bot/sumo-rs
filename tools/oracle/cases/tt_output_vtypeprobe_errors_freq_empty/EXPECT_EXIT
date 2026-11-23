@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero
+Official expectation: output/vtypeprobe/errors/freq_empty/{errors,output}.sumo

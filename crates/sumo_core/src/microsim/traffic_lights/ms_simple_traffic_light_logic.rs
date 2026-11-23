@@ -561,7 +561,7 @@ impl MSSimpleTrafficLightLogic {
             let id = self.base.get_id().to_string();
             tlcontrol.get(&id).switch_to_loaded(Ptr::from_mut(&mut self.base));
         }
-        self.myPhases[self.myStep as usize].m().myLastSwitch = t - spentDuration;
+        // v1.28.0 release: no myLastSwitch update here (snapshot-only MSSimpleTrafficLightLogic::loadState override)
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::mapTimeInCycle(SUMOTime) const` [const, virtual]
