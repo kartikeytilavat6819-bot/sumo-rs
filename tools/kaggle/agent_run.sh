@@ -53,5 +53,5 @@ open(p, "w", encoding="utf-8").write(src[:line_start] + probe + src[line_start:]
 PY
 for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
-  (cd "$IS_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -m2 "^FINDROUTE") | sed "s/^/$side: /"
+  (cd "$IS_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m6 "^FINDROUTE|Error|Traceback|line [0-9]+, in <module>") | sed "s/^/$side: /"
 done
