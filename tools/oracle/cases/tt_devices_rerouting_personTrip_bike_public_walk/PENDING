@@ -1,1 +1,0 @@
-Multi-modal person stage handling in the Rust port is not yet faithful: the person's total trip duration is roughly twice the C++ value while the walking statistics match, so the extra time accumulates in waiting/transfer stages. Re-enable when MSTransportable stage timing matches the C++.

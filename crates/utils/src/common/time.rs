@@ -197,6 +197,9 @@ mod tests {
         assert_eq!(time2string_hr(12_500, false), "12.50");
         assert_eq!(time2string_hr(3_725_000, true), "01:02:05");
         assert_eq!(time2string_hr(-1500, false), "-1.50");
+        // human-readable with -H: H:MM:SS.ss and D:H:MM:SS.ss (C++ time2string)
+        assert_eq!(time2string_hr(1_250, true), "00:00:01.25");
+        assert_eq!(time2string_hr(86_400_000 + 3_725_000, true), "1:01:02:05");
         assert!(string2time("1::2").is_err()); // empty field -> EmptyData, as in C++
         assert!(!is_time("1::2"));
     }
