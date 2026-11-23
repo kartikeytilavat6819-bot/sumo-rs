@@ -111,4 +111,5 @@ while read -r c; do
   done
   echo "== $c official rc=$(cat "$OUT/$c.pristine.simrc") cmp=$(cat "$OUT/$c.pristine.cmprc") | ours rc=$(cat "$OUT/$c.ours.simrc") cmp=$(cat "$OUT/$c.ours.cmprc")"
   [ "$(cat "$OUT/$c.ours.cmprc")" = 0 ] || echo "   ours diff: $(grep -v '^\s*$' "$OUT/$c.ours.cmp" | head -1 | cut -c1-220)"
+  [ -f "$OUT/$c.ours.fcd.cmp" ] && [ -s "$OUT/$c.ours.fcd.cmp" ] && echo "   ours fcd: $(grep -v '^\s*$' "$OUT/$c.ours.fcd.cmp" | head -1 | cut -c1-220)"
 done < "$RAILROWS"
