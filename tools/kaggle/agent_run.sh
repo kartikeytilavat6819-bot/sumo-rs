@@ -50,4 +50,16 @@ for side in off ours; do
   timeout 300 "$bin" $(cat "$d/sim.args") -n "$d/net.net.xml" -r "$d/input_routes.rou.xml" --tripinfo-output "$OUT/$c.$side.trip.xml" > /dev/null 2>&1
 done
 echo "== 17583 tripinfo diff lines: $(diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.off.trip.xml") <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.ours.trip.xml") | grep -c '^[<>]')"
+# 4) rows flagged as new failures by the last full gate: exit codes + first differing tripinfo/stderr lines
+for c in tt_bugs_8xxx_ticket8817 tt_devices_rerouting_stops_stop_same_edge_slack tt_devices_rerouting_weights_stopped_vehicle tt_devices_rerouting_weights_weight_output; do
+  d=tools/oracle/cases/$c; net=$d/net.net.xml; [ -f "$net" ] || net=$d/ref_simple.net.xml
+  rou=$d/routes.rou; for f in input_routes2.rou.xml input_routes.rou.xml; do [ -f "$d/$f" ] && rou=$d/$f && break; done
+  for side in off ours; do
+    bin=$OFF; [ "$side" = ours ] && bin=$OURS
+    timeout 300 "$bin" $(cat "$d/sim.args" 2>/dev/null) -n "$net" -r "$rou" --tripinfo-output "$OUT/$c.$side.trip.xml" > /dev/null 2> "$OUT/$c.$side.err"; echo $? > "$OUT/$c.$side.rc"
+  done
+  echo "== FLAG $c rc official=$(cat $OUT/$c.off.rc) ours=$(cat $OUT/$c.ours.rc)"
+  diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.off.trip.xml" 2>/dev/null) <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.ours.trip.xml" 2>/dev/null) | head -n 4 | cut -c1-250 | sed 's/^/   trip /'
+  diff "$OUT/$c.off.err" "$OUT/$c.ours.err" | head -n 4 | cut -c1-250 | sed 's/^/   err  /'
+done
 echo "AGENT RUN DONE"
