@@ -58,7 +58,7 @@ for c in tt_rail_rerouter_overtaking_follower_arrival_delay_low tt_rail_rerouter
 done
 # oc98: newStop_fast_forced(2) complex TraCI rows: official vs ours console (+ OC98DBG addStop lines on our side)
 echo "== COMPLEX newStop_fast_forced*"
-COMPLEX_OUT="$OUT/complex" COMPLEX_FILTER="setStop/newStop_fast_forced" OC98DBG=1 bash tools/oracle/run_complex_suite.sh 2>&1 | tail -n 4
+COMPLEX_OUT="$OUT/complex" COMPLEX_FILTER="setStop/newStop_fast_forced" bash tools/oracle/run_complex_suite.sh 2>&1 | tail -n 4
 for t in newStop_fast_forced newStop_fast_forced2; do
   for side in official ours; do
     f="$OUT/complex/vehicle/setStop/$t/$side/console.txt"
