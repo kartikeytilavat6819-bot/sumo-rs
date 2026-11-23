@@ -9,10 +9,8 @@ use std::f64::consts::PI;
 
 use super::geom_helper::deg2rad;
 
-/// PROJ's precomputed conversion constants (modern PROJ's crs_to_crs pipeline uses these
-/// rather than SUMO's `x * M_PI / 180` / `x * 180 / M_PI` macro order).
+/// PROJ's `RAD_TO_DEG` constant (`x * RAD_TO_DEG`, not `(x * 180) / PI`).
 const RAD_TO_DEG: f64 = 180. / PI;
-const DEG_TO_RAD: f64 = PI / 180.;
 use super::{Boundary, Position};
 use crate::common::msg_handler::{write_error, write_warning};
 use crate::common::std_defs::{g_precision, g_precision_geo};
@@ -418,9 +416,7 @@ impl GeoConvHelper {
                 return false;
             }
             if let Some(p) = self.projection {
-                // C++ passes degrees straight to modern PROJ (myRadians = false); PROJ's
-                // crs_to_crs pipeline converts with its precomputed DEG_TO_RAD constant.
-                (x, y) = p.fwd(x * DEG_TO_RAD, y * DEG_TO_RAD);
+                (x, y) = p.fwd(deg2rad(x), deg2rad(y));
             } else if self.projection_method == ProjectionMethod::Proj {
                 write_error(&format!("Projection '{}' is not supported by this build (only +proj=utm and +proj=tmerc with lat_0=0)", self.proj_string));
                 return false;
@@ -585,7 +581,7 @@ fn clens(a: &[f64; 6], arg_r: f64) -> f64 {
 
 impl Etmerc {
     /// PROJ `setup_exact`: all six coefficient series, Qn (no `a`), Zb.
-    fn new(a: f64, rf: f64, k0: f64, lon0_rad: f64, x0: f64, y0: f64, lat0_rad: f64) -> Etmerc {
+    fn new(a: f64, rf: f64, k0: f64, lon0: f64, x0: f64, y0: f64, lat0: f64) -> Etmerc {
         let f = 1. / rf;
         let n = f / (2. - f);
         let mut np = n;
@@ -631,9 +627,10 @@ impl Etmerc {
         utg[5] = np * (-20648693. / 638668800.);
         gtu[5] = np * (212378941. / 319334400.);
 
-        let z = gatg(&cbg, lat0_rad, (2. * lat0_rad).cos(), (2. * lat0_rad).sin());
+        let lat0 = deg2rad(lat0);
+        let z = gatg(&cbg, lat0, (2. * lat0).cos(), (2. * lat0).sin());
         let zb = -qn * (z + clens(&gtu, 2. * z));
-        Etmerc { lon0: lon0_rad, x0, y0, a, ra: 1. / a, qn, zb, cgb, cbg, utg, gtu }
+        Etmerc { lon0: deg2rad(lon0), x0, y0, a, ra: 1. / a, qn, zb, cgb, cbg, utg, gtu }
     }
 
     /// Parses the `+proj=utm` and `+proj=tmerc` strings this port projects; None for anything else.
@@ -677,11 +674,9 @@ impl Etmerc {
                 if !(1..=60).contains(&zone) {
                     return None;
                 }
-                // PROJ PJ_PROJECTION(utm): lam0 = (zone + .5) * M_PI / 30. - M_PI (0-based zone)
-                let lam0 = (zone as f64 - 0.5) * PI / 30. - PI;
-                Some(Etmerc::new(a, rf, 0.9996, lam0, 500000., if south { 10000000. } else { 0. }, 0.))
+                Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }, 0.))
             }
-            "tmerc" => Some(Etmerc::new(a, rf, k0, lon0 * DEG_TO_RAD, x0, y0, lat0 * DEG_TO_RAD)),
+            "tmerc" => Some(Etmerc::new(a, rf, k0, lon0, x0, y0, lat0)),
             _ => None,
         }
     }
@@ -825,9 +820,9 @@ impl Merc {
         }
         // PROJ's PJ_PROJECTION(merc) overrides k0 with cos(lat_ts) for the sphere
         if let Some(lat_ts) = lat_ts {
-            k = (lat_ts.abs() * DEG_TO_RAD).cos();
+            k = deg2rad(lat_ts).abs().cos();
         }
-        Some(Merc { a, ra: 1. / a, lon0: lon0 * DEG_TO_RAD, x0, y0, k })
+        Some(Merc { a, ra: 1. / a, lon0: deg2rad(lon0), x0, y0, k })
     }
 
     /// PROJ `merc_s_forward` + `fwd_finalize`: lon/lat (radians) -> metres.
