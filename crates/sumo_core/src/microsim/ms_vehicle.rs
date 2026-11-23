@@ -8480,7 +8480,7 @@ impl MSVehicle {
                 // joining only takes place after stop duration is over
                 if stop.joinTriggered && !self.myAmRegisteredAsWaiting && stop.duration <= (if stop.pars.extension >= 0 { -stop.pars.extension } else { 0 }) {
                     if stop.pars.extension >= 0 {
-                        utils::common::msg_handler::write_warning(&format!("Vehicle '{}' aborts joining after extension of {} at time {}.", self.get_id(), to_string(&steps2time(stop.pars.extension)), time2string(MSNet::get_instance().get_current_time_step())));
+                        utils::common::msg_handler::write_warning(&format!("Vehicle '{}' aborts joining after extension of {}s at time {}.", self.get_id(), to_string(&steps2time(stop.pars.extension)), time2string(MSNet::get_instance().get_current_time_step())));
                         stop.m().joinTriggered = false;
                     } else {
                         // keep stopping indefinitely but ensure that simulation terminates
