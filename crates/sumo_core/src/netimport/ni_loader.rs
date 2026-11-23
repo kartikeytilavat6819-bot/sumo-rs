@@ -166,8 +166,9 @@ impl NILoader {
         }
         ok &= self.load_xml(oc);
         // check the loaded structures
-        // C++ throws ProcessError here; the error must go through the throw path, not write_error,
-        // so it is not recorded as an initial message that clear(false) would replay.
+        // C++ throws ProcessError here (NILoader.cpp:1587/1590); main reports it
+        // and exits non-zero. With --ignore-errors the wasInformed check in
+        // netconvert's run() is cleared, so only a thrown ProcessError aborts.
         if self.myNetBuilder.m().get_node_cont().size() == 0 {
             std::panic::panic_any(ProcessError::new("No nodes loaded."));
         }

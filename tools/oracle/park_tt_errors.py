@@ -96,6 +96,9 @@ def normalise(line):
     # local-only / Rust-only noise that the official binary never emits
     if s.startswith("Warning: Environment variable SUMO_HOME is not set properly"):
         return None
+    # environment-dependent: whether an external xsd is considered local depends on SUMO_HOME
+    if s.startswith("Disabling XML validation for external file"):
+        return None
     if s.startswith("thread '") and " panicked at " in s:
         return None
     if s.startswith("note: run with `RUST_BACKTRACE=1`"):
@@ -103,6 +106,8 @@ def normalise(line):
     if s.startswith("Eclipse SUMO ") or s.lstrip().startswith("Build features"):
         return None
     # times (texttest config_all: [0-9.]+ms / spent Xs / Duration Xs)
+    # tests/netconvert/config.netconvert: output:done \(.*\)\.{REPLACE done.}
+    s = re.sub(r"done \(.*\)\.", "done.", s)
     s = re.sub(r"[0-9.]+ms", "(TIME)", s)
     s = re.sub(r"spent [0-9.]+s", "spent (TIME)", s)
     s = re.sub(r"Duration [0-9.]+s", "Duration (TIME)", s)
@@ -131,7 +136,17 @@ def normalised_lines(path):
     # keep file order: texttest diffs the normalised lines in order, so a wrong
     # message order is a real difference and must not be masked by sorting.
     with open(path, encoding="utf-8", errors="replace") as fh:
-        return [x for x in (normalise(ln) for ln in fh) if x is not None]
+        raw = [ln.rstrip("\r\n") for ln in fh
+               if not ln.startswith("Disabling XML validation for external file")]
+    # The dropped environment-dependent line above can split "X ... done." into
+    # two lines ("X ..." / " done."); re-join it to match the original TextTest.
+    merged = []
+    for ln in raw:
+        if ln.lstrip().startswith("done.") and merged and merged[-1].endswith(" ..."):
+            merged[-1] = merged[-1] + " " + ln.lstrip()
+        else:
+            merged.append(ln)
+    return [x for x in (normalise(ln) for ln in merged) if x is not None]
 
 
 def compare(ref, log):

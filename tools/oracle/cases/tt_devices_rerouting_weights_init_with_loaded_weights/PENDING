@@ -1,1 +1,1 @@
-Rerouting with pre-loaded weights is not yet faithful: the vehicle takes a different route (arrival 308.00 vs 196.00). Re-enable when loaded-weight routing matches the C++.
+Loaded-weight routing still diverges (arrival 308 vs official 196): the port appears to ignore the pre-loaded blocked travel time for edge 'middle' and routes through it. Source review of _initEdgeWeights/getTravelTime/SAXWeightsHandler/ValueTimeLine found no mismatch; needs a binary route trace to isolate. Re-enable when the loaded-weight initialization is fixed.

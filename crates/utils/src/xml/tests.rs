@@ -166,3 +166,16 @@ fn register_child() {
     assert_eq!(child.borrow().0.log, vec!["<calibrator", "/calibrator"]);
     assert_eq!(p2.log, vec!["/calibrator"]);
 }
+
+#[test]
+fn missing_equals_reports_xerces_message() {
+    // C++ Xerces reports "equal sign expected" at line/column 5/27 for this
+    // broken state file (tests/complex/traci/simulation/loadState/errors/input_state.xml,
+    // MSStateHandler.cpp myStartElement). The token after attribute name "state"
+    // starts at column 27 on physical line 4; TextTest reports line 5.
+    let mut h = Recorder::new();
+    let xml = "<?xml version=\"1.0\"?>\n\n<snapshot>\n    <intentionally broken state file>\n</snapshot>\n";
+    let err = SUMOSAXReader::new("never").parse_string(&mut h, xml).unwrap_err().to_string();
+    assert!(err.starts_with("equal sign expected\n"), "{err}");
+    assert!(err.contains(" At line/column 5/27."), "{err}");
+}

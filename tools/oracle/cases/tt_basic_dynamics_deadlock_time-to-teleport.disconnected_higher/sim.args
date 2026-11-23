@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --ignore-route-errors --time-to-teleport.disconnected 1000 -a tools/oracle/cases/tt_basic_dynamics_deadlock_time-to-teleport.disconnected_higher/input_additional.add.xml

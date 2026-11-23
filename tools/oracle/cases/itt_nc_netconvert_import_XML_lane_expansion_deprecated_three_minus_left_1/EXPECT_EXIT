@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: netconvert/import/XML/lane_expansion/deprecated/three_minus_left_1/{errors,output}.netconvert

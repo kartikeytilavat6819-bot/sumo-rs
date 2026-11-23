@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: netconvert/import/XML/alter_tls_program/state_too_short/{errors,output}.netconvert
