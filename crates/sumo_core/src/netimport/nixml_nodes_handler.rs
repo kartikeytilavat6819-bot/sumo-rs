@@ -726,8 +726,15 @@ impl SaxHandler for NIXMLNodesHandler {
         &mut self.base
     }
     fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
-        NIXMLNodesHandler::my_start_element(self, element, attrs);
-        Ok(())
+        // C++ throws ProcessError from the NBNode constructor/reinit inside the handler; XMLSubSys::runParser
+        // (XMLSubSys.cpp:178) catches it, reports it and stops parsing. Mapped to Err for run_parser here.
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| NIXMLNodesHandler::my_start_element(self, element, attrs))) {
+            Ok(()) => Ok(()),
+            Err(payload) => match payload.downcast::<ProcessError>() {
+                Ok(e) => Err(*e),
+                Err(other) => std::panic::resume_unwind(other),
+            },
+        }
     }
     fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
         NIXMLNodesHandler::my_end_element(self, element);
