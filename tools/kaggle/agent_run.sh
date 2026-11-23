@@ -13,8 +13,8 @@ for c in tt_output_route_probe_devnull_output tt_output_route_probe_null_output 
   d="tools/oracle/cases/$c"
   ARGS=$(cat "$d/sim.args")
   echo "===== $c"
-  (cd "$d" && timeout 120 "$OUR" -n ref_simple.net.xml -r routes.rou $ARGS >"$OUT/$c.ours.out" 2>"$OUT/$c.ours.err"; echo "ours rc=$?")
-  (cd "$d" && timeout 120 "$OFF" -n ref_simple.net.xml -r routes.rou $ARGS >"$OUT/$c.off.out" 2>"$OUT/$c.off.err"; echo "official rc=$?")
+  timeout 120 "$OUR" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" --no-step-log true $ARGS >"$OUT/$c.ours.out" 2>"$OUT/$c.ours.err"; echo "ours rc=$?"
+  timeout 120 "$OFF" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" --no-step-log true $ARGS >"$OUT/$c.off.out" 2>"$OUT/$c.off.err"; echo "official rc=$?"
   echo "--- ours stderr"; head -c 300 "$OUT/$c.ours.err"; echo
   echo "--- official stderr"; head -c 300 "$OUT/$c.off.err"; echo
 done
