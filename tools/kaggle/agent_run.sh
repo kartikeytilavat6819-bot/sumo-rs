@@ -43,13 +43,15 @@ import sys
 p = sys.argv[1]
 src = open(p, encoding="utf-8").read()
 marker = 'traci.vehicle.insertStop(vehID, 1, "busStop_B2C2"'
-probe = ('print("FINDROUTE", traci.simulation.findRoute("A1B1", "B2C2", vType=traci.vehicle.getTypeID(vehID)).edges, '
-         'traci.vehicle.getRoute(vehID))\n')
+probe = ('try:\n'
+         '    print("FINDROUTE", traci.simulation.findRoute("A1B1", "B2C2", vType=traci.vehicle.getTypeID(vehID)).edges)\n'
+         'except Exception as e:\n'
+         '    print("FINDROUTE-ERR", type(e).__name__, e)\n')
 i = src.find(marker)
 line_start = src.rfind("\n", 0, i) + 1
 open(p, "w", encoding="utf-8").write(src[:line_start] + probe + src[line_start:])
 PY
 for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
-  (cd "$IS_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -m2 "FINDROUTE") | sed "s/^/$side: /"
+  (cd "$IS_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -m2 "^FINDROUTE") | sed "s/^/$side: /"
 done
