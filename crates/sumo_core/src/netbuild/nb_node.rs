@@ -107,9 +107,7 @@ fn nbnode_validate_new(id: &str, position: &Position) {
         std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
     }
     if position.is_nan() {
-        // C++ throws ProcessError (caught by the XML loader, which writes the error and
-        // keeps going); a Rust panic would be scored as PANIC by the harness.
-        utils::common::msg_handler::write_error(&format!("Invalid position '{}' for node '{}'", position, id));
+        std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", position, id)));
     }
 }
 
@@ -866,7 +864,7 @@ impl NBNode {
     pub fn reinit(&mut self, position: &Position, type_: SumoXMLNodeType, updateEdgeGeometries: bool) {
         self.myPosition = *position;
         if self.myPosition.is_nan() {
-            utils::common::msg_handler::write_error(&format!("Invalid position '{}' for node '{}'", self.myPosition, self.get_id()));
+            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", self.myPosition, self.get_id())));
         }
         // patch type
         self.myType = type_;
@@ -8932,13 +8930,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn nan_position_reports_error_without_panicking() {
-        // v1_28_0 NBNode.cpp:324 throws ProcessError("Invalid position ...") for a NaN
-        // position; XMLSubSys::runParser catches it and writes the error. Our port writes
-        // the error directly so the harness scores a normal error exit, not a Rust panic.
-        // Before the fix this helper panicked. Call the helper directly: NBNode::new reads
-        // process-global options, which are uninitialised in a unit test.
-        nbnode_validate_new("E", &Position::new(f64::NAN, 0.));
+    fn nan_position_throws_process_error() {
+        // v1_28_0 NBNode.cpp:324 throws ProcessError("Invalid position ...") for a NaN position.
+        // The NIXMLNodesHandler turns the throw into a parse failure (XMLSubSys.cpp:178-183).
+        // Call the helper directly: NBNode::new reads process-global options.
+        let payload = std::panic::catch_unwind(|| nbnode_validate_new("E", &Position::new(f64::NAN, 0.))).unwrap_err();
+        let e = payload.downcast::<utils::common::util_exceptions::ProcessError>().expect("ProcessError payload");
+        assert!(e.to_string().starts_with("Invalid position '"), "{e}");
+        assert!(e.to_string().ends_with("for node 'E'"), "{e}");
     }
 }
 

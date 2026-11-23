@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 800 -a tools/oracle/cases/tt_extended_rerouter_closingReroute_soft_alt_sign_vehicle_closedEnroute/input_additional.add.xml
