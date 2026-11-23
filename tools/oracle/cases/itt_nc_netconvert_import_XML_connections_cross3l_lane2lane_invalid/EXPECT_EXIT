@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: netconvert/import/XML/connections/cross3l_lane2lane_invalid/{errors,output}.netconvert

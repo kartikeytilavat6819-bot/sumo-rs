@@ -28,6 +28,12 @@ PRISTINE = os.environ.get("SUMO_PRISTINE_BIN", "/tmp/sumo_pkg/sumo/bin")
 OFFICIAL = PRISTINE + "/sumo"
 
 SKIP = re.compile(r"sumo-gui|traci\.gui|libsumo|libtraci|matplotlib|numpy|scipy|pandas|webservice|GUISIM_BINARY", re.I)
+
+# Tests parked because the official sumo itself cannot run them.
+PARKED = {
+    # official sumo 1.28.0 segfaults (exit 139) in moveToXY; not imitated
+    "vehicle/moveToXY/no_permitted_route_lane",
+}
 TEXT_EXT = {".xml", ".txt", ".csv", ".log", ".sumocfg", ".py", ".rou", ".net", ".add", ".cfg"}
 
 
@@ -132,7 +138,9 @@ def main():
     if not os.path.exists(nc):
         nc = os.environ.get("CARGO_TARGET_DIR", "/tmp/target") + "/debug/netconvert"
     tests = sorted(p.parent for p in BUNDLE.rglob("runner.py"))
-    tests = [t for t in tests if not SKIP.search((t / "runner.py").read_text(encoding="utf-8", errors="replace"))]
+    tests = [t for t in tests
+             if t.relative_to(BUNDLE).as_posix() not in PARKED
+             and not SKIP.search((t / "runner.py").read_text(encoding="utf-8", errors="replace"))]
     if FILTER:
         tests = [t for t in tests if FILTER in str(t.relative_to(BUNDLE))]
     if LIMIT:
