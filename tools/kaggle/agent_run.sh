@@ -33,3 +33,23 @@ for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
   (cd "$PROBE_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -m3 "PROBE") | sed "s/^/$side: /"
 done
+
+# insertStop: the router's own answer for the query that fails (A1B1 -> B2C2), both binaries
+IS_DIR="$OUT/insertstop_probe"
+rm -rf "$IS_DIR"; mkdir -p "$IS_DIR"
+cp -r tools/oracle/complex_bundle/vehicle/insertStop/second_unreachable_ignore_rerouter/. "$IS_DIR/"
+python3 - "$IS_DIR/runner.py" <<'PY'
+import sys
+p = sys.argv[1]
+src = open(p, encoding="utf-8").read()
+marker = 'traci.vehicle.insertStop(vehID, 1, "busStop_B2C2"'
+probe = ('print("FINDROUTE", traci.simulation.findRoute("A1B1", "B2C2", vType=traci.vehicle.getTypeID(vehID)).edges, '
+         'traci.vehicle.getRoute(vehID))\n')
+i = src.find(marker)
+line_start = src.rfind("\n", 0, i) + 1
+open(p, "w", encoding="utf-8").write(src[:line_start] + probe + src[line_start:])
+PY
+for side in official ours; do
+  if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
+  (cd "$IS_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -m2 "FINDROUTE") | sed "s/^/$side: /"
+done
