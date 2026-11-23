@@ -10042,9 +10042,6 @@ impl MSVehicle {
                         egoET = self.myJunctionConflictEntryTime;
                     }
                 }
-                if self.get_id() == "ES1" {
-                    eprintln!("OC102J t={} foe={} egoET={} foeET={} gap={:.3} egoConf={} foeConf={}", MSNet::get_instance().get_current_time_step(), veh.get_id(), egoET, foeET, gap, self.myJunctionConflictEntryTime, veh.myJunctionConflictEntryTime);
-                }
                 if egoET == foeET {
                     // try to use speed as tie braker
                     if self.get_speed() == veh.get_speed() {
@@ -10901,9 +10898,6 @@ impl MSVehicle {
                 (dpi.myLink, dpi.mySetRequest, dpi.myVLinkPass, dpi.myVLinkWait, dpi.myDistance, dpi.myArrivalTime, dpi.myArrivalSpeed, dpi.get_leave_speed())
             };
 
-            if self.get_id() == "ES1" && MSNet::get_instance().get_current_time_step() >= 94000 && MSNet::get_instance().get_current_time_step() <= 100000 {
-                eprintln!("OC102I t={} i={} lane={} linkNull={} setReq={} red={} dist={:.3} vPass={:.3} vWait={:.3}", MSNet::get_instance().get_current_time_step(), i, self.myLane.get_id(), link.is_null(), dSetRequest, if link.is_null() { false } else { link.have_red() }, dDistance, dVLinkPass, dVLinkWait);
-            }
             // the vehicle must change the lane on one of the next lanes (XXX: refs to code further below???, Leo)
             if !link.is_null() && dSetRequest {
                 let ls = link.get_state();
@@ -15359,9 +15353,6 @@ impl MSVehicle {
     pub fn check_link_leader(&self, link: Ptr<MSLink>, lane: Ptr<MSLane>, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64, vLinkWait: &mut f64, setRequest: &mut bool, isShadowLink: bool) {
         let me: Ptr<MSVehicle> = Ptr::new(self);
         let linkLeaders = link.get_leader_info(me, seen, Ptr::null(), isShadowLink);
-        if self.get_id() == "ES1" && MSNet::get_instance().get_current_time_step() >= 94000 && MSNet::get_instance().get_current_time_step() <= 100000 {
-            eprintln!("OC102L t={} seen={:.3} nLeaders={} link={}", MSNet::get_instance().get_current_time_step(), seen, linkLeaders.len(), link.get_via_lane_or_lane().get_id());
-        }
         for it in linkLeaders.iter() {
             // the vehicle to enter the junction first has priority
             let leader: Ptr<MSVehicle> = it.vehAndGap.0;
