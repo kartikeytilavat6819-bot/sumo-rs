@@ -15388,7 +15388,11 @@ impl MSVehicle {
                     // leader is neither on lane nor conflictLane (the conflict is only established geometrically)
                     self.adapt_to_leaders(&linkLeadersAhead, latOffset, seen, lastLink, leader.get_lane(), v, vLinkPass);
                 } else {
+                    let vBefore = *v;
                     self.adapt_to_junction_leader(it.vehAndGap, seen, lastLink, lane, v, vLinkPass, it.distToCrossing);
+                    if self.get_id() == "ES1" {
+                        eprintln!("OC102A t={} leader={} gap={:.3} seen={:.3} vBefore={:.3} vAfter={:.3} vPass={:.3}", MSNet::get_instance().get_current_time_step(), it.vehAndGap.0.get_id(), it.vehAndGap.1, seen, vBefore, *v, *vLinkPass);
+                    }
                 }
                 if !lastLink.is_null() {
                     // we are not yet on the junction with this linkLeader.
