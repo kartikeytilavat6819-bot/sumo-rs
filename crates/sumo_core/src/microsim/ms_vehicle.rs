@@ -14892,6 +14892,9 @@ impl MSVehicle {
                     vsafeLeader = max2(vsafeLeader, min2(v2, vStop));
                 }
             }
+            if self.get_id() == "ES1" {
+                eprintln!("OC102D t={} leader={} gap={:.3} distToCrossing={:.3} vsafeLeader={:.3} v={:.3} seen={:.3}", MSNet::get_instance().get_current_time_step(), leaderInfo.0.get_id(), leaderInfo.1, distToCrossing, vsafeLeader, *v, seen);
+            }
             if !lastLink.is_null() {
                 lastLink.m().adapt_leave_speed(vsafeLeader);
             }
