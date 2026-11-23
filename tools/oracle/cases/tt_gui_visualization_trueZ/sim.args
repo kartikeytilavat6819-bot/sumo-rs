@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -g tools/oracle/cases/tt_gui_visualization_trueZ/settings.xml --delay 10

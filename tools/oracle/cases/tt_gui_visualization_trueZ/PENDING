@@ -1,0 +1,1 @@
+GUI-only test: sim.args contains --delay 10 and --gui-settings-file, which headless sumo does not accept. Imported for provenance but not runnable in this harness.
