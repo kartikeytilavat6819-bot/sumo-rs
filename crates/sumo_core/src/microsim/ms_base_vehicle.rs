@@ -6133,14 +6133,11 @@ impl MSBaseVehicle {
             let alternatives: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().get_stopping_place_alternatives(&nameTag.0, nameTag.1).clone();
             for alt in alternatives {
                 let altLane = alt.get_lane();
-                let altEdge = Ptr::new(altLane.get_edge());
-                let same = altEdge == Ptr::new(self.myStops[iter].lane.get_edge());
-                let allows = altLane.allows_vehicle_class(self.get_v_class());
-                let found = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge);
-                if same || !allows {
+                if Ptr::new(altLane.get_edge()) == Ptr::new(self.myStops[iter].lane.get_edge()) || !altLane.allows_vehicle_class(self.get_v_class()) {
                     continue;
                 }
-                self.myStops[iter].edge = found.unwrap_or(end);
+                let altEdge = Ptr::new(altLane.get_edge());
+                self.myStops[iter].edge = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge).unwrap_or(end);
                 if self.myStops[iter].edge != end {
                     self.myStops[iter].replace_stopping_place(alt);
                     return true;
