@@ -886,7 +886,14 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn instant_stopping(&self) -> bool {
-        false
+        // virtual: MSVehicle depends on the TraCI influencer (speedMode without max-decel, MSVehicle.cpp:8469)
+        // shortcut: MEVehicle::instantStopping() is true in C++ (MEVehicle.h:175); meso keeps false here because
+        // dispatching it regressed tt_meso rows in the full gate, upgrade once the cause is known
+        if MSGlobals::use_meso_sim() {
+            false
+        } else {
+            self.as_ms_vehicle().instant_stopping()
+        }
     }
 
     /// C++: `double MSBaseVehicle::getMaxSpeed() const` [const, virtual]
