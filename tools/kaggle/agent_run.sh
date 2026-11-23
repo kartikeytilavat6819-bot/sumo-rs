@@ -51,6 +51,10 @@ while read -r c; do
   rc_p=$(cat "$OUT/$c.pristine.rc"); rc_o=$(cat "$OUT/$c.ours.rc")
   echo "== $c rc official=$rc_p ours=$rc_o"
   echo "   official stderr: $(head -2 "$OUT/$c.pristine.err" | tr '\n' '|' | cut -c1-200)"
+  echo "   official stdout: $(head -2 "$OUT/$c.pristine.out" | tr '
+' '|' | cut -c1-200)"
+  echo "   ours stdout:     $(head -2 "$OUT/$c.ours.out" | tr '
+' '|' | cut -c1-200)"
   echo "   ours stderr:     $(head -2 "$OUT/$c.ours.err" | tr '\n' '|' | cut -c1-200)"
   if [ -f "$d/ref.errors" ]; then
     diff_out=$(first_diff "$d/ref.errors" "$OUT/$c.ours.err")
