@@ -95,6 +95,9 @@ tt_rail_siding_siding_noSignal
 tt_rail_siding_siding_noSignal2
 tt_rail_tram_bidi_conflict_insertion_tls
 tt_tls_NEMA_errors_customDetectorsMissing
+city_melbourne_guess_signals
+city_phoenix_scale_grid
+jt_unreg_5arm
 RAILLIST
 while read -r c; do
   d="tools/oracle/cases/$c"
