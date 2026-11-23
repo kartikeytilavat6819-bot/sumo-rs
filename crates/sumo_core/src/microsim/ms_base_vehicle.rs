@@ -1453,8 +1453,8 @@ impl MSBaseVehicle {
                 sink = self.myRoute.get_last_edge();
             }
         }
-        // on insertion, the new route is compared against the complete loaded route
-        let oldStart = if onInit { 0 } else if source == self.get_edge() { self.myCurrEdge } else { self.myCurrEdge + 1 };
+        // v1.28.0 release: oldEdgesRemaining always starts at the current edge (snapshot added an onInit special case)
+        let oldStart = if source == self.get_edge() { self.myCurrEdge } else { self.myCurrEdge + 1 };
         let oldEdgesRemaining: ConstMSEdgeVector = self.myRoute.get_edges().get(oldStart..).unwrap_or(&[]).to_vec();
         let mut edges: ConstMSEdgeVector = Vec::new();
         if source != sink || !sink.prohibits(Ptr::from_mut(&mut self.base)) {
@@ -1597,8 +1597,8 @@ impl MSBaseVehicle {
                     edges.clear();
                     if onInit && source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
                         edges.push(stopEdge);
-                        utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%' with departPos %.",
-                            self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id(), sourcePos));
+                        utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%'.",
+                            self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id()));
                     }
                 } else if source == stopEdge && !stops[idx].stopPar.is_null() && stops[idx].stopPar.endPos >= sourcePos {
                     // special case: no failure on dynamically computed stop position

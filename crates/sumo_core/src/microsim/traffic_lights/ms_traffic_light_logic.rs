@@ -1966,3 +1966,24 @@ impl MSTrafficLightLogic_SwitchCommand {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn green_lanes_order_by_numerical_id() {
+        // Release MSTrafficLightLogic.cpp:233 - greenLanes is std::map<const MSLane*,int,
+        // ComparatorNumericalIdLess>; Named.h:38-43 orders by getNumericalID(), not by pointer.
+        // NumIdKey is the Rust equivalent used in checkState; pin that its ordering is by the
+        // numerical id so the first unsafe lane stays the one C++ picks.
+        let high = NumIdKey::new(Ptr::null(), 10);
+        let low = NumIdKey::new(Ptr::null(), 2);
+        assert!(low < high);
+        assert!(high > low);
+        let mut map: BTreeMap<NumIdKey<MSLane>, i32> = BTreeMap::new();
+        map.insert(high, 1);
+        map.insert(low, 2);
+        assert_eq!(map.keys().next().copied(), Some(low));
+    }
+}
+
