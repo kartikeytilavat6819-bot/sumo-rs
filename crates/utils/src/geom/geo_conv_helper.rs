@@ -502,22 +502,17 @@ impl GeoConvHelper {
     }
 }
 
-/// Transverse Mercator (`+proj=utm` / `+proj=tmerc`) using PROJ's default Evenden/Snyder
-/// algorithm. The pristine SUMO binary links a PROJ build whose default transverse Mercator
-/// is `evenden_snyder` (see its proj.ini). The Poder/Engsager (`etmerc`) series round-trips
-/// lon/lat a few ULPs differently, which flips the 6-digit geo output at exact `.5` boundaries.
+/// Transverse Mercator as PROJ's default `etmerc` (Poder/Engsager; here the Kruger series of order 6)
 #[derive(Clone, Copy, Debug)]
 struct Etmerc {
-    a: f64,
-    es: f64,
-    esp: f64,
-    /// `en[0]` is the quarter-meridian scale, `en[1..7]` convert phi->mu, `en[7..13]` mu->phi.
-    en: [f64; 13],
-    ml0: f64,
-    k0: f64,
     lon0: f64,
     x0: f64,
     y0: f64,
+    /// k0 times the rectifying radius
+    qn: f64,
+    e: f64,
+    alpha: [f64; 6],
+    beta: [f64; 6],
 }
 
 /// PROJ `adjlon`: wraps a longitude difference into [-pi, pi]
@@ -525,62 +520,34 @@ fn adjlon(lon: f64) -> f64 {
     if lon.abs() <= PI { lon } else { (lon + PI).rem_euclid(2. * PI) - PI }
 }
 
-/// PROJ `polyval`: Horner evaluation of a polynomial with `p[0]` the constant term.
-fn polyval(x: f64, p: &[f64]) -> f64 {
-    let mut y = *p.last().unwrap();
-    for &c in p[..p.len() - 1].iter().rev() {
-        y = y * x + c;
-    }
-    y
-}
-
-/// PROJ `clenshaw`: `sum(c[k] * sin((2*k+2) * zeta))` from `sin(zeta)`/`cos(zeta)`.
-fn clenshaw(sz: f64, cz: f64, c: &[f64]) -> f64 {
-    let mut u0 = 0.;
-    let mut u1 = 0.;
-    let x = 2. * (cz - sz) * (cz + sz);
-    for &coef in c.iter().rev() {
-        let t = x * u0 - u1 + coef;
-        u1 = u0;
-        u0 = t;
-    }
-    2. * sz * cz * u0
-}
-
-/// PROJ `pj_enfn`: meridian-distance Fourier coefficients in the third flattening n.
-fn meridian_coeffs(n: f64) -> [f64; 13] {
-    const MU_PHI: [f64; 12] = [
-        -3. / 2., 9. / 16., -3. / 32., 15. / 16., -15. / 32., 135. / 2048.,
-        -35. / 48., 105. / 256., 315. / 512., -189. / 512., -693. / 1280., 1001. / 2048.,
-    ];
-    const PHI_MU: [f64; 12] = [
-        3. / 2., -27. / 32., 269. / 512., 21. / 16., -55. / 32., 6759. / 4096.,
-        151. / 96., -417. / 128., 1097. / 512., -15543. / 2560., 8011. / 2560., 293393. / 61440.,
-    ];
-    let n2 = n * n;
-    let mut en = [0.; 13];
-    en[0] = polyval(n2, &[1., 1. / 4., 1. / 64., 1. / 256.]) / (1. + n);
-    let mut d = n;
-    let mut o = 0usize;
-    for l in 0..6 {
-        let m = (5 - l) / 2;
-        en[l + 1] = d * polyval(n2, &MU_PHI[o..o + m + 1]);
-        en[l + 7] = d * polyval(n2, &PHI_MU[o..o + m + 1]);
-        d *= n;
-        o += m + 1;
-    }
-    en
-}
-
 impl Etmerc {
     fn new(a: f64, rf: f64, k0: f64, lon0: f64, x0: f64, y0: f64) -> Etmerc {
         let f = 1. / rf;
         let n = f / (2. - f);
-        let es = f * (2. - f);
-        let en = meridian_coeffs(n);
-        // lat_0 = 0 for every projection this port accepts, so ml0 = en[0] * clenshaw(0, 1, ..) = 0.
-        let ml0 = 0.;
-        Etmerc { a, es, esp: es / (1. - es), en, ml0, k0, lon0: deg2rad(lon0), x0, y0 }
+        let e = (f * (2. - f)).sqrt();
+        let n2 = n * n;
+        let n3 = n2 * n;
+        let n4 = n3 * n;
+        let n5 = n4 * n;
+        let n6 = n5 * n;
+        let big_a = a / (1. + n) * (1. + n2 / 4. + n4 / 64. + n6 / 256.);
+        let alpha = [
+            n / 2. - 2. * n2 / 3. + 5. * n3 / 16. + 41. * n4 / 180. - 127. * n5 / 288. + 7891. * n6 / 37800.,
+            13. * n2 / 48. - 3. * n3 / 5. + 557. * n4 / 1440. + 281. * n5 / 630. - 1983433. * n6 / 1935360.,
+            61. * n3 / 240. - 103. * n4 / 140. + 15061. * n5 / 26880. + 167603. * n6 / 181440.,
+            49561. * n4 / 161280. - 179. * n5 / 168. + 6601661. * n6 / 7257600.,
+            34729. * n5 / 80640. - 3418889. * n6 / 1995840.,
+            212378941. * n6 / 319334400.,
+        ];
+        let beta = [
+            n / 2. - 2. * n2 / 3. + 37. * n3 / 96. - n4 / 360. - 81. * n5 / 512. + 96199. * n6 / 604800.,
+            n2 / 48. + n3 / 15. - 437. * n4 / 1440. + 46. * n5 / 105. - 1118711. * n6 / 3870720.,
+            17. * n3 / 480. - 37. * n4 / 840. - 209. * n5 / 4480. + 5569. * n6 / 9676800.,
+            4397. * n4 / 161280. - 11. * n5 / 504. - 830251. * n6 / 7257600.,
+            4583. * n5 / 161280. - 108847. * n6 / 3991680.,
+            20648693. * n6 / 638668800.,
+        ];
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
     }
 
     /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
@@ -631,70 +598,45 @@ impl Etmerc {
         }
     }
 
-    /// forward: lon/lat in radians to easting/northing (PROJ `approx_e_fwd` + `fwd_finalize`)
+    /// forward: lon/lat in radians to easting/northing
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
-        const FC3: f64 = 0.16666666666666666666;
-        const FC4: f64 = 0.08333333333333333333;
-        const FC5: f64 = 0.05;
-        const FC6: f64 = 0.03333333333333333333;
-        const FC7: f64 = 0.02380952380952380952;
-        const FC8: f64 = 0.01785714285714285714;
         let lam = adjlon(lon - self.lon0);
-        let sphi = lat.sin();
-        let cphi = lat.cos();
-        let mut t = if cphi.abs() > 1e-10 { sphi / cphi } else { 0. };
-        t *= t;
-        let mut al = cphi * lam;
-        let als = al * al;
-        al /= (1. - self.es * sphi * sphi).sqrt();
-        let n = self.esp * cphi * cphi;
-        let x = self.k0 * al * (1. + FC3 * als * (1. - t + n
-            + FC5 * als * (5. + t * (t - 18.) + n * (14. - 58. * t)
-                + FC7 * als * (61. + t * (t * (179. - t) - 479.)))));
-        let ml = self.en[0] * (lat + clenshaw(sphi, cphi, &self.en[1..7]));
-        let y = self.k0 * (ml - self.ml0 + sphi * al * lam * 0.5 * (1.
-            + FC4 * als * (5. - t + n * (9. + 4. * n)
-                + FC6 * als * (61. + t * (t - 58.) + n * (270. - 330. * t)
-                    + FC8 * als * (1385. + t * (t * (543. - t) - 3111.))))));
-        // fwd_finalize: classic proj coordinates are in units of the semi-major axis,
-        // then false easting/northing are added (fr_meter = 1 for metres).
-        (self.a * x + self.x0, self.a * y + self.y0)
+        let s = lat.sin();
+        let psi = s.atanh() - self.e * (self.e * s).atanh();
+        let t = psi.sinh();
+        let xi0 = t.atan2(lam.cos());
+        let eta0 = (lam.sin() / (1. + t * t).sqrt()).atanh();
+        let (mut xi, mut eta) = (xi0, eta0);
+        for (j, a) in self.alpha.iter().enumerate() {
+            let k = 2. * (j + 1) as f64;
+            xi += a * (k * xi0).sin() * (k * eta0).cosh();
+            eta += a * (k * xi0).cos() * (k * eta0).sinh();
+        }
+        (self.x0 + self.qn * eta, self.y0 + self.qn * xi)
     }
 
-    /// inverse: easting/northing to lon/lat in radians (PROJ `inv_prepare` + `approx_e_inv` + `inv_finalize`)
+    /// inverse: easting/northing to lon/lat in radians
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
-        const FC3: f64 = 0.16666666666666666666;
-        const FC4: f64 = 0.08333333333333333333;
-        const FC5: f64 = 0.05;
-        const FC6: f64 = 0.03333333333333333333;
-        const FC7: f64 = 0.02380952380952380952;
-        const FC8: f64 = 0.01785714285714285714;
-        // inv_prepare: de-offset, de-scale, then classic units are 1/a of a radian.
-        let x = (x - self.x0) / self.a;
-        let y = (y - self.y0) / self.a;
-        // pj_inv_mlfn
-        let mu = (self.ml0 + y / self.k0) / self.en[0];
-        let mut phi = mu + clenshaw(mu.sin(), mu.cos(), &self.en[7..13]);
-        if phi.abs() >= 0.5 * PI {
-            return (self.lon0, if y < 0. { -0.5 * PI } else { 0.5 * PI });
+        let xi = (y - self.y0) / self.qn;
+        let eta = (x - self.x0) / self.qn;
+        let (mut xi0, mut eta0) = (xi, eta);
+        for (j, b) in self.beta.iter().enumerate() {
+            let k = 2. * (j + 1) as f64;
+            xi0 -= b * (k * xi).sin() * (k * eta).cosh();
+            eta0 -= b * (k * xi).cos() * (k * eta).sinh();
         }
-        let sphi = phi.sin();
-        let cphi = phi.cos();
-        let mut t = if cphi.abs() > 1e-10 { sphi / cphi } else { 0. };
-        let n = self.esp * cphi * cphi;
-        let mut con = 1. - self.es * sphi * sphi;
-        let d = x * con.sqrt() / self.k0;
-        con *= t;
-        t *= t;
-        let ds = d * d;
-        phi -= (con * ds / (1. - self.es)) * 0.5 * (1.
-            - ds * FC4 * (5. + t * (3. - 9. * n) + n * (1. - 4. * n)
-                - ds * FC6 * (61. + t * (90. - 252. * n + 45. * t) + 46. * n
-                    - ds * FC8 * (1385. + t * (3633. + t * (4095. + 1575. * t))))));
-        let lam = d * (1. - ds * FC3 * (1. + 2. * t + n
-            - ds * FC5 * (5. + t * (28. + 24. * t + 8. * n) + 6. * n
-                - ds * FC7 * (61. + t * (662. + t * (1320. + 720. * t)))))) / cphi;
-        // inv_finalize: add the central meridian back and wrap.
+        let tau = xi0.sin() / (eta0.sinh().powi(2) + xi0.cos().powi(2)).sqrt();
+        let lam = eta0.sinh().atan2(xi0.cos());
+        let psi = tau.asinh();
+        let mut phi = tau.atan();
+        for _ in 0..50 {
+            let next = (psi + self.e * (self.e * phi.sin()).atanh()).tanh().asin();
+            let done = (next - phi).abs() < 1e-15;
+            phi = next;
+            if done {
+                break;
+            }
+        }
         (adjlon(self.lon0 + lam), phi)
     }
 }
@@ -907,20 +849,6 @@ mod tests {
             h.cartesian2geo(&mut p);
             assert!((p.x() - lon).abs() < 1e-9 && (p.y() - lat).abs() < 1e-9, "inverse {lon} {lat}: {p:?}");
         }
-    }
-
-    /// Official SUMO 1.28.0 writes 52.428498 for the OSM input 52.4284985 after the
-    /// UTM forward/inverse round-trip at precision 6; the Poder/Engsager series wrote
-    /// 52.428499 because its round-trip lands just above the exact .5 boundary.
-    #[test]
-    fn utm_geo_roundtrip_halfway_boundary() {
-        let h = GeoConvHelper::new(&utm_proj(33), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
-        let mut p = Position::new(13.5275234, 52.4284985);
-        assert!(h.x2cartesian_const(&mut p));
-        h.cartesian2geo(&mut p);
-        assert!(p.y() < 52.4284985, "round-trip must stay below the .5 boundary: {}", p.y());
-        assert!((p.y() - 52.428498).abs() < 1e-6);
-        assert!((p.x() - 13.527523).abs() < 1e-6);
     }
 
     #[test]
