@@ -1,5 +1,7 @@
 # Handoff: state of the sumo-rs port (2026-11-12, end of day)
 
+> **2026-11-22:** the JuPedSim pedestrian model was deliberately dropped; see [NOT_PORTED.md](NOT_PORTED.md) for everything that is not ported and how to add it.
+
 Read this first, then `AGENTS.md` (rules for every porting agent) and `PORTING.md` (conventions,
 product goal, design notes). This file says where things stand and how to continue.
 

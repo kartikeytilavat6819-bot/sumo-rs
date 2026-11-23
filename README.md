@@ -8,6 +8,10 @@ The goal is a faithful port: same inputs, same outputs, checked against SUMO's o
 
 See [PORTING.md](PORTING.md) for what has been ported. Run `python tools/progress.py` for a progress bar (C++ lines ported, per module).
 
+## Not ported
+
+A few parts are deliberately not ported (the JuPedSim pedestrian model, XSD schema validation) and some official cases cannot be reproduced because the official binary itself crashes on them. See [NOT_PORTED.md](NOT_PORTED.md) for the list, the affected test cases and how to add them later.
+
 ## Build and test
 
 ```sh
