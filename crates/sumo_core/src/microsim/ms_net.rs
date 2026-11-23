@@ -3096,7 +3096,13 @@ impl MSNet {
     pub fn inform_transportable_state_listener(&mut self, transportable: Ptr<MSTransportable>, to: MSNet_TransportableState, info: &str) {
         // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
         for listener in self.myTransportableStateListeners.iter() {
-            listener.m().transportable_state_changed(transportable, to, info);
+            // MSNet_TransportableStateListener has no vtable: the overrides of the two C++ subclasses (libsumo Helper,
+            // TraCIServer) are reached by identity, as for vehicle state listeners
+            if crate::libsumo::helper::Helper::is_transportable_state_listener(listener.as_raw()) {
+                crate::libsumo::helper::Helper::transportable_state_changed(transportable, to, info);
+            } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base3 as *mut MSNet_TransportableStateListener {
+                TraCIServer::get_instance().m().transportable_state_changed(transportable, to, info);
+            }
         }
     }
 
