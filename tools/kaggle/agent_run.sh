@@ -13,6 +13,12 @@ for c in OSM_buildings_from_relation OSM_inner_shape OSM_water_incomplete XML_la
   "$SUMO_PRISTINE_BIN/polyconvert" ${a//@DIR@/$d/ref} >$d/ref.log 2>&1; rr=$?
   "$BIN/polyconvert" ${a//@DIR@/$d/cand} >$d/cand.log 2>&1; cr=$?
   echo "-- $c rc ref=$rr cand=$cr $(grep -m1 -A1 'panicked at' $d/cand.log | tr '\n' ' ' | cut -c1-200)"
+  # cartesian (UTM) pass: isolates the forward projection from the inverse (geo) path
+  mkdir -p $d/utm_ref $d/utm_cand
+  "$SUMO_PRISTINE_BIN/polyconvert" ${a//@DIR@/$d/utm_ref} --proj.plain-geo false >/dev/null 2>&1
+  "$BIN/polyconvert" ${a//@DIR@/$d/utm_cand} --proj.plain-geo false >/dev/null 2>&1
+  echo "-- $c UTM (cartesian) first diff:"
+  diff <(grep -v "generated on" $d/utm_ref/routes.rou.xml 2>/dev/null | sed "s#/utm_ref/#/SIDE/#") <(grep -v "generated on" $d/utm_cand/routes.rou.xml 2>/dev/null | sed "s#/utm_cand/#/SIDE/#") | head -4 | cut -c1-200
   diff <(grep -v "generated on" $d/ref/routes.rou.xml 2>/dev/null | sed "s#/ref/#/SIDE/#") <(grep -v "generated on" $d/cand/routes.rou.xml 2>/dev/null | sed "s#/cand/#/SIDE/#") | head -8 | cut -c1-200
 done
 for t in duarouter jtrrouter; do
