@@ -1,1 +1,2 @@
+DROPPED: JuPedSim pedestrian model not ported (owner decision 2026-11-22); see NOT_PORTED.md section 1.
 official sumo segfaults (exit 139) on this JuPedSim case; no usable oracle

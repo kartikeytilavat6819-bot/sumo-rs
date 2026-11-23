@@ -89,6 +89,11 @@ run_row() {
   local d=$OUT/$v
   rm -rf "$d"; mkdir -p "$d/cpp_out/plain" "$d/rust_out/plain"
   local cdir="$ROOT/tools/oracle/cases/$v"
+  if [ -f "$cdir/SKIP_NETOPTS" ]; then
+    printf '%s\tSKIP\t%s\n' "$v" "$(head -1 "$cdir/SKIP_NETOPTS" | cut -c1-80)" >> "$OUT/summary.tsv"
+    echo "$v SKIP $(head -1 "$cdir/SKIP_NETOPTS" | cut -c1-80)"
+    return
+  fi
   local expect_err=0
   # Only cases imported with official TextTest provenance (CASE.md) have ref.errors/ref.output
   # split per stream. Legacy error cases' text was captured with a different -o path and is
