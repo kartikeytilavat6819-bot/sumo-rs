@@ -58,11 +58,12 @@ for name in $RAIL; do
     if [ $side = ref ]; then BIN="$SUMO_PRISTINE_BIN/sumo"; else BIN="$CARGO_TARGET_DIR/debug/sumo"; fi
     o="$OUT/rail/$name/$side"
     mkdir -p "$o"
-    (cd "$d" && "$BIN" $args --net-file net.net.xml --route-files input_routes.rou.xml --tripinfo-output "$o/trip.xml" --fcd-output "$o/fcd.xml" --no-step-log > "$o/stdout" 2> "$o/stderr"; echo $? > "$o/exit")
+    (cd "$d" && "$BIN" $args --net-file net.net.xml --route-files input_routes.rou.xml --tripinfo-output "$o/trip.xml" --fcd-output "$o/fcd.xml" --stop-output "$o/stop.xml" --no-step-log > "$o/stdout" 2> "$o/stderr"; echo $? > "$o/exit")
   done
   echo "== $name exit ref=$(cat "$OUT/rail/$name/ref/exit") ours=$(cat "$OUT/rail/$name/ours/exit")"
   diff "$OUT/rail/$name/ref/stderr" "$OUT/rail/$name/ours/stderr" | head -4 | cut -c1-200
   diff "$OUT/rail/$name/ref/trip.xml" "$OUT/rail/$name/ours/trip.xml" | head -6 | cut -c1-200
+  for side in ref ours; do echo "-- $side stopinfos:"; head -c 600 "$OUT/rail/$name/$side/stop.xml" 2>/dev/null; echo; done
   for veh in WE1 v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -6 | cut -c1-200; done
 done
 echo "AGENT RUN DONE"
