@@ -15356,6 +15356,9 @@ impl MSVehicle {
     pub fn check_link_leader(&self, link: Ptr<MSLink>, lane: Ptr<MSLane>, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64, vLinkWait: &mut f64, setRequest: &mut bool, isShadowLink: bool) {
         let me: Ptr<MSVehicle> = Ptr::new(self);
         let linkLeaders = link.get_leader_info(me, seen, Ptr::null(), isShadowLink);
+        if self.get_id() == "ES1" && MSNet::get_instance().get_current_time_step() >= 94000 && MSNet::get_instance().get_current_time_step() <= 100000 {
+            eprintln!("OC102L t={} seen={:.3} nLeaders={} link={}", MSNet::get_instance().get_current_time_step(), seen, linkLeaders.len(), link.get_via_lane_or_lane().get_id());
+        }
         for it in linkLeaders.iter() {
             // the vehicle to enter the junction first has priority
             let leader: Ptr<MSVehicle> = it.vehAndGap.0;
