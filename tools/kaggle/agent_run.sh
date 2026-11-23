@@ -93,6 +93,23 @@ bt_variant "default (repeat)" X=1
 bt_variant "tcache_count=0" GLIBC_TUNABLES=glibc.malloc.tcache_count=0
 bt_variant "top_pad=1MB" MALLOC_TOP_PAD_=1048576
 
+echo "--- official elechybrid_overhead: output checksums under repeats/allocator variants"
+c=elechybrid_overhead; src="$ROOT/tools/oracle/cases/$c"; args=$(cat "$src/sim.args"); n=0
+eh_variant() {
+  label="$1"; shift
+  n=$((n+1)); w="$OUT/ehvariant$n"; mkdir -p "$w"; cp -r "$src/." "$w/"
+  a=$(printf '%s' "$args" | sed "s#tools/oracle/cases/$c#$w#g")
+  [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; a="$a $opt $w/out_$suf.xml"; done < "$src/extra_outputs.txt"
+  # shellcheck disable=SC2086
+  (cd "$w" && env "$@" timeout 300 "$REF" $a --net-file "$w/ref_simple.net.xml" --route-files "$w/routes.rou" >/dev/null 2>&1)
+  printf '%-24s' "$label"
+  for f in elechybrid overheadwires substations; do printf '%s=%s ' "$f" "$(grep -v 'generated on\|value=' "$w/out_$f.xml" 2>/dev/null | cksum | cut -d' ' -f1)"; done; echo
+}
+eh_variant "default" X=1
+eh_variant "default (repeat)" X=1
+eh_variant "tcache_count=0" GLIBC_TUNABLES=glibc.malloc.tcache_count=0
+eh_variant "top_pad=1MB" MALLOC_TOP_PAD_=1048576
+
 # Measure the official binary's vehicle-sized malloc/free sequence (address reuse) on md_stop.
 echo "--- official md_stop: vehicle-sized malloc/free address-reuse sequence"
 mkdir -p "$OUT/shim"
