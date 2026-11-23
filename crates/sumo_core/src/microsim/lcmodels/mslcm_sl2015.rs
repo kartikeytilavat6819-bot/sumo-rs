@@ -6478,6 +6478,9 @@ impl MSLCM_SL2015 {
                 let keep = Self::overlap(rightVehSide, leftVehSide, foeRight, foeLeft) && !self.outside_edge()
                     // account for imprecise driving by some models
                     && (vehDist.1 >= vehDist.0.get_vehicle_type().get_min_gap() * (1. - vehDist.0.get_car_follow_model().get_collision_min_gap_factor())
+                        // snapshot-only: imprecise driving with a negative leader distance on normal lanes (not in release 1.28.0)
+                        || (vehDist.1 < 0. && self.myVehicle.get_lane().is_normal() && vehDist.0.get_lane().is_normal()
+                            && vehDist.1 >= -self.myVehicle.get_vehicle_type().get_min_gap() * (1. - self.myVehicle.get_car_follow_model().get_collision_min_gap_factor()))
                         // avoid deadlock due to #3729
                         || (!leaders
                             && self.myVehicle.get_position_on_lane() >= self.myVehicle.get_vehicle_type().get_length()
