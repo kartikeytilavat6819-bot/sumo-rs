@@ -779,7 +779,11 @@ impl MSRoutingEngine {
         }
         // myCachedRoutes.clear(): the route cache is never populated in this port
         Self::cleanup_cch();
-        // shortcut: the provider and its routers are leaked, not deleted (C++ delete), upgrade when the routers have a common owner
+        // C++ `delete myRouterProvider` destroys the routers, whose destructors
+        // emit the query statistics. Call drop_() before discarding the provider.
+        if let Some(provider) = ROUTER_PROVIDER.with(|p| p.get()) {
+            provider.m().drop_();
+        }
         ROUTER_PROVIDER.with(|p| p.set(None));
     }
 

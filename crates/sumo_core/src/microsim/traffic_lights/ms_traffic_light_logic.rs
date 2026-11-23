@@ -535,7 +535,7 @@ impl MSTrafficLightLogic {
 
     pub fn init_base(&mut self, nb: &mut NLDetectorBuilder) {
         let phases: MSTrafficLightLogic_Phases = self.get_phases().clone();
-        if !phases.is_empty() && (utils::options::options_cont::get_bool("mesosim") || utils::options::options_cont::get_float("meso-tls-penalty") > 0.0) {
+        if !phases.is_empty() && (crate::microsim::ms_globals::use_meso_sim() || crate::microsim::ms_globals::tls_penalty() > 0.0) {
             // MSGlobals::gUseMesoSim, MSGlobals::gTLSPenalty
             self.init_meso_tls_penalties();
         }
@@ -875,8 +875,8 @@ impl MSTrafficLightLogic {
                 penalty[j] += 0.5 * (red * red + red);
             }
         }
-        // MSGlobals::gTLSPenalty
-        let mut tlsPenalty: f64 = utils::options::options_cont::get_float("meso-tls-penalty");
+        // MSGlobals::gTLSPenalty (set from --weights.tls-penalty in MSFrame::setMSGlobals)
+        let mut tlsPenalty: f64 = crate::microsim::ms_globals::tls_penalty();
         let durationSeconds = steps2time(duration);
         let mut controlledJunctions: BTreeSet<Ptr<MSJunction>> = BTreeSet::new();
         let mut shortEdges: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
