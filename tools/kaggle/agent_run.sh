@@ -140,38 +140,6 @@ if not shown:
     print("no difference in the compared attributes")
 PYEOF3
 
-echo "--- ours elechybrid_overhead: solver calls whose solution contains the divergent voltage (-1.2135)"
-c=elechybrid_overhead; src="$ROOT/tools/oracle/cases/$c"; w="$OUT/dumprun"; mkdir -p "$w"; cp -r "$src/." "$w/"
-a=$(sed "s#tools/oracle/cases/$c#$w#g" "$src/sim.args")
-[ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; a="$a $opt $w/out_$suf.xml"; done < "$src/extra_outputs.txt"
-# shellcheck disable=SC2086
-(cd "$w" && OC95_DUMP=1 timeout 300 "$OURS" $a --net-file "$w/ref_simple.net.xml" --route-files "$w/routes.rou" >/dev/null 2>"$w/dump.log")
-python3 - "$w/dump.log" <<'PYEOF4'
-import re, sys, collections
-calls = []
-for line in open(sys.argv[1], errors="replace"):
-    if not line.startswith("OC95Q "):
-        continue
-    m = re.match(r"OC95Q (\d+) \[([^\]]*)\] \[([^\]]*)\] \[([^\]]*)\]", line)
-    if not m:
-        continue
-    n = int(m.group(1))
-    A = [float(v) for v in m.group(2).split(",")]
-    b = [float(v) for v in m.group(3).split(",")]
-    x = [float(v) for v in m.group(4).split(",")]
-    calls.append((n, A, b, x))
-print("solver calls:", len(calls), "sizes:", dict(collections.Counter(c[0] for c in calls)))
-for target in (-1.2135, -3.0026):
-    hits = [i for i, (n, A, b, x) in enumerate(calls) if any(abs(v - target) <= 5.1e-5 for v in x)]
-    print("target", target, "matching call indexes (first 12):", hits[:12])
-    for i in hits[:2]:
-        n, A, b, x = calls[i]
-        print("CALL", i, "n =", n)
-        print("A =", A)
-        print("b =", b)
-        print("x =", x)
-PYEOF4
-
 # Measure the official binary's vehicle-sized malloc/free sequence (address reuse) on md_stop.
 echo "--- official md_stop: vehicle-sized malloc/free address-reuse sequence"
 mkdir -p "$OUT/shim"
