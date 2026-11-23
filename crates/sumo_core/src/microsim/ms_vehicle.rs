@@ -15884,7 +15884,8 @@ impl MSVehicle {
             // distAccel + distDecel < d
             let inner = 2. * d * (b + a) + (vs * vs) - (c * c);
             let t1 = b * ((a * inner) - (b * (c * c)));
-            let disc = (2. * c * b).powf(2.0) + (4. * t1 + (a * vs).powf(2.0));
+            // C++ (MSVehicle.cpp estimateTimeToNextStop): pow(2 * c * b, 2) + (4 * ((b * (...)) + pow((a * vs), 2))); the factor 4 covers both terms
+            let disc = (2. * c * b).powf(2.0) + (4. * (t1 + (a * vs).powf(2.0)));
             let maxVD = max2(c, ((max2(0.0, disc).sqrt() * 0.5) + (c * b)) / (b + a));
             it = self.myCurrEdge;
             let mut v0 = c;
