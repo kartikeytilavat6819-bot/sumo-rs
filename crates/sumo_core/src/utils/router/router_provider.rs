@@ -61,7 +61,12 @@ impl<E, L, N, V> RouterProvider<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // shortcut: the C++ deletes of the four routers are not done (no virtual destructor, and the owner of each router is not known here), upgrade when the routers have a common owner
+        // C++ destructor deletes the four routers; the vehicle router's base
+        // SUMOAbstractRouter::drop_() emits the query statistics. The other
+        // routers have no queries here and only free internal memory in C++.
+        if !self.myVehRouter.is_null() {
+            self.myVehRouter.m().drop_();
+        }
     }
 
     /// C++: `RouterProvider<E, L, N, V> * RouterProvider::clone()`

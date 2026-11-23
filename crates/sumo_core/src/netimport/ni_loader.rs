@@ -166,6 +166,9 @@ impl NILoader {
         }
         ok &= self.load_xml(oc);
         // check the loaded structures
+        // C++ throws ProcessError here (NILoader.cpp:1587/1590); main reports it
+        // and exits non-zero. With --ignore-errors the wasInformed check in
+        // netconvert's run() is cleared, so only a thrown ProcessError aborts.
         if self.myNetBuilder.m().get_node_cont().size() == 0 {
             std::panic::panic_any(ProcessError::new("No nodes loaded."));
         }
@@ -173,6 +176,9 @@ impl NILoader {
             std::panic::panic_any(ProcessError::new("No edges loaded."));
         }
         if !self.myNetBuilder.m().get_edge_cont().check_consistency(self.myNetBuilder.m().get_node_cont()) {
+            // C++ throws ProcessError() here; netconvert's catch deliberately suppresses the
+            // "Process Error" message and only prints "Quitting (on error)." with exit code 1.
+            // Route it through the port's throw mechanism so main's filter handles it.
             std::panic::panic_any(ProcessError::default_msg());
         }
         if !ok && !throw(oc.get_bool("ignore-errors")) {

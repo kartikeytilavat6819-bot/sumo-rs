@@ -231,3 +231,17 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // RouteCostCalculator.h:69-77 — the two deterministic keepRoute branches.
+    #[test]
+    fn keep_route_boundaries() {
+        let c = RouteCostCalculator::<(), (), ()>::with_params(5, false, false, 1.0);
+        assert!(c.keep_route());
+        let c = RouteCostCalculator::<(), (), ()>::with_params(5, false, false, 0.0);
+        assert!(!c.keep_route());
+    }
+}
+

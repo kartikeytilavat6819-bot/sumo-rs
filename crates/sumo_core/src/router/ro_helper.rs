@@ -231,3 +231,17 @@ pub fn recheck_for_loops(edges: &mut ConstROEdgeVector, mandatory: &ConstROEdgeV
     // removal of node loops (node occurs twice) is not done because these may occur legitimately
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_mandatory_detects_edge_in_range() {
+        // C++ ROHelper::noMandatory: false iff any mandatory edge occurs in [start, end).
+        let e: Ptr<ROEdge> = Ptr::null();
+        let mandatory: ConstROEdgeVector = vec![e];
+        assert!(no_mandatory(&mandatory, &[]));
+        assert!(!no_mandatory(&mandatory, &[e]));
+    }
+}
+

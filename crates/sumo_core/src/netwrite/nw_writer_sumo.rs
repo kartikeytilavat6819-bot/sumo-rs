@@ -254,31 +254,33 @@ impl NWWriter_SUMO {
             attrs.insert(SUMO_ATTR_LIMIT_TURN_SPEED, to_str_f64(oc.get_float("junctions.limit-turn-speed").unwrap()));
         }
         if !oc.is_default("check-lane-foes.all") {
-            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ALL, oc.get_bool("check-lane-foes.all").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ALL, cxx_bool_str(oc.get_bool("check-lane-foes.all").unwrap()).to_string());
         }
         if !oc.is_default("check-lane-foes.roundabout") {
-            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ROUNDABOUT, oc.get_bool("check-lane-foes.roundabout").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_CHECKLANEFOES_ROUNDABOUT, cxx_bool_str(oc.get_bool("check-lane-foes.roundabout").unwrap()).to_string());
         }
         if !oc.is_default("tls.ignore-internal-junction-jam") {
-            attrs.insert(SUMO_ATTR_TLS_IGNORE_INTERNAL_JUNCTION_JAM, oc.get_bool("tls.ignore-internal-junction-jam").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_TLS_IGNORE_INTERNAL_JUNCTION_JAM, cxx_bool_str(oc.get_bool("tls.ignore-internal-junction-jam").unwrap()).to_string());
         }
         if defaultSpread != LaneSpreadFunction::RIGHT {
             attrs.insert(SUMO_ATTR_SPREADTYPE, oc.get_string("default.spreadtype").unwrap());
         }
         if oc.exists("geometry.avoid-overlap") && !oc.get_bool("geometry.avoid-overlap").unwrap() {
-            attrs.insert(SUMO_ATTR_AVOID_OVERLAP, oc.get_bool("geometry.avoid-overlap").unwrap().to_string());
+            // C++ toString(bool) uses ostringstream without boolalpha -> "0"/"1"
+            let v = oc.get_bool("geometry.avoid-overlap").unwrap();
+            attrs.insert(SUMO_ATTR_AVOID_OVERLAP, cxx_bool_str(v).to_string());
         }
         if oc.exists("junctions.higher-speed") && oc.get_bool("junctions.higher-speed").unwrap() {
-            attrs.insert(SUMO_ATTR_HIGHER_SPEED, oc.get_bool("junctions.higher-speed").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_HIGHER_SPEED, cxx_bool_str(oc.get_bool("junctions.higher-speed").unwrap()).to_string());
         }
         if oc.exists("internal-junctions.vehicle-width") && !oc.is_default("internal-junctions.vehicle-width") {
             attrs.insert(SUMO_ATTR_INTERNAL_JUNCTIONS_VEHICLE_WIDTH, to_str_f64(oc.get_float("internal-junctions.vehicle-width").unwrap()));
         }
         if !oc.is_default("junctions.minimal-shape") {
-            attrs.insert(SUMO_ATTR_JUNCTIONS_MINIMAL_SHAPE, oc.get_bool("junctions.minimal-shape").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_JUNCTIONS_MINIMAL_SHAPE, cxx_bool_str(oc.get_bool("junctions.minimal-shape").unwrap()).to_string());
         }
         if !oc.is_default("junctions.endpoint-shape") {
-            attrs.insert(SUMO_ATTR_JUNCTIONS_ENDPOINT_SHAPE, oc.get_bool("junctions.endpoint-shape").unwrap().to_string());
+            attrs.insert(SUMO_ATTR_JUNCTIONS_ENDPOINT_SHAPE, cxx_bool_str(oc.get_bool("junctions.endpoint-shape").unwrap()).to_string());
         }
         into.write_xml_header("net", "net_file.xsd", attrs, true); // street names may contain non-ascii chars
         into.lf();
@@ -684,9 +686,9 @@ impl NWWriter_SUMO {
                 GeoConvHelper::with_final(|g| g.cartesian2geo(&mut pos));
                 nodePos.push(pos);
             }
-            into.set_precision(utils::common::std_defs::g_precision_geo());
+            // v1_28_0 NWWriter_SUMO.cpp:1040 writes the position without changing precision;
+            // the gPrecisionGeo bracket around it was added later.
             into.write_attr(SUMO_ATTR_POSITION, &nodePos);
-            into.set_precision(utils::common::std_defs::g_precision());
         }
         // write the phases
         let varPhaseLength = logic.get_type() != TrafficLightType::STATIC;
@@ -2254,4 +2256,22 @@ fn write_location(into: &mut OutputDevice) {
         into.close_tag("");
         into.lf();
     });
+}
+
+/// C++ `toString(bool)` uses `std::ostringstream` without `boolalpha`, so a bool is written as "0"/"1".
+fn cxx_bool_str(v: bool) -> &'static str {
+    if v { "1" } else { "0" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::cxx_bool_str;
+
+    #[test]
+    fn avoid_overlap_header_bool_is_cxx_zero_or_one() {
+        // NWWriter_SUMO.cpp:101: attrs[SUMO_ATTR_AVOID_OVERLAP] = toString(oc.getBool("geometry.avoid-overlap"));
+        // The attribute is only written when the option is false.
+        assert_eq!(cxx_bool_str(false), "0");
+        assert_eq!(cxx_bool_str(true), "1");
+    }
 }

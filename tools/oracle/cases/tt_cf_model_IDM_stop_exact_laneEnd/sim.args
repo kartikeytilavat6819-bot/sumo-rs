@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --carfollow.model IDM -a tools/oracle/cases/tt_cf_model_IDM_stop_exact_laneEnd/input_additional.add.xml

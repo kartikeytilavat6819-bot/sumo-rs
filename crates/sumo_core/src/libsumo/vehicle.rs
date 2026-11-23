@@ -1610,6 +1610,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn get_follow_speed(vehID: &str, speed: f64, gap: f64, leaderSpeed: f64, leaderMaxDecel: f64, leaderID: &str) -> f64 {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("getFollowSpeed not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
         let leader = micro_veh(MSNet::get_instance().get_vehicle_control().get_vehicle(leaderID).cast::<MSBaseVehicle>());
         veh.get_car_follow_model().follow_speed(veh, speed, gap, leaderSpeed, leaderMaxDecel, leader, MSCFModel_CalcReason::FUTURE)
     }
@@ -1630,6 +1634,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn get_secure_gap(vehID: &str, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64, leaderID: &str) -> f64 {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("getSecureGap not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
         let leader = micro_veh(MSNet::get_instance().get_vehicle_control().get_vehicle(leaderID).cast::<MSBaseVehicle>());
         veh.get_car_follow_model().get_secure_gap(veh, leader, speed, leaderSpeed, leaderMaxDecel)
     }
@@ -1640,6 +1648,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn get_stop_speed(vehID: &str, speed: f64, gap: f64) -> f64 {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("getStopSpeed not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
         veh.get_car_follow_model().stop_speed(veh, speed, gap, MSCFModel_CalcReason::FUTURE)
     }
 
@@ -3105,6 +3117,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("changeLane not applicable for meso");
+            return;
+        }
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
         laneTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), laneIndex));
@@ -3146,6 +3162,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("changeLaneRelative not applicable for meso");
+            return;
+        }
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         let laneIndex = veh.get_lane_index() + indexOffset;
         if laneIndex < 0 && !veh.m().get_lane_change_model().is_opposite() {
@@ -3176,6 +3196,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn change_sublane(vehID: &str, latDist: f64) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("changeSublane not applicable for meso");
+            return;
+        }
         veh.m().get_influencer().set_sublane_change(latDist);
     }
 
@@ -3205,6 +3229,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("slowDown not applicable for meso");
+            return;
+        }
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
         speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
         speedTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), speed));
@@ -3246,6 +3274,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("Duration parameter exceeds the time value range.");
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("openGap not applicable for meso");
+            return;
+        }
         let mut refVeh: Ptr<MSVehicle> = Ptr::default();
         if referenceVehID != "" {
             refVeh = micro_veh(Helper::get_vehicle(referenceVehID));
@@ -3278,6 +3310,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn deactivate_gap_control(vehID: &str) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("deactivateGapControl not applicable for meso");
+            return;
+        }
         if veh.has_influencer() {
             veh.m().get_influencer().deactivate_gap_controller();
         }
@@ -3411,6 +3447,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_lane_change_mode(vehID: &str, laneChangeMode: i32) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setLaneChangeMode not applicable for meso");
+            return;
+        }
         veh.m().get_influencer().set_lane_change_mode(laneChangeMode);
     }
 
@@ -3595,6 +3635,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_lateral_lane_position(vehID: &str, posLat: f64) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setLateralLanePosition not applicable for meso");
+            return;
+        }
         veh.m().set_lateral_position_on_lane(posLat);
     }
 
@@ -3614,6 +3658,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn update_best_lanes(vehID: &str) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("updateBestLanes not applicable for meso");
+            return;
+        }
         if veh.is_on_road() {
             veh.m().update_best_lanes(true, Ptr::default());
         }
@@ -3780,6 +3828,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_signals(vehID: &str, signals: i32) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setSignals not applicable for meso");
+            return;
+        }
         // set influencer to make the change persistent
         veh.m().get_influencer().set_signals(signals);
         // set them now so that getSignals returns the correct value
@@ -4703,9 +4755,14 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_action_step_length(vehID: &str, actionStepLength: f64, resetActionOffset: bool) {
         if actionStepLength < 0.0 {
+            utils::common::msg_handler::write_error("Invalid action step length (<0). Ignoring command setActionStepLength().");
             return;
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_error("setActionStepLength not applicable for meso");
+            return;
+        }
         if actionStepLength == 0. {
             veh.m().reset_action_offset(0);
         } else {

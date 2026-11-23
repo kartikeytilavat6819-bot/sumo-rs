@@ -584,6 +584,12 @@ impl NEMALogic {
                     let customID = self.get_parameter(lane.get_id(), String::new());
                     if customID != "" {
                         det = lookup_e2_detector_by_id(&customID);
+                        if det.is_null() {
+                            panic!(
+                                "Unknown laneAreaDetector '{}' given as custom detector for NEMA tlLogic '{}', program '{}.",
+                                customID, self.get_id(), self.myProgramID
+                            );
+                        }
                         //set the detector to be visible in gui
                         det.m().set_visible(self.myShowDetectors);
                     } else {

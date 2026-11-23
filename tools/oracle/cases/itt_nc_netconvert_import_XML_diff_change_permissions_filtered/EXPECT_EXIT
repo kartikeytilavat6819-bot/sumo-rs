@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: netconvert/import/XML/diff/change_permissions_filtered/{errors,output}.netconvert

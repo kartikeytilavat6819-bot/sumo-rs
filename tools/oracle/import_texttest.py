@@ -60,6 +60,7 @@ EXTRA_INPUT_OPTS = {
     "--fcd-output.filter-edges.input-file",
     "--astar.landmark-distances",
     "--load-state",
+    "-c", "--configuration-file",
 }
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
@@ -333,7 +334,7 @@ def is_route_file(path: str) -> bool:
         return False
 
 
-def import_one(source, tests_sumo, force=False):
+def import_one(source, tests_sumo, force=False, include_errors=False):
     """Import a single TextTest leaf. Returns (name, info-dict) or (None, skip-reason)."""
     source = realpath(source)
     rel = os.path.relpath(source, realpath(tests_sumo))
@@ -353,7 +354,7 @@ def import_one(source, tests_sumo, force=False):
     # Negative tests (expected error / non-zero exit) produce no tripinfo/fcd/stat,
     # so make_sim_refs.sh cannot build a reference. Skip them at import time.
     ec = join(source, "exitcode.sumo")
-    if os.path.isfile(ec):
+    if os.path.isfile(ec) and not include_errors:
         with open(ec, encoding="utf-8", errors="replace") as fh:
             if fh.read().strip() not in ("", "0"):
                 return None, "expected-error test (non-zero exitcode.sumo)"
@@ -361,12 +362,38 @@ def import_one(source, tests_sumo, force=False):
     # quits with a nonzero exit code (run_all marks any nonzero exit as FAIL).
     for d in ancestors(source, tests_sumo):
         ef = join(d, "errors.sumo")
-        if os.path.isfile(ef):
+        if os.path.isfile(ef) and not include_errors:
             with open(ef, encoding="utf-8", errors="replace") as fh:
                 if "Quitting (on error)" in fh.read():
                     return None, "error-exit test (errors.sumo Quitting on error)"
 
     sim, net, routes, additions, outputs = parse_file_options(tokens)
+
+    # Config-writing tests name the net/routes inside a -c sumo.sumocfg instead of on
+    # the command line. Resolve them so the case still exposes -n/-r to the harness.
+    if net is None:
+        cfg_path = None
+        for i, t in enumerate(tokens):
+            if t in ("-c", "--configuration-file") and i + 1 < len(tokens):
+                cfg_path = resolve(tokens[i + 1], potentials)
+                break
+            if t.startswith("--configuration-file="):
+                cfg_path = resolve(t.split("=", 1)[1], potentials)
+                break
+        if cfg_path and os.path.isfile(cfg_path):
+            import xml.etree.ElementTree as ET
+            try:
+                root = ET.parse(cfg_path).getroot()
+                for tag in ("net-file", "route-files"):
+                    el = root.find(".//" + tag)
+                    if el is None or not el.get("value"):
+                        continue
+                    if tag == "net-file":
+                        net = el.get("value")
+                    else:
+                        routes.extend(x for x in el.get("value").split(",") if x)
+            except ET.ParseError:
+                pass
 
     net_path = resolve(net, potentials) if net else None
     if not net_path or not net_path.lower().endswith(".net.xml"):
@@ -391,14 +418,10 @@ def import_one(source, tests_sumo, force=False):
             join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
     empty_route = False
     if not route_path:
-        # A state-only run has no -r/--route-files; the harness still passes a
-        # route file, so give it an empty one (same as additions-only tests).
-        has_state = any(t == "--load-state" or t.startswith("--load-state=")
-                        for t in sim)
-        if kept_additions or has_state:
-            empty_route = True
-        else:
-            return None, "no route input"
+        # Many meta/rail tests only check non-traffic output; the harness still
+        # needs a routes file, so supply an empty one (as for additionals-only tests).
+        # This also covers state-only runs (no -r) imported with --load-state.
+        empty_route = True
 
     # File-valued behaviour options (e.g. --weight-files): copy their inputs
     # and rewrite the option value to a repo-relative path, since run_all and
@@ -602,6 +625,8 @@ def main(argv=None):
                    help="path to tests/sumo (default: %(default)s)")
     p.add_argument("--dry-run", action="store_true", help="list cases without writing")
     p.add_argument("--force", action="store_true", help="overwrite existing cases")
+    p.add_argument("--include-errors", action="store_true",
+                   help="import error-exit tests too (for EXPECT_EXIT unparking)")
     args = p.parse_args(argv)
 
     tests_sumo = realpath(args.tests_sumo)
@@ -622,7 +647,7 @@ def main(argv=None):
                 print("WOULD IMPORT", name)
                 imported += 1
                 continue
-            name, info = import_one(leaf, tests_sumo, args.force)
+            name, info = import_one(leaf, tests_sumo, args.force, args.include_errors)
             if name is None:
                 skipped += 1
                 reasons[info.split(":")[0]] += 1
