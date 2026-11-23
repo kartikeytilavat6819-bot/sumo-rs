@@ -98,6 +98,9 @@ tt_tls_NEMA_errors_customDetectorsMissing
 city_melbourne_guess_signals
 city_phoenix_scale_grid
 jt_unreg_5arm
+tt_junction_model_indirect_left_turn_internal_junction_controlled_moped
+tt_sublane_model_junction_indirect_left_moped
+tt_sublane_model_junction_turnAlignment_moped_indirect_left
 RAILLIST
 while read -r c; do
   d="tools/oracle/cases/$c"
