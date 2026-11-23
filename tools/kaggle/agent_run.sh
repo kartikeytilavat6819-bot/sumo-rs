@@ -103,9 +103,10 @@ while read -r c; do
   for who in pristine ours; do
     bin=$PRISTINE; [ "$who" = ours ] && bin=$OURS
     timeout 600 "$bin" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
-      --tripinfo-output "$OUT/$c.$who.ti.xml" --no-step-log true $EXTRA >"$OUT/$c.$who.sim.log" 2>&1
+      --tripinfo-output "$OUT/$c.$who.ti.xml" --fcd-output "$OUT/$c.$who.fcd.xml" --statistic-output "$OUT/$c.$who.stat.xml" --no-step-log true $EXTRA >"$OUT/$c.$who.sim.log" 2>&1
     echo "$?" >"$OUT/$c.$who.simrc"
     python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/$c.$who.ti.xml" >"$OUT/$c.$who.cmp" 2>&1
+    [ -f "$d/ref.fcd.xml" ] && python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/$c.$who.fcd.xml" >"$OUT/$c.$who.fcd.cmp" 2>&1 || true
     echo "$?" >"$OUT/$c.$who.cmprc"
   done
   echo "== $c official rc=$(cat "$OUT/$c.pristine.simrc") cmp=$(cat "$OUT/$c.pristine.cmprc") | ours rc=$(cat "$OUT/$c.ours.simrc") cmp=$(cat "$OUT/$c.ours.cmprc")"
