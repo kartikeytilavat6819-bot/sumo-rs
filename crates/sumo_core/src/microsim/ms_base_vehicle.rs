@@ -1464,10 +1464,10 @@ impl MSBaseVehicle {
         let mut jumps: BTreeSet<i32> = BTreeSet::new();
 
         let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
+        // C++ reroute(): honour departPos on init so departPos > arrivalPos triggers computeLooped
         if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
             sourcePos = self.myParameter.departPos;
         } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
-            // routing starts on the next edge
             sourcePos = 0.0;
         }
         if self.myParameter.via.is_empty() {

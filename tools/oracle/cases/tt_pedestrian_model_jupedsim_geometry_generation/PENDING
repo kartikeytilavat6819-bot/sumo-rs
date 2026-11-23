@@ -1,1 +1,2 @@
+DROPPED: JuPedSim pedestrian model not ported (owner decision 2026-11-22); see NOT_PORTED.md section 1.
 Rust port has no JuPedSim C API bindings: MSPModel_JuPedSim new/add/execute panic in msp_model_ju_ped_sim.rs (shortcut comments); cannot produce a sim oracle

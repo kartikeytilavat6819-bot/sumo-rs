@@ -280,10 +280,23 @@ impl MSEdgeWeightsStorage {
 
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The loaded-weights case (init-with-loaded-weights) relies on the begin boundary of
+    // a later interval being inclusive: 100s must return the [100,200) value, not [0,100).
+    #[test]
+    fn later_interval_begin_is_inclusive() {
+        let mut tl = ValueTimeLineDouble::default();
+        tl.add(0., 100., 10.);
+        tl.add(100., 200., 100000.);
+        assert!(tl.describes_time(50.));
+        assert_eq!(tl.get_value(50.), 10.);
+        assert!(tl.describes_time(100.));
+        assert_eq!(tl.get_value(100.), 100000.);
+        assert!(!tl.describes_time(200.));
+    }
 
     #[test]
     fn value_time_line_add_splits_interval() {
