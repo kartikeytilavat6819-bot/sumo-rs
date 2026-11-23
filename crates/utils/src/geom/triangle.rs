@@ -27,8 +27,9 @@ impl PartialEq for Triangle {
 }
 
 impl Triangle {
+    /// C++ `const Triangle Triangle::INVALID = Triangle();` — default-constructed corners at (0,0,0), not `Position::INVALID`.
     pub const INVALID: Triangle =
-        Triangle { a: Position::INVALID, b: Position::INVALID, c: Position::INVALID, boundary: Boundary::new() };
+        Triangle { a: Position::new(0., 0.), b: Position::new(0., 0.), c: Position::new(0., 0.), boundary: Boundary::new() };
 
     pub fn new(a: Position, b: Position, c: Position) -> Self {
         let mut boundary = Boundary::new();
@@ -200,6 +201,13 @@ impl Triangle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn invalid_matches_default_constructed_cpp_triangle() {
+        // Release Triangle.cpp:22 - `const Triangle Triangle::INVALID = Triangle();` gives corners at Position() (0,0,0), not Position::INVALID.
+        assert_eq!(Triangle::INVALID, Triangle::new(Position::new(0., 0.), Position::new(0., 0.), Position::new(0., 0.)));
+        assert_eq!(Triangle::default(), Triangle::INVALID);
+    }
+
     #[test]
     fn triangle() {
         let t = Triangle::new(Position::new(0., 0.), Position::new(4., 0.), Position::new(0., 4.));
