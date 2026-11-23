@@ -30,3 +30,13 @@ for c in polyconvert_itt_polyconvert_import_OSM_buildings_from_relation \
   measure polyconvert "$c"
 done
 measure duarouter duarouter_itt_duarouter_meta_write_config
+
+# Reproduce the exact duarouter-oracle comparison (it adds -n and the oracle normalizer).
+DC=duarouter_itt_duarouter_meta_write_config
+bash tools/oracle/run_duarouter.sh "$DC" || true
+echo "==== raw oracle config diff"
+cat "/tmp/duarouter_oracle/$DC/config.cfg.diff" 2>/dev/null || true
+echo "==== raw ref config lines"
+sed -n '1,16p' "/tmp/duarouter_oracle/$DC/ref/config.cfg" 2>/dev/null || true
+echo "==== raw cand config lines"
+sed -n '1,16p' "/tmp/duarouter_oracle/$DC/cand/config.cfg" 2>/dev/null || true
