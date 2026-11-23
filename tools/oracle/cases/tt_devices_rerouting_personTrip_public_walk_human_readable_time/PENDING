@@ -1,1 +1,0 @@
-Human-readable-time (-H) personTrip output: check_ref_complete cannot parse the time-formatted tripinfo, and the Rust port panics in SUMOTrafficObject::getParameter for this path. Parked with a PENDING marker.
