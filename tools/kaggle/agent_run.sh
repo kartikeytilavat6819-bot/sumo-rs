@@ -1,5 +1,6 @@
 #!/bin/bash
 # oc111 probe: the 17 itt_nc_* netconvert rows, official vs ours with the same args, under /tmp/oc111.
+# One compact block per row so all 17 fit in the gate tail.
 ROOT=$PWD
 OUT=/tmp/oc111
 RUST=$CARGO_TARGET_DIR/debug/netconvert
@@ -19,11 +20,10 @@ for v in $ROWNAMES; do
   read -ra sa <<< "$src"; read -ra ca <<< "$co"; read -ra ra <<< "$ro"
   (cd "$d/ours" && timeout 900 "$RUST" "${sa[@]}" "${ra[@]}" -o "$d/ours/net.net.xml" > "$d/ours.stderr" 2>&1); rrc=$?
   (cd "$d/official" && timeout 900 "$CPP" "${sa[@]}" "${ca[@]}" -o "$d/official/net.net.xml" > "$d/official.stderr" 2>&1); crc=$?
-  echo "=== $v exit official=$crc ours=$rrc"
-  echo "--- official stderr:"; head -n 8 "$d/official.stderr"
-  echo "--- ours stderr:"; head -n 8 "$d/ours.stderr"
-  echo "--- stderr diff (official vs ours, first 12):"; diff "$d/official.stderr" "$d/ours.stderr" | head -n 12
+  nd=$(diff "$d/official.stderr" "$d/ours.stderr" | grep -c '^[<>]')
+  echo "=== $v exit off=$crc ours=$rrc stderr_diff_lines=$nd"
+  if [ "$nd" != 0 ]; then diff "$d/official.stderr" "$d/ours.stderr" | head -n 4 | cut -c1-200; fi
   if [ "$crc" = 0 ] && [ -s "$d/official/net.net.xml" ] && [ -s "$d/ours/net.net.xml" ]; then
-    echo "--- compare_net:"; (cd "$ROOT" && python3 tools/oracle/compare_net.py "$d/official/net.net.xml" "$d/ours/net.net.xml" 2>&1 | head -n 20)
+    (cd "$ROOT" && python3 tools/oracle/compare_net.py "$d/official/net.net.xml" "$d/ours/net.net.xml" 2>&1 | head -n 2)
   fi
 done
