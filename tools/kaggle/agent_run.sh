@@ -92,4 +92,78 @@ bt_variant "default" X=1
 bt_variant "default (repeat)" X=1
 bt_variant "tcache_count=0" GLIBC_TUNABLES=glibc.malloc.tcache_count=0
 bt_variant "top_pad=1MB" MALLOC_TOP_PAD_=1048576
+
+# Measure the official binary's vehicle-sized malloc/free sequence (address reuse) on md_stop.
+echo "--- official md_stop: vehicle-sized malloc/free address-reuse sequence"
+mkdir -p "$OUT/shim"
+cat > "$OUT/shim/shim.c" <<'CEOF'
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdint.h>
+static void *(*rm)(size_t);
+static void (*rf)(void *);
+static char boot[65536];
+static size_t bo;
+static int init;
+#define TS 16384
+static void *tab[TS];
+static void ins(void *p) { size_t h = ((uintptr_t)p >> 4) % TS; while (tab[h] && tab[h] != (void *)1) h = (h + 1) % TS; tab[h] = p; }
+static int del(void *p) { size_t h = ((uintptr_t)p >> 4) % TS; for (int i = 0; i < TS; i++) { if (!tab[h]) return 0; if (tab[h] == p) { tab[h] = (void *)1; return 1; } h = (h + 1) % TS; } return 0; }
+static void ensure(void) { if (init) return; init = 1; rm = dlsym(RTLD_NEXT, "malloc"); rf = dlsym(RTLD_NEXT, "free"); init = 2; }
+void *malloc(size_t n) {
+    if (init == 1) { void *p = boot + bo; bo += (n + 15) & ~(size_t)15; return p; }
+    ensure();
+    void *p = rm(n);
+    if (n >= 600 && n <= 3000 && p) { ins(p); char b[96]; int l = snprintf(b, sizeof b, "M %zu %p\n", n, p); if (write(2, b, l)) {} }
+    return p;
+}
+void free(void *p) {
+    if ((char *)p >= boot && (char *)p < boot + sizeof boot) return;
+    if (init != 2) return;
+    if (p && del(p)) { char b[64]; int l = snprintf(b, sizeof b, "F %p\n", p); if (write(2, b, l)) {} }
+    rf(p);
+}
+CEOF
+if cc -shared -fPIC -O2 -o "$OUT/shim/shim.so" "$OUT/shim/shim.c" -ldl 2>"$OUT/shim/cc.err"; then
+  c=md_stop; src="$ROOT/tools/oracle/cases/$c"; w="$OUT/shimrun"; mkdir -p "$w"; cp -r "$src/." "$w/"
+  a=$(sed "s#tools/oracle/cases/$c#$w#g" "$src/sim.args")
+  # shellcheck disable=SC2086
+  (cd "$w" && LD_PRELOAD="$OUT/shim/shim.so" timeout 300 "$REF" $a --net-file "$w/ref_simple.net.xml" --route-files "$w/routes.rou" >/dev/null 2>"$w/shim.log")
+  python3 - "$w/shim.log" <<'PYEOF2'
+import sys, collections
+sizes = collections.Counter(); size_of = {}; ev = []
+for line in open(sys.argv[1], errors="replace"):
+    f = line.split()
+    if len(f) == 3 and f[0] == "M":
+        sizes[int(f[1])] += 1; size_of[f[2]] = int(f[1]); ev.append(("M", f[2]))
+    elif len(f) == 2 and f[0] == "F":
+        ev.append(("F", f[1]))
+print("size histogram (size:count) top:", sizes.most_common(8))
+# vehicle size: the size with 34 allocations if present, else the most common
+target = [s for s, c in sizes.items() if c == 34]
+vs = target[0] if target else sizes.most_common(1)[0][0]
+print("assumed vehicle chunk request size:", vs)
+ids = {}; out = []
+for k, p in ev:
+    if size_of.get(p) != vs and not (k == "M" and False):
+        continue
+    if k == "M":
+        new = p not in ids
+        ids.setdefault(p, len(ids))
+        out.append(("A%d" % ids[p]) + ("" if new else "(reuse)"))
+    else:
+        out.append("f%d" % ids[p])
+line = ""
+for t in out:
+    if len(line) + len(t) > 118:
+        print(line); line = ""
+    line += t + " "
+print(line)
+PYEOF2
+else
+  echo "shim compile failed: $(head -c 300 "$OUT/shim/cc.err")"
+fi
 echo "PROBE DONE (outputs in $OUT)"
