@@ -4861,3 +4861,14 @@ impl MSPModel_Striping_walkingarea_path_sorter {
 
 }
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn disconnect_warning_uses_sumo_time_format() {
+        // C++ MSPModel_Striping.cpp:1551 formats SIMTIME via time2string: 46000 steps -> "46.00".
+        // The old Rust code passed the raw i32, printing "time=46000".
+        assert_eq!(utils::common::time::time2string(46000), "46.00");
+        assert_eq!(utils::common::time::time2string(42000), "42.00");
+    }
+}
+
