@@ -35,12 +35,12 @@ for c in tt_spec_flow_errors_poisson_invalid tt_spec_arrival_errors_lane_given10
   echo "== ERRROW $c rc official=$(cat $OUT/$c.e.off.rc) ours=$(cat $OUT/$c.e.ours.rc)"
   for k in err out; do
     if cmp -s "$OUT/$c.e.off.$k" "$OUT/$c.e.ours.$k"; then echo "   std$k: SAME ($(wc -l < "$OUT/$c.e.off.$k") lines)"; else
-      echo "   std$k DIFF  official:"; grep -a -v "^Loading\|^ *$" "$OUT/$c.e.off.$k" | head -n 5 | cut200 | sed 's/^/      /'
-      echo "              ours:";     grep -a -v "^Loading\|^ *$" "$OUT/$c.e.ours.$k" | head -n 5 | cut200 | sed 's/^/      /'
+      echo "   std$k DIFF  official:"; sed -E 's/[(][0-9]+ms[)]/(Nms)/' "$OUT/$c.e.off.$k" | head -n 8 | cut200 | sed 's/^/      /'
+      echo "              ours:";     sed -E 's/[(][0-9]+ms[)]/(Nms)/' "$OUT/$c.e.ours.$k" | head -n 8 | cut200 | sed 's/^/      /'
     fi
   done
   echo "   ref.errors:"; head -n 3 "$d/ref.errors" 2>/dev/null | cut200 | sed 's/^/      /'
-  echo "   ref.output: $(wc -c < "$d/ref.output" 2>/dev/null) bytes: $(head -c 120 "$d/ref.output" 2>/dev/null | tr '\n' '|')"
+  echo "   ref.output ($(wc -c < "$d/ref.output" 2>/dev/null) bytes):"; sed -E 's/[(][0-9]+ms[)]/(Nms)/' "$d/ref.output" 2>/dev/null | head -n 8 | cut200 | sed 's/^/      /'
 done
 
 # 3) tt_bugs_17xxx_ticket17583: should be clean (prefix fix)
