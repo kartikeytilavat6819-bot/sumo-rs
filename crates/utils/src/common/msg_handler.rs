@@ -536,6 +536,31 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn edge_type_error_format_is_aggregation_key() {
+        // C++ NIXMLEdgesHandler.cpp:634 and :1105 use WRITE_ERRORF, so the format string
+        // (not the formatted message) is the aggregation key: 6 repeats give one summary line.
+        // The old Rust `write_error(&tlf!(...))` formatted eagerly and never aggregated.
+        let cap = Capture::default();
+        register_device("test-msg-edge-type", Box::new(cap.clone()));
+        let mut h = MsgHandler::new(MsgType::Error);
+        h.remove_retriever("stderr");
+        h.add_retriever("test-msg-edge-type");
+        h.set_aggregation_threshold(5);
+        for i in 0..6 {
+            h.informf(
+                "Type '%' used by edge '%' was not defined (ignore with option --ignore-errors.edge-type).",
+                &[&String::from("railway.tram"), &format!("e{i}")],
+            );
+        }
+        h.clear(true);
+        let text = cap.text();
+        assert!(
+            text.contains("6 total messages of type: Type '%' used by edge '%' was not defined (ignore with option --ignore-errors.edge-type)."),
+            "{text}"
+        );
+    }
+
+    #[test]
     fn every_line_is_newline_terminated() {
         let cap = Capture::default();
         register_device("test-msg-nl", Box::new(cap.clone()));

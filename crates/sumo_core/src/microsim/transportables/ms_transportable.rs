@@ -1074,28 +1074,29 @@ impl MSTransportable {
         let mut waitingTimeOK = true;
         let mut timeLossOK = true;
         let mut travelTimeOK = true;
+        // C++ accumulates SUMOTime (int) with +=; the official NDEBUG binary wraps on overflow.
         for i in self.myPlan.iter() {
             let mut t = i.get_duration();
             if t != SUMOTIME_MAX {
-                duration += t;
+                duration = duration.wrapping_add(t);
             } else {
                 durationOK = false;
             }
             t = i.get_total_waiting_time();
             if t != SUMOTIME_MAX {
-                waitingTime += t;
+                waitingTime = waitingTime.wrapping_add(t);
             } else {
                 waitingTimeOK = false;
             }
             t = i.get_time_loss(Ptr::new(self));
             if t != SUMOTIME_MAX {
-                timeLoss += t;
+                timeLoss = timeLoss.wrapping_add(t);
             } else {
                 timeLossOK = false;
             }
             t = i.get_travel_time();
             if t != SUMOTIME_MAX {
-                travelTime += t;
+                travelTime = travelTime.wrapping_add(t);
             } else {
                 travelTimeOK = false;
             }

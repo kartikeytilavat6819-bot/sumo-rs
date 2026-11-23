@@ -367,10 +367,11 @@ impl MSDevice_Tripinfo {
     #[allow(unused_variables)]
     pub fn add_pedestrian_data(walkLength: f64, walkDuration: SUMOTime, walkTimeLoss: SUMOTime) {
         let sp = st(); let s = sp.m();
+        // C++ accumulates SUMOTime (int) with +=; the official NDEBUG binary wraps on overflow.
         s.myWalkCount += 1;
         s.myTotalWalkRouteLength += walkLength;
-        s.myTotalWalkDuration += walkDuration;
-        s.myTotalWalkTimeLoss += walkTimeLoss;
+        s.myTotalWalkDuration = s.myTotalWalkDuration.wrapping_add(walkDuration);
+        s.myTotalWalkTimeLoss = s.myTotalWalkTimeLoss.wrapping_add(walkTimeLoss);
     }
 
     /// C++: `void MSDevice_Tripinfo::addRideTransportData(const bool, const double, const SUMOTime, const SUMOVehicleClass, const std::string &, const SUMOTime)` [static]

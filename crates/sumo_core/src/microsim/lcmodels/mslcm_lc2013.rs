@@ -2255,7 +2255,10 @@ impl MSLCM_LC2013 {
         // special case: vehicle considers changing to the opposite direction edge
         let prebOffset = laneOffset;
         for p in 0..(preb.len() as i32) {
-            if preb[p as usize].lane == prebLane && p + laneOffset >= 0 {
+            // C++ MSLCM_LC2013.cpp:1160 asserts p + prebOffset < preb.size() (compiled out in the
+            // official NDEBUG build). FCD-replay can leave a single-lane bestLanes vector while a
+            // change to the nonexistent neighbour lane is considered; skip that case.
+            if preb[p as usize].lane == prebLane && p + laneOffset >= 0 && p + prebOffset < preb.len() as i32 {
                 curr = lane_q_copy(&preb[p as usize]);
                 neigh = lane_q_copy(&preb[(p + prebOffset) as usize]);
                 currentDist = curr.length;
@@ -2351,7 +2354,14 @@ impl MSLCM_LC2013 {
         neighDist += roundaboutBonus;
 
         let usableDist = max2(currentDist - posOnLane - best.occupation * JAM_FACTOR, driveToNextStop);
-        let maxJam = max2(preb[(currIdx as i32 + prebOffset) as usize].occupation, preb[currIdx].occupation);
+        let neighIdx = currIdx as i32 + prebOffset;
+        // C++ reads preb[currIdx + prebOffset] unconditionally (assert compiled out); a stale
+        // best-lane list can make that index invalid, in which case only the current lane counts.
+        let maxJam = if neighIdx >= 0 && (neighIdx as usize) < preb.len() {
+            max2(preb[neighIdx as usize].occupation, preb[currIdx].occupation)
+        } else {
+            preb[currIdx].occupation
+        };
         let vMax = self.myVehicle.get_lane().get_vehicle_max_speed(traffic_object_of(self.myVehicle));
         let neighVMax = neighLane.get_vehicle_max_speed(traffic_object_of(self.myVehicle));
         // upper bound which will be restricted successively
