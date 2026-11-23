@@ -14,3 +14,21 @@ for t in misc/concurrent person/person simulation/loadState/persons_include simu
     head -40 "$d"
   fi
 done
+
+# setStop first-call state: lane, lane position and speed right before the first setStop, both binaries
+PROBE_DIR="$OUT/setstop_probe"
+rm -rf "$PROBE_DIR"; mkdir -p "$PROBE_DIR"
+cp -r tools/oracle/complex_bundle/vehicle/setStop/newStop_fast_forced/. "$PROBE_DIR/"
+python3 - "$PROBE_DIR/runner.py" <<'PY'
+import sys
+p = sys.argv[1]
+src = open(p, encoding="utf-8").read()
+marker = '    traci.vehicle.setStop(vehID, "SC", pos + 10, duration=3)\n'
+probe = ('    print("PROBE lane=%s lanePos=%s road=%s speed=%s" % (traci.vehicle.getLaneID(vehID), '
+         'traci.vehicle.getLanePosition(vehID), traci.vehicle.getRoadID(vehID), traci.vehicle.getSpeed(vehID)))\n')
+open(p, "w", encoding="utf-8").write(src.replace(marker, probe + marker, 1))
+PY
+for side in official ours; do
+  if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
+  (cd "$PROBE_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -m3 "PROBE") | sed "s/^/$side: /"
+done
