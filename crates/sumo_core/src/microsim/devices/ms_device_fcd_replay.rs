@@ -202,11 +202,14 @@ impl MSDevice_FCDReplay_FCDHandler {
             let t: Ptr<MSDevice_FCDReplay_Trajectory> = Ptr::from_mut(&mut **self.myTrajectories.entry(id.clone()).or_default());
             if t[0].time >= intervalStart {
                 // new vehicle or person
-                let mut params = SUMOVehicleParameter::new();
-                params.id = id.clone();
-                params.depart = depart;
-                params.departPos = t[0].lanePos;
-                params.departSpeed = t[0].speed;
+                // C++ allocates a fresh SUMOVehicleParameter per vehicle/person and the built
+                // object owns it; a per-iteration heap allocation keeps each pointer stable
+                // when the loop moves on to the next id.
+                let params = Ptr::from_mut(Box::leak(Box::new(SUMOVehicleParameter::new())));
+                params.m().id = id.clone();
+                params.m().depart = depart;
+                params.m().departPos = t[0].lanePos;
+                params.m().departSpeed = t[0].speed;
                 // params->arrivalPos = t.back().lanePos;
                 let mut vType = vType0.clone();
                 if vType == "" {
@@ -225,8 +228,8 @@ impl MSDevice_FCDReplay_FCDHandler {
                     continue;
                 }
                 if isPerson {
-                    let plan = self.make_plan(&params, &routeEdges, &stages, &*t);
-                    let person = MSNet::get_instance().m().get_person_control().build_person(Ptr::from_mut(&mut params), vehicleType, plan, Ptr::null());
+                    let plan = self.make_plan(&*params, &routeEdges, &stages, &*t);
+                    let person = MSNet::get_instance().m().get_person_control().build_person(params, vehicleType, plan, Ptr::null());
                     person.m().get_singular_type().set_v_class(SVC_IGNORING);
                     if !MSNet::get_instance().m().get_person_control().add(person) {
                         panic!("Duplicate person '{}'.", id);
@@ -245,11 +248,11 @@ impl MSDevice_FCDReplay_FCDHandler {
                         panic!("Could not add route '{}'.", dummyRouteID);
                     }
                     if t[0].edgeOrLane != "" {
-                        params.departPosProcedure = DepartPosDefinition::GIVEN;
-                        params.departLaneProcedure = DepartLaneDefinition::GIVEN;
-                        params.departLane = utils::xml::sumo_xml_definitions::get_index_from_lane(&t[0].edgeOrLane).unwrap_or_else(|e| panic!("{}", e));
+                        params.m().departPosProcedure = DepartPosDefinition::GIVEN;
+                        params.m().departLaneProcedure = DepartLaneDefinition::GIVEN;
+                        params.m().departLane = utils::xml::sumo_xml_definitions::get_index_from_lane(&t[0].edgeOrLane).unwrap_or_else(|e| panic!("{}", e));
                     }
-                    let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(Ptr::from_mut(&mut params), route, vehicleType, false, MSVehicleControl_VehicleDefinitionSource::OTHER, true);
+                    let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route, vehicleType, false, MSVehicleControl_VehicleDefinitionSource::OTHER, true);
                     if !MSNet::get_instance().m().get_vehicle_control().add_vehicle(&id, vehicle) {
                         panic!("Duplicate vehicle '{}'.", id);
                     }
@@ -288,11 +291,13 @@ impl MSDevice_FCDReplay_FCDHandler {
                             append = true;
                         }
                         if append {
-                            person.m().append_stage(stage, 0);
+                            // C++ appendStage(stage) uses the default next=-1 (push_back)
+                            person.m().append_stage(stage, -1);
                         }
                         // else: C++ deletes the stage here; the port leaves it allocated (shortcut: stage ownership is not ported)
                     }
-                    person.m().remove_stage(stageIndex, false);
+                    // C++ removeStage(stageIndex) uses the default stayInSim=true
+                    person.m().remove_stage(stageIndex, true);
                     // C++ `delete plan`: the plan vector is not freed here (shortcut: plan ownership is not ported)
                 } else {
                     let vehicle = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&id);
@@ -598,7 +603,7 @@ impl MSDevice_FCDReplay_FCDHandler {
                         let s: &mut MSStageWalking = Box::leak(Box::new(MSStageWalking::new(&params.id, &subRoute, finalStop, -1, params.departSpeed, params.departPos, 0., 0., -1, "")));
                         plan.push(Ptr::from_mut(&mut s.base.base));
                     } else {
-                        let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, prevEdge, Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", 0)));
+                        let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, prevEdge, Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", -1)));
                         plan.push(Ptr::from_mut(&mut s.base));
                     }
                     start = MSEdge::dictionary_2(&t[stageStart.trajectoryOffset as usize].edgeOrLane);
@@ -623,7 +628,7 @@ impl MSDevice_FCDReplay_FCDHandler {
                 plan.push(Ptr::from_mut(&mut s.base.base));
             }
         } else {
-            let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, *route.last().unwrap(), Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", 0)));
+            let s: &mut MSStageDriving = Box::leak(Box::new(MSStageDriving::new(start, *route.last().unwrap(), Ptr::null(), -1., 0., &vec![prevVeh.clone()], "", "", -1)));
             plan.push(Ptr::from_mut(&mut s.base));
         }
         Ptr::from_raw(Box::into_raw(Box::new(plan)))
@@ -1013,9 +1018,11 @@ impl MSDevice_FCDReplay {
         if te.edgeOrLane != "" {
             let edgeID = utils::xml::sumo_xml_definitions::get_edge_id_from_lane(&te.edgeOrLane);
             let laneIdx = utils::xml::sumo_xml_definitions::get_index_from_lane(&te.edgeOrLane).unwrap_or_else(|e| panic!("{}", e));
-            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, &edgeID, laneIdx, te.pos.x(), te.pos.y(), te.angle, 7, -1.);
+            // C++ moveToXY(..., 7) uses its default matchThreshold of 100 m
+            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, &edgeID, laneIdx, te.pos.x(), te.pos.y(), te.angle, 7, 100.);
         } else if te.pos.x() != INVALID_DOUBLE_VALUE {
-            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, "", -1, te.pos.x(), te.pos.y(), te.angle, 0, -1.);
+            // C++ moveToXY(..., 0) likewise uses the default matchThreshold of 100 m
+            crate::libsumo::vehicle::Vehicle::move_to_xy(&holderID, "", -1, te.pos.x(), te.pos.y(), te.angle, 0, 100.);
         }
         v.m().get_influencer().set_speed_mode(0);
         crate::libsumo::vehicle::Vehicle::set_speed(&holderID, te.speed);
@@ -1169,6 +1176,49 @@ pub struct MSDevice_FCDReplay_TrajectoryEntry {
 }
 
 impl MSDevice_FCDReplay_TrajectoryEntry {
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Pins the mapping from the device.fcd-replay.consistency option to the attribute mask
+    // that my_start_element / fcd_opt_double read (C++ MSDevice_FCDReplay::init / myUsedAttributes).
+    #[test]
+    fn used_attributes_mask_is_respected() {
+        MY_USED_ATTRIBUTES.with(|m| {
+            let mut set = m.borrow_mut();
+            set.clear();
+            set.insert(SUMO_ATTR_X);
+            set.insert(SUMO_ATTR_SPEED);
+        });
+        assert!(fcd_used(SUMO_ATTR_X));
+        assert!(fcd_used(SUMO_ATTR_SPEED));
+        assert!(!fcd_used(SUMO_ATTR_Y));
+        assert!(!fcd_used(SUMO_ATTR_LANE));
+        MY_USED_ATTRIBUTES.with(|m| m.borrow_mut().clear());
+    }
+
+    // Pins the field layout consumed by move(): edgeOrLane selects moveToXY(7) vs (0),
+    // lanePos is the vehicle desired depart position, and speed feeds libsumo setSpeed.
+    #[test]
+    fn trajectory_entry_fields_match_move_paths() {
+        let e = MSDevice_FCDReplay_TrajectoryEntry {
+            time: 100,
+            pos: Position::new(-294.97, -49.16),
+            edgeOrLane: "onRamp_0".to_string(),
+            lanePos: 5.1,
+            speed: 2.6,
+            angle: 80.54,
+        };
+        assert_eq!(e.time, 100);
+        assert!((e.pos.x() - -294.97).abs() < 1e-9);
+        assert!((e.pos.y() - -49.16).abs() < 1e-9);
+        assert_eq!(e.edgeOrLane, "onRamp_0");
+        assert_eq!(e.lanePos, 5.1);
+        assert_eq!(e.speed, 2.6);
+        assert_eq!(e.angle, 80.54);
+    }
 }
 
 

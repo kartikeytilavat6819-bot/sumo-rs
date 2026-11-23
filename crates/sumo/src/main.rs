@@ -45,7 +45,11 @@ fn sumo_main(args: Vec<String>) -> i32 {
     let default_hook = std::panic::take_hook();
     let show_panics = std::env::var_os("RUST_BACKTRACE").is_some();
     std::panic::set_hook(Box::new(move |info| {
-        if show_panics {
+        // ProcessError payloads are C++ exceptions in disguise: report_panic prints them as
+        // "Error: ...". Printing the default hook too would add the raw payload as an extra
+        // stderr line which the official binary never emits.
+        let is_process_error = info.payload().downcast_ref::<ProcessError>().is_some();
+        if show_panics && !is_process_error {
             default_hook(info);
         }
     }));

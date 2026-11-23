@@ -126,6 +126,10 @@ def normalise(line):
             return "'" + q.replace("\\", "/").rstrip("/").split("/")[-1] + "'"
         return m.group(0)
     s = re.sub(r"'([^']*)'", shorten, s)
+    # the harness rewrites --device.ssm.filter-edges.input-file to a repo-relative path so it is
+    # findable from the repo root; TextTest ran it as a bare filename. Compare by basename there.
+    s = re.sub(r"(SSM device edge filter \()([^)]*)(\))",
+               lambda m: m.group(1) + m.group(2).replace("\\", "/").rstrip("/").split("/")[-1] + m.group(3), s)
     # the harness renames inputs (net.net.xml -> ref_simple.net.xml, routes -> routes.rou),
     # so the file named by a "Loading ... from '...'" line is a path, not a semantic value.
     s = re.sub(r"(Loading [^']*? from )'[^']*'", r"\1'(FILE)'", s)
