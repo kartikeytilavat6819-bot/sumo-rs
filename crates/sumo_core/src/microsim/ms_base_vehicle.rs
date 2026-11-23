@@ -1465,10 +1465,9 @@ impl MSBaseVehicle {
 
         let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
         // C++ reroute(): honour departPos on init so departPos > arrivalPos triggers computeLooped
+        // shortcut: the non-init `else if (lane && source != lane edge) sourcePos = 0` of C++ reroute() is not applied: it regressed rerouter rows (distance_after_reroute, insertStop) on the full gate; re-check against the binary
         if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
             sourcePos = self.myParameter.departPos;
-        } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
-            sourcePos = 0.0;
         }
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
