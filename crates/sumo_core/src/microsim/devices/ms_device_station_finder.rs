@@ -20,6 +20,12 @@ const DEFAULT_AVG_WAITING_TIME: f64 = 900.; // s
 const DEFAULT_CHARGINGSTATION_VIEW_DIST: f64 = 10.; // m
 const DEFAULT_CONSUMPTION_ESTIMATE_HISTORY: f64 = 10.; // s
 
+/// C++ `std::map::operator[]` on the score map: default-insert 0. for a missing key
+/// (MSDevice_StationFinder.cpp:464 reads scores["distfrom"] which is never written in C++).
+fn score_value(scores: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, key: &str) -> f64 {
+    *scores.entry(key.to_string()).or_insert(0.)
+}
+
 /// C++ `dynamic_cast<MSChargingStation*>(stoppingPlace)`; the callers only pass charging stations
 fn as_charging_station(p: Ptr<MSStoppingPlace>) -> Ptr<MSChargingStation> {
     Ptr::from_raw(p.as_raw() as *mut MSChargingStation)
@@ -1143,7 +1149,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             return cs.get_parking_area().get_occupancy() as f64;
         }
-        (cs.get_end_lane_position() - cs.get_last_free_pos(self.myHolder.m(), 0.)) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
+        (cs.get_end_lane_position() - cs.get_last_free_pos_2()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
 
     /// C++: `double MSDevice_StationFinder::getLastStepStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual]
@@ -1162,7 +1168,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             return cs.get_parking_area().get_last_step_occupancy() as f64;
         }
-        (cs.get_end_lane_position() - cs.get_last_free_pos(self.myHolder.m(), 0.)) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
+        (cs.get_end_lane_position() - cs.get_last_free_pos_2()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
 
     /// C++: `double MSDevice_StationFinder::getStoppingPlaceCapacity(MSStoppingPlace *)` [virtual]
@@ -1469,7 +1475,8 @@ impl MSDevice_StationFinder {
             let now = MSNet::get_instance().m().get_current_time_step();
             self.myLastSearch = now;
             let mut scores: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t = Default::default();
-            let cs = self.find_charging_station(MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default()), expectedConsumption, &mut scores, true, true, true, true);
+            // C++ findChargingStation defaults here: skipOccupied=false, visible=false
+            let cs = self.find_charging_station(MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default()), expectedConsumption, &mut scores, true, true, false, false);
             if !cs.is_null() {
                 // integrate previously planned stops which do not have charging facilities
                 self.myChargingStation = Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace);
@@ -1481,9 +1488,10 @@ impl MSDevice_StationFinder {
                     // what if the charging station is skipped due to long waiting time?
                     if self.myReplacePlannedStop > 0. && self.myHolder.m().has_stops() && self.myHolder.m().get_next_stop_parameter().chargingStation.is_empty() {
                         // compare the distance to the original target
-                        if scores["distfrom"] < self.myDistanceToOriginalStop {
+                        // C++ scores["distfrom"] uses std::map::operator[] (default 0.; the key is never written in C++)
+                        if score_value(&mut scores, "distfrom") < self.myDistanceToOriginalStop {
                             // compute the arrival time at the original stop
-                            let timeToOriginalStop = time2steps(scores["timefrom"]);
+                            let timeToOriginalStop = time2steps(score_value(&mut scores, "timefrom"));
                             let originalUntil = self.myHolder.m().get_next_stop_parameter().until;
                             if timeToOriginalStop + self.myLastSearch < originalUntil {
                                 let delta = originalUntil - (timeToOriginalStop + self.myLastSearch);
@@ -1495,7 +1503,7 @@ impl MSDevice_StationFinder {
                                 // optionally implement a charging strategy by adjusting the accepted charging rates
                                 if self.myChargingStrategy != MSDevice_StationFinder_ChargingStrategy::CHARGINGSTRATEGY_NONE {
                                     // the charging strategy should actually only be computed at the arrival at the charging station
-                                    self.implement_charging_strategy(self.myLastSearch + time2steps(scores["timeto"]), stopPar.until, expectedConsumption, cs);
+                                    self.implement_charging_strategy(self.myLastSearch + time2steps(score_value(&mut scores, "timeto")), stopPar.until, expectedConsumption, cs);
                                 }
                             }
                         }
@@ -1776,7 +1784,7 @@ impl MSDevice_StationFinder {
         if !cs.get_parking_area().is_null() {
             (cs.get_parking_area().get_capacity() - cs.get_parking_area().get_occupancy()) as f64
         } else {
-            (cs.get_last_free_pos(self.myHolder.m(), 0.) - cs.get_begin_lane_position()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
+            (cs.get_last_free_pos_2() - cs.get_begin_lane_position()) / self.myHolder.m().get_vehicle_type().get_parameter().length
         }
     }
 
@@ -1957,5 +1965,22 @@ impl MSDevice_StationFinder {
         panic!("MSDevice_StationFinder::operator= is invalid (private in C++)")
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::score_value;
+    use std::collections::BTreeMap;
+
+    // C++ MSDevice_StationFinder.cpp:464: `scores["distfrom"]` on a map that never has
+    // that key inserted -> std::map::operator[] default-constructs a double (0.).
+    #[test]
+    fn score_map_missing_key_defaults_to_zero_and_inserts() {
+        let mut scores: BTreeMap<String, f64> = BTreeMap::new();
+        assert_eq!(score_value(&mut scores, "distfrom"), 0.);
+        assert!(scores.contains_key("distfrom"));
+        scores.insert("timefrom".to_string(), 42.);
+        assert_eq!(score_value(&mut scores, "timefrom"), 42.);
+    }
 }
 
