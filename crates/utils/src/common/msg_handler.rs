@@ -82,9 +82,11 @@ pub fn get_device(name: &str) -> Result<(), ProcessError> {
         "stdout" => Box::new(std::io::stdout()),
         "stderr" => Box::new(std::io::stderr()),
         "nul" | "NUL" | "/dev/null" => Box::new(std::io::sink()),
-        _ => Box::new(std::fs::File::create(name).map_err(|e| {
+        // C++ OutputDevice buffers file writes until closeAll; keep the same
+        // behaviour so a log file stays empty until the devices are closed.
+        _ => Box::new(std::io::BufWriter::new(std::fs::File::create(name).map_err(|e| {
             ProcessError::IOError(format!("Could not build output file '{name}' ({e})."))
-        })?),
+        })?)),
     };
     devs.insert(name.to_string(), dev);
     Ok(())
@@ -104,7 +106,16 @@ fn device_inform(name: &str, msg: &str, progress: bool) {
     let dev = devs.get_mut(name).unwrap();
     let line = if progress { msg.to_string() } else { format!("{msg}\n") };
     let _ = dev.write_all(line.as_bytes());
-    let _ = dev.flush();
+    // no per-write flush: C++ OutputDevice::inform buffers and only flushes on closeAll
+}
+
+/// Flush all message devices (the log/message-log/error-log files).
+/// Called by OutputDevice::close_all, matching C++ OutputDevice::closeAll.
+pub fn flush_devices() {
+    let mut devs = lock(&DEVICES);
+    for dev in devs.values_mut() {
+        let _ = dev.flush();
+    }
 }
 
 impl MsgHandler {
@@ -461,6 +472,22 @@ pub(crate) mod tests {
         pub(crate) fn text(&self) -> String {
             String::from_utf8(lock(&self.0).clone()).unwrap()
         }
+    }
+
+    #[test]
+    fn file_device_buffers_until_close_all() {
+        // C++ OutputDevice::inform buffers file writes; they reach disk only on
+        // OutputDevice::closeAll(true) (MSNet::clearAll, MSNet.cpp:1088).
+        let dir = std::env::temp_dir().join(format!("sumo_rs_msg_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("buffered.log");
+        let name = path.to_string_lossy().to_string();
+        let _ = std::fs::remove_file(&path);
+        get_device(&name).unwrap();
+        device_inform(&name, "hello", false);
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), 0, "file write must be buffered");
+        flush_devices();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello\n");
     }
 
     #[test]

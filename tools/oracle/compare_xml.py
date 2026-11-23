@@ -15,6 +15,7 @@ Rules:
 """
 
 import argparse
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -70,8 +71,14 @@ def main(argv=None):
     p.add_argument("--tol", type=float, default=None)
     args = p.parse_args(argv)
     try:
-        ref = ET.parse(args.ref).getroot()
-        cand = ET.parse(args.cand).getroot()
+        # SUMO's --save-commented descriptions can contain '--' inside comments, which
+        # is invalid XML for ElementTree. Drop comments first, as the comparator does anyway.
+        def load(path):
+            text = open(path, encoding="utf-8", errors="replace").read()
+            text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+            return ET.fromstring(text)
+        ref = load(args.ref)
+        cand = load(args.cand)
     except (OSError, ET.ParseError) as e:
         print(f"UNREADABLE: {e}")
         return 2

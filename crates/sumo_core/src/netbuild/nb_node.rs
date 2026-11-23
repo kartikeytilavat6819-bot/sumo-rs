@@ -104,7 +104,7 @@ fn nbnode_set_connection_same_dest(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<N
 
 fn nbnode_validate_new(id: &str, position: &Position) {
     if !utils::xml::sumo_xml_definitions::is_valid_net_id(id) {
-        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
+        std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
     }
     if position.is_nan() {
         // C++ throws ProcessError (caught by the XML loader, which writes the error and

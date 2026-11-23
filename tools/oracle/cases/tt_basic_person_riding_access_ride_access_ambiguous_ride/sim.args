@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model nonInteracting --no-duration-log -a tools/oracle/cases/tt_basic_person_riding_access_ride_access_ambiguous_ride/input_additional.add.xml

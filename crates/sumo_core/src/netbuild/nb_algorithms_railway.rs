@@ -479,10 +479,11 @@ impl NBRailwaySignalGuesser {
                         let bidi = stopEdge.get_bidi_edge();
                         if ec.split_at_2(dc, stopEdge, n, &stopEdgeID, &edgeID, stopEdge.get_num_lanes(), stopEdge.get_num_lanes(), -1.0, 1.0, 0) {
                             if !bidi.is_null() {
-                                let edgeID2 = ec.create_unused_id(&format!("{}.{}", bidi.get_id(), splitPos as i32), "#");
-                                // v1_28_0 NBAlgorithms_Railway.cpp:1431 passes (edgeID2, bidiID)
-                                // here, unlike the second split branch which passes (bidiID, edgeID2).
-                                ec.split_at_2(dc, bidi, n, &edgeID2, bidi.get_id(), bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
+                                let (rawID2, remainingID) = Self::bidi_split_names(bidi.get_id(), splitPos as i32);
+                                let edgeID2 = ec.create_unused_id(&rawID2, "#");
+                                // C++ NBAlgorithms_Railway.cpp:1428-1429 passes (edgeID2, bidiID) here,
+                                // unlike the other split branch which passes (bidiID, edgeID2).
+                                ec.split_at_2(dc, bidi, n, &edgeID2, &remainingID, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
                             }
                             addedSignals += 1;
                             item.m().find_lane_and_compute_bus_stop_extent_2(stopEdge);
@@ -568,6 +569,13 @@ impl NBRailwaySignalGuesser {
             && node.get_outgoing_edges().len() >= 1
             && (node.get_edges().len() > 2
                 || node.get_incoming_edges()[0].get_from_node() != node.get_outgoing_edges()[0].get_to_node())
+    }
+
+    /// C++ NBAlgorithms_Railway.cpp:1428-1429 (guessByStops, bidi branch):
+    /// `const std::string edgeID2 = ec.createUnusedID(bidi->getID() + "." + toString(int(splitPos)), "#");`
+    /// `ec.splitAt(dc, bidi, n, edgeID2, bidi->getID(), ...)` — the NEW name is the first part.
+    fn bidi_split_names(bidi_id: &str, split_pos: i32) -> (String, String) {
+        (format!("{}.{}", bidi_id, split_pos), bidi_id.to_string())
     }
 
 }
@@ -3307,6 +3315,18 @@ impl RouterEdge<NBVehicle> for NBRailwayTopologyAnalyzer_Track {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bidi_split_gives_new_id_to_first_part() {
+        // Official test itt_nc_netconvert_function_railway_signals_guess_by_stops_split:
+        // bidi edge -E1 is split; the new segment is :-E1_-ts_0_1 (from edgeID2),
+        // the original -E1 name is kept for the second part.
+        let (raw_new, remaining) = NBRailwaySignalGuesser::bidi_split_names("-E1", 10);
+        assert_eq!(raw_new, "-E1.10");
+        assert_eq!(remaining, "-E1");
+        // the swap bug passed (original, new) here
+        assert_ne!(raw_new, remaining);
+    }
 
     #[test]
     fn ptline_start_is_skipped_at_top_of_out_rail_loop() {
