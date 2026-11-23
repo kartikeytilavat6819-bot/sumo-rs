@@ -34,18 +34,18 @@ for c in $ROWS; do
   echo "  -- off stderr:"; head -n 4 "$OUT/$c.off/err.txt" | cut -c1-200 | sed 's/^/     /'
   echo "  -- ours stderr:"; head -n 4 "$OUT/$c.ours/err.txt" | cut -c1-200 | sed 's/^/     /'
   if [ "$(cat "$OUT/$c.ours/rc.txt")" = 124 ]; then
-    # hang: attach a debugger to a fresh copy and print where it spins
+    # hang with ~0% CPU = blocked (lock/wait). ptrace attach is denied, so launch under gdb
+    # and interrupt it after 15s to print every thread's stack.
     rdir="$OUT/$c.stack"; rm -rf "$rdir"; mkdir -p "$rdir"; cp -r "$d/." "$rdir/"
-    echo "  -- debugger tools: gdb=$(command -v gdb) eu-stack=$(command -v eu-stack) pstack=$(command -v pstack) lldb=$(command -v lldb) ptrace_scope=$(cat /proc/sys/kernel/yama/ptrace_scope 2>/dev/null)"
-    (cd "$rdir" && "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${EXTRA[@]}" >out.txt 2>err.txt & pid=$!
+    (cd "$rdir"
+      gdb -batch -ex "set pagination off" -ex "run" -ex "thread apply all bt 25" --args "$OURS" -n ref_simple.net.xml -r routes.rou --no-step-log true -e 5 "${EXTRA[@]}" >gdb.txt 2>&1 &
+      gpid=$!
       sleep 15
-      echo "  -- ours still running after 15s: $(kill -0 $pid 2>/dev/null && echo yes || echo no); cpu: $(ps -o %cpu= -p $pid 2>/dev/null)"
-      if command -v gdb >/dev/null; then
-        gdb -p $pid -batch -ex "thread apply all bt 30" 2>&1 | grep -E '^#|^Thread|ptrace|Operation not permitted' | cut -c1-230 | head -70
-      elif command -v eu-stack >/dev/null; then eu-stack -p $pid 2>&1 | cut -c1-230 | head -50
-      elif command -v pstack >/dev/null; then pstack $pid 2>&1 | cut -c1-230 | head -50
-      fi
-      kill -9 $pid 2>/dev/null; wait $pid 2>/dev/null)
+      pkill -INT -n -f "debug/sumo -n ref_simple" 2>/dev/null
+      sleep 10
+      echo "  -- gdb stacks of the blocked process:"
+      grep -E '^#|^Thread|received signal|SIGINT' gdb.txt | cut -c1-230 | head -80
+      pkill -9 -f "debug/sumo -n ref_simple" 2>/dev/null; kill -9 $gpid 2>/dev/null; wait $gpid 2>/dev/null)
   fi
   if [ -f "$d/ref.errors" ]; then
     if diff -q "$d/ref.errors" "$OUT/$c.ours/err.txt" >/dev/null; then echo "  ref.errors: MATCH"
