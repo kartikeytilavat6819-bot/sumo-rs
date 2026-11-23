@@ -10,7 +10,6 @@ REF="${SUMO_PRISTINE_BIN:?}/sumo"
 export SUMO_HOME="${SUMO_HOME:-}"
 CASES="md_midinterval md_stop md_vtypes out_meandata out_bt elechybrid_overhead"
 ROOT=$(pwd)
-export OC95_TRACE=1
 
 for c in $CASES; do
   src="$ROOT/tools/oracle/cases/$c"
@@ -50,8 +49,11 @@ for c in $CASES; do
     fi
   done
 done
-echo "--- OC95T trace (md_midinterval ours, first 40 lines)"
-grep -h "OC95T leave" "$OUT/md_midinterval/ours/stderr.txt" | awk '{print $3}' | sort | uniq -c
-echo "--- OC95T enter counts per tracker"
-grep -h "OC95T enter" "$OUT/md_midinterval/ours/stderr.txt" | awk '{print $3}' | sort | uniq -c
+for c in md_midinterval md_stop; do
+  f=out_ed_mid.xml; [ $c = md_stop ] && f=out_ed_stop_tr.xml
+  for side in ref ours; do
+    echo "--- $c $side: interval headers + edge -103224#0/#1 rows"
+    grep -h '<interval\|id="-103224#0"\|id="-103224#1"' "$OUT/$c/$side/$f" | sed 's/^ *//' | head -n 30
+  done
+done
 echo "PROBE DONE (outputs in $OUT)"
