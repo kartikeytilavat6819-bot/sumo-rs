@@ -1,5 +1,6 @@
 #!/bin/bash
-# oc119 probe: runs official ($SUMO_PRISTINE_BIN/sumo) and ours on each target case and prints the first differences.
+# oc119 probe: runs official ($SUMO_PRISTINE_BIN/sumo) and ours on each case; prints first differences of
+# tripinfo/fcd/statistics, and of stdout/stderr against the committed ref.output / ref.errors.
 # Usage (repo root): bash tools/kaggle/agent_run.sh [case ...]
 OUT=/tmp/oc119; mkdir -p "$OUT"
 ROOT=$(pwd)
@@ -16,19 +17,24 @@ for c in "${CASES[@]}"; do
     args=$(tr -d '\r' < "$dir/sim.args" | sed "s#tools/oracle/cases/$c#$dir#g")
     (cd "$dir" && timeout 600 "$bin" -n ref_simple.net.xml -r routes.rou --tripinfo-output "$w/ti.xml" \
         --fcd-output "$w/fcd.xml" --statistic-output "$w/stat.xml" --no-step-log true $args \
-        > "$w/log" 2>&1); echo "$c $tag rc=$?"
+        > "$w/out" 2> "$w/err"); echo "$c $tag rc=$?"
   done
   for k in ti fcd stat; do
     if [ -f "$OUT/$c.off/$k.xml" ] && [ -f "$OUT/$c.ours/$k.xml" ]; then
       n=$(diff <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | grep -c "^[<>]")
       echo "$c $k difflines=$n"
-      diff -U2 <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | head -12 | cut -c1-200
     else
       echo "$c $k missing output"
     fi
   done
-  echo "$c messages (official vs ours, Warning/Error/Quitting lines):"
-  diff <(grep -E "^(Warning|Error|Quitting)" "$OUT/$c.off/log") <(grep -E "^(Warning|Error|Quitting)" "$OUT/$c.ours/log") | head -12 | cut -c1-200
-  echo "--- ours log tail:"; tail -n 3 "$OUT/$c.ours/log" | cut -c1-200
+  for tag in off ours; do
+    for s in out err; do
+      ref=ref.output; [ $s = err ] && ref=ref.errors
+      if [ -f "$dir/$ref" ]; then
+        d=$(diff <(tr -d '\r' < "$dir/$ref") "$OUT/$c.$tag/$s" | head -6 | cut -c1-200)
+        echo "$c $tag $s vs $ref: ${d:-SAME}"
+      fi
+    done
+  done
 done
 echo "AGENT RUN DONE"
