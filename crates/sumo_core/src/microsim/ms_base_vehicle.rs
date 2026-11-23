@@ -4059,9 +4059,9 @@ impl MSBaseVehicle {
 
         let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
         if std::env::var("OC98DBG").is_ok() {
-            eprintln!("OC98DBG addStop veh={} tooClose={} instant={} iter={} prevStopEdge={} stopEdge={} sameLaneEdge={} prevStopPos={} brakeGap={} endPos={} speed={}",
+            eprintln!("OC98DBG addStop veh={} tooClose={} instant={} iter={} prevStopEdge={} stopEdge={} sameLaneEdge={} prevStopPos={} brakeGap={} endPos={}",
                 self.myParameter.id, tooClose, self.instant_stopping(), iter, prevStopEdge, stop.edge,
-                prevEdge == Ptr::new(stop.lane.get_edge()), prevStopPos, self.get_brake_gap(false), stop.pars.endPos, self.get_speed());
+                prevEdge == Ptr::new(stop.lane.get_edge()), prevStopPos, self.get_brake_gap(false), stop.pars.endPos);
         }
 
         if prevStopEdge > stop.edge
