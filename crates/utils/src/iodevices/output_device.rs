@@ -301,6 +301,9 @@ impl OutputDevice {
                 write_error(&e.to_string());
             }
         }
+        // MsgHandler log files are OutputDevices in C++ too; flush them here so
+        // buffered messages (e.g. the startup line and router stats) reach the file.
+        crate::common::msg_handler::flush_devices();
     }
 
     pub fn ok(&self) -> bool {
