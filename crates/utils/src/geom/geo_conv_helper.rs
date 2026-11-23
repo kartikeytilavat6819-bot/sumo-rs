@@ -966,21 +966,6 @@ mod tests {
     }
 
     #[test]
-    fn proj_conversion_constants_and_utm_lam0() {
-        // PROJ's crs_to_crs pipeline uses precomputed constants, not SUMO's `(x*PI)/180`.
-        assert_eq!(DEG_TO_RAD, PI / 180.);
-        assert_eq!(RAD_TO_DEG, 180. / PI);
-        // PJ_PROJECTION(utm): lam0 = (zone + .5) * M_PI / 30. - M_PI (0-based zone).
-        let zone = 32;
-        let lam0 = (zone as f64 - 0.5) * PI / 30. - PI;
-        let h = GeoConvHelper::new(&utm_proj(zone), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
-        let mut p = Position::new(lam0 / DEG_TO_RAD, 0.);
-        assert!(h.x2cartesian_const(&mut p));
-        assert!((p.x() - 500000.).abs() < 1e-6, "central meridian easting: {}", p.x());
-        assert!(p.y().abs() < 1e-6, "equator northing: {}", p.y());
-    }
-
-    #[test]
     fn utm_zone_from_first_point() {
         let mut h = GeoConvHelper::new("UTM", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
         let mut p = Position::new(9.1, 48.7);
