@@ -1895,7 +1895,7 @@ impl MSRailSignal {
             self.constraints_allow(closest.0, false);
         } else if !self.myLinkInfos[linkIndex as usize].myDriveways.is_empty() {
             let driveway = self.myLinkInfos[linkIndex as usize].myDriveways[0];
-            driveway.conflict_lane_occupied(false, Ptr::null());
+            driveway.conflict_lane_occupied(true, Ptr::null()); // C++ default store=true (MSDriveWay.h:99)
             driveway.foe_drive_way_approached();
         }
         set_my_store_vehicles(false);
