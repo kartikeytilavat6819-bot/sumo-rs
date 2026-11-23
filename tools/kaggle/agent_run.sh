@@ -6,7 +6,7 @@ ROOT=$(pwd)
 OURS="${CARGO_TARGET_DIR:-$ROOT/target}/debug/sumo"
 OFF="${SUMO_PRISTINE_BIN:-/usr/local/bin}/sumo"
 CASES=("$@")
-[ ${#CASES[@]} -eq 0 ] && CASES=(tt_devices_rerouting_tlsPenalty_penalty_0.5 tt_devices_stationfinder_charging tt_devices_fcd-replay_plain tt_output_examples_cross3ltl_suffix)
+[ ${#CASES[@]} -eq 0 ] && CASES=(tt_devices_rerouting_tlsPenalty_penalty_0.5 tt_devices_stationfinder_charging tt_devices_fcd-replay_plain tt_output_examples_cross3ltl_suffix tt_devices_taxi_idling_randomCircling_rerouting)
 for c in "${CASES[@]}"; do
   dir="$ROOT/tools/oracle/cases/$c"
   for tag in off ours; do
