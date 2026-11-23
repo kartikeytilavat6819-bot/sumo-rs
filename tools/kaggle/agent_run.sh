@@ -21,6 +21,8 @@ for c in $CASES; do
     cp -r "$src/." "$w/"
     # sim.args uses repo-relative case paths; point them at the private copy
     a=$(printf '%s' "$args" | sed "s#tools/oracle/cases/$c#$w#g")
+    # extra_outputs.txt lines are "<option> <suffix>"; compared against ref.<suffix>.xml
+    [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; a="$a $opt $w/out_$suf.xml"; done < "$src/extra_outputs.txt"
     bin="$REF"; [ "$side" = ours ] && bin="$OURS"
     # shellcheck disable=SC2086
     (cd "$w" && timeout 900 "$bin" $a \
@@ -76,4 +78,18 @@ run_variant "tcache_count=1" GLIBC_TUNABLES=glibc.malloc.tcache_count=1
 run_variant "mmap_threshold=65536" MALLOC_MMAP_THRESHOLD_=65536
 run_variant "top_pad=1MB" MALLOC_TOP_PAD_=1048576
 run_variant "arena_max=1" MALLOC_ARENA_MAX=1
+echo "--- official out_bt: number of <seen> entries and checksum under allocator variants"
+c=out_bt; src="$ROOT/tools/oracle/cases/$c"; args=$(cat "$src/sim.args"); n=0
+bt_variant() {
+  label="$1"; shift
+  n=$((n+1)); w="$OUT/btvariant$n"; mkdir -p "$w"; cp -r "$src/." "$w/"
+  a=$(printf '%s' "$args" | sed "s#tools/oracle/cases/$c#$w#g")
+  # shellcheck disable=SC2086
+  (cd "$w" && env "$@" timeout 300 "$REF" $a --net-file "$w/ref_simple.net.xml" --route-files "$w/routes.rou" --bt-output "$w/out_bt.xml" >/dev/null 2>&1)
+  printf '%-30s seen=%s bt=%s sum=%s\n' "$label" "$(grep -c '<seen' "$w/out_bt.xml" 2>/dev/null)" "$(grep -c '<bt ' "$w/out_bt.xml" 2>/dev/null)" "$(grep -v 'generated on\|value=' "$w/out_bt.xml" 2>/dev/null | cksum | cut -d' ' -f1)"
+}
+bt_variant "default" X=1
+bt_variant "default (repeat)" X=1
+bt_variant "tcache_count=0" GLIBC_TUNABLES=glibc.malloc.tcache_count=0
+bt_variant "top_pad=1MB" MALLOC_TOP_PAD_=1048576
 echo "PROBE DONE (outputs in $OUT)"
