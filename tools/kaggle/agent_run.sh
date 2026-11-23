@@ -49,6 +49,8 @@ probe = ('try:\n'
          '    print("FINDROUTE-ERR", type(e).__name__, e)\n')
 i = src.find(marker)
 line_start = src.rfind("\n", 0, i) + 1
+indent = src[line_start:i]  # the marker line's own indentation (the call sits inside an if block)
+probe = "".join(indent + ln if ln.strip() else ln for ln in probe.splitlines(True))
 open(p, "w", encoding="utf-8").write(src[:line_start] + probe + src[line_start:])
 PY
 for side in official ours; do
