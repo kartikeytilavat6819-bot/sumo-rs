@@ -1,0 +1,2 @@
+official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
+Official expectation: netconvert/import/dlr_navteq/vclass/peds_only_on_1/_deprecated_/dismissing__removing_peds_cycles/{errors,output}.netconvert

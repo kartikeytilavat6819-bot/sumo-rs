@@ -121,10 +121,11 @@ pub fn railway_recompute_costs<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAb
 }
 
 /// The `RailwayRouter::prohibit` reached from the base router's prohibit slot (C++ virtual dispatch)
-// Needs `V: RouterVehicle` like the impl block below: without it the inherent `RailwayRouter::prohibit` is not
-// applicable, method lookup falls through Deref to `SUMOAbstractRouter::prohibit`, and that calls this hook again (endless loop).
+// The bound must match the impl that defines RailwayRouter::prohibit (V: RouterVehicle). Without it the
+// inherent method is not a candidate, `.prohibit` auto-derefs to the base SUMOAbstractRouter::prohibit,
+// which dispatches back to this hook forever (one get_router_tt -> billions of prohibit calls).
 pub fn railway_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
-    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().prohibit(toProhibit)
+    RailwayRouter::<E, V>::prohibit(Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m(), toProhibit)
 }
 
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {

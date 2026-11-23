@@ -125,6 +125,10 @@ for dir in tools/oracle/cases/*/; do
     if [ -f "$dir/net.args" ] && [ ! -f "$dir/sim.args" ]; then
       line "$c" err SKIP "netconvert error row (net.args)"; SKIP=$((SKIP+1)); continue
     fi
+    # A SUMO error row still needs its net to run the official command below.
+    if [ ! -f "$dir/ref_simple.net.xml" ]; then
+      line "$c" err SKIP "no ref_simple.net.xml"; SKIP=$((SKIP+1)); continue
+    fi
     EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
         --no-step-log true $EXTRA >"$OUT/$c.err.out" 2>"$OUT/$c.err.log"
