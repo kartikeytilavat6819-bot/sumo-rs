@@ -9,6 +9,9 @@ use std::f64::consts::PI;
 
 use super::geom_helper::{deg2rad, rad2deg};
 use super::{Boundary, Position};
+
+/// PROJ's degree-to-radian factor (`x * DEG_TO_RAD`, not `(x * PI) / 180`).
+const DEG_TO_RAD: f64 = PI / 180.;
 use crate::common::msg_handler::{write_error, write_warning};
 use crate::common::std_defs::{g_precision, g_precision_geo};
 use crate::common::string_utils::escape_xml;
@@ -411,7 +414,9 @@ impl GeoConvHelper {
                 return false;
             }
             if let Some(p) = self.projection {
-                (x, y) = p.fwd(deg2rad(x), deg2rad(y));
+                // C++ passes degrees straight to modern PROJ (myRadians = false); PROJ's
+                // crs_to_crs pipeline converts with its precomputed DEG_TO_RAD constant.
+                (x, y) = p.fwd(x * DEG_TO_RAD, y * DEG_TO_RAD);
             } else if self.projection_method == ProjectionMethod::Proj {
                 write_error(&format!("Projection '{}' is not supported by this build (only +proj=utm and +proj=tmerc with lat_0=0)", self.proj_string));
                 return false;
