@@ -42,7 +42,7 @@ for c in $CASES; do
     case "$s" in fcd*|stat*|tripinfo*) continue ;; esac
     if [ -z "$got" ]; then echo "$c/$s: no output produced"; continue; fi
     refout="$OUT/$c/ref/out_${s}"; [ -f "$refout" ] || refout="$OUT/$c/ref/${s}"
-    norm() { grep -v 'generated on\|net-file\|route-files\|additional-files' "$1" | sed 's/^ *//'; }
+    norm() { grep -v 'generated on\|net-file\|route-files\|additional-files\|-output value=' "$1" | sed 's/^ *//'; }
     if diff -q <(norm "$refout") <(norm "$got") >/dev/null; then
       echo "$c/$s: identical"
     else
@@ -109,6 +109,36 @@ eh_variant "default" X=1
 eh_variant "default (repeat)" X=1
 eh_variant "tcache_count=0" GLIBC_TUNABLES=glibc.malloc.tcache_count=0
 eh_variant "top_pad=1MB" MALLOC_TOP_PAD_=1048576
+
+echo "--- elechybrid_overhead: first rows where ref and ours differ (test1/test2/test3 vehicle lines)"
+python3 - "$OUT/elechybrid_overhead/ref/out_elechybrid.xml" "$OUT/elechybrid_overhead/ours/out_elechybrid.xml" <<'PYEOF3'
+import re, sys
+def rows(path):
+    out = []
+    try:
+        for line in open(path, errors="replace"):
+            if "<vehicle " in line:
+                d = dict(re.findall(r'(\w+)="([^"]*)"', line))
+                out.append(d)
+    except OSError as e:
+        print("cannot read", path, e)
+    return out
+ref, ours = rows(sys.argv[1]), rows(sys.argv[2])
+print("vehicle rows: ref=%d ours=%d" % (len(ref), len(ours)))
+keys = ["current", "circuitVoltage", "alphaCircuitSolver", "power", "overheadWireId", "tractionSubstationId", "actualBatteryCapacity"]
+shown = 0
+for i, (a, b) in enumerate(zip(ref, ours)):
+    diff = [k for k in keys if a.get(k) != b.get(k)]
+    if diff:
+        print("row %d id=%s pos=%s lane=%s" % (i, a.get("id"), a.get("posOnLane"), a.get("lane")))
+        for k in diff:
+            print("    %-22s ref=%-24s ours=%s" % (k, a.get(k), b.get(k)))
+        shown += 1
+        if shown >= 5:
+            break
+if not shown:
+    print("no difference in the compared attributes")
+PYEOF3
 
 # Measure the official binary's vehicle-sized malloc/free sequence (address reuse) on md_stop.
 echo "--- official md_stop: vehicle-sized malloc/free address-reuse sequence"
