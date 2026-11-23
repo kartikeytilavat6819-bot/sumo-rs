@@ -2761,8 +2761,10 @@ impl MSPModel_Striping_PState {
                 if route.len() > 2 {
                     dLoc = utils::tlf!(" between edge '%' and edge '%'", route[lastDisconnect - 1].get_id(), route[lastDisconnect].get_id());
                 }
+                // C++ SIMTIME is time2string(currentTimeStep); passing raw SUMOTime printed milliseconds.
+                let simTime = utils::common::time::time2string(MSNet::get_instance().get_current_time_step());
                 utils::write_warningf!("Person '%' walking from edge '%' to edge '%' has a disconnect%, time=%.", person.get_id(), route[0].get_id(),
-                    route[route.len() - 1].get_id(), dLoc.as_str(), MSNet::get_instance().get_current_time_step());
+                    route[route.len() - 1].get_id(), dLoc.as_str(), simTime);
                 s.myDir = if passedFwd >= passedBwd { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
             } else {
                 s.myDir = if !mayStartBackward { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };

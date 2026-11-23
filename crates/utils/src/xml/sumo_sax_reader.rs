@@ -97,6 +97,63 @@ impl XmlStream {
         }
     }
 
+    /// Xerces reports "equal sign expected" at the first token after an
+    /// attribute name that is not followed by '=' (e.g. `<tag broken state>`).
+    fn missing_equals_error(&self, h: &mut dyn SaxHandler, tag_pos: u64) -> Option<ProcessError> {
+        let data = self.data();
+        let start = tag_pos as usize;
+        if data.get(start) != Some(&b'<') {
+            return None;
+        }
+        let end = data[start..].iter().position(|&c| c == b'>').map(|i| start + i).unwrap_or(data.len());
+        let tag = &data[start..end];
+        let mut i = 1usize;
+        // skip the element name
+        while i < tag.len() && !tag[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        loop {
+            while i < tag.len() && tag[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            if i >= tag.len() {
+                return None;
+            }
+            let name_start = i;
+            while i < tag.len() && !tag[i].is_ascii_whitespace() && tag[i] != b'=' {
+                i += 1;
+            }
+            if i == name_start {
+                return None;
+            }
+            while i < tag.len() && tag[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            if i >= tag.len() || tag[i] != b'=' {
+                return Some(self.fatal(h, "equal sign expected", start as u64 + i as u64));
+            }
+            // quoted or unquoted value
+            i += 1;
+            while i < tag.len() && tag[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            if i < tag.len() && (tag[i] == b'"' || tag[i] == b'\'') {
+                let quote = tag[i];
+                i += 1;
+                while i < tag.len() && tag[i] != quote {
+                    i += 1;
+                }
+                if i < tag.len() {
+                    i += 1;
+                }
+            } else {
+                while i < tag.len() && !tag[i].is_ascii_whitespace() {
+                    i += 1;
+                }
+            }
+        }
+    }
+
     /// a quick-xml error, worded and positioned as Xerces reports it
     fn read_error(&self, h: &mut dyn SaxHandler, e: &quick_xml::Error) -> ProcessError {
         match e {
@@ -160,7 +217,13 @@ impl XmlStream {
                 let name = s.name().as_ref().to_string();
                 let mut attrs = Vec::new();
                 for a in s.attributes() {
-                    let a = a.map_err(|err| self.fatal(h, &err.to_string(), pos))?;
+                    let a = a.map_err(|err| {
+                        if let Some(e) = self.missing_equals_error(h, pos) {
+                            e
+                        } else {
+                            self.fatal(h, &err.to_string(), pos)
+                        }
+                    })?;
                     let v = a.normalized_value(XmlVersion::Implicit1_0).map_err(|err| self.reference_error(h, pos, &err.to_string()))?;
                     attrs.push((a.key.as_ref().to_string(), v.into_owned()));
                 }

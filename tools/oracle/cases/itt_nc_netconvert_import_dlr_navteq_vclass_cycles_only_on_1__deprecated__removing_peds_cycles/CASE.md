@@ -1,0 +1,4 @@
+# itt_nc_netconvert_import_dlr_navteq_vclass_cycles_only_on_1__deprecated__removing_peds_cycles
+
+Source: `netconvert/import/dlr_navteq/vclass/cycles_only_on_1/_deprecated_/removing_peds_cycles`
+Official netconvert exit code: 1

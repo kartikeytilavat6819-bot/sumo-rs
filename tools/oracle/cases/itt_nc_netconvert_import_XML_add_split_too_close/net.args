@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_too_close/input_edges.edg.xml,tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_too_close/input_edges2.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_too_close/input_nodes.nod.xml
