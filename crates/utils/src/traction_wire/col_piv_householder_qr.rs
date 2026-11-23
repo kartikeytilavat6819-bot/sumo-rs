@@ -219,6 +219,10 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
     for i in 0..rank {
         x[perm[i]] = c[i];
     }
+    if std::env::var_os("OC95_DUMP").is_some() {
+        // probe only (removed before the final commit): exact solver inputs/outputs
+        eprintln!("OC95Q {} {:?} {:?} {:?}", rows, a.data, b, x);
+    }
     x
 }
 
