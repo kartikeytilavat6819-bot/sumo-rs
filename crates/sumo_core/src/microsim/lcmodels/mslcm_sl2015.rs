@@ -2879,7 +2879,7 @@ impl MSLCM_SL2015 {
         // oc97-TEMP-TRACE (remove after measuring)
         if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/lc_trace.txt") {
             use std::io::Write;
-            let _ = writeln!(tf, "LC type={} speed={:.6} pos={:.6} lat={:.6} off={} ownState={}", self.myVehicle.get_vehicle_type().get_id(), self.myVehicle.get_speed(), self.myVehicle.get_position_on_lane(), self.myVehicle.get_lateral_position_on_lane(), laneOffset, self.myOwnState);
+            let _ = writeln!(tf, "LC id={} speed={:.6} pos={:.6} lat={:.6} off={} ownState={}", self.myVehicle.get_id(), self.myVehicle.get_speed(), self.myVehicle.get_position_on_lane(), self.myVehicle.get_lateral_position_on_lane(), laneOffset, self.myOwnState);
         }
         if laneOffset != 0 {
             // update mySafeLatDist w.r.t. the direction being checkd
