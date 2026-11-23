@@ -323,6 +323,14 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
     for i in 0..rank {
         x[perm[i]] = c[i];
     }
+    if let Ok(t) = std::env::var("OC95_DUMP_TARGET") {
+        // probe only (removed before the final commit): solver calls whose solution contains the target value
+        if let Ok(t) = t.parse::<f64>() {
+            if x.iter().any(|v| (v - t).abs() <= 5.1e-5) {
+                eprintln!("OC95Q {} rank={} {:?} {:?} {:?}", rows, rank, a.data, b, x);
+            }
+        }
+    }
     x
 }
 
