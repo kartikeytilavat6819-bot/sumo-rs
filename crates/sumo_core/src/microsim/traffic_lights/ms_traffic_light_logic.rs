@@ -629,8 +629,8 @@ impl MSTrafficLightLogic {
         let mut firstUnsafeOrigins: i32 = 0;
         let mut unsafeGreenPhases: i32 = 0;
         for i in 0..phases.len() {
-            // determinism: C++ orders greenLanes by numerical lane id (ComparatorNumericalIdLess); here the map is ordered by address
-            let mut greenLanes: BTreeMap<Ptr<MSLane>, i32> = BTreeMap::new();
+            // C++ std::map<const MSLane*, int, ComparatorNumericalIdLess>: order by numerical lane id, not address.
+            let mut greenLanes: BTreeMap<NumIdKey<MSLane>, i32> = BTreeMap::new();
             let state = phases[i].get_state().to_string();
             for j in 0..numLinks {
                 if ((state.as_bytes()[j] as i8) as LinkState) == LINKSTATE_TL_GREEN_MAJOR {
@@ -639,20 +639,21 @@ impl MSTrafficLightLogic {
                             // links from an internal junction have implicit priority in case of conflict
                             continue;
                         }
-                        *greenLanes.entry(link.get_lane()).or_insert(0) += 1;
+                        let lane = link.get_lane();
+                        *greenLanes.entry(NumIdKey::new(lane, lane.get_numerical_id() as i64)).or_insert(0) += 1;
                     }
                 }
             }
             let mut isUnsafe = false;
-            for (lane, count) in greenLanes.iter() {
+            for (laneKey, count) in greenLanes.iter() {
                 if *count > 1 {
                     if unsafeGreenPhases == 0 && !isUnsafe {
                         firstUnsafePhase = i as i32;
-                        firstUnsafeLane = *lane;
+                        firstUnsafeLane = laneKey.ptr();
                         firstUnsafeOrigins = *count;
                     }
                     isUnsafe = true;
-                    unsafeGreen.insert(*lane);
+                    unsafeGreen.insert(laneKey.ptr());
                 }
             }
             if isUnsafe {
