@@ -62,4 +62,9 @@ for c in tt_bugs_8xxx_ticket8817 tt_devices_rerouting_stops_stop_same_edge_slack
   diff <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.off.trip.xml" 2>/dev/null) <(grep -v -e 'generated on' -e 'output value' "$OUT/$c.ours.trip.xml" 2>/dev/null) | head -n 4 | cut -c1-250 | sed 's/^/   trip /'
   diff "$OUT/$c.off.err" "$OUT/$c.ours.err" | head -n 4 | cut -c1-250 | sed 's/^/   err  /'
 done
+# 5) complex rows touched by my stop/estimate fixes (compact: result line + first differing console lines)
+for t in vehicle/stopDelay_waypoint vehicle/setStop/newStop_fast_forced vehicle/setStop_default_state; do
+  echo "== COMPLEX $t: $(COMPLEX_OUT="$OUT/cx" COMPLEX_FILTER="$t" bash tools/oracle/run_complex_suite.sh 2>&1 | grep -a "^PASS\|^FAIL" | head -n 2 | cut -c1-260 | tr '
+' ' ')"
+done
 echo "AGENT RUN DONE"
