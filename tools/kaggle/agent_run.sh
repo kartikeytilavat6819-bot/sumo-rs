@@ -1,12 +1,13 @@
 #!/bin/bash
 # oc119 probe: runs official ($SUMO_PRISTINE_BIN/sumo) and ours on each target case and prints the first differences.
-# Usage (repo root): bash tools/kaggle/agent_run.sh [case ...]   (default: the oc119 target rows)
+# Usage (repo root): bash tools/kaggle/agent_run.sh [case ...]
 OUT=/tmp/oc119; mkdir -p "$OUT"
 ROOT=$(pwd)
 OURS="${CARGO_TARGET_DIR:-$ROOT/target}/debug/sumo"
 OFF="${SUMO_PRISTINE_BIN:-/usr/local/bin}/sumo"
 CASES=("$@")
-[ ${#CASES[@]} -eq 0 ] && CASES=(tt_devices_rerouting_tlsPenalty_penalty_0.5 tt_devices_stationfinder_charging tt_devices_fcd-replay_plain tt_output_examples_cross3ltl_suffix tt_devices_taxi_idling_randomCircling_rerouting)
+[ ${#CASES[@]} -eq 0 ] && CASES=(tt_output_tripinfo_one_vehicle_subsecond tt_output_tripinfo_probability_by_type tt_output_tripinfo_teleport tt_output_tripinfo_teleport_multihop tt_output_tripinfo_write_undeparted)
+F="grep -v -e generated -e -output"
 for c in "${CASES[@]}"; do
   dir="$ROOT/tools/oracle/cases/$c"
   for tag in off ours; do
@@ -19,12 +20,15 @@ for c in "${CASES[@]}"; do
   done
   for k in ti fcd stat; do
     if [ -f "$OUT/$c.off/$k.xml" ] && [ -f "$OUT/$c.ours/$k.xml" ]; then
-      F="grep -v -e generated -e -output"; n=$(diff <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | grep -c "^[<>]")
+      n=$(diff <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | grep -c "^[<>]")
       echo "$c $k difflines=$n"
       diff -U2 <($F < "$OUT/$c.off/$k.xml") <($F < "$OUT/$c.ours/$k.xml") | head -12 | cut -c1-200
     else
       echo "$c $k missing output"
     fi
   done
+  echo "$c messages (official vs ours, Warning/Error/Quitting lines):"
+  diff <(grep -E "^(Warning|Error|Quitting)" "$OUT/$c.off/log") <(grep -E "^(Warning|Error|Quitting)" "$OUT/$c.ours/log") | head -12 | cut -c1-200
   echo "--- ours log tail:"; tail -n 3 "$OUT/$c.ours/log" | cut -c1-200
 done
+echo "AGENT RUN DONE"
