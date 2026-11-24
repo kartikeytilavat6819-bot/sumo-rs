@@ -10534,7 +10534,8 @@ impl MSVehicle {
             self.myState.myPos = realPos; // reset fake position
             if self.myStops.front().unwrap().pars.parking != ParkingType::ONROAD {
                 // processNextStop is called again during MSVehicleTransfer::loadState
-                stopDuration += self.get_action_step_length();
+                // C++ SUMOTime (int64) addition wraps when the saved duration is SUMOTime_MAX
+                stopDuration = stopDuration.wrapping_add(self.get_action_step_length());
             }
             self.myStops.front_mut().unwrap().duration = stopDuration;
             if !MSGlobals::use_stop_started() {
