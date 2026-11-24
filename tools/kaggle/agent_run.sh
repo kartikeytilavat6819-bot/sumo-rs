@@ -67,4 +67,10 @@ for t in vehicle/stopDelay_waypoint vehicle/setStop/newStop_fast_forced vehicle/
   echo "== COMPLEX $t: $(COMPLEX_OUT="$OUT/cx" COMPLEX_FILTER="$t" bash tools/oracle/run_complex_suite.sh 2>&1 | grep -a "^PASS\|^FAIL" | head -n 2 | cut -c1-260 | tr '
 ' ' ')"
 done
+# 6) verbatim OFFICIAL stderr/stdout of the three stale-reference rows (harness invocation), to regenerate ref.errors/ref.output
+for c in tt_spec_arrival_errors_lane_given10 tt_spec_arrival_errors_speed_given100 tt_devices_ssm_bugs_ticket5231; do
+  echo "== OFFICIAL $c rc=$(cat $OUT/$c.e.off.rc) stderr_lines=$(wc -l < $OUT/$c.e.off.err) stdout_bytes=$(wc -c < $OUT/$c.e.off.out)"
+  echo "-- BEGIN stderr"; sed 's/^/|/' "$OUT/$c.e.off.err"; echo "-- END stderr"
+  echo "-- BEGIN stdout"; sed 's/^/|/' "$OUT/$c.e.off.out"; echo "-- END stdout"
+done
 echo "AGENT RUN DONE"
