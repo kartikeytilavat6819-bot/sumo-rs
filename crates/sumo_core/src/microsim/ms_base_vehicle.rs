@@ -884,15 +884,12 @@ impl MSBaseVehicle {
     // virtual bool instantStopping() const {
     //         return false;
     //     }
+    /// The virtual is overridden by MSVehicle (MSVehicle.cpp:8469); reach it through the checked downcast.
     #[allow(unused_variables)]
     pub fn instant_stopping(&self) -> bool {
-        // virtual: MSVehicle depends on the TraCI influencer (speedMode without max-decel, MSVehicle.cpp:8469)
-        // shortcut: MEVehicle::instantStopping() is true in C++ (MEVehicle.h:175); meso keeps false here because
-        // dispatching it regressed tt_meso rows in the full gate, upgrade once the cause is known
-        if MSGlobals::use_meso_sim() {
-            false
-        } else {
-            self.as_ms_vehicle().instant_stopping()
+        match self.as_micro_vehicle() {
+            Some(v) => v.instant_stopping(),
+            None => false,
         }
     }
 
@@ -4058,7 +4055,13 @@ impl MSBaseVehicle {
             return false;
         }
 
-        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
+        // instantStopping() is virtual: MSVehicle overrides it (influencer), MEVehicle too
+        let instantStopping = if MSGlobals::use_meso_sim() {
+            true // MEVehicle::instantStopping()
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().instant_stopping()
+        };
+        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !instantStopping { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
 
         if prevStopEdge > stop.edge
             // a collision-stop happens after vehicle movement and may move the

@@ -8,21 +8,22 @@ fn tra_ci_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MS
     t.compute_dispatch(now, fleet);
 }
 
-fn tra_ci_from(d: &mut MSDispatch) -> &mut MSDispatch_TraCI {
-    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
-    unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) }
-}
-
 fn tra_ci_add_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
-    tra_ci_from(d).add_reservation(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity)
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.add_reservation(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity)
 }
 
 fn tra_ci_remove_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
-    tra_ci_from(d).remove_reservation(person, from, fromPos, to, toPos, group)
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.remove_reservation(person, from, fromPos, to, toPos, group)
 }
 
 fn tra_ci_fulfilled_reservation(d: &mut MSDispatch, res: Ptr<Reservation>) {
-    tra_ci_from(d).fulfilled_reservation(res)
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.fulfilled_reservation(res);
 }
 
 pub(crate) const MS_DISPATCH_TRA_CI_VT: MSDispatchVt = MSDispatchVt {

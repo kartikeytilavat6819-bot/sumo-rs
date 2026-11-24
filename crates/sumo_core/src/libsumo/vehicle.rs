@@ -168,7 +168,8 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
-        TraCIPosition { base: TraCIResult::new(), x: 0.0, y: 0.0, z: 0.0 }
+        // C++ TraCIPosition() defaults every coordinate to INVALID_DOUBLE_VALUE (TraCIDefs.h:194)
+        TraCIPosition { base: TraCIResult::new(), x: INVALID_DOUBLE_VALUE, y: INVALID_DOUBLE_VALUE, z: INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
@@ -1928,7 +1929,11 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
                 microVeh.m().get_lane_change_model().set_parameter(attrName, value);
             }
         } else if key.starts_with("carFollowModel.") {
-            veh.m().set_car_follow_model_parameter(key, value).unwrap_or_else(|e| panic!("{}", e.0));
+            if microVeh.is_null() {
+                panic!("{}", format!("Meso Vehicle '{}' does not support carFollowModel parameters.", vehID));
+            }
+            // C++ Vehicle.cpp:2572: InvalidArgument is rethrown with the vehicle context
+            veh.m().set_car_follow_model_parameter(key, value).unwrap_or_else(|e| panic!("{}", format!("Vehicle '{}' does not support carFollowModel parameter '{}' ({}).", vehID, key, e.0)));
         } else if key.starts_with("junctionModel.") {
             // use the whole key (including junctionModel prefix)
             veh.m().set_junction_model_parameter(key, value);
@@ -2600,7 +2605,8 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         } else if param == "speed" {
             let speed = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
             if speed > 0. && pars.get_triggers().len() > 0 {
-                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, speed));
+                // TLF formats the double with toString (gPrecision), so 3.0 prints as "3.00"
+                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, utils::common::to_string::f64_to_string(speed)));
             }
             pars.speed = speed;
             pars.parametersSet |= STOP_SPEED_SET;

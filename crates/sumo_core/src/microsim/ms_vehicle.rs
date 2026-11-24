@@ -5139,7 +5139,7 @@ impl MSVehicle {
     //             return STEPS2TIME(estimatedDepart + stop.duration - stop.pars.until);
     //         }
     //         if (stop.pars.duration > 0) {
-    //             estimatedDepart += stop.pars.duration;
+    //             estimatedDepart = estimatedDepart.wrapping_add(stop.pars.duration);
     //         }
     //         estimatedDepart += TIME2STEPS(estimateTimeToNextStop().first);
     //         const double result = MAX2(0.0, STEPS2TIME(estimatedDepart - stop.pars.until));
@@ -5156,10 +5156,10 @@ impl MSVehicle {
             let stop = self.myStops.front().unwrap();
             let mut estimatedDepart: SUMOTime = MSNet::get_instance().get_current_time_step() - delta_t();
             if stop.reached {
-                return steps2time(estimatedDepart + stop.duration - stop.pars.until);
+                return steps2time(estimatedDepart.wrapping_add(stop.duration).wrapping_sub(stop.pars.until));
             }
             if stop.pars.duration > 0 {
-                estimatedDepart += stop.pars.duration;
+                estimatedDepart = estimatedDepart.wrapping_add(stop.pars.duration);
             }
             estimatedDepart += time2steps(self.estimate_time_to_next_stop().0);
             let x = steps2time(estimatedDepart - stop.pars.until);
@@ -8387,7 +8387,7 @@ impl MSVehicle {
         let time: SUMOTime = MSNet::get_instance().get_current_time_step();
         let me: Ptr<MSVehicle> = Ptr::from_mut(self);
         if stop.reached {
-            stop.m().duration -= self.get_action_step_length();
+            stop.m().duration = stop.duration.wrapping_sub(self.get_action_step_length()); // C++ int64 wraps
             if self.get_speed() > 0.0 {
                 // re-enter stopping places to correct waiting position (except for parkingArea since it's place-based)
                 if !stop.busstop.is_null() {
@@ -8484,7 +8484,7 @@ impl MSVehicle {
                 // joining only takes place after stop duration is over
                 if stop.joinTriggered && !self.myAmRegisteredAsWaiting && stop.duration <= (if stop.pars.extension >= 0 { -stop.pars.extension } else { 0 }) {
                     if stop.pars.extension >= 0 {
-                        utils::common::msg_handler::write_warning(&format!("Vehicle '{}' aborts joining after extension of {} at time {}.", self.get_id(), to_string(&steps2time(stop.pars.extension)), time2string(MSNet::get_instance().get_current_time_step())));
+                        utils::common::msg_handler::write_warning(&format!("Vehicle '{}' aborts joining after extension of {}s at time {}.", self.get_id(), to_string(&steps2time(stop.pars.extension)), time2string(MSNet::get_instance().get_current_time_step())));
                         stop.m().joinTriggered = false;
                     } else {
                         // keep stopping indefinitely but ensure that simulation terminates
@@ -8588,7 +8588,7 @@ impl MSVehicle {
                     // compute stopping time
                     let duration = stop.get_min_duration(time);
                     stop.m().duration = duration;
-                    let endBoarding = if stop.pars.extension >= 0 { time + stop.duration + stop.pars.extension } else { SUMOTIME_MAX };
+                    let endBoarding = if stop.pars.extension >= 0 { time.wrapping_add(stop.duration).wrapping_add(stop.pars.extension) } else { SUMOTIME_MAX };
                     stop.m().endBoarding = endBoarding;
                     // getDevice(typeid(MSDevice_Taxi)) by id prefix, see above
                     let taxiDevice: Ptr<MSDevice_Taxi> = self
@@ -10534,7 +10534,8 @@ impl MSVehicle {
             self.myState.myPos = realPos; // reset fake position
             if self.myStops.front().unwrap().pars.parking != ParkingType::ONROAD {
                 // processNextStop is called again during MSVehicleTransfer::loadState
-                stopDuration += self.get_action_step_length();
+                // C++ SUMOTime (int64) addition wraps when the saved duration is SUMOTime_MAX
+                stopDuration = stopDuration.wrapping_add(self.get_action_step_length());
             }
             self.myStops.front_mut().unwrap().duration = stopDuration;
             if !MSGlobals::use_stop_started() {
@@ -15413,7 +15414,6 @@ impl MSVehicle {
             }
         }
         // if this is the link between two internal lanes we may have to slow down for pedestrians
-        // (MSVehicle.cpp:3717) the foe-limited v must reach vLinkWait, which is the final speed of a link item without request
         *vLinkWait = min2(*vLinkWait, *v);
     }
 
@@ -15884,7 +15884,6 @@ impl MSVehicle {
             // distAccel + distDecel < d
             let inner = 2. * d * (b + a) + (vs * vs) - (c * c);
             let t1 = b * ((a * inner) - (b * (c * c)));
-            // C++ (MSVehicle.cpp estimateTimeToNextStop): pow(2 * c * b, 2) + (4 * ((b * (...)) + pow((a * vs), 2))); the factor 4 covers both terms
             let disc = (2. * c * b).powf(2.0) + (4. * (t1 + (a * vs).powf(2.0)));
             let maxVD = max2(c, ((max2(0.0, disc).sqrt() * 0.5) + (c * b)) / (b + a));
             it = self.myCurrEdge;
@@ -16169,8 +16168,7 @@ impl MSVehicle {
             arrivalTime = t - delta_t() + cfModel.get_minimal_arrival_time(seen, self.myState.mySpeed, arrivalSpeed);
         }
         if self.is_stopped() {
-            // a stop with the default duration has SUMOTime_MAX (libsumo Helper::buildStopParameters); C++ signed overflow wraps on x86-64
-            arrivalTime = arrivalTime.wrapping_add(std::cmp::max(0, self.myStops.front().unwrap().duration));
+            arrivalTime = arrivalTime.wrapping_add(std::cmp::max(0, self.myStops.front().unwrap().duration)); // C++ int64 wraps (default stop duration is SUMOTime_MAX)
         }
         arrivalTime
     }
