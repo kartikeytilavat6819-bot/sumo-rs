@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-22T03:06:01.148532-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/input_additional.add.xml,tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_tls_driveOff_EIDM/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="EIDM"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="flow.0" x="99.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="99.90" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="flow.0" x="99.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="99.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.1" x="92.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="92.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="flow.0" x="99.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="99.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.1" x="92.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="92.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="flow.0" x="99.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="99.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.1" x="92.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="92.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="flow.0" x="99.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="99.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.1" x="92.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="92.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="flow.0" x="101.09" y="0.00" angle="90.00" type="t" speed="1.19" pos="1.09" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="92.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="92.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="flow.0" x="104.86" y="0.00" angle="90.00" type="t" speed="3.77" pos="4.86" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="92.68" y="0.00" angle="90.00" type="t" speed="0.38" pos="92.68" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="flow.0" x="111.20" y="0.00" angle="90.00" type="t" speed="6.33" pos="11.20" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="95.04" y="0.00" angle="90.00" type="t" speed="2.36" pos="95.04" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="84.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="84.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="flow.0" x="119.93" y="0.00" angle="90.00" type="t" speed="8.73" pos="19.93" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="99.58" y="0.00" angle="90.00" type="t" speed="4.53" pos="99.58" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.2" x="85.44" y="0.00" angle="90.00" type="t" speed="0.74" pos="85.44" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="77.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="flow.0" x="130.67" y="0.00" angle="90.00" type="t" speed="10.74" pos="30.67" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="106.33" y="0.00" angle="90.00" type="t" speed="6.76" pos="6.33" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="88.36" y="0.00" angle="90.00" type="t" speed="2.91" pos="88.36" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="77.32" y="0.00" angle="90.00" type="t" speed="0.22" pos="77.32" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="flow.0" x="142.85" y="0.00" angle="90.00" type="t" speed="12.18" pos="42.85" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="115.22" y="0.00" angle="90.00" type="t" speed="8.88" pos="15.22" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="93.49" y="0.00" angle="90.00" type="t" speed="5.14" pos="93.49" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.3" x="79.30" y="0.00" angle="90.00" type="t" speed="1.97" pos="79.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="69.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="69.50" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="flow.0" x="155.90" y="0.00" angle="90.00" type="t" speed="13.05" pos="55.90" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="125.93" y="0.00" angle="90.00" type="t" speed="10.71" pos="25.93" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="100.81" y="0.00" angle="90.00" type="t" speed="7.32" pos="0.81" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="83.23" y="0.00" angle="90.00" type="t" speed="3.93" pos="83.23" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="70.14" y="0.00" angle="90.00" type="t" speed="0.64" pos="70.14" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="flow.0" x="169.40" y="0.00" angle="90.00" type="t" speed="13.50" pos="69.40" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="138.02" y="0.00" angle="90.00" type="t" speed="12.10" pos="38.02" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="110.16" y="0.00" angle="90.00" type="t" speed="9.35" pos="10.16" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="89.21" y="0.00" angle="90.00" type="t" speed="5.98" pos="89.21" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="72.83" y="0.00" angle="90.00" type="t" speed="2.69" pos="72.83" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="61.90" y="0.00" angle="90.00" type="t" speed="0.00" pos="61.90" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="flow.0" x="183.11" y="0.00" angle="90.00" type="t" speed="13.71" pos="83.11" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="151.01" y="0.00" angle="90.00" type="t" speed="12.99" pos="51.01" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="121.22" y="0.00" angle="90.00" type="t" speed="11.05" pos="21.22" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="97.21" y="0.00" angle="90.00" type="t" speed="8.00" pos="97.21" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.4" x="77.61" y="0.00" angle="90.00" type="t" speed="4.78" pos="77.61" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="62.73" y="0.00" angle="90.00" type="t" speed="0.83" pos="62.73" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.30" y="0.00" angle="90.00" type="t" speed="0.00" pos="54.30" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="flow.0" x="196.93" y="0.00" angle="90.00" type="t" speed="13.81" pos="96.93" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.1" x="164.48" y="0.00" angle="90.00" type="t" speed="13.47" pos="64.48" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="133.53" y="0.00" angle="90.00" type="t" speed="12.32" pos="33.53" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="107.07" y="0.00" angle="90.00" type="t" speed="9.86" pos="7.07" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="84.46" y="0.00" angle="90.00" type="t" speed="6.85" pos="84.46" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="65.78" y="0.00" angle="90.00" type="t" speed="3.06" pos="65.78" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="54.55" y="0.00" angle="90.00" type="t" speed="0.25" pos="54.55" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="flow.1" x="178.18" y="0.00" angle="90.00" type="t" speed="13.70" pos="78.18" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="146.65" y="0.00" angle="90.00" type="t" speed="13.11" pos="46.65" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="118.48" y="0.00" angle="90.00" type="t" speed="11.41" pos="18.48" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="93.27" y="0.00" angle="90.00" type="t" speed="8.80" pos="93.27" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.5" x="71.08" y="0.00" angle="90.00" type="t" speed="5.30" pos="71.08" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="56.60" y="0.00" angle="90.00" type="t" speed="2.05" pos="56.60" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="46.70" y="0.00" angle="90.00" type="t" speed="0.00" pos="46.70" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="flow.1" x="191.98" y="0.00" angle="90.00" type="t" speed="13.81" pos="91.98" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.2" x="160.18" y="0.00" angle="90.00" type="t" speed="13.53" pos="60.18" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="131.02" y="0.00" angle="90.00" type="t" speed="12.54" pos="31.02" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="103.80" y="0.00" angle="90.00" type="t" speed="10.53" pos="3.80" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="78.54" y="0.00" angle="90.00" type="t" speed="7.46" pos="78.54" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="60.64" y="0.00" angle="90.00" type="t" speed="4.04" pos="60.64" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="47.36" y="0.00" angle="90.00" type="t" speed="0.66" pos="47.36" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="flow.2" x="173.90" y="0.00" angle="90.00" type="t" speed="13.73" pos="73.90" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="144.24" y="0.00" angle="90.00" type="t" speed="13.23" pos="44.24" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="115.71" y="0.00" angle="90.00" type="t" speed="11.91" pos="15.71" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="87.98" y="0.00" angle="90.00" type="t" speed="9.44" pos="87.98" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="66.74" y="0.00" angle="90.00" type="t" speed="6.10" pos="66.74" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="50.10" y="0.00" angle="90.00" type="t" speed="2.74" pos="50.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.10" y="0.00" angle="90.00" type="t" speed="0.00" pos="39.10" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="flow.2" x="187.72" y="0.00" angle="90.00" type="t" speed="13.82" pos="87.72" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.3" x="157.83" y="0.00" angle="90.00" type="t" speed="13.59" pos="57.83" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="128.56" y="0.00" angle="90.00" type="t" speed="12.85" pos="28.56" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="99.09" y="0.00" angle="90.00" type="t" speed="11.11" pos="99.09" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.6" x="74.86" y="0.00" angle="90.00" type="t" speed="8.12" pos="74.86" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="54.95" y="0.00" angle="90.00" type="t" speed="4.85" pos="54.95" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="39.93" y="0.00" angle="90.00" type="t" speed="0.83" pos="39.93" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.50" y="0.00" angle="90.00" type="t" speed="0.00" pos="31.50" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="flow.3" x="171.58" y="0.00" angle="90.00" type="t" speed="13.75" pos="71.58" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="141.96" y="0.00" angle="90.00" type="t" speed="13.40" pos="41.96" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="111.44" y="0.00" angle="90.00" type="t" speed="12.35" pos="11.44" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="84.82" y="0.00" angle="90.00" type="t" speed="9.97" pos="84.82" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="61.88" y="0.00" angle="90.00" type="t" speed="6.93" pos="61.88" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="43.01" y="0.00" angle="90.00" type="t" speed="3.07" pos="43.01" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="31.76" y="0.00" angle="90.00" type="t" speed="0.26" pos="31.76" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="flow.3" x="185.41" y="0.00" angle="90.00" type="t" speed="13.83" pos="85.41" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="155.62" y="0.00" angle="90.00" type="t" speed="13.67" pos="55.62" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="124.57" y="0.00" angle="90.00" type="t" speed="13.12" pos="24.57" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="96.31" y="0.00" angle="90.00" type="t" speed="11.49" pos="96.31" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.7" x="70.78" y="0.00" angle="90.00" type="t" speed="8.90" pos="70.78" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="48.33" y="0.00" angle="90.00" type="t" speed="5.33" pos="48.33" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="33.81" y="0.00" angle="90.00" type="t" speed="2.06" pos="33.81" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="flow.3" x="199.28" y="0.00" angle="90.00" type="t" speed="13.86" pos="99.28" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.4" x="169.42" y="0.00" angle="90.00" type="t" speed="13.79" pos="69.42" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="138.10" y="0.00" angle="90.00" type="t" speed="13.54" pos="38.10" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="108.90" y="0.00" angle="90.00" type="t" speed="12.59" pos="8.90" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="81.39" y="0.00" angle="90.00" type="t" speed="10.62" pos="81.39" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="55.84" y="0.00" angle="90.00" type="t" speed="7.50" pos="55.84" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="37.87" y="0.00" angle="90.00" type="t" speed="4.05" pos="37.87" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="flow.4" x="183.26" y="0.00" angle="90.00" type="t" speed="13.85" pos="83.26" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="151.83" y="0.00" angle="90.00" type="t" speed="13.73" pos="51.83" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="122.15" y="0.00" angle="90.00" type="t" speed="13.25" pos="22.15" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="93.37" y="0.00" angle="90.00" type="t" speed="11.97" pos="93.37" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.8" x="65.33" y="0.00" angle="90.00" type="t" speed="9.49" pos="65.33" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="43.99" y="0.00" angle="90.00" type="t" speed="6.12" pos="43.99" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="flow.4" x="197.13" y="0.00" angle="90.00" type="t" speed="13.87" pos="97.13" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.5" x="165.65" y="0.00" angle="90.00" type="t" speed="13.82" pos="65.65" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="135.75" y="0.00" angle="90.00" type="t" speed="13.60" pos="35.75" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="106.26" y="0.00" angle="90.00" type="t" speed="12.90" pos="6.26" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="76.49" y="0.00" angle="90.00" type="t" speed="11.16" pos="76.49" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="52.13" y="0.00" angle="90.00" type="t" speed="8.15" pos="52.13" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="flow.5" x="179.51" y="0.00" angle="90.00" type="t" speed="13.86" pos="79.51" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="149.51" y="0.00" angle="90.00" type="t" speed="13.76" pos="49.51" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="119.68" y="0.00" angle="90.00" type="t" speed="13.42" pos="19.68" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="88.87" y="0.00" angle="90.00" type="t" speed="12.38" pos="88.87" lane="a_0" slope="0.00"/>
+        <vehicle id="flow.9" x="62.13" y="0.00" angle="90.00" type="t" speed="10.00" pos="62.13" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="flow.5" x="193.39" y="0.00" angle="90.00" type="t" speed="13.88" pos="93.39" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.6" x="163.34" y="0.00" angle="90.00" type="t" speed="13.83" pos="63.34" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="133.36" y="0.00" angle="90.00" type="t" speed="13.68" pos="33.36" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="102.03" y="0.00" angle="90.00" type="t" speed="13.16" pos="2.03" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="73.64" y="0.00" angle="90.00" type="t" speed="11.51" pos="73.64" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="flow.6" x="177.21" y="0.00" angle="90.00" type="t" speed="13.86" pos="77.21" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="147.16" y="0.00" angle="90.00" type="t" speed="13.80" pos="47.16" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="115.58" y="0.00" angle="90.00" type="t" speed="13.55" pos="15.58" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="86.25" y="0.00" angle="90.00" type="t" speed="12.61" pos="86.25" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="flow.6" x="191.09" y="0.00" angle="90.00" type="t" speed="13.88" pos="91.09" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.7" x="161.01" y="0.00" angle="90.00" type="t" speed="13.85" pos="61.01" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="129.32" y="0.00" angle="90.00" type="t" speed="13.74" pos="29.32" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="99.52" y="0.00" angle="90.00" type="t" speed="13.27" pos="99.52" lane="a_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="flow.7" x="174.88" y="0.00" angle="90.00" type="t" speed="13.87" pos="74.88" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="143.14" y="0.00" angle="90.00" type="t" speed="13.82" pos="43.14" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="113.13" y="0.00" angle="90.00" type="t" speed="13.61" pos="13.13" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="flow.7" x="188.76" y="0.00" angle="90.00" type="t" speed="13.88" pos="88.76" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.8" x="157.00" y="0.00" angle="90.00" type="t" speed="13.86" pos="57.00" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="126.90" y="0.00" angle="90.00" type="t" speed="13.76" pos="26.90" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="flow.8" x="170.88" y="0.00" angle="90.00" type="t" speed="13.88" pos="70.88" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="140.73" y="0.00" angle="90.00" type="t" speed="13.83" pos="40.73" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="flow.8" x="184.77" y="0.00" angle="90.00" type="t" speed="13.88" pos="84.77" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="154.60" y="0.00" angle="90.00" type="t" speed="13.87" pos="54.60" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="flow.8" x="198.65" y="0.00" angle="90.00" type="t" speed="13.89" pos="98.65" lane="b_0" slope="0.00"/>
+        <vehicle id="flow.9" x="168.48" y="0.00" angle="90.00" type="t" speed="13.88" pos="68.48" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="flow.9" x="182.36" y="0.00" angle="90.00" type="t" speed="13.89" pos="82.36" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="flow.9" x="196.25" y="0.00" angle="90.00" type="t" speed="13.89" pos="96.25" lane="b_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00"/>
+</fcd-export>

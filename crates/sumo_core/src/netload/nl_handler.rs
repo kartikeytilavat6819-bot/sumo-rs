@@ -43,6 +43,19 @@ fn try_catch_args<R>(body: impl FnOnce() -> R) -> Result<R, String> {
     })
 }
 
+/// C++: an exception thrown by a handler callback propagates through the Xerces parser to XMLSubSys::runParser,
+/// which catches ProcessError (XMLSubSys.cpp: catch (const ProcessError& e)). Here the callback panics with the
+/// ProcessError payload, so it is turned back into the Err that run_parser handles; other payloads keep propagating.
+fn catch_process_error(body: impl FnOnce()) -> Result<(), utils::common::util_exceptions::ProcessError> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
+        Ok(()) => Ok(()),
+        Err(payload) => match payload.downcast::<utils::common::util_exceptions::ProcessError>() {
+            Ok(e) => Err(*e),
+            Err(payload) => std::panic::resume_unwind(payload),
+        },
+    }
+}
+
 /// C++ `throw` of a ProcessError result that the caller does not catch locally
 fn unwrap_or_throw<T>(r: Result<T, ProcessError>) -> T {
     r.unwrap_or_else(|e| std::panic::panic_any(e))
@@ -3815,11 +3828,27 @@ impl NLShapeHandler {
 impl utils::xml::generic_sax_handler::SaxHandler for NLHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
     fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
-        self.my_start_element(element, attrs);
-        Ok(())
+        catch_process_error(|| self.my_start_element(element, attrs))
     }
     fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
-        self.my_end_element(element);
-        Ok(())
+        catch_process_error(|| self.my_end_element(element))
+    }
+}
+
+#[cfg(test)]
+mod catch_process_error_tests {
+    use super::*;
+    use utils::common::util_exceptions::ProcessError;
+
+    /// XMLSubSys::runParser catches ProcessError thrown by handler callbacks (catchExceptions=true)
+    #[test]
+    fn process_error_panic_becomes_err() {
+        let r = catch_process_error(|| std::panic::panic_any(ProcessError::new("Invalid rate parameter".to_string())));
+        assert_eq!(r.unwrap_err().to_string(), "Invalid rate parameter");
+    }
+
+    #[test]
+    fn normal_callback_stays_ok() {
+        assert!(catch_process_error(|| {}).is_ok());
     }
 }
