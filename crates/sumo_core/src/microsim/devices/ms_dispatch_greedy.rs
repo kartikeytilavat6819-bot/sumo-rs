@@ -3,7 +3,6 @@
 use crate::prelude::*;
 use crate::microsim::devices::ms_dispatch::DEFAULT_MSDISPATCH_VT;
 use utils::common::time::SUMOTIME_MAX;
-use crate::microsim::devices::ms_dispatch::DEFAULT_MSDISPATCH_VT;
 
 /// Signature of the C++ virtual `MSDispatch_Greedy::dispatch()`; the base `computeDispatch` must reach the derived body (ride sharing).
 pub type MSDispatch_Greedy_DispatchFn = fn(&mut MSDispatch_Greedy, Ptr<MSDevice_Taxi>, &mut usize, &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, &mut Vec<Ptr<Reservation>>) -> i32;
