@@ -802,7 +802,10 @@ impl NLJunctionControlBuilder {
         let existing: Ptr<MSTrafficLightLogic> = self.get_tl_logic_control_to_use().get_2(&self.myActiveKey, &self.myActiveProgram);
         let now = self.myNet.get_current_time_step();
         if !existing.is_null() && matches!(existing.get_logic_type(), TrafficLightType::RAIL_SIGNAL | TrafficLightType::RAIL_CROSSING) {
-            existing.m().base2.update_parameters(&self.myAdditionalParameter);
+            // Parameterised::updateParameters calls the virtual setParameter (MSRailSignal handles "moving-block")
+            for (key, value) in self.myAdditionalParameter.iter() {
+                existing.m().set_parameter(key.as_str(), value.as_str());
+            }
             return;
         }
         if !matches!(self.myLogicType, TrafficLightType::RAIL_SIGNAL | TrafficLightType::RAIL_CROSSING) {
