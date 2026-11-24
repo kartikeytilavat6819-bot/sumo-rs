@@ -4,7 +4,7 @@
 OUT=/tmp/oc97
 ROOT=$(pwd)
 mkdir -p "$OUT"
-rm -f "$OUT/lc_trace.txt"
+rm -f "$OUT/lc_trace.txt"; rm -f "$OUT/dw_trace.txt"
 CASES="tt_junction_model_indirect_left_turn_internal_junction_controlled_moped:flow_0.52 tt_sublane_model_junction_indirect_left_moped:flow_0.15 tt_sublane_model_junction_turnAlignment_moped_indirect_left:flow_0.16"
 
 for c in $CASES; do
@@ -74,4 +74,5 @@ for side in ref ours; do
   echo "-- findRoute $side:"
   python3 "$ROOT/tools/kaggle/oc97_route_probe.py" "$BIN" "$ROOT/tools/oracle/cases/tt_rail_rerouter_closing_detour_onInit" 2>&1 | head -8 | cut -c1-300
 done
+echo "-- driveway self-foe trace (ours, temp):"; sort -u /tmp/oc97/dw_trace.txt 2>/dev/null | head -20
 echo "AGENT RUN DONE"
