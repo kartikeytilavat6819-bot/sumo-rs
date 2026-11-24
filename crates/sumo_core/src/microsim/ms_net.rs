@@ -3457,6 +3457,11 @@ impl MSNet {
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         for (_, router) in me.myIntermodalRouter.take() {
+            // C++ ~IntermodalRouter deletes myInternalRouter, whose ~SUMOAbstractRouter prints the query statistics
+            // (the intermodal router itself never counts queries); only the print is ported here, the memory is not freed
+            if !router.myInternalRouter.is_null() {
+                router.myInternalRouter.m().drop_();
+            }
             delete_ptr(router);
         }
     }
