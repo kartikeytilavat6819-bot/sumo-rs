@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --device.rerouting.mode 12 --weights.priority-factor 2 -a tools/oracle/cases/tt_extended_rerouter_closingRouteChoice_prioFactor_routingMode12/input_additional.add.xml

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-21T17:04:08.379607-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/ref_simple.net.xml"/>
+        <route-files value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="42"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="flow_maybe_detour.0" depart="0.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="207.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="207.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.90" rerouteNo="1" devices="tripinfo_flow_maybe_detour.0 fcd_flow_maybe_detour.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.1" depart="2.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="209.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="207.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.51" rerouteNo="1" devices="tripinfo_flow_maybe_detour.1 fcd_flow_maybe_detour.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.2" depart="4.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="211.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="207.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.32" rerouteNo="1" devices="tripinfo_flow_maybe_detour.2 fcd_flow_maybe_detour.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.3" depart="6.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="215.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="209.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.12" rerouteNo="1" devices="tripinfo_flow_maybe_detour.3 fcd_flow_maybe_detour.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.4" depart="8.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="216.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="208.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="9.79" rerouteNo="1" devices="tripinfo_flow_maybe_detour.4 fcd_flow_maybe_detour.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.5" depart="10.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="218.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="208.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.17" rerouteNo="1" devices="tripinfo_flow_maybe_detour.5 fcd_flow_maybe_detour.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.6" depart="12.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="220.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="208.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.13" rerouteNo="1" devices="tripinfo_flow_maybe_detour.6 fcd_flow_maybe_detour.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.7" depart="14.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="222.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="208.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.13" rerouteNo="1" devices="tripinfo_flow_maybe_detour.7 fcd_flow_maybe_detour.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.8" depart="16.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="224.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="208.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.13" rerouteNo="1" devices="tripinfo_flow_maybe_detour.8 fcd_flow_maybe_detour.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow_maybe_detour.9" depart="18.00" departLane="beg_0" departPos="3.10" departSpeed="0.00" departDelay="0.00" arrival="226.00" arrivalLane="rend_0" arrivalPos="500.00" arrivalSpeed="27.80" duration="208.00" routeLength="3496.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.13" rerouteNo="1" devices="tripinfo_flow_maybe_detour.9 fcd_flow_maybe_detour.9" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

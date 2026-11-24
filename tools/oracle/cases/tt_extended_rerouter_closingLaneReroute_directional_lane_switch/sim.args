@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --seed 42 -a tools/oracle/cases/tt_extended_rerouter_closingLaneReroute_directional_lane_switch/input_additional.add.xml

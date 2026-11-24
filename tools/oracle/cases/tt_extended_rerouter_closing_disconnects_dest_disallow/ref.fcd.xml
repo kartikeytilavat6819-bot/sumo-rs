@@ -1,0 +1,1255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-21T21:51:42.258658-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closing_disconnects_dest_disallow/ref_simple.net.xml"/>
+        <route-files value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closing_disconnects_dest_disallow/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_rerouter_closing_disconnects_dest_disallow/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closing_disconnects_dest_disallow/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closing_disconnects_dest_disallow/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_rerouter_closing_disconnects_dest_disallow/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="onRerouterEdgeAtClose" x="3.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="3.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="onRerouterEdgeAtClose" x="5.65" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="5.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="onRerouterEdgeAtClose" x="10.80" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="10.90" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="onRerouterEdgeAtClose" x="18.52" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="18.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="onRerouterEdgeAtClose" x="28.82" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="29.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="onRerouterEdgeAtClose" x="41.70" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="42.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="onRerouterEdgeAtClose" x="57.15" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.60" pos="57.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="onRerouterEdgeAtClose" x="75.18" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.20" pos="75.90" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="onRerouterEdgeAtClose" x="95.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="20.80" pos="96.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="onRerouterEdgeAtClose" x="118.96" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="23.40" pos="120.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="onRerouterEdgeAtClose" x="144.71" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.00" pos="146.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="onRerouterEdgeAtClose" x="172.25" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="173.90" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="onRerouterEdgeAtClose" x="199.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="201.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="onRerouterEdgeAtClose" x="227.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="229.50" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="onRerouterEdgeAtClose" x="254.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="257.30" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="onRerouterEdgeAtClose" x="282.39" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="285.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="onRerouterEdgeAtClose" x="309.93" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="312.90" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="onRerouterEdgeAtClose" x="337.46" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="340.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="onRerouterEdgeAtClose" x="365.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="368.50" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="onRerouterEdgeAtClose" x="392.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="396.30" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="onRerouterEdgeAtClose" x="420.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="424.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="onRerouterEdgeAtClose" x="447.21" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.40" pos="451.50" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="onRerouterEdgeAtClose" x="469.89" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="22.90" pos="474.40" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="onRerouterEdgeAtClose" x="488.12" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.40" pos="492.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="508.05" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="6.70" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="521.73" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="20.60" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="535.42" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="34.50" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="549.10" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="48.40" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="562.79" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="62.30" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="576.47" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="76.20" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="590.15" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="90.10" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="603.84" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="104.00" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="617.52" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="117.90" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="631.21" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="131.80" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="644.89" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="145.70" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="658.58" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="159.60" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="672.26" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="173.50" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="685.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="187.40" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="699.63" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="201.30" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="713.32" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="215.20" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="3.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="3.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="727.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="229.10" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="5.65" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="5.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="740.69" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="243.00" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="10.80" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="10.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="754.37" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="256.90" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="18.52" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="18.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="768.06" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="270.80" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="28.82" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="29.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="781.74" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="284.70" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="41.70" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="42.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="795.43" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="298.60" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="57.15" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.60" pos="57.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="809.11" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="312.50" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="75.18" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.20" pos="75.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="822.80" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="326.40" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="95.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="20.80" pos="96.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="836.48" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="340.30" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="118.96" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="23.40" pos="120.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="850.17" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="354.20" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="144.71" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.00" pos="146.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="863.85" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="368.10" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="172.25" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="173.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="877.53" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="382.00" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="199.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="201.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="891.22" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="395.90" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="227.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="229.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="904.90" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="409.80" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="254.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="257.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="918.59" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="423.70" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="282.39" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="285.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="932.27" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="437.60" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="309.93" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="312.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="945.96" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="451.50" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="337.46" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="340.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="959.64" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="465.40" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="365.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="368.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="973.33" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="479.30" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="392.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="396.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="985.57" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.43" pos="491.73" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="420.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="424.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="3.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="3.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="993.37" angle="0.00" type="DEFAULT_VEHTYPE" speed="7.93" pos="499.66" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="447.21" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.40" pos="451.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="5.65" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="5.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="3.43" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="469.89" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="22.90" pos="474.40" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="10.80" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="10.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="488.12" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.40" pos="492.80" lane="beg_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="18.52" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="18.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="508.05" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="6.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="28.82" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="29.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="521.73" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="20.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="41.70" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="42.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="535.42" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="34.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="57.15" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.60" pos="57.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="549.10" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="48.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="75.18" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.20" pos="75.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="562.79" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="62.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="95.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="20.80" pos="96.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="576.47" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="76.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="118.96" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="23.40" pos="120.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="590.15" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="90.10" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="144.71" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.00" pos="146.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="603.84" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="104.00" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="172.25" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="173.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="617.52" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="117.90" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="199.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="201.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="631.21" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="131.80" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="227.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="229.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="644.89" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="145.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="254.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="257.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="658.58" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="159.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="282.39" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="285.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="672.26" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="173.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="309.93" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="312.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="685.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="187.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="337.46" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="340.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="699.63" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="201.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="365.00" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="368.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="713.32" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="215.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="392.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="396.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="727.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="229.10" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="420.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="424.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="740.69" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="243.00" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="447.21" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.40" pos="451.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="754.37" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="256.90" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="469.89" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="22.90" pos="474.40" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="768.06" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="270.80" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="488.12" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.40" pos="492.80" lane="beg_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="781.74" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="284.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="508.05" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="6.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="795.43" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="298.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="521.73" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="20.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="809.11" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="312.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="535.42" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="34.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="822.80" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="326.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="549.10" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="48.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="836.48" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="340.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="562.79" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="62.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="850.17" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="354.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="576.47" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="76.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="863.85" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="368.10" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="590.15" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="90.10" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="877.53" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="382.00" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="603.84" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="104.00" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="891.22" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="395.90" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="617.52" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="117.90" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="904.90" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="409.80" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="631.21" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="131.80" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="918.59" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="423.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="644.89" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="145.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="932.27" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="437.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="658.58" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="159.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="945.96" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="451.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="672.26" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="173.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="959.64" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="465.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="685.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="187.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="973.33" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="479.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="699.63" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="201.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="983.92" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.76" pos="490.06" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="713.32" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="215.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="501.65" y="996.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="503.09" lane="beg2left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="990.09" angle="0.00" type="DEFAULT_VEHTYPE" speed="6.26" pos="496.33" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="727.00" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="229.10" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="505.82" y="998.35" angle="64.41" type="DEFAULT_VEHTYPE" speed="2.60" pos="2.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="501.65" y="994.39" angle="0.00" type="DEFAULT_VEHTYPE" speed="4.36" pos="500.69" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="740.69" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="243.00" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="510.95" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="7.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="506.01" y="998.35" angle="67.59" type="DEFAULT_VEHTYPE" speed="5.20" pos="2.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="754.37" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="256.90" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="518.65" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="15.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="513.71" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="10.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="768.06" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="270.80" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="528.92" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="26.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="523.98" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="21.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="781.74" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="284.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="541.76" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="39.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="536.82" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="34.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="795.43" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="298.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="555.48" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="52.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="550.54" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="47.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="809.11" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="312.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="569.21" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="66.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="564.27" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="61.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="822.80" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="326.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="582.93" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="80.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="577.99" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="75.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="836.48" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="340.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="596.66" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="94.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="591.72" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="89.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="850.17" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="354.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="610.38" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="108.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="605.44" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="103.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="863.85" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="368.10" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="624.11" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="122.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="619.17" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="117.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="877.53" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="382.00" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="637.83" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="136.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="632.89" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="131.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="891.22" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="395.90" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="651.56" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="150.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="646.62" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="145.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="904.90" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="409.80" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="665.28" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="164.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="660.34" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="159.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="918.59" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="423.70" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="679.01" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="178.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="674.07" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="173.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="932.27" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="437.60" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="692.73" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="191.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="687.79" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="186.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="945.96" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="451.50" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="706.46" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="205.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="701.52" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="200.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="959.64" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="465.40" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="720.18" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="219.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="715.24" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="214.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="973.33" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="479.30" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="733.91" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="233.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="728.97" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="228.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="501.65" y="987.01" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="493.20" lane="beg2left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="747.63" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="247.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="742.69" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="242.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="507.21" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="4.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="761.35" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="261.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="756.42" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="256.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="520.93" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="17.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="775.08" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="275.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="770.14" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="270.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="534.66" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="31.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="788.80" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="289.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="783.87" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="284.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="548.38" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="45.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="802.53" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="303.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="797.59" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="298.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="562.11" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="59.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="816.25" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="317.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="811.32" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="312.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="575.83" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="73.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="829.98" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="330.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="825.04" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="325.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="589.56" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="87.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="843.70" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="344.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="838.77" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="339.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="603.28" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="101.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="857.43" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="358.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="852.49" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="353.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="617.01" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="115.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="871.15" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="372.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="866.22" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="367.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="630.73" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="129.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="884.88" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="386.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="879.94" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="381.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="644.46" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="143.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="898.60" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="400.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="893.67" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="395.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="658.18" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="156.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="912.33" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="414.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="907.39" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="409.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="671.91" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="170.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="926.05" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="428.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="921.11" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="423.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="685.63" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="184.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="939.78" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="442.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="934.84" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="437.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="699.36" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="198.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="953.50" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="456.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="948.56" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="451.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="713.08" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="212.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="967.23" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="469.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="962.29" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="464.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="726.81" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="226.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="980.95" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="483.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="976.01" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="478.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="740.53" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="240.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="994.68" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="497.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="989.74" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="492.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="754.26" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="254.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1008.40" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="511.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1003.46" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="506.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="767.98" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="268.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1022.13" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="525.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1017.19" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="520.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="781.71" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="282.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1035.85" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="539.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1030.91" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="534.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="795.43" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="295.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1049.58" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="553.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1044.64" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="548.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="809.16" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="309.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1063.30" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="567.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1058.36" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="562.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="822.88" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="323.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1077.03" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="581.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1072.09" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="576.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="836.61" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="337.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1090.75" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="595.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="145.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1085.81" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="590.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="850.33" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="351.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1104.48" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="608.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="146.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1099.54" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="603.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="864.06" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="365.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1118.20" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="622.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="147.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1113.26" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="617.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="877.78" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="379.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1131.93" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="636.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="148.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1126.99" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="631.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="891.50" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="393.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1145.65" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="650.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="149.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1140.71" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="645.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="905.23" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="407.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1159.37" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="664.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="150.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1154.44" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="659.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="918.95" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="421.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1173.10" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="678.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="151.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1168.16" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="673.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="932.68" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="434.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1186.82" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="692.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="152.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1181.89" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="687.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="946.40" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="448.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1200.55" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="706.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="153.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1195.61" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="701.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="960.13" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="462.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1214.27" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="720.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="154.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1209.34" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="715.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="973.85" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="476.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1228.00" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="734.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="155.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1223.06" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="729.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="987.58" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="490.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1241.72" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="747.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="156.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1236.79" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="742.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1001.30" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="504.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1255.45" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="761.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="157.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1250.51" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="756.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1015.03" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="518.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1269.17" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="775.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="158.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1264.24" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="770.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1028.75" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="532.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1282.90" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="789.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="159.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1277.96" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="784.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1042.48" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="546.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1296.62" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="803.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="160.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1291.69" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="798.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1056.20" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="560.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1310.35" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="817.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="161.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1305.41" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="812.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1069.93" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="573.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1324.07" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="831.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="162.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1319.13" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="826.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1083.65" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="587.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1337.80" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="845.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="163.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1332.86" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="840.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1097.38" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="601.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1351.52" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="859.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="164.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1346.58" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="854.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1111.10" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="615.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1365.25" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="873.00" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="165.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1360.31" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="868.00" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1124.83" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="629.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1378.97" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="886.90" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="166.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1374.03" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="881.90" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1138.55" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="643.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1392.70" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="900.80" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="167.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1387.76" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="895.80" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1152.28" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="657.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1406.42" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="914.70" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="168.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1401.48" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="909.70" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1166.00" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="671.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1420.15" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="928.60" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="169.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1415.21" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="923.60" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1179.73" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="685.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1433.87" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="942.50" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="170.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1428.93" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="937.50" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1193.45" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="699.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1447.60" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="956.40" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="171.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1442.66" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="951.40" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1207.18" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="712.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1461.32" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="970.30" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="172.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1456.38" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="965.30" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1220.90" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="726.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1475.05" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="984.20" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="173.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1470.11" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="979.20" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1234.63" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="740.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1488.77" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="998.10" lane="left_0" slope="0.00"/>
+    </timestep>
+    <timestep time="174.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1483.83" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="993.10" lane="left_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1248.35" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="754.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="991.02" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="5.82" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="175.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="995.94" angle="122.65" type="DEFAULT_VEHTYPE" speed="13.90" pos="0.82" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1262.08" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="768.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="977.34" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="19.72" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="176.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="982.26" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="14.72" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1275.80" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="782.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="963.65" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="33.62" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="177.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="968.58" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="28.62" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1289.52" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="796.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="949.97" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="47.52" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="178.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="954.89" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="42.52" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1303.25" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="810.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="936.28" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="61.42" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="179.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="941.21" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="56.42" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1316.97" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="824.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="922.60" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="75.32" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="180.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="927.52" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="70.32" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1330.70" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="838.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="908.91" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="89.22" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="181.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="913.84" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="84.22" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1344.42" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="851.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="895.23" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="103.12" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="182.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="900.15" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="98.12" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1358.15" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="865.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="881.54" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="117.02" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="183.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="886.47" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="112.02" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1371.87" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="879.71" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="867.86" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="130.92" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="184.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="872.78" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="125.92" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1385.60" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="893.61" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="854.17" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="144.82" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="185.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="859.10" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="139.82" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1399.32" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="907.51" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="840.49" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="158.72" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="186.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="845.41" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="153.72" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1413.05" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="921.41" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="826.80" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="172.62" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="187.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="831.73" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="167.62" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1426.77" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="935.31" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="813.12" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="186.52" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="188.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="818.04" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="181.52" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1440.50" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="949.21" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="799.43" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="200.42" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="189.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="804.36" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="195.42" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1454.22" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="963.11" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="785.75" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="214.32" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="190.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="790.67" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="209.32" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1467.95" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="977.01" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="772.06" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="228.22" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="191.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="776.99" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="223.22" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1481.67" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="990.91" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="758.38" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="242.12" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="192.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="763.30" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="237.12" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1495.40" y="998.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="1004.81" lane="left_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="744.70" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="256.02" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="193.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="749.62" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="251.02" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="984.41" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="12.53" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="731.01" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="269.92" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="194.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="735.93" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="264.92" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="970.73" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="26.43" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="717.33" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="283.82" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="195.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="722.25" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="278.82" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="957.04" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="40.33" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="703.64" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="297.72" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="196.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="708.56" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="292.72" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="943.36" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="54.23" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="689.96" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="311.62" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="197.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="694.88" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="306.62" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="929.67" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="68.13" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="676.27" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="325.52" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="198.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="681.19" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="320.52" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="915.99" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="82.03" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="662.59" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="339.42" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="199.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="667.51" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="334.42" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="902.31" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="95.93" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="648.90" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="353.32" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="200.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="653.83" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="348.32" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="888.62" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="109.83" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="635.22" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="367.22" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="201.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="640.14" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="362.22" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="874.94" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="123.73" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="621.53" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="381.12" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="202.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="626.46" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="376.12" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="861.25" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="137.63" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="607.85" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="395.02" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="203.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="612.77" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="390.02" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="847.57" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="151.53" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="594.16" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="408.92" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="204.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="599.09" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="403.92" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="833.88" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="165.43" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="580.48" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="422.82" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="205.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="585.40" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="417.82" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="820.20" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="179.33" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="566.79" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="436.72" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="206.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="571.72" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="431.72" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="806.51" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="193.23" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="553.11" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="450.62" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="207.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="558.03" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="445.62" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="792.83" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="207.13" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="539.42" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="464.52" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="208.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="544.35" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="459.52" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="779.14" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="221.03" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="525.74" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="478.42" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="209.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="530.66" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="473.42" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="765.46" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="234.93" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="513.25" angle="180.00" type="DEFAULT_VEHTYPE" speed="12.69" pos="491.11" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="210.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="518.17" angle="180.00" type="DEFAULT_VEHTYPE" speed="12.69" pos="486.11" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="751.77" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="248.83" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1498.35" y="505.18" angle="180.00" type="DEFAULT_VEHTYPE" speed="8.19" pos="499.30" lane="left2end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="211.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="510.11" angle="180.00" type="DEFAULT_VEHTYPE" speed="8.19" pos="494.30" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="738.09" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="262.73" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1511.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.79" pos="7.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="212.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1498.35" y="503.61" angle="180.00" type="DEFAULT_VEHTYPE" speed="6.60" pos="500.89" lane="left2end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="724.40" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="276.63" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1524.95" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.39" pos="20.39" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="213.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1511.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.20" pos="7.00" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="710.72" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="290.53" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1540.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="15.99" pos="36.38" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="214.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1523.37" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.80" pos="18.79" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="697.03" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="304.43" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1559.20" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.59" pos="54.97" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="215.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1537.62" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="14.40" pos="33.19" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="683.35" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="318.33" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1580.19" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="21.19" pos="76.16" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="216.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1554.46" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="17.00" pos="50.19" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="669.66" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="332.23" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1603.75" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="23.79" pos="99.95" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="217.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1573.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="19.60" pos="69.78" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="655.98" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="346.13" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1629.89" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.39" pos="126.34" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="218.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1595.85" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="22.20" pos="91.98" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="642.29" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="360.03" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1657.42" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="154.14" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="219.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1620.41" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="24.80" pos="116.77" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="628.61" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="373.93" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1684.96" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="181.94" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="220.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1647.55" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.40" pos="144.17" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="614.93" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="387.83" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1712.50" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="209.74" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="221.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1675.08" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="171.97" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="601.24" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="401.73" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1740.03" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="237.54" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="222.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1702.62" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="199.77" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="587.56" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="415.63" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1767.57" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="265.34" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="223.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1730.16" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="227.57" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="573.87" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="429.53" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1795.10" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="293.14" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="224.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1757.69" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="255.37" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="560.19" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="443.43" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1822.64" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="320.94" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="225.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1785.23" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="283.17" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="546.50" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="457.33" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1850.18" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="348.74" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="226.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1812.76" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="310.97" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="532.82" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="471.23" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1877.71" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="376.54" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="227.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1840.30" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="338.77" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="519.13" angle="180.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="485.13" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1905.25" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="404.34" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="228.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1867.84" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="366.57" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="508.84" angle="180.00" type="DEFAULT_VEHTYPE" speed="10.45" pos="495.58" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1932.78" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="432.14" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="229.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1895.37" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="394.37" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1498.35" y="502.98" angle="180.00" type="DEFAULT_VEHTYPE" speed="5.95" pos="501.54" lane="left2end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1960.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="459.94" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="230.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1922.91" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="422.17" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1511.68" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.55" pos="7.00" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="1987.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="487.74" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="231.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1950.44" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="449.97" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1522.73" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.15" pos="18.15" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2015.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="15.54" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="232.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="1977.98" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="477.77" lane="end_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1536.35" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.75" pos="31.91" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2043.34" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="43.34" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="233.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2005.57" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="5.57" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1552.55" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="16.35" pos="48.26" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2071.14" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="71.14" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="234.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2033.37" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="33.37" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1571.32" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="18.95" pos="67.21" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2098.94" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="98.94" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="235.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2061.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="61.17" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1592.67" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="21.55" pos="88.76" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2126.74" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="126.74" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="236.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2088.97" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="88.97" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1616.59" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="24.15" pos="112.92" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2154.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="154.54" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="237.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2116.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="116.77" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1643.09" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="26.75" pos="139.67" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2182.34" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="182.34" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="238.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2144.57" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="144.57" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1670.63" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="167.47" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2210.14" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="210.14" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="239.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2172.37" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="172.37" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1698.16" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="195.27" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2237.94" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="237.94" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="240.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2200.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="200.17" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1725.70" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="223.07" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2265.74" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="265.74" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="241.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2227.97" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="227.97" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1753.24" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="250.87" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2293.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="293.54" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="242.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2255.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="255.77" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1780.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="278.67" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2321.34" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="321.34" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="243.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2283.57" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="283.57" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1808.31" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="306.47" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2349.14" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="349.14" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="244.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2311.37" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="311.37" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1835.84" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="334.27" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2376.94" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="376.94" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="245.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2339.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="339.17" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1863.38" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="362.07" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2404.74" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="404.74" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="246.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2366.97" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="366.97" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1890.92" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="389.87" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2432.54" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="432.54" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="247.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2394.77" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="394.77" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1918.45" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="417.67" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2460.34" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="460.34" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="248.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2422.57" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="422.57" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1945.99" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="445.47" lane="end_0" slope="0.00"/>
+        <vehicle id="onRerouterEdgeAtClose" x="2488.14" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="488.14" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="249.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2450.37" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="450.37" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="1973.52" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="473.27" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="250.00">
+        <vehicle id="beforeRerouterEdgeAtClose" x="2478.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="478.17" lane="rend_0" slope="0.00"/>
+        <vehicle id="insertedWhileClosed" x="2001.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="1.07" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="251.00">
+        <vehicle id="insertedWhileClosed" x="2028.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="28.87" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="252.00">
+        <vehicle id="insertedWhileClosed" x="2056.67" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="56.67" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="253.00">
+        <vehicle id="insertedWhileClosed" x="2084.47" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="84.47" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="254.00">
+        <vehicle id="insertedWhileClosed" x="2112.27" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="112.27" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="255.00">
+        <vehicle id="insertedWhileClosed" x="2140.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="140.07" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="256.00">
+        <vehicle id="insertedWhileClosed" x="2167.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="167.87" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="257.00">
+        <vehicle id="insertedWhileClosed" x="2195.67" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="195.67" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="258.00">
+        <vehicle id="insertedWhileClosed" x="2223.47" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="223.47" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="259.00">
+        <vehicle id="insertedWhileClosed" x="2251.27" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="251.27" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="260.00">
+        <vehicle id="insertedWhileClosed" x="2279.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="279.07" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="261.00">
+        <vehicle id="insertedWhileClosed" x="2306.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="306.87" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="262.00">
+        <vehicle id="insertedWhileClosed" x="2334.67" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="334.67" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="263.00">
+        <vehicle id="insertedWhileClosed" x="2362.47" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="362.47" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="264.00">
+        <vehicle id="insertedWhileClosed" x="2390.27" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="390.27" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="265.00">
+        <vehicle id="insertedWhileClosed" x="2418.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="418.07" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="266.00">
+        <vehicle id="insertedWhileClosed" x="2445.87" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="445.87" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="267.00">
+        <vehicle id="insertedWhileClosed" x="2473.67" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="27.80" pos="473.67" lane="rend_0" slope="0.00"/>
+    </timestep>
+    <timestep time="268.00"/>
+</fcd-export>
