@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -t --max-depart-delay 60 -a tools/oracle/cases/tt_tls_actuated_coordination_saturatedNS_fixedCycle_coordinated/input_additional.add.xml,tools/oracle/cases/tt_tls_actuated_coordination_saturatedNS_fixedCycle_coordinated/input_additional2.add.xml

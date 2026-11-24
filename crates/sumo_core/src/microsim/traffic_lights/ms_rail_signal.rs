@@ -140,7 +140,7 @@ impl MSRailSignal_LinkInfo {
             Some(i) => i,
             None => {
                 utils::common::msg_handler::write_warning(&format!(
-                    "Invalid approach information to rail signal {} after rerouting for vehicle '{}' first driveway edge '{}' time={}.",
+                    "Invalid approach information to rail signal '{}' after rerouting for vehicle '{}' first driveway edge '{}' time={}.",
                     MSDriveWay::get_clickable_tl_link_id(self.myLink),
                     arg0.get_id(),
                     first.get_id(),

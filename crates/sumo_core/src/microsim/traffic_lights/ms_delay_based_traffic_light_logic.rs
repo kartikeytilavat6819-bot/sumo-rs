@@ -198,9 +198,9 @@ impl MSDelayBasedTrafficLightLogic {
                         // check whether the lane (or unamibiguous lane sequence) is long enough and avoid overlapping detectors
                         let mut length = lane.get_length();
                         let mut firstLane = lane;
+                        // v1.28.0 release: no logical-predecessor null guard here (snapshot added one)
                         while length < self.myDetectionRange
                             && firstLane.get_incoming_lanes().len() == 1
-                            && !firstLane.get_logical_predecessor_lane().is_null()
                             && firstLane.get_incoming_lanes()[0].viaLink.get_corresponding_entry_link().get_tl_logic().is_null()
                         {
                             firstLane = firstLane.get_logical_predecessor_lane();
