@@ -2246,6 +2246,7 @@ impl MSDriveWay {
                 }
             }
         }
+        for f in unique_foes.values() { oc97_self_foe_trace("unique_foe_after_loop", *f); }
         oc97_self_foe_trace("foe_loop", dw);
         dwm.myConflictLinks.clear();
         dwm.myConflictLinks.extend(unique_c_link.iter().copied());
@@ -4231,6 +4232,14 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn build_sub_foe(&mut self, foe: Ptr<MSDriveWay>, movingBlock: bool) -> bool {
+        // oc97-TEMP-TRACE wrapper (remove after measuring)
+        let r = self.build_sub_foe_inner(foe, movingBlock);
+        oc97_self_foe_trace("build_sub_foe(this)", Ptr::from_mut(self));
+        oc97_self_foe_trace("build_sub_foe(foe)", foe);
+        r
+    }
+
+    fn build_sub_foe_inner(&mut self, foe: Ptr<MSDriveWay>, movingBlock: bool) -> bool {
         // Subdriveways (Teilfahrstraße) model the resolution of a driving conflict
         // before a vehicle has left the driveway. This is possible when the driveway diverges from the foe
         // driveway at an earlier point (switch or crossing).
