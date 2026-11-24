@@ -1967,6 +1967,7 @@ impl MSNet {
                     segment.m().clear_state();
                     segment = segment.m().get_next_segment();
                 }
+                // v1.28.0 release: no per-link clearState loop here (snapshot-only addition)
             }
         } else {
             for edge in MSEdge::get_all_edges().iter() {
@@ -2960,6 +2961,7 @@ impl MSNet {
         let oc_begin = opt_time("begin");
         self.clear_state(oc_begin, true);
         NLBuilder::init_randomness();
+        // load traffic from additional files
         // v1.28.0 release always loads these; the snapshot's "ignore.additionalelements" guard
         // would call get_bool on an option that release never registers and panic.
         for file in utils::options::options_cont::get_string_vector("additional-files") {
