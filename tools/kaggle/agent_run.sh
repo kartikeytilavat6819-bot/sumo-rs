@@ -64,7 +64,8 @@ for name in $RAIL; do
   diff "$OUT/rail/$name/ref/stderr" "$OUT/rail/$name/ours/stderr" | head -4 | cut -c1-200
   diff "$OUT/rail/$name/ref/trip.xml" "$OUT/rail/$name/ours/trip.xml" | head -6 | cut -c1-200
   for side in ref ours; do echo "-- $side vehroute (v_0):"; grep -A3 "vehicle id=\"v_0\"" "$OUT/rail/$name/$side/vehroute.xml" 2>/dev/null | head -4 | cut -c1-300; done
-  nn=4; [ "$name" = tt_rail_rail_signal_moving_block_protect_bidi ] && nn=40; for veh in WE1 WE0 EW v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -$nn | cut -c1-170; done
+  if [ "$name" = tt_rail_rail_signal_moving_block_protect_bidi ]; then for veh in WE1 WE0 EW; do echo "-- $veh side by side (ref | ours): speed pos lane"; for side in ref ours; do grep "vehicle id=\"$veh\"" "$OUT/rail/$name/$side/fcd.xml" | sed -E 's/.*speed="([^"]*)" pos="([^"]*)" lane="([^"]*)".*/  /' > "$OUT/rail/$name/$side/$veh.cmp"; done; paste -d"|" "$OUT/rail/$name/ref/$veh.cmp" "$OUT/rail/$name/ours/$veh.cmp" | sed -n 36,100p; done; fi
+  nn=4; for veh in v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -$nn | cut -c1-170; done
 done
 # oc97: route costs for the train on the closing case, official vs ours (TraCI findRoute)
 for side in ref ours; do
