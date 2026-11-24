@@ -64,7 +64,7 @@ for name in $RAIL; do
   diff "$OUT/rail/$name/ref/stderr" "$OUT/rail/$name/ours/stderr" | head -4 | cut -c1-200
   diff "$OUT/rail/$name/ref/trip.xml" "$OUT/rail/$name/ours/trip.xml" | head -6 | cut -c1-200
   for side in ref ours; do echo "-- $side vehroute (v_0):"; grep -A3 "vehicle id=\"v_0\"" "$OUT/rail/$name/$side/vehroute.xml" 2>/dev/null | head -4 | cut -c1-300; done
-  for veh in WE1 v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -6 | cut -c1-200; done
+  nn=4; [ "$name" = tt_rail_rail_signal_moving_block_protect_bidi ] && nn=40; for veh in WE1 WE0 EW v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -$nn | cut -c1-170; done
 done
 # oc97: route costs for the train on the closing case, official vs ours (TraCI findRoute)
 for side in ref ours; do
