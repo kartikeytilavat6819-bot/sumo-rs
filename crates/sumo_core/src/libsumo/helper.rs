@@ -2298,16 +2298,6 @@ impl Helper {
         std::ptr::eq(listener, &mut my_vehicle_state_listener().base)
     }
 
-    /// Identifies the Helper transportable listener for MSNet's dispatch (same reasoning as `is_vehicle_state_listener`).
-    pub fn is_transportable_state_listener(listener: *mut MSNet_TransportableStateListener) -> bool {
-        std::ptr::eq(listener, &mut my_transportable_state_listener().base)
-    }
-
-    /// C++: `Helper::TransportableStateListener::transportableStateChanged` [virtual], reached by MSNet via `is_transportable_state_listener`
-    pub fn transportable_state_changed(transportable: Ptr<MSTransportable>, to: MSNet_TransportableState, info: &str) {
-        my_transportable_state_listener().transportable_state_changed(transportable, to, info);
-    }
-
     /// C++: `Helper::VehicleStateListener::vehicleStateChanged` [virtual], reached by MSNet via `is_vehicle_state_listener`
     pub fn vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
         my_vehicle_state_listener().vehicle_state_changed(vehicle, to, info);
