@@ -42,27 +42,43 @@ def sync(new, dst):
     return changed
 
 
-inp = glob.glob("/kaggle/input/**/manifest.txt", recursive=True)
 setup = open(f"{RES}/_setup.log", "w")
-if not inp:
-    setup.write("NO manifest.txt\n")
-    raise SystemExit(1)
-base = os.path.dirname(inp[0])
+# GitHub mode (2026-11-22): the dispatcher embeds MANIFEST above this line and pushes each commit to the public repo as
+# refs/gate/<id>; the notebook fetches it there (fast) instead of the PC uploading a ~400 MB dataset per batch.
+GH = "https://github.com/kartikeytilavat6819-bot/sumo-rs.git"
+if "MANIFEST" in globals():
+    lines = [l for l in MANIFEST.split("\n") if l.strip()]
+    base = None
+else:
+    inp = glob.glob("/kaggle/input/**/manifest.txt", recursive=True)
+    if not inp:
+        setup.write("NO manifest.txt\n")
+        raise SystemExit(1)
+    base = os.path.dirname(inp[0])
+    lines = [l for l in open(inp[0]).read().split("\n") if l.strip()]
+if base is None:
+    sh(setup, "git init -q /tmp/repo", 2)
 sh(setup, "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal", 3)
 # emission models (PHEMlight5) read data files relative to SUMO_HOME; the oracle wheel ships them
 sh(setup, "python -m pip install -q --target /tmp/sumo_pkg eclipse-sumo==1.28.0 2>&1 | tail -2; ls /tmp/sumo_pkg/sumo/data/emissions/PHEMlight5 | wc -l", 4)
-env = (f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score"
+env = (f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score RUN_SHARDS=4"
        f" SUMO_HOME=/tmp/sumo_pkg/sumo SUMO_PRISTINE_BIN=/tmp/sumo_pkg/sumo/bin; cd {SRC};")
 
-for line in open(inp[0]).read().split("\n"):
-    if not line.strip():
-        continue
+for line in lines:
     gid, branch, sha = line.split()[:3]
     log = open(f"{RES}/{gid}.result.tmp", "w")
     log.write(f"{branch} {sha}\n")
     shutil.rmtree(NEW, ignore_errors=True)
     os.makedirs(NEW)
-    subprocess.run(f"tar -xzf {base}/{gid}.tgz -C {NEW}", shell=True)
+    if base is None:
+        rc = sh(log, f"git -C /tmp/repo fetch -q --depth 1 {GH} refs/gate/{gid} && git -C /tmp/repo archive FETCH_HEAD | tar -x -C {NEW}", 5)
+        if rc != 0:
+            log.write("SNAPSHOT FETCH FAILED\n")
+            log.close()
+            os.replace(f"{RES}/{gid}.result.tmp", f"{RES}/{gid}.result")
+            continue
+    else:
+        subprocess.run(f"tar -xzf {base}/{gid}.tgz -C {NEW}", shell=True)
     # scripts and *.args are committed from Windows with CRLF; Linux bash chokes on the \r
     subprocess.run(f"cd {NEW}/tools && find . -type f \\( -name '*.sh' -o -name '*.args' \\) -exec sed -i 's/\\r$//' {{}} +", shell=True)
     log.write(f"files changed vs previous snapshot: {sync(NEW, SRC)}\n\n")

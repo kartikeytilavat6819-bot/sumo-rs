@@ -42,6 +42,7 @@ while ($true) {
         foreach ($id in $w.ids) {
             $r = Get-ChildItem $out -Recurse -Filter "$id.result" -ErrorAction SilentlyContinue | Select-Object -First 1
             if ($r) { Copy-Item $r.FullName "$q\$id.result" -Force; Remove-Item "$q\$id.req.taken" -ErrorAction SilentlyContinue }
+            git -C "C:\Users\karti\sumo-rs" push -q origin --delete "refs/gate/$id" 2>$null   # drop the temporary GitHub ref
             else { Rename-Item "$q\$id.req.taken" "$id.req" -ErrorAction SilentlyContinue }   # not reached: requeue
         }
         "$(Get-Date -Format HH:mm) $($w.kernel) $($st.Trim() -replace '.*status ','') -> $($w.ids.Count) results"
@@ -63,22 +64,20 @@ while ($true) {
             foreach ($req in $batch) {
                 $id = $req.BaseName
                 $branch, $sha, $repo = (Get-Content $req.FullName -Raw).Trim().Split(' ', 3)
-                git -C $repo archive --format=tar.gz -o "$work\data\$id.tgz" $sha
-                if ($LASTEXITCODE -ne 0) { Set-Content "$q\$id.result" "$branch $sha`nARCHIVE FAILED"; Remove-Item $req.FullName; continue }
+                # GitHub mode: publish the commit as refs/gate/<id> on the public repo (only missing objects upload);
+                # the notebook fetches it there instead of this PC uploading a ~400 MB dataset per batch
+                git -C $repo push -q -f origin "${sha}:refs/gate/$id" 2>$null
+                if ($LASTEXITCODE -ne 0) { Set-Content "$q\$id.result" "$branch $sha`nGITHUB PUSH FAILED"; Remove-Item $req.FullName; continue }
                 Rename-Item $req.FullName "$id.req.taken"
                 $ids += $id; $manifest += "$id $branch $sha"
             }
             if ($ids.Count -eq 0) { continue }
-            Set-Content "$work\data\manifest.txt" ($manifest -join "`n")
-            $ds = "$user/srgb-src-$i"
-            @{ title = "srgb-src-$i"; id = $ds; licenses = @(@{ name = "CC0-1.0" }) } | ConvertTo-Json | Set-Content "$work\data\dataset-metadata.json"
-            if ((python -m kaggle datasets status $ds 2>&1 | Out-String) -match 'ready|pending') { python -m kaggle datasets version -p "$work\data" -m "batch" -q | Out-Null }
-            else { python -m kaggle datasets create -p "$work\data" -q | Out-Null }
-            for ($k = 0; $k -lt 40; $k++) { if ((python -m kaggle datasets status $ds 2>&1 | Out-String) -match 'ready') { break }; Start-Sleep 10 }
-            Copy-Item (Join-Path $PSScriptRoot "batch_kernel.py") "$work\kernel\batch_kernel.py"
+            # no dataset upload: the manifest is embedded in the notebook script
+            $kpy = "MANIFEST = '''" + ($manifest -join "`n") + "'''`n" + (Get-Content (Join-Path $PSScriptRoot "batch_kernel.py") -Raw)
+            [IO.File]::WriteAllText("$work\kernel\batch_kernel.py", $kpy)
             $kernel = "$user/srgb-$i"
             @{ id = $kernel; title = "srgb-$i"; code_file = "batch_kernel.py"; language = "python"; kernel_type = "script";
-               is_private = $true; enable_gpu = $false; enable_internet = $true; dataset_sources = @($ds);
+               is_private = $true; enable_gpu = $false; enable_internet = $true; dataset_sources = @();
                competition_sources = @(); kernel_sources = @() } | ConvertTo-Json | Set-Content "$work\kernel\kernel-metadata.json"
             $push = python -m kaggle kernels push -p "$work\kernel" 2>&1 | Out-String
             if ($push -notmatch 'successfully pushed') {

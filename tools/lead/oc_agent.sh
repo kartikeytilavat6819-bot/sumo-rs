@@ -55,14 +55,26 @@ msg="$(sed "s/<ID>/$ID/g" "$REPO/tools/lead/${OC_RULES:-oc_rules.md}"; echo; cat
 if [ -n "${OC_BASELINE:-}" ]; then
   say "baseline gate of $(git -C "$WT" rev-parse --short HEAD)"
   base=$(powershell.exe -ExecutionPolicy Bypass -File 'C:\Users\karti\sumo-rs\tools\gcloud\vm_gate.ps1' -Branch "$BR" 2>&1 | tr -d '\r')
-  KNOWN="$KNOWN $(grep -E 'FAIL|PANIC|TIMEOUT|panicked|STALE|MISSING' <<<"$base" | grep -vE '^PASS=' | awk '{print $1}' | tr '\n' ' ') "
+  KNOWN="$KNOWN $(grep -E 'FAIL|PANIC|TIMEOUT|panicked|STALE|MISSING' <<<"$base" | grep -vE '^PASS=' | awk '$1=="FAIL"{print $2; next} {print $1}' | tr '\n' ' ') $(grep -E '^netopts_new:' <<<"$base" | grep -oE '[A-Za-z0-9_.-]+:(FAIL|PANIC)' | cut -d: -f1 | tr '\n' ' ') "
   say "baseline known rows:$KNOWN"
 fi
+killtree() { local c; for c in $(ps -ef | awk -v p="$1" '$3==p{print $2}'); do killtree "$c"; done; kill "$1" 2>/dev/null; }
 sid=""
 for r in $(seq 1 "$ROUNDS"); do
   before=$(git -C "$WT" rev-parse HEAD)
   say "round $r: $MODEL working${sid:+ (session $sid)}"
-  out=$(cd "$WT" && printf '%s' "$msg" | timeout 3600 "$OC" run --auto -m "$MODEL" --format json --archived ${sid:+--session "$sid"} 2>&1)
+  # run in the background and watch the stream: a provider limit shows up as a 429 retry with a retry-after of
+  # hours, which opencode would sit out until the 1 h timeout; cut it off and treat it as the free-usage limit
+  cur=$LOG.cur; : > "$cur"
+  (cd "$WT" && printf '%s' "$msg" | timeout 3600 "$OC" run --auto -m "$MODEL" --format json --archived ${sid:+--session "$sid"} > "$cur" 2>&1) &
+  pid=$!
+  while kill -0 $pid 2>/dev/null; do
+    if grep -qE 'Free usage limit reached|"retryAfterMs":[0-9]{7,}' "$cur"; then
+      killtree $pid; echo "Free usage limit reached (provider rate limit, long retry-after)" >> "$cur"; break
+    fi
+    sleep 15
+  done
+  wait $pid 2>/dev/null; out=$(cat "$cur")
   printf '%s\n' "$out" >> "$LOG.json"
   [ -n "$sid" ] || sid=$(grep -o '"sessionID":"ses_[A-Za-z0-9]*"' <<<"$out" | head -1 | cut -d'"' -f4)
   if grep -q 'Free usage limit reached' <<<"$out"; then

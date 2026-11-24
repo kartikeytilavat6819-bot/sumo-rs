@@ -1,12 +1,26 @@
 # sumo-rs
 
-A work-in-progress port of [Eclipse SUMO](https://github.com/eclipse-sumo/sumo) (Simulation of Urban MObility) from C++ to Rust.
+A port of [Eclipse SUMO](https://github.com/eclipse-sumo/sumo) (Simulation of Urban MObility) 1.28.0 from C++ to Rust.
 
 The goal is a faithful port: same inputs, same outputs, checked against SUMO's own test suite.
 
 ## Status
 
-See [PORTING.md](PORTING.md) for what has been ported. Run `python tools/progress.py` for a progress bar (C++ lines ported, per module).
+Verified against the official SUMO **1.28.0** binary on its own test suite (full run of 2026-11-24, commit `acf684f05`):
+every case that a faithful port can reproduce gives identical output.
+
+| Suite | Result |
+|---|---|
+| sumo (TextTest cases) | all pass except 6 documented in NOT_PORTED.md section 3 |
+| netconvert | 1,589 / 1,590 (the remaining case is skipped by the harness) |
+| duarouter | 559 / 559 |
+| dfrouter, jtrrouter, marouter, od2trips, activitygen, netgenerate, polyconvert | all pass |
+| TraCI | 609 / 609 |
+| complex TraCI scripts | 461 / 463 (the other 2 are documented in NOT_PORTED.md) |
+
+On five sample scenarios (up to ~3,000 vehicles) the Rust release build produced byte-identical trip and statistics
+output and ran 1.2x-3.6x faster than the official binary. See [PORTING.md](PORTING.md) for what has been ported and
+`python tools/progress.py` for per-module progress.
 
 ## Not ported
 

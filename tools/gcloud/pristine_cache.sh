@@ -18,6 +18,7 @@ done
 
 key=$( {
   echo "bin $real $(stat -c '%s %Y' "$real")"
+  echo "cwd $(pwd)"   # outputs can embed cwd-based paths (e.g. --save-configuration): a replay from another slot leaked them
   for a in "$@"; do
     echo "arg ${a//$root/@ROOT@}"
     IFS=',' read -ra parts <<< "${a#*=}"

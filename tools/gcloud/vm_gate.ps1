@@ -4,29 +4,72 @@
 param(
     [Parameter(Mandatory = $true)][string]$Branch,
     [string]$Repo = "C:\Users\karti\sumo-rs",
-    [string]$Vm = ""
+    [string]$Vm = "",
+    # extra official tt_ cases to run on an agent gate (space-separated): the agent's target rows it does not touch
+    [string]$TtRows = "",
+    # run ALL official tt_ cases (no per-branch filter), VM only: the lead's filler uses idle slots for these
+    [switch]$FullRun,
+    # quick probe round: build + unit tests + ONLY the branch's target/changed rows + agent_run.sh (no regression suites)
+    [switch]$Quick
 )
 $ErrorActionPreference = "Continue"
 # user's order: only the personal account, never the work account
 $env:CLOUDSDK_CORE_ACCOUNT = "kartikeytilavat6819@gmail.com"
 $env:CLOUDSDK_CORE_PROJECT = "project-b17b0335-3081-4c61-89b"
 # two VMs; slots are first-free (no per-branch warmth), so go to the VM with fewer runs from this machine
-$vms = @(@{ n = "sumo-gate"; z = "us-central1-a" }, @{ n = "sumo-gate2"; z = "us-central1-b" })
+# 2026-11-21: sumo-gate was out of rotation (disk 99%) and is back since 21:45 (18 GB free after removing the stale ~/exp)
+$vms = @(@{ n = "sumo-gate"; z = "us-central1-a" })   # sumo-gate2 stopped by the owner (2026-11-24) to save cost; re-add it to use it again
 $mark = Join-Path $env:TEMP "vmgate_runs"
 New-Item -ItemType Directory -Force $mark | Out-Null
 $sha = (git -C $Repo rev-parse --short $Branch).Trim()
 if (-not $sha) { "unknown branch $Branch"; exit 1 }
 $id = (("$Branch-$sha".ToLower()) -replace '[^a-z0-9]+', '-').Trim('-')
+if ($Quick) { $id = "$id-q" }
+if ($FullRun) { $id = "$id-full" }   # distinct VM-side file names from a normal gate of the same commit
 $full = (git -C $Repo rev-parse $sha).Trim()
 # official-suite tt_ cases this branch adds or changes: an agent gate runs only these, wave2 runs all of them
 $ttf = Join-Path $env:TEMP "$id.ttf"
 $ttKey = "all"
-if ($Branch -ne 'wave2') {
-    $mb = (git -C $Repo merge-base main $full).Trim()
+if ($Branch -ne 'wave2' -and -not $FullRun) {
+    # an agent gate runs only the tt_ cases its own commits add/change; wave2's gate runs them all before main moves
+    # (bisect branches need the full set of wave2's cases, so they keep main as the base)
+    $base = if ($Branch -like 'bisect-*') { 'main' } else { 'wave2' }
+    $mb = (git -C $Repo merge-base $base $full).Trim()
     $tt = @(git -C $Repo diff --name-only $mb $full -- tools/oracle/cases/ | ForEach-Object { if ($_ -match '^tools/oracle/cases/(tt_[^/]+)/') { $Matches[1] } } | Sort-Object -Unique)
+    if ($TtRows) { $tt = @(@($tt) + ($TtRows -split '\s+' | Where-Object { $_ }) | Sort-Object -Unique) }
     [IO.File]::WriteAllText($ttf, ($tt -join "`n"))
-    $ttKey = [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($tt -join "`n"))).Replace('-', '').Substring(0, 12)
+    # extra suites (vm_gate_run.sh $4) chosen from the branch's changed files; run_all, depart and unit tests always run.
+    # Unknown/shared paths (utils, harness scripts, other crates) select everything; full/wave2 gates always run everything.
+    $sel = @{}
+    foreach ($f in @(git -C $Repo diff --name-only $mb $full)) {
+        switch -Regex ($f) {
+            '^tools/kaggle/|^tools/lead/|\.md$' { break }
+            '^crates/sumo_core/src/(netbuild|netimport|netwrite|netload)/' { $sel['netopts'] = 1; $sel['tools'] = 1; break }
+            '^crates/sumo_core/src/(polyconvert|netgen|activitygen|dfrouter)/|^crates/(netgenerate|polyconvert|activitygen|dfrouter)/' { $sel['tools'] = 1; break }
+            '^crates/sumo_core/src/(router|duarouter|jtrrouter|marouter|od2trips)/|^crates/(duarouter|jtrrouter|marouter|od2trips)/' { $sel['router'] = 1; break }
+            '^crates/sumo_core/src/utils/router/' { $sel['router'] = 1; $sel['traci'] = 1; break }
+            '^crates/sumo_core/src/(microsim|mesosim|libsumo|traci_server)/|^crates/sumo/' { $sel['traci'] = 1; break }
+            '^tools/oracle/import_texttest_net\.rows$|^tools/oracle/cases/itt_nc_' { $sel['netopts'] = 1; break }
+            '^tools/oracle/cases/(duarouter|jtrrouter|od2trips|marouter)_' { $sel['router'] = 1; break }
+            '^tools/oracle/cases/(dfrouter|netgenerate|polyconvert|activitygen)_' { $sel['tools'] = 1; break }
+            '^tools/oracle/cases/' { break }   # run_all already runs the changed cases
+            default { $sel['all'] = 1 }
+        }
+    }
+    # the agent's target rows must run too, even when its changed files don't select their suite (else they show NOT-RUN)
+    foreach ($r in @($TtRows -split '\s+' | Where-Object { $_ })) {
+        switch -Regex ($r) {
+            '^(polyconvert|netgenerate|dfrouter|activitygen)_' { $sel['tools'] = 1; break }
+            '^(duarouter|jtrrouter|od2trips|marouter)_' { $sel['router'] = 1; break }
+            '^itt_nc_' { $sel['netopts'] = 1; break }
+            '^[A-Za-z]+/.+' { if ($r -notmatch '/ref$') { $sel['traci'] = 1 }; break }
+        }
+    }
+    $suites = if ($sel['all']) { 'all' } elseif ($sel.Count) { ($sel.Keys | Sort-Object) -join ',' } else { 'none' }
+    if ($Quick) { $suites = 'quick' }
+    $ttKey = [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes(($tt -join "`n") + "|$suites"))).Replace('-', '').Substring(0, 12)
 }
+if (-not $suites) { $suites = 'all' }
 # Identical gates (same commit, same tt_ case set; e.g. several agents' baseline gates of one base) run once:
 # the first takes a lock, the others wait for its result and reuse it.
 $cdir = Join-Path $env:TEMP "vmgate_cache"
@@ -49,9 +92,11 @@ while ($true) {
 # user's order: no idle capacity. A free VM slot (8 per VM) wins; with all 16 busy the gate is queued for the Kaggle
 # dispatcher too, and whichever starts first runs it (a still-untaken Kaggle request is withdrawn when a VM slot frees).
 # Branches whose agent_run.sh needs instrumented C++ (vm_cpp_trace.sh, VM only) never go to Kaggle.
-$slots = 8
+# slots hold ~12 GB warm targets each, plus ~3 GB /tmp per active gate. 2026-11-21: disks grown 100 -> 200 GB; user wants
+# ~90% disk use, so 12 slots (~15 GB each; vm_gate_run.sh locks slots 0-11). On the old 96 GB disks 4 was the limit.
+$slots = 11   # 2026-11-22: 12 put both VMs at 95% disk and load ~28 on 16 cores
 $q = "$HOME\.kaggle\gateq"; $kreq = "$q\$id.req"; $kres = "$q\$id.result"
-$vmOnly = [bool]((git -C $Repo show "${sha}:tools/kaggle/agent_run.sh" 2>$null) -match 'vm_cpp_trace') -or ($Branch -eq 'wave2')  # wave2 decides main: the Kaggle runner skips the duarouter/netopts/tool oracles
+$vmOnly = [bool]((git -C $Repo show "${sha}:tools/kaggle/agent_run.sh" 2>$null) -match 'vm_cpp_trace|gdb ') -or ($Branch -eq 'wave2') -or $FullRun -or $Quick  # wave2 decides main: the Kaggle runner skips the duarouter/netopts/tool oracles
 $queued = $false
 while (-not $Vm) {
     Get-ChildItem $mark -File | Where-Object { -not (Get-Process -Id ([int]($_.Name -split '_')[-1]) -ErrorAction SilentlyContinue) } | Remove-Item -ErrorAction SilentlyContinue
@@ -93,17 +138,20 @@ $run = Join-Path $PSScriptRoot "vm_gate_run.sh"
 $ra = Join-Path $PSScriptRoot "..\oracle\run_all.sh"   # lead's sharded/filtered run_all, used when the branch's copy predates it
 # an ssh/scp drop (many agents connect at once) loses the whole run: retry until the run script reports an end
 for ($try = 1; $try -le 3; $try++) {
-    $known = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "git -C ~/gaterepo.git for-each-ref --sort=-creatordate --count=80 --format='%(objectname)' 2>/dev/null" 2>$null) |
+    $known = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "git -C ~/gaterepo.git for-each-ref --format='%(objectname)' refs/gh 2>/dev/null; git -C ~/gaterepo.git for-each-ref --sort=-creatordate --count=80 --format='%(objectname)' 2>/dev/null" 2>$null) |
         Where-Object { $_ -match '^[0-9a-f]{40}$' }
     $not = @($known | Where-Object { git -C $Repo cat-file -e "$_^{commit}" 2>$null; $LASTEXITCODE -eq 0 } | ForEach-Object { "^$_" })
     Remove-Item $bdl -ErrorAction SilentlyContinue
     git -C $Repo bundle create $bdl "refs/gate/$id" @not 2>$null | Out-Null   # no file = the VM already has the commit
     $up = @($run, $ra, (Join-Path $PSScriptRoot "pristine_cache.sh")) + @(Get-Item $bdl, $ttf -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
     gcloud compute scp @up "${Vm}:/tmp/" --zone $Zone --quiet 2>&1 | Out-Null
-    $prep = "R=~/gaterepo.git; [ -d `$R ] || git init -q --bare `$R; if [ -f /tmp/$id.bundle ]; then git -C `$R fetch -q /tmp/$id.bundle '+refs/gate/*:refs/gate/*' && rm -f /tmp/$id.bundle; fi; git -C `$R archive --format=tar.gz -o /tmp/$id.tgz $full || echo 'SNAPSHOT CORRUPT (missing commit)';"
-    $out = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "$prep while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/run_all.sh /home/gate/lead_run_all.sh; sudo cp /tmp/pristine_cache.sh /home/gate/pristine_cache.sh; sudo sed -i 's/\r$//' /home/gate/pristine_cache.sh; [ -f /tmp/$id.ttf ] && sudo cp /tmp/$id.ttf /home/gate/ttf_$id; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha' /home/gate/ttf_$id; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh /home/gate/ttf_$id /tmp/$id.tgz /tmp/$id.ttf" 2>&1 |
-        Where-Object { $_ -notmatch '^(Updating|Warning: Permanently|External IP|Writing|.*NativeCommandError|.*CategoryInfo|.*At .*gcloud\.ps1|\s*\+|\s*~)' })
-    if (($out -join "`n") -match 'GATE DONE|BUILD FAILED') { $out; $out | Set-Content $cout; break }
+    # an ssh drop leaves the previous attempt running on the VM (CPU + disk): kill it, sparing this shell's own process group
+    $kill = "me=`$(ps -o pgid= -p `$`$ | tr -d ' '); for p in `$(pgrep -f 'sudo -iu gate bash /home/gate/run_$id.sh'); do g=`$(ps -o pgid= -p `$p | tr -d ' '); [ `${g:-0} != 0 ] && [ `${g:-0} != `${me:-0} ] && sudo kill -TERM -- -`$g; done;"
+    $prep = "$kill R=~/gaterepo.git; [ -d `$R ] || git init -q --bare `$R; if [ -f /tmp/$id.bundle ]; then git -C `$R fetch -q /tmp/$id.bundle '+refs/gate/*:refs/gate/*' && rm -f /tmp/$id.bundle; fi; git -C `$R archive --format=tar.gz -o /tmp/$id.tgz $full || echo 'SNAPSHOT CORRUPT (missing commit)';"
+    $out = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "$prep while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/run_all.sh /home/gate/lead_run_all.sh; sudo cp /tmp/pristine_cache.sh /home/gate/pristine_cache.sh; sudo sed -i 's/\r$//' /home/gate/pristine_cache.sh; [ -f /tmp/$id.ttf ] && sudo cp /tmp/$id.ttf /home/gate/ttf_$id; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha' /home/gate/ttf_$id '$suites'; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh /home/gate/ttf_$id /tmp/$id.tgz /tmp/$id.ttf" 2>&1 |
+        Where-Object { $_ -notmatch '^(Updating|Warning: Permanently|External IP|Writing|.*NativeCommandError|.*CategoryInfo|.*At .*gcloud\.ps1|\s+\+ |\s+~)' })   # PowerShell error decoration is indented; column-0 '+' lines are agents' diff output
+    # a result produced on a full VM disk is not a property of the commit: report it, but do not cache it
+    if (($out -join "`n") -match 'GATE DONE|BUILD FAILED') { $out; if (($out -join "`n") -notmatch 'No space left on device') { $out | Set-Content $cout }; break }
     "vm_gate: attempt $try ended without a result (ssh/scp drop); retrying"
     if ($try -eq 3) { $out }
     Start-Sleep (15 * $try)

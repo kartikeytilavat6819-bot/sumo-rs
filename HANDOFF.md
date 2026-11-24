@@ -1,5 +1,12 @@
 # Handoff: state of the sumo-rs port (2026-11-12, end of day)
 
+> **2026-11-24 (current state, supersedes the 2026-11-12 numbers below):** the port is complete against the official
+> 1.28.0 test suite. Full run of `main` = `acf684f05`: every reproducible case passes (sumo TextTest cases except 6,
+> netconvert 1,589/1,590 with 1 harness skip, duarouter 559/559, all other tools 100%, TraCI 609/609, complex TraCI
+> 461/463). Everything that does not match is listed with its reason in [NOT_PORTED.md](NOT_PORTED.md).
+> To continue: new features go on top of this baseline; keep every change green on the full gate
+> (`tools/gcloud/vm_gate.ps1 -FullRun`).
+>
 > **2026-11-22:** the JuPedSim pedestrian model was deliberately dropped; see [NOT_PORTED.md](NOT_PORTED.md) for everything that is not ported and how to add it.
 
 Read this first, then `AGENTS.md` (rules for every porting agent) and `PORTING.md` (conventions,

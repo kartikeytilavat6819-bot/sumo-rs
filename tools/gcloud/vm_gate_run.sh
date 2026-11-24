@@ -5,7 +5,7 @@ set -u
 # 8 slots per VM (run_all is single-threaded, so one gate leaves 15 cores idle; 62 GB RAM); each slot has its own tree + target
 slot=""
 while [ -z "$slot" ]; do
-  for s in 0 1 2 3 4 5 6 7; do exec 9>/home/gate/slot$s.lock; if flock -n 9; then slot=$s; break; fi; exec 9>&-; done
+  for s in 0 1 2 3 4 5 6 7 8 9 10 11; do exec 9>/home/gate/slot$s.lock; if flock -n 9; then slot=$s; break; fi; exec 9>&-; done
   [ -z "$slot" ] && sleep 5
 done
 SRC=/home/gate/s$slot/src NEW=/home/gate/s$slot/new
@@ -36,6 +36,14 @@ if [ $rc -ne 0 ]; then echo "BUILD FAILED"; exit 1; fi
 (cd "$CARGO_TARGET_DIR/debug" && ln -sf sumo sumo.exe && ln -sf netconvert netconvert.exe)
 # official-suite tt_ cases: wave2 runs all of them; an agent branch only the ones it adds/changes ($3 = list file)
 [ -n "${3:-}" ] && [ -f "$3" ] && export TT_FILTER="$(cat "$3")"
+# extra suites to run ($4, comma list from vm_gate.ps1 by the branch's changed files; 'all' for wave2/full/unknown)
+SUITES="${4:-all}"; want() { [ "$SUITES" = all ] || [[ ",$SUITES," == *",$1,"* ]]; }
+# agents wait on QUICK gates; background regression/full gates yield the CPU to them (children inherit the niceness)
+[ "$SUITES" = quick ] || renice -n 15 -p $$ >/dev/null 2>&1
+# QUICK gate (agent probe rounds): run_all runs ONLY the listed rows (no regression rows), no extra suites, no depart
+if [ "$SUITES" = quick ] && [ -n "${3:-}" ] && [ -f "$3" ]; then
+  export QUICK_FILTER="$(cat "$3")"
+fi
 # shards follow the free cores: 16 cores / gates running on this VM, 2..8; wave2 (all tt_ cases) at least 4
 active=$(ls /home/gate/run_*.sh 2>/dev/null | wc -l); [ "$active" -lt 1 ] && active=1
 shards=$((16 / active)); [ $shards -lt 2 ] && shards=2; [ $shards -gt 8 ] && shards=8
@@ -50,51 +58,61 @@ if [ -f /home/gate/pristine_cache.sh ]; then
   find /home/gate/pcache/entries -mindepth 2 -maxdepth 2 -name rc -mtime +7 -printf '%h\n' 2>/dev/null | xargs -r rm -rf   # unused for a week
 fi
 export NETOPTS2_JOBS=$((shards * 2))
+# reaper: a case's big outputs (fcd/xml, often 0.3-1 GB each) are scored right after the case; keep them 15 min, then free
+# them (2026-11-22: 11 parallel gates x ~14 GB filled both VM disks)
+( while sleep 60; do find "$SCORE_OUT" /tmp/netopts2_$slot /tmp/dua$slot -type f -size +1M -mmin +15 -delete 2>/dev/null; find "$SCORE_OUT" -type f -size +100M -mmin +8 -delete 2>/dev/null; done ) & REAPER=$!
+[ -n "${QUICK_FILTER:-}" ] && sed -i '/^  # TT_FILTER (newline list/i\  [ -n "${QUICK_FILTER:-}" ] \&\& ! grep -qxF "$c" <<<"$QUICK_FILTER" \&\& continue' tools/oracle/run_all.sh
 bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|TIMEOUT|PASS=|STALE|MISSING'
-bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
-if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
+[ "$SUITES" = quick ] || bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
+if want router && [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
   OUT=/tmp/dua$slot env ${PC:+REF_BIN=$PC/duarouter} timeout 1800 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
   echo "duarouter oracle: PASS=$(grep -c $'\tPASS\t' /tmp/dua$slot/results.tsv) of $(($(wc -l < /tmp/dua$slot/results.tsv) - 1))"; grep -v $'\tPASS\t' /tmp/dua$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
 fi
 # netconvert option rows outside run_all (h08); one summary line + the non-PASS row names
-if [ -f tools/oracle/run_netopts_new.sh ]; then
+if want netopts && [ -f tools/oracle/run_netopts_new.sh ]; then
   rm -rf /tmp/netopts2_$slot; NETOPTS2_OUT=/tmp/netopts2_$slot env ${PC:+CPP_NETCONVERT=$PC/netconvert} timeout 2400 bash tools/oracle/run_netopts_new.sh >/dev/null 2>&1
   T=/tmp/netopts2_$slot/summary.tsv
   echo "netopts_new: PASS=$(grep -c $'\tPASS\t' $T 2>/dev/null) of $(cat $T 2>/dev/null | wc -l); not passing: $(grep -v $'\tPASS\t' $T 2>/dev/null | cut -f1,2 | tr '\t\n' ': ')"
 fi
 for t in dfrouter activitygen netgenerate polyconvert; do
-  if [ -f tools/oracle/run_dfag.sh ] && [ -x "$CARGO_TARGET_DIR/debug/$t" ]; then
+  if want tools && [ -f tools/oracle/run_dfag.sh ] && [ -x "$CARGO_TARGET_DIR/debug/$t" ]; then
     TOOL=$t OUT=/tmp/${t}_o$slot timeout 600 bash tools/oracle/run_dfag.sh >/dev/null 2>&1
     lbl=$t; case $t in netgenerate|polyconvert) lbl="$t itt";; esac  # run_gen_poly.sh prints the plain "<tool> oracle" line
     echo "$lbl oracle: PASS=$(grep -c $'	PASS	' /tmp/${t}_o$slot/results.tsv) of $(($(wc -l < /tmp/${t}_o$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/${t}_o$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
   fi
 done
 for t in od2trips marouter; do
-  if [ -x "$CARGO_TARGET_DIR/debug/$t" ] && [ -x "$SUMO_PRISTINE_BIN/$t" ]; then
+  if ! want router; then :
+  elif [ -x "$CARGO_TARGET_DIR/debug/$t" ] && [ -x "$SUMO_PRISTINE_BIN/$t" ]; then
     OUT=/tmp/${t}$slot timeout 600 bash tools/oracle/run_odtool.sh $t >/dev/null 2>&1
     echo "$t oracle: PASS=$(grep -c $'	PASS	' /tmp/${t}$slot/results.tsv) of $(($(wc -l < /tmp/${t}$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/${t}$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
   else echo "$t oracle: SKIPPED (missing our binary or $SUMO_PRISTINE_BIN/$t)"; fi
 done
 # jtrrouter oracle (block z30)
-if [ -f tools/oracle/run_jtrrouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/jtrrouter" ]; then
+if want router && [ -f tools/oracle/run_jtrrouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/jtrrouter" ]; then
   OUT=/tmp/jtr$slot timeout 600 bash tools/oracle/run_jtrrouter.sh >/dev/null 2>&1
   echo "jtrrouter oracle: PASS=$(grep -c $'	PASS	' /tmp/jtr$slot/results.tsv) of $(($(wc -l < /tmp/jtr$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/jtr$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -12
 fi
 # netgenerate / polyconvert oracles (tools/oracle/run_gen_poly.sh)
-[ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
+want tools && [ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
 # TraCI test-client oracle: differential suite driven by the Python raw-protocol client
-if [ -f tools/oracle/run_traci_suite.sh ] && [ -x "$CARGO_TARGET_DIR/debug/sumo" ]; then
+if want traci && [ -f tools/oracle/run_traci_suite.sh ] && [ -x "$CARGO_TARGET_DIR/debug/sumo" ]; then
   TRACI_SUITE_OUT=/tmp/traci$slot TRACI_JOBS=6 TRACI_SHOW=10 timeout 900 bash tools/oracle/run_traci_suite.sh 2>&1 | grep -E 'FAIL categories|traci suite oracle|^FAIL '
 fi
 # complex TraCI suite oracle: official vs our sumo over the bundled runner.py scripts
-if [ -f tools/oracle/run_complex_suite.sh ]; then
-  COMPLEX_OUT=/tmp/complex$slot COMPLEX_TIMEOUT=12 timeout 600 bash tools/oracle/run_complex_suite.sh > /tmp/complexlog$slot 2>&1
+if want traci && [ -f tools/oracle/run_complex_suite.sh ]; then
+  COMPLEX_OUT=/tmp/complex$slot COMPLEX_TIMEOUT=12 timeout 2400 bash tools/oracle/run_complex_suite.sh > /tmp/complexlog$slot 2>&1
   grep '^complex suite oracle:' /tmp/complexlog$slot
   grep '^FAIL' /tmp/complexlog$slot | head -12
+  echo "complex failing: $(grep -E '^(FAIL|TIMEOUT|PANIC)' /tmp/complexlog$slot | awk '{print $2}' | sort -u | tr '
+' ' ')"   # all names (details above only for the first 12)
 fi
 # one test thread: the message handler (clear_errors/error_was_informed) is process-global like C++ MsgHandler,
 # so parallel tests that write errors made xml::tests::gz_and_include flaky
 cargo test -q -p sumo_core -p utils -- --test-threads=1 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
+kill $REAPER 2>/dev/null
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target
 if [ -f tools/kaggle/agent_run.sh ]; then sed -i "s#/tmp/target#$CARGO_TARGET_DIR#g" tools/kaggle/agent_run.sh; timeout 1800 bash tools/kaggle/agent_run.sh 2>&1 | tail -400; echo "AGENT RUN DONE"; fi
+# free this slot's scratch right away (2026-11-22: leftovers of many gates filled both VM disks to 100%)
+rm -rf "$SCORE_OUT" /tmp/dua$slot /tmp/netopts2_$slot /tmp/traci$slot /tmp/complex$slot /tmp/genpoly$slot /tmp/jtr$slot /tmp/*_o$slot "$1" 2>/dev/null
