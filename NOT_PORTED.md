@@ -71,6 +71,14 @@ bounds on these inputs. They are not port gaps:
 - complex TraCI test `vehicle/moveToXY/no_permitted_route_lane`: official segfaults (exit 139), excluded in
   `tools/oracle/complex_suite.py`.
 
+Output that depends on heap addresses / pointer ordering in the official binary (a faithful port cannot reproduce
+the order; analysis of 2026-11-23, rows still counted as failing in the gate):
+- meandata: `md_midinterval`, `md_stop`, `md_vtypes`, `out_meandata`, `out_bt` (iteration over pointer-keyed
+  containers decides which vehicles/intervals are written and in what order);
+- `elechybrid_overhead` row 53: the overhead-wire circuit solver's tie-break depends on the last bits of matrix
+  entries built in pointer order (official `circuitVoltage` -2.9118, ours -3.6404).
+A fix would mean emulating the C++ allocation order; reopen only with a concrete measurement of it.
+
 ## 4. Known shortcuts inside ported code
 
 Search the code for `shortcut:` comments; each names its limit and when to upgrade. Notable ones:
