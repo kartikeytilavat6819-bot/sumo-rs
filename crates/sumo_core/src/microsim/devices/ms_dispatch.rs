@@ -25,6 +25,10 @@ pub enum Reservation_ReservationState {
 /// Installed by each algorithm's constructor, so base-class calls reach the derived body.
 pub struct MSDispatchVt {
     pub compute_dispatch: fn(&mut MSDispatch, SUMOTime, &Vec<Ptr<MSDevice_Taxi>>),
+    // MSDispatch_TraCI overrides these three (MSDispatch_TraCI.h:58,64,76)
+    pub add_reservation: fn(&mut MSDispatch, Ptr<MSTransportable>, SUMOTime, SUMOTime, SUMOTime, Ptr<MSEdge>, f64, Ptr<MSStoppingPlace>, Ptr<MSEdge>, f64, Ptr<MSStoppingPlace>, String, &str, i32, i32) -> Ptr<Reservation>,
+    pub remove_reservation: fn(&mut MSDispatch, Ptr<MSTransportable>, Ptr<MSEdge>, f64, Ptr<MSEdge>, f64, String) -> String,
+    pub fulfilled_reservation: fn(&mut MSDispatch, Ptr<Reservation>),
 }
 
 fn default_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
@@ -33,6 +37,9 @@ fn default_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<M
 
 pub(crate) const DEFAULT_MSDISPATCH_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: default_compute_dispatch,
+    add_reservation: MSDispatch::add_reservation_base,
+    remove_reservation: MSDispatch::remove_reservation_base,
+    fulfilled_reservation: MSDispatch::fulfilled_reservation_base,
 };
 
 /// An algorithm that performs distpach for a taxi fleet
@@ -238,8 +245,26 @@ impl MSDispatch {
     // #endif
     //     return result;
     // }
-    #[allow(unused_variables)]
+    /// virtual MSDispatch::addReservation (reaches MSDispatch_TraCI's override when installed)
     pub fn add_reservation(&mut self, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, tostop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
+        let vt = self.vt;
+        (vt.add_reservation)(self, person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, tostop, group, line, maxCapacity, maxContainerCapacity)
+    }
+
+    /// virtual MSDispatch::removeReservation
+    pub fn remove_reservation(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
+        let vt = self.vt;
+        (vt.remove_reservation)(self, person, from, fromPos, to, toPos, group)
+    }
+
+    /// virtual MSDispatch::fulfilledReservation
+    pub fn fulfilled_reservation(&mut self, res: Ptr<Reservation>) {
+        let vt = self.vt;
+        (vt.fulfilled_reservation)(self, res)
+    }
+
+    #[allow(unused_variables)]
+    pub fn add_reservation_base(&mut self, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, tostop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
         let personID = person.get_id().to_string();
         let personNumID = person.get_numerical_id();
         let mut resID = String::new();
@@ -396,7 +421,7 @@ impl MSDispatch {
     //     return removedID;
     // }
     #[allow(unused_variables)]
-    pub fn remove_reservation(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
+    pub fn remove_reservation_base(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
         let personNumID = person.get_numerical_id();
         let mut group = group;
         if group.is_empty() {
@@ -525,7 +550,7 @@ impl MSDispatch {
     //     delete res;
     // }
     #[allow(unused_variables)]
-    pub fn fulfilled_reservation(&mut self, res: Ptr<Reservation>) {
+    pub fn fulfilled_reservation_base(&mut self, res: Ptr<Reservation>) {
         let group = res.group.clone();
         self.myRunningReservations.entry(group.clone()).or_default().remove(&res.id);
         if self.myRunningReservations[&group].is_empty() {

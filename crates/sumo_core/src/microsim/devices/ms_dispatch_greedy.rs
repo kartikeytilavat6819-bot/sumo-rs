@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::time::SUMOTIME_MAX;
+use crate::microsim::devices::ms_dispatch::DEFAULT_MSDISPATCH_VT;
 
 /// Signature of the C++ virtual `MSDispatch_Greedy::dispatch()`; the base `computeDispatch` must reach the derived body (ride sharing).
 pub type MSDispatch_Greedy_DispatchFn = fn(&mut MSDispatch_Greedy, Ptr<MSDevice_Taxi>, &mut usize, &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, &mut Vec<Ptr<Reservation>>) -> i32;
@@ -46,6 +47,7 @@ fn greedy_dispatch(g: &mut MSDispatch_Greedy, taxi: Ptr<MSDevice_Taxi>, resIt: &
 
 pub(crate) const MS_DISPATCH_GREEDY_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: greedy_compute_dispatch,
+    ..DEFAULT_MSDISPATCH_VT
 };
 
 fn greedy_closest_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
@@ -56,6 +58,7 @@ fn greedy_closest_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Ve
 
 pub(crate) const MS_DISPATCH_GREEDY_CLOSEST_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: greedy_closest_compute_dispatch,
+    ..DEFAULT_MSDISPATCH_VT
 };
 
 impl MSDispatch_Greedy {
