@@ -239,7 +239,17 @@ fn my_leftover_vehicle_parameters() -> &'static mut Vec<Ptr<SUMOVehicleParameter
 
 /// C++ `MSRoute::dictionary(id)`: None where C++ returns nullptr
 fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
-    if MSRoute::has_route(id) { Some(MSRoute::dictionary_3(id, Ptr::null())) } else { None }
+    if MSRoute::has_route(id) {
+        return Some(MSRoute::dictionary_3(id, Ptr::null()));
+    }
+    // C++ MSRoute::dictionary(id, rng=nullptr) falls back to myDistDict and samples
+    // a route from a named <routeDistribution> (MSRoute.cpp:142-155). The old
+    // has_route-only lookup returned None for calibrators fed by a routeDistribution.
+    let dist = MSRoute::dist_dictionary(id);
+    if !dist.is_null() && dist.get_overall_prob() > 0.0 {
+        return (*dist).get(None).ok();
+    }
+    None
 }
 
 /// C++ `new VehicleRemover(lane, parent, undo)` kept alive in myLeftoverReminders; its MSMoveReminder ctor adds it to the lane
@@ -1717,5 +1727,29 @@ impl MSCalibrator_VehicleRemover {
         self.myParent = Ptr::null();
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lookup_route_samples_named_route_distribution() {
+        // C++ MSRoute.cpp:142-155: dictionary(id, nullptr) falls back to myDistDict
+        // and samples a route from a <routeDistribution>. A calibrator whose flow
+        // references such a distribution must not report "No valid routes".
+        let edge = Ptr::from_raw(Box::into_raw(Box::new(
+            crate::microsim::ms_edge::MSEdge::new("x", 0, SumoXMLEdgeFunc::NORMAL, "", "", "", 0, 0.0),
+        )));
+        let route: crate::utils::vehicle::sumo_traffic_object::ConstMSRoutePtr =
+            std::rc::Rc::new(crate::microsim::ms_route::MSRoute::new("t_cal_r", &vec![edge], true, Ptr::null(), &Vec::new(), -1, -1));
+        let mut dist = RandomDistributor::<crate::utils::vehicle::sumo_traffic_object::ConstMSRoutePtr>::default();
+        assert!(dist.add(route, 1.0, false));
+        assert!(MSRoute::dictionary_2("t_cal_dist", Ptr::from_raw(Box::into_raw(Box::new(dist))), true));
+        assert!(!MSRoute::has_route("t_cal_dist"));
+        let sampled = lookup_route("t_cal_dist").expect("route distribution must be sampled");
+        assert_eq!(sampled.size(), 1);
+        MSRoute::clear();
+    }
 }
 

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -v -b 26 --load-state tools/oracle/cases/tt_extended_state_load_arriving/input_state.xml

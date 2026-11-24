@@ -1967,11 +1967,7 @@ impl MSNet {
                     segment.m().clear_state();
                     segment = segment.m().get_next_segment();
                 }
-                for lane in edge.get_lanes().iter() {
-                    for link in lane.get_link_cont().iter() {
-                        link.m().clear_state();
-                    }
-                }
+                // v1.28.0 release: no per-link clearState loop here (snapshot-only addition)
             }
         } else {
             for edge in MSEdge::get_all_edges().iter() {
@@ -2966,17 +2962,17 @@ impl MSNet {
         self.clear_state(oc_begin, true);
         NLBuilder::init_randomness();
         // load traffic from additional files
-        if !get_bool("ignore.additionalelements") {
-            for file in utils::options::options_cont::get_string_vector("additional-files") {
-                // ignore failure on parsing calibrator flow
-                let mut rh = MSRouteHandler::new(&file, true);
-                utils::common::msg_handler::progress_begin_message(&format!("Loading traffic from '{}'", file));
-                let before = get_current_millis();
-                if !utils::xml::xml_sub_sys::run_parser(&mut rh, &file, false, false, false, true).unwrap_or(false) {
-                    std::panic::panic_any(ProcessError::new(utils::tlf!("Loading of % failed.", file)));
-                }
-                utils::common::msg_handler::progress_time_message(get_current_millis() - before);
+        // v1.28.0 release always loads these; the snapshot's "ignore.additionalelements" guard
+        // would call get_bool on an option that release never registers and panic.
+        for file in utils::options::options_cont::get_string_vector("additional-files") {
+            // ignore failure on parsing calibrator flow
+            let mut rh = MSRouteHandler::new(&file, true);
+            utils::common::msg_handler::progress_begin_message(&format!("Loading traffic from '{}'", file));
+            let before = get_current_millis();
+            if !utils::xml::xml_sub_sys::run_parser(&mut rh, &file, false, false, false, true).unwrap_or(false) {
+                std::panic::panic_any(ProcessError::new(utils::tlf!("Loading of % failed.", file)));
             }
+            utils::common::msg_handler::progress_time_message(get_current_millis() - before);
         }
         delete_ptr(self.myRouteLoaders);
         self.myRouteLoaders = utils::options::options_cont::with_options(|oc| NLBuilder::build_route_loader_control(oc));
@@ -3095,8 +3091,13 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn inform_transportable_state_listener(&mut self, transportable: Ptr<MSTransportable>, to: MSNet_TransportableState, info: &str) {
         // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
+        // MSNet_TransportableStateListener has no vtable: dispatch by identity, as inform_vehicle_state_listener does
         for listener in self.myTransportableStateListeners.iter() {
-            listener.m().transportable_state_changed(transportable, to, info);
+            if crate::libsumo::helper::Helper::is_transportable_state_listener(listener.as_raw()) {
+                crate::libsumo::helper::Helper::transportable_state_changed_dispatch(transportable, to, info);
+            } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base3 as *mut MSNet_TransportableStateListener {
+                TraCIServer::get_instance().m().transportable_state_changed(transportable, to, info);
+            }
         }
     }
 
@@ -3456,6 +3457,11 @@ impl MSNet {
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         for (_, router) in me.myIntermodalRouter.take() {
+            // C++ ~IntermodalRouter deletes myInternalRouter, whose ~SUMOAbstractRouter prints the query statistics
+            // (the intermodal router itself never counts queries); only the print is ported here, the memory is not freed
+            if !router.myInternalRouter.is_null() {
+                router.myInternalRouter.m().drop_();
+            }
             delete_ptr(router);
         }
     }

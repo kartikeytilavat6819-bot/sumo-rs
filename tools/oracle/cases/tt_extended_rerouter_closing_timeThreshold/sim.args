@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 --no-duration-log -a tools/oracle/cases/tt_extended_rerouter_closing_timeThreshold/input_additional.add.xml

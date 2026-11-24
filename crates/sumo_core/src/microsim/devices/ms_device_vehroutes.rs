@@ -50,8 +50,6 @@ pub struct MSDevice_Vehroutes {
     pub myDepartPosLat: f64,
     /// the edges that were passed before the current stop
     pub myPriorEdges: Vec<Ptr<MSEdge>>,
-    /// the cost of the initial route if not set (cannot be stored in the route because it may be shared)
-    pub myInitialCost: f64,
     pub myStopOut: OutputDevice,
 }
 
@@ -832,14 +830,10 @@ impl MSDevice_Vehroutes {
             myDepartSpeed: -1.0,
             myDepartPosLat: 0.0,
             myPriorEdges: Vec::new(),
-            myInitialCost: -1.0,
             myStopOut: OutputDevice::new_string(2),
         };
         let mut dummyMsg = String::new();
         this.myCurrentValid = this.myHolder.has_valid_route(&mut dummyMsg, this.myCurrentRoute.clone());
-        if this.myCurrentRoute.get_costs() < 0.0 && MY_WRITE_COSTS.load(Relaxed) {
-            this.myInitialCost = this.myHolder.get_router_tt().recompute_costs(this.myCurrentRoute.get_edges(), this.myHolder, sim_step(), Ptr::default());
-        }
         this
     }
 
@@ -957,11 +951,7 @@ impl MSDevice_Vehroutes {
             debug_assert!((self.myReplacedRoutes.len() as i32) > index);
             let iu = index as usize;
             if MY_DUA_STYLE.load(Relaxed) || MY_WRITE_COSTS.load(Relaxed) {
-                let mut cost = self.myReplacedRoutes[iu].route.get_costs();
-                if cost < 0.0 && index == 0 {
-                    cost = self.myInitialCost;
-                }
-                os.write_attr(SUMO_ATTR_COST, &cost);
+                os.write_attr(SUMO_ATTR_COST, &self.myReplacedRoutes[iu].route.get_costs());
             }
             if MY_WRITE_COSTS.load(Relaxed) {
                 os.write_attr(SUMO_ATTR_SAVINGS, &self.myReplacedRoutes[iu].route.get_savings());

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.rerouting.probability 1 --device.rerouting.period 10 -a tools/oracle/cases/tt_extended_rerouter_closingLaneReroute_routingMode_ignore/input_additional.add.xml

@@ -849,6 +849,11 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) where E: RouterEdgeInfo {
+        // C++ does two empty loops and reassigns an empty map, i.e. a no-op. Skipping it avoids
+        // re-entering the virtual prohibit callback for every getRouterTT() call (ticket9812).
+        if toProhibit.is_empty() && self.myProhibited.is_empty() {
+            return;
+        }
         if let Some(prohibit) = self.myProhibit {
             return prohibit(self, toProhibit);
         }
@@ -958,7 +963,10 @@ mod tests {
 
     impl RouterVehicle for TestVeh {
         fn v_class(&self) -> SUMOVehicleClass {
-            SVC_IGNORING
+            // SVC_IGNORING is 0 (the null vehicle used by the other tests), for which
+            // prohibition permission bits are a no-op. Use a real class here so the
+            // prohibition check behaves like C++ with an actual vehicle.
+            SVC_RAIL
         }
         fn get_id(&self) -> String {
             "veh".to_string()
@@ -1076,6 +1084,63 @@ mod tests {
         let mut none: Vec<Ptr<TestEdge>> = Vec::new();
         assert!(!router.compute(ptrs[3], ptrs[0], Ptr::null(), 0, &mut none, true));
         assert!(none.is_empty());
+    }
+
+    /// A closing with a finite end is temporary: the router may still use the edge
+    /// (paying the wait), while `end == MAX` is a hard prohibition. This is the
+    /// distinction the closingReroute `until` cases depend on.
+    #[test]
+    fn finite_prohibition_is_temporary() {
+        let a = edge("A", 0, 10.);
+        let a = Ptr::from_box(&a);
+        let op: SUMOAbstractRouter_TypedOperation<TestEdge, TestVeh> = length_effort;
+        let edges = vec![a];
+        let mut router = DijkstraRouter::new(&edges, true, Some(op), None, true, Ptr::null(), false, false);
+        let veh_box = Box::new(TestVeh);
+        let veh = Ptr::from_box(&veh_box);
+
+        let mut prohibitions = SUMOAbstractRouter_Prohibitions::new();
+        // MSTriggeredRerouter.cpp:149 → getClosed() sets permissions to
+        // SVC_AUTHORITY for `allow="authority"`; a rail vehicle is not covered.
+        prohibitions.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: 200., permissions: SVC_AUTHORITY });
+        router.prohibit(&prohibitions);
+        assert!(!router.is_prohibited(a, veh, 0.), "finite end must not be hard-prohibited");
+        assert_eq!(router.get_effort(a, veh, 0.), 200. + 10., "finite end must add the wait time");
+
+        let mut permanent = SUMOAbstractRouter_Prohibitions::new();
+        permanent.insert(a.cast::<()>(), RouterProhibition { begin: 0., end: f64::MAX, permissions: SVC_AUTHORITY });
+        router.prohibit(&permanent);
+        assert!(router.is_prohibited(a, veh, 0.), "MAX end must be hard-prohibited");
+        // getEffort() would return MAX + effort here; C++ never calls it for a
+        // hard-prohibited edge because isProhibited() excludes it first.
+    }
+
+    static PROHIBIT_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    fn counting_prohibit(_: &mut SUMOAbstractRouter<TestEdge, TestVeh>, _: &SUMOAbstractRouter_Prohibitions) {
+        PROHIBIT_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// C++ SUMOAbstractRouter.h:409-422 prohibit(): with an empty toProhibit and no existing
+    /// prohibitions the two loops are empty and the reassignment changes nothing, so the virtual
+    /// override must not be entered (ticket9812 rail-taxi hang). With existing prohibitions the
+    /// first loop clears them, so the override IS entered.
+    #[test]
+    fn empty_prohibit_dispatches_only_when_prior_prohibitions_exist() {
+        let boxes = vec![edge("A", 0, 10.)];
+        let ptrs: Vec<Ptr<TestEdge>> = boxes.iter().map(|b| Ptr::from_box(b)).collect();
+        let op: SUMOAbstractRouter_TypedOperation<TestEdge, TestVeh> = length_effort;
+        let mut router = DijkstraRouter::new(&ptrs, true, Some(op), None, true, Ptr::null(), false, false);
+        let empty = SUMOAbstractRouter_Prohibitions::default();
+        router.base.myProhibit = Some(counting_prohibit);
+        PROHIBIT_CALLS.store(0, std::sync::atomic::Ordering::SeqCst);
+        router.prohibit(&empty);
+        assert_eq!(PROHIBIT_CALLS.load(std::sync::atomic::Ordering::SeqCst), 0);
+        // Seed a prior prohibition; prohibiting with an empty map must now reach the override.
+        let mut seeded = SUMOAbstractRouter_Prohibitions::default();
+        seeded.insert(ptrs[0].cast::<()>(), RouterProhibition { begin: 0., end: f64::MAX, permissions: 0 });
+        router.base.myProhibited = seeded;
+        router.prohibit(&empty);
+        assert_eq!(PROHIBIT_CALLS.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 }
 

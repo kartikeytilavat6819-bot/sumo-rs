@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-21T17:03:35.022399-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_calibrator_errors_vClass_mismatch_ignore/ref_simple.net.xml"/>
+        <route-files value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_calibrator_errors_vClass_mismatch_ignore/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_calibrator_errors_vClass_mismatch_ignore/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_calibrator_errors_vClass_mismatch_ignore/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_calibrator_errors_vClass_mismatch_ignore/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_extended_calibrator_errors_vClass_mismatch_ignore/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="100"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00"/>
+    <timestep time="1.00"/>
+    <timestep time="2.00"/>
+    <timestep time="3.00"/>
+    <timestep time="4.00"/>
+    <timestep time="5.00"/>
+    <timestep time="6.00">
+        <vehicle id="cali.0.0" x="106.48" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="5.10" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="cali.0.0" x="119.91" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.63" pos="18.73" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="cali.0.0" x="132.46" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.73" pos="31.46" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="cali.0.0" x="146.00" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.74" pos="45.20" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="106.48" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="5.10" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="cali.0.0" x="158.96" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.15" pos="58.35" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="119.87" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.59" pos="18.69" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="cali.0.0" x="172.15" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.39" pos="71.74" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="132.41" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.73" pos="31.42" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="cali.0.0" x="185.02" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.05" pos="84.80" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="144.99" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.77" pos="44.18" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="106.48" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="5.10" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="cali.0.0" x="197.61" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.78" pos="97.57" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="157.65" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.84" pos="57.03" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="119.97" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.69" pos="18.79" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="cali.0.0" x="211.02" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.45" pos="11.02" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="170.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.32" pos="70.35" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="132.85" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.06" pos="31.86" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="cali.0.0" x="224.06" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.04" pos="24.06" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="184.43" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.85" pos="84.20" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="145.56" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.90" pos="44.76" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="cali.0.0" x="237.25" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.20" pos="37.25" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="197.29" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.05" pos="97.25" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="158.78" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.41" pos="58.17" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="cali.0.0" x="250.63" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.38" pos="50.63" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="210.15" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.90" pos="10.15" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="171.83" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.25" pos="71.42" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="106.48" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="5.10" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="cali.0.0" x="263.51" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.87" pos="63.51" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="223.04" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.88" pos="23.04" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="184.27" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.62" pos="84.04" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="119.01" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.72" pos="17.82" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="cali.0.0" x="276.89" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.38" pos="76.89" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="236.07" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.03" pos="36.07" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="196.97" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.88" pos="96.92" lane="middle_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="132.15" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.33" pos="31.15" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="cali.0.0" x="290.26" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.38" pos="90.26" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.1" x="249.52" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.45" pos="49.52" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="210.19" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.27" pos="10.19" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="145.36" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.41" pos="44.56" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="cali.0.1" x="262.73" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.21" pos="62.73" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="223.46" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.27" pos="23.46" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="158.46" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.29" pos="57.85" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="cali.0.1" x="275.43" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.70" pos="75.43" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="236.08" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.62" pos="36.08" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="171.00" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.73" pos="70.58" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="cali.0.1" x="288.59" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.16" pos="88.59" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.2" x="248.70" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.62" pos="48.70" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="184.30" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.50" pos="84.07" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="cali.0.2" x="262.11" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.42" pos="62.11" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="197.36" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.25" pos="97.32" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="cali.0.2" x="275.09" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.97" pos="75.09" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="210.01" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.69" pos="10.01" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="cali.0.2" x="288.86" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.77" pos="88.86" lane="end_0" slope="0.00"/>
+        <vehicle id="cali.0.3" x="223.36" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.35" pos="23.36" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="cali.0.3" x="236.00" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.64" pos="36.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="cali.0.3" x="249.81" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.81" pos="49.81" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="cali.0.3" x="262.76" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.95" pos="62.76" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="cali.0.3" x="276.65" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="76.65" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="cali.0.3" x="289.97" y="-1.65" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.32" pos="89.97" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00"/>
+    <timestep time="33.00"/>
+    <timestep time="34.00"/>
+    <timestep time="35.00"/>
+    <timestep time="36.00"/>
+    <timestep time="37.00"/>
+    <timestep time="38.00"/>
+    <timestep time="39.00"/>
+    <timestep time="40.00"/>
+    <timestep time="41.00"/>
+    <timestep time="42.00"/>
+    <timestep time="43.00"/>
+    <timestep time="44.00"/>
+    <timestep time="45.00"/>
+    <timestep time="46.00"/>
+    <timestep time="47.00"/>
+    <timestep time="48.00"/>
+    <timestep time="49.00"/>
+    <timestep time="50.00"/>
+    <timestep time="51.00"/>
+    <timestep time="52.00"/>
+    <timestep time="53.00"/>
+    <timestep time="54.00"/>
+    <timestep time="55.00"/>
+    <timestep time="56.00"/>
+    <timestep time="57.00"/>
+    <timestep time="58.00"/>
+    <timestep time="59.00"/>
+    <timestep time="60.00"/>
+    <timestep time="61.00"/>
+    <timestep time="62.00"/>
+    <timestep time="63.00"/>
+    <timestep time="64.00"/>
+    <timestep time="65.00"/>
+    <timestep time="66.00"/>
+    <timestep time="67.00"/>
+    <timestep time="68.00"/>
+    <timestep time="69.00"/>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00"/>
+    <timestep time="91.00"/>
+    <timestep time="92.00"/>
+    <timestep time="93.00"/>
+    <timestep time="94.00"/>
+    <timestep time="95.00"/>
+    <timestep time="96.00"/>
+    <timestep time="97.00"/>
+    <timestep time="98.00"/>
+    <timestep time="99.00"/>
+</fcd-export>

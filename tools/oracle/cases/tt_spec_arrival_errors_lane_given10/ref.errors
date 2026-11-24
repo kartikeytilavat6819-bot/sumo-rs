@@ -1,1 +1,2 @@
-Warning: Vehicle '1' will not be able to arrive at the given lane 'end_10'!
+Error: The route '1' for vehicle '1' is not known.
+Quitting (on error).

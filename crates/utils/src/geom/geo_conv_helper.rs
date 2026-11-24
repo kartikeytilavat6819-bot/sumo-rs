@@ -502,17 +502,24 @@ impl GeoConvHelper {
     }
 }
 
-/// Transverse Mercator as PROJ's default `etmerc` (Poder/Engsager; here the Kruger series of order 6)
+/// PROJ's `DEG_TO_RAD` constant (used for `lon_0`, parsed by `dmstor`)
+const PROJ_DEG_TO_RAD: f64 = 0.017453292519943295;
+
+/// Transverse Mercator as PROJ 6.3.2 `tmerc`/`utm` "exact" algorithm (Poder/Engsager, src/projections/tmerc.cpp; the
+/// official Linux wheel bundles PROJ 6.3.2),
+/// ported operation by operation: measured against the official polyconvert, the 6th decimal of
+/// round-tripped lon/lat only agrees when the floating-point operation order is PROJ's.
 #[derive(Clone, Copy, Debug)]
 struct Etmerc {
-    lon0: f64,
+    a: f64,
+    lam0: f64,
     x0: f64,
     y0: f64,
-    /// k0 times the rectifying radius
     qn: f64,
-    e: f64,
-    alpha: [f64; 6],
-    beta: [f64; 6],
+    cgb: [f64; 6],
+    cbg: [f64; 6],
+    utg: [f64; 6],
+    gtu: [f64; 6],
 }
 
 /// PROJ `adjlon`: wraps a longitude difference into [-pi, pi]
@@ -520,34 +527,107 @@ fn adjlon(lon: f64) -> f64 {
     if lon.abs() <= PI { lon } else { (lon + PI).rem_euclid(2. * PI) - PI }
 }
 
+unsafe extern "C" {
+    #[link_name = "asinh"]
+    fn c_asinh(x: f64) -> f64;
+}
+
+/// C `asinh` from the platform libm (what PROJ calls); Rust's `f64::asinh` uses a different formula and
+/// differs in the last bit, which flips ties when polyconvert rounds lon/lat to 6 decimals.
+fn libm_asinh(x: f64) -> f64 {
+    unsafe { c_asinh(x) }
+}
+
+/// PROJ 6.3.2 `gatg` (cos(2B) and sin(2B) are computed inside)
+fn tm_gatg(p1: &[f64; 6], b: f64) -> f64 {
+    let cos_2b = 2. * (2. * b).cos();
+    let mut i = 5;
+    let mut h1 = p1[i];
+    let mut h2 = 0.;
+    let mut h = 0.;
+    while i > 0 {
+        i -= 1;
+        h = -h2 + cos_2b * h1 + p1[i];
+        h2 = h1;
+        h1 = h;
+    }
+    b + h * (2. * b).sin()
+}
+
+/// PROJ 6.3.2 complex Clenshaw summation `clenS`, returns (R, I)
+fn tm_clen_s(a: &[f64; 6], arg_r: f64, arg_i: f64) -> (f64, f64) {
+    let sin_arg_r = arg_r.sin();
+    let cos_arg_r = arg_r.cos();
+    let sinh_arg_i = arg_i.sinh();
+    let cosh_arg_i = arg_i.cosh();
+    let mut r = 2. * cos_arg_r * cosh_arg_i;
+    let mut i = -2. * sin_arg_r * sinh_arg_i;
+    let mut p = 5;
+    let (mut hi1, mut hr1, mut hi) = (0., 0., 0.);
+    let mut hr = a[p];
+    while p > 0 {
+        let hr2 = hr1;
+        let hi2 = hi1;
+        hr1 = hr;
+        hi1 = hi;
+        p -= 1;
+        hr = -hr2 + r * hr1 - i * hi1 + a[p];
+        hi = -hi2 + i * hr1 + r * hi1;
+    }
+    r = sin_arg_r * cosh_arg_i;
+    i = cos_arg_r * sinh_arg_i;
+    (r * hr - i * hi, r * hi + i * hr)
+}
+
 impl Etmerc {
-    fn new(a: f64, rf: f64, k0: f64, lon0: f64, x0: f64, y0: f64) -> Etmerc {
-        let f = 1. / rf;
+    /// PROJ ellipsoid setup (ell_set.cpp: es = 2f - f^2, n = tan(asin(e)/2)^2) and `setup_exact`
+    fn new(a: f64, rf: f64, k0: f64, lam0: f64, x0: f64, y0: f64) -> Etmerc {
+        // ell_set.cpp: f = 1/rf, es = 2f - f^2; tmerc.cpp setup_exact: f = es / (1 + sqrt(1 - es)), n = f / (2 - f)
+        let f0 = 1. / rf;
+        let es = 2. * f0 - f0 * f0;
+        let f = es / (1. + (1. - es).sqrt());
         let n = f / (2. - f);
-        let e = (f * (2. - f)).sqrt();
-        let n2 = n * n;
-        let n3 = n2 * n;
-        let n4 = n3 * n;
-        let n5 = n4 * n;
-        let n6 = n5 * n;
-        let big_a = a / (1. + n) * (1. + n2 / 4. + n4 / 64. + n6 / 256.);
-        let alpha = [
-            n / 2. - 2. * n2 / 3. + 5. * n3 / 16. + 41. * n4 / 180. - 127. * n5 / 288. + 7891. * n6 / 37800.,
-            13. * n2 / 48. - 3. * n3 / 5. + 557. * n4 / 1440. + 281. * n5 / 630. - 1983433. * n6 / 1935360.,
-            61. * n3 / 240. - 103. * n4 / 140. + 15061. * n5 / 26880. + 167603. * n6 / 181440.,
-            49561. * n4 / 161280. - 179. * n5 / 168. + 6601661. * n6 / 7257600.,
-            34729. * n5 / 80640. - 3418889. * n6 / 1995840.,
-            212378941. * n6 / 319334400.,
-        ];
-        let beta = [
-            n / 2. - 2. * n2 / 3. + 37. * n3 / 96. - n4 / 360. - 81. * n5 / 512. + 96199. * n6 / 604800.,
-            n2 / 48. + n3 / 15. - 437. * n4 / 1440. + 46. * n5 / 105. - 1118711. * n6 / 3870720.,
-            17. * n3 / 480. - 37. * n4 / 840. - 209. * n5 / 4480. + 5569. * n6 / 9676800.,
-            4397. * n4 / 161280. - 11. * n5 / 504. - 830251. * n6 / 7257600.,
-            4583. * n5 / 161280. - 108847. * n6 / 3991680.,
-            20648693. * n6 / 638668800.,
-        ];
-        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
+        let mut np = n;
+        let mut cgb = [0.; 6];
+        let mut cbg = [0.; 6];
+        let mut utg = [0.; 6];
+        let mut gtu = [0.; 6];
+        cgb[0] = n * (2. + n * (-2. / 3.0 + n * (-2. + n * (116. / 45.0 + n * (26. / 45.0 + n * (-2854. / 675.0))))));
+        cbg[0] = n * (-2. + n * (2. / 3.0 + n * (4. / 3.0 + n * (-82. / 45.0 + n * (32. / 45.0 + n * (4642. / 4725.0))))));
+        np *= n;
+        cgb[1] = np * (7. / 3.0 + n * (-8. / 5.0 + n * (-227. / 45.0 + n * (2704. / 315.0 + n * (2323. / 945.0)))));
+        cbg[1] = np * (5. / 3.0 + n * (-16. / 15.0 + n * (-13. / 9.0 + n * (904. / 315.0 + n * (-1522. / 945.0)))));
+        np *= n;
+        cgb[2] = np * (56. / 15.0 + n * (-136. / 35.0 + n * (-1262. / 105.0 + n * (73814. / 2835.0))));
+        cbg[2] = np * (-26. / 15.0 + n * (34. / 21.0 + n * (8. / 5.0 + n * (-12686. / 2835.0))));
+        np *= n;
+        cgb[3] = np * (4279. / 630.0 + n * (-332. / 35.0 + n * (-399572. / 14175.0)));
+        cbg[3] = np * (1237. / 630.0 + n * (-12. / 5.0 + n * (-24832. / 14175.0)));
+        np *= n;
+        cgb[4] = np * (4174. / 315.0 + n * (-144838. / 6237.0));
+        cbg[4] = np * (-734. / 315.0 + n * (109598. / 31185.0));
+        np *= n;
+        cgb[5] = np * (601676. / 22275.0);
+        cbg[5] = np * (444337. / 155925.0);
+        np = n * n;
+        let qn = k0 / (1. + n) * (1. + np * (1. / 4.0 + np * (1. / 64.0 + np / 256.0)));
+        utg[0] = n * (-0.5 + n * (2. / 3.0 + n * (-37. / 96.0 + n * (1. / 360.0 + n * (81. / 512.0 + n * (-96199. / 604800.0))))));
+        gtu[0] = n * (0.5 + n * (-2. / 3.0 + n * (5. / 16.0 + n * (41. / 180.0 + n * (-127. / 288.0 + n * (7891. / 37800.0))))));
+        utg[1] = np * (-1. / 48.0 + n * (-1. / 15.0 + n * (437. / 1440.0 + n * (-46. / 105.0 + n * (1118711. / 3870720.0)))));
+        gtu[1] = np * (13. / 48.0 + n * (-3. / 5.0 + n * (557. / 1440.0 + n * (281. / 630.0 + n * (-1983433. / 1935360.0)))));
+        np *= n;
+        utg[2] = np * (-17. / 480.0 + n * (37. / 840.0 + n * (209. / 4480.0 + n * (-5569. / 90720.0))));
+        gtu[2] = np * (61. / 240.0 + n * (-103. / 140.0 + n * (15061. / 26880.0 + n * (167603. / 181440.0))));
+        np *= n;
+        utg[3] = np * (-4397. / 161280.0 + n * (11. / 504.0 + n * (830251. / 7257600.0)));
+        gtu[3] = np * (49561. / 161280.0 + n * (-179. / 168.0 + n * (6601661. / 7257600.0)));
+        np *= n;
+        utg[4] = np * (-4583. / 161280.0 + n * (108847. / 3991680.0));
+        gtu[4] = np * (34729. / 80640.0 + n * (-3418889. / 1995840.0));
+        np *= n;
+        utg[5] = np * (-20648693. / 638668800.0);
+        gtu[5] = np * (212378941. / 319334400.0);
+        Etmerc { a, lam0, x0, y0, qn, cgb, cbg, utg, gtu }
     }
 
     /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
@@ -591,53 +671,69 @@ impl Etmerc {
                 if !(1..=60).contains(&zone) {
                     return None;
                 }
-                Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }))
+                // PROJ utm setup: lam0 = (zone + .5) * M_PI / 30. - M_PI with the zone counted from 0
+                Some(Etmerc::new(a, rf, 0.9996, ((zone - 1) as f64 + 0.5) * PI / 30. - PI, 500000., if south { 10000000. } else { 0. }))
             }
-            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0, x0, y0)),
+            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0 * PROJ_DEG_TO_RAD, x0, y0)),
             _ => None,
         }
     }
 
-    /// forward: lon/lat in radians to easting/northing
+    /// forward: lon/lat in radians to easting/northing (pj_fwd + `exact_e_fwd`, PROJ 6.3.2)
     fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
-        let lam = adjlon(lon - self.lon0);
-        let s = lat.sin();
-        let psi = s.atanh() - self.e * (self.e * s).atanh();
-        let t = psi.sinh();
-        let xi0 = t.atan2(lam.cos());
-        let eta0 = (lam.sin() / (1. + t * t).sqrt()).atanh();
-        let (mut xi, mut eta) = (xi0, eta0);
-        for (j, a) in self.alpha.iter().enumerate() {
-            let k = 2. * (j + 1) as f64;
-            xi += a * (k * xi0).sin() * (k * eta0).cosh();
-            eta += a * (k * xi0).cos() * (k * eta0).sinh();
+        let lam = adjlon(lon - self.lam0);
+        // ell. LAT, LNG -> Gaussian LAT, LNG
+        let mut cn = tm_gatg(&self.cbg, lat);
+        let mut ce = lam;
+        // Gaussian LAT, LNG -> compl. sph. LAT
+        let sin_cn = cn.sin();
+        let cos_cn = cn.cos();
+        let sin_ce = ce.sin();
+        let cos_ce = ce.cos();
+        cn = sin_cn.atan2(cos_ce * cos_cn);
+        ce = (sin_ce * cos_cn).atan2(sin_cn.hypot(cos_cn * cos_ce));
+        // compl. sph. N, E -> ell. norm. N, E
+        ce = libm_asinh(ce.tan());
+        let (d_cn, d_ce) = tm_clen_s(&self.gtu, 2. * cn, 2. * ce);
+        cn += d_cn;
+        ce += d_ce;
+        if ce.abs() <= 2.623395162778 {
+            // Zb is 0 for lat_0 = 0 (the only case from_proj accepts)
+            let y = self.qn * cn;
+            let x = self.qn * ce;
+            (self.a * x + self.x0, self.a * y + self.y0)
+        } else {
+            (f64::INFINITY, f64::INFINITY)
         }
-        (self.x0 + self.qn * eta, self.y0 + self.qn * xi)
     }
 
-    /// inverse: easting/northing to lon/lat in radians
+    /// inverse: easting/northing to lon/lat in radians (pj_inv + `exact_e_inv`, PROJ 6.3.2)
     fn inv(&self, x: f64, y: f64) -> (f64, f64) {
-        let xi = (y - self.y0) / self.qn;
-        let eta = (x - self.x0) / self.qn;
-        let (mut xi0, mut eta0) = (xi, eta);
-        for (j, b) in self.beta.iter().enumerate() {
-            let k = 2. * (j + 1) as f64;
-            xi0 -= b * (k * xi).sin() * (k * eta).cosh();
-            eta0 -= b * (k * xi).cos() * (k * eta).sinh();
+        let ra = 1. / self.a;
+        let x = (x - self.x0) * ra;
+        let y = (y - self.y0) * ra;
+        // normalize N, E
+        let mut cn = y / self.qn;
+        let mut ce = x / self.qn;
+        if ce.abs() <= 2.623395162778 {
+            // norm. N, E -> compl. sph. LAT, LNG
+            let (d_cn, d_ce) = tm_clen_s(&self.utg, 2. * cn, 2. * ce);
+            cn += d_cn;
+            ce += d_ce;
+            ce = ce.sinh().atan();
+            // compl. sph. LAT -> Gaussian LAT, LNG
+            let sin_cn = cn.sin();
+            let cos_cn = cn.cos();
+            let sin_ce = ce.sin();
+            let cos_ce = ce.cos();
+            ce = sin_ce.atan2(cos_ce * cos_cn);
+            cn = (sin_cn * cos_ce).atan2(sin_ce.hypot(cos_ce * cos_cn));
+            // Gaussian LAT, LNG -> ell. LAT, LNG
+            let phi = tm_gatg(&self.cgb, cn);
+            (adjlon(ce + self.lam0), phi)
+        } else {
+            (f64::INFINITY, f64::INFINITY)
         }
-        let tau = xi0.sin() / (eta0.sinh().powi(2) + xi0.cos().powi(2)).sqrt();
-        let lam = eta0.sinh().atan2(xi0.cos());
-        let psi = tau.asinh();
-        let mut phi = tau.atan();
-        for _ in 0..50 {
-            let next = (psi + self.e * (self.e * phi.sin()).atanh()).tanh().asin();
-            let done = (next - phi).abs() < 1e-15;
-            phi = next;
-            if done {
-                break;
-            }
-        }
-        (adjlon(self.lon0 + lam), phi)
     }
 }
 
@@ -893,5 +989,16 @@ mod tests {
         // invalid DHDN zone: warning + false, as in GeoConvHelper.cpp
         let mut bad = GeoConvHelper::new("DHDN_UTM", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
         assert!(!bad.x2cartesian(&mut Position::new(100000., 5000000.), false));
+    }
+
+    #[test]
+    fn utm_round_trip_tie_matches_proj() {
+        // polyconvert OSM node lon 13.5307795 lat 52.4273049 (zone 33): the official polyconvert writes the
+        // round trip as 13.530779,52.427305 (tie broken by PROJ's exact tmerc rounding noise)
+        let h = GeoConvHelper::new(&utm_proj(33), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(13.5307795, 52.4273049);
+        assert!(h.x2cartesian_const(&mut p));
+        h.cartesian2geo(&mut p);
+        assert_eq!(format!("{:.6},{:.6}", p.x(), p.y()), "13.530779,52.427305");
     }
 }

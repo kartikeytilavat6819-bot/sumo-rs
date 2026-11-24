@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --collision.action warn --tripinfo-output.write-unfinished -e 10 -a tools/oracle/cases/tt_extended_rerouter_routeProb_route_end_insertion/input_additional.add.xml

@@ -1,2 +1,0 @@
-official SUMO 1.28.0 exits non-zero (expected-error TextTest row)
-Official expectation: rail/rerouter/overtaking/follower_delay_low/{errors,output}.sumo

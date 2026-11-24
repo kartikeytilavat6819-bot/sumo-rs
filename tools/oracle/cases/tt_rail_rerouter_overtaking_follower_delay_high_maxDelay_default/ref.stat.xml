@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T13:52:29.611350-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-22T00:26:03.398793-05:00 by Eclipse SUMO sumo 1.28.0
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -14,17 +14,17 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref_simple.net.xml"/>
-        <route-files value="tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/routes.rou"/>
-        <additional-files value="tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/input_additional2.add.xml"/>
+        <net-file value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref_simple.net.xml"/>
+        <route-files value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/input_additional2.add.xml,tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/input_additional.add.xml,tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/input_routes.rou.xml"/>
     </input>
 
     <output>
         <write-license value="true"/>
-        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref.fcd.xml"/>
-        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref.tripinfo.xml"/>
+        <fcd-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref.tripinfo.xml"/>
         <railsignal-block-output value="railsignal_blocks.xml"/>
-        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref.stat.xml"/>
+        <statistic-output value="/mnt/d/sumo-wt/agent-oc108/tools/oracle/cases/tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default/ref.stat.xml"/>
     </output>
 
     <processing>
@@ -44,4 +44,14 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 -->
 
 <statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1795325163.44" clockEnd="1795325166.76" clockDuration="3.32" traciDuration="2.00" realTimeFactor="738.87" vehicleUpdatesPerSecond="1125.15" personUpdatesPerSecond="0.00" begin="0.00" end="2456.00" duration="2456.00"/>
+    <vehicles loaded="2" inserted="2" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="0" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="2" routeLength="42987.53" speed="26.56" duration="1870.00" waitingTime="247.50" timeLoss="416.74" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="3740.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="0" routeLength="0.00" duration="0.00" timeLoss="0.00"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
 </statistics>
