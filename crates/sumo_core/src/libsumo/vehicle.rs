@@ -212,7 +212,17 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn get_road_id(vehID: &str) -> String {
         let veh = Helper::get_vehicle(vehID);
-        if veh.is_on_road() { micro_veh(veh).get_lane().get_edge().get_id().to_string() } else { String::new() }
+        // C++ isVisible(veh) (on road, parking, or remote controlled), not isOnRoad(): a taxi stopped
+        // at its pickup stop is parking-visible; CALL_MICRO_FUN falls back to veh->getEdge() in meso
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) {
+            if crate::microsim::ms_globals::use_meso_sim() {
+                veh.get_edge().get_id().to_string()
+            } else {
+                micro_veh(veh).get_lane().get_edge().get_id().to_string()
+            }
+        } else {
+            String::new()
+        }
     }
 
     /// C++: `std::string Vehicle::getLaneID(const std::string &)` [static]
