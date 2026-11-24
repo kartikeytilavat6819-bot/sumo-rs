@@ -526,6 +526,17 @@ fn adjlon(lon: f64) -> f64 {
     if lon.abs() <= PI { lon } else { (lon + PI).rem_euclid(2. * PI) - PI }
 }
 
+unsafe extern "C" {
+    #[link_name = "asinh"]
+    fn c_asinh(x: f64) -> f64;
+}
+
+/// C `asinh` from the platform libm (what PROJ calls); Rust's `f64::asinh` uses a different formula and
+/// differs in the last bit, which flips ties when polyconvert rounds lon/lat to 6 decimals.
+fn libm_asinh(x: f64) -> f64 {
+    unsafe { c_asinh(x) }
+}
+
 /// PROJ `gatg`
 fn tm_gatg(p1: &[f64; 6], b: f64, cos_2b: f64, sin_2b: f64) -> f64 {
     let two_cos_2b = 2. * cos_2b;
@@ -680,7 +691,7 @@ impl Etmerc {
         let inv_denom_tan_ce = 1. / sin_cn.hypot(cos_cn_cos_ce);
         let tan_ce = sin_ce * cos_cn * inv_denom_tan_ce;
         // compl. sph. N, E -> ell. norm. N, E
-        let mut ce = tan_ce.asinh();
+        let mut ce = libm_asinh(tan_ce);
         let two_inv_denom_tan_ce = 2. * inv_denom_tan_ce;
         let two_inv_denom_tan_ce_square = two_inv_denom_tan_ce * inv_denom_tan_ce;
         let tmp_r = cos_cn_cos_ce * two_inv_denom_tan_ce_square;
