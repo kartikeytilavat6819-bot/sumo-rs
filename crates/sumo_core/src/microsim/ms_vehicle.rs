@@ -5139,7 +5139,7 @@ impl MSVehicle {
     //             return STEPS2TIME(estimatedDepart + stop.duration - stop.pars.until);
     //         }
     //         if (stop.pars.duration > 0) {
-    //             estimatedDepart += stop.pars.duration;
+    //             estimatedDepart = estimatedDepart.wrapping_add(stop.pars.duration);
     //         }
     //         estimatedDepart += TIME2STEPS(estimateTimeToNextStop().first);
     //         const double result = MAX2(0.0, STEPS2TIME(estimatedDepart - stop.pars.until));
@@ -5156,10 +5156,10 @@ impl MSVehicle {
             let stop = self.myStops.front().unwrap();
             let mut estimatedDepart: SUMOTime = MSNet::get_instance().get_current_time_step() - delta_t();
             if stop.reached {
-                return steps2time(estimatedDepart + stop.duration - stop.pars.until);
+                return steps2time(estimatedDepart.wrapping_add(stop.duration).wrapping_sub(stop.pars.until));
             }
             if stop.pars.duration > 0 {
-                estimatedDepart += stop.pars.duration;
+                estimatedDepart = estimatedDepart.wrapping_add(stop.pars.duration);
             }
             estimatedDepart += time2steps(self.estimate_time_to_next_stop().0);
             let x = steps2time(estimatedDepart - stop.pars.until);
@@ -16166,7 +16166,7 @@ impl MSVehicle {
             arrivalTime = t - delta_t() + cfModel.get_minimal_arrival_time(seen, self.myState.mySpeed, arrivalSpeed);
         }
         if self.is_stopped() {
-            arrivalTime += std::cmp::max(0, self.myStops.front().unwrap().duration);
+            arrivalTime = arrivalTime.wrapping_add(std::cmp::max(0, self.myStops.front().unwrap().duration)); // C++ int64 wraps (default stop duration is SUMOTime_MAX)
         }
         arrivalTime
     }
