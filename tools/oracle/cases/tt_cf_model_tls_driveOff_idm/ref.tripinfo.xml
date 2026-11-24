@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-22T03:06:02.851164-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_cf_model_tls_driveOff_idm/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_cf_model_tls_driveOff_idm/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_cf_model_tls_driveOff_idm/input_additional.add.xml,tools/oracle/cases/tt_cf_model_tls_driveOff_idm/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_tls_driveOff_idm/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_tls_driveOff_idm/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc97/tools/oracle/cases/tt_cf_model_tls_driveOff_idm/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="IDM"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="flow.0" depart="0.00" departLane="a_0" departPos="99.90" departSpeed="0.00" departDelay="0.00" arrival="14.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.84" duration="14.00" routeLength="100.10" waitingTime="4.00" waitingCount="1" stopTime="0.00" timeLoss="6.49" rerouteNo="0" devices="tripinfo_flow.0 fcd_flow.0" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.1" depart="1.00" departLane="a_0" departPos="92.30" departSpeed="0.00" departDelay="0.90" arrival="17.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.79" duration="16.00" routeLength="107.70" waitingTime="4.00" waitingCount="1" stopTime="0.00" timeLoss="7.49" rerouteNo="0" devices="tripinfo_flow.1 fcd_flow.1" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.2" depart="1.00" departLane="a_0" departPos="84.70" departSpeed="0.00" departDelay="0.80" arrival="19.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.62" duration="18.00" routeLength="115.30" waitingTime="5.00" waitingCount="1" stopTime="0.00" timeLoss="9.28" rerouteNo="0" devices="tripinfo_flow.2 fcd_flow.2" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.3" depart="1.00" departLane="a_0" departPos="77.10" departSpeed="0.00" departDelay="0.70" arrival="21.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.55" duration="20.00" routeLength="122.90" waitingTime="6.00" waitingCount="1" stopTime="0.00" timeLoss="10.94" rerouteNo="0" devices="tripinfo_flow.3 fcd_flow.3" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.4" depart="1.00" departLane="a_0" departPos="69.50" departSpeed="0.00" departDelay="0.60" arrival="23.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.50" duration="22.00" routeLength="130.50" waitingTime="7.00" waitingCount="1" stopTime="0.00" timeLoss="12.53" rerouteNo="0" devices="tripinfo_flow.4 fcd_flow.4" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.5" depart="1.00" departLane="a_0" departPos="61.90" departSpeed="0.00" departDelay="0.50" arrival="26.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.70" duration="25.00" routeLength="138.10" waitingTime="8.00" waitingCount="1" stopTime="0.00" timeLoss="14.09" rerouteNo="0" devices="tripinfo_flow.5 fcd_flow.5" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.6" depart="1.00" departLane="a_0" departPos="54.30" departSpeed="0.00" departDelay="0.40" arrival="28.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.53" duration="27.00" routeLength="145.70" waitingTime="9.00" waitingCount="1" stopTime="0.00" timeLoss="15.69" rerouteNo="0" devices="tripinfo_flow.6 fcd_flow.6" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.7" depart="1.00" departLane="a_0" departPos="46.70" departSpeed="0.00" departDelay="0.30" arrival="30.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.47" duration="29.00" routeLength="153.30" waitingTime="10.00" waitingCount="1" stopTime="0.00" timeLoss="17.23" rerouteNo="0" devices="tripinfo_flow.7 fcd_flow.7" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.8" depart="1.00" departLane="a_0" departPos="39.10" departSpeed="0.00" departDelay="0.20" arrival="32.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.44" duration="31.00" routeLength="160.90" waitingTime="11.00" waitingCount="1" stopTime="0.00" timeLoss="18.75" rerouteNo="0" devices="tripinfo_flow.8 fcd_flow.8" vType="t" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.9" depart="1.00" departLane="a_0" departPos="31.50" departSpeed="0.00" departDelay="0.10" arrival="34.00" arrivalLane="b_0" arrivalPos="100.00" arrivalSpeed="13.42" duration="33.00" routeLength="168.50" waitingTime="12.00" waitingCount="1" stopTime="0.00" timeLoss="20.24" rerouteNo="0" devices="tripinfo_flow.9 fcd_flow.9" vType="t" speedFactor="1.00" vaporized=""/>
+</tripinfos>

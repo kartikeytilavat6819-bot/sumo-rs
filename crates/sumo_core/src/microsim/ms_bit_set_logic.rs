@@ -143,4 +143,31 @@ mod tests {
         assert!(b.has_foes());
         assert!(b.get_response_for(1).test(3));
     }
+
+    #[test]
+    fn response_and_foes_rows_are_indexed_separately() {
+        // The junction loader builds one response row and one foes row per
+        // connection (NLJunctionControlBuilder::addLogicItem); MSRightOfWayJunction
+        // and MSInternalJunction must read the matching row for a link, not mix them.
+        let mut r0 = LinkBits::new();
+        r0.set(1, true);
+        let mut f0 = LinkBits::new();
+        f0.set(3, true);
+        let mut r1 = LinkBits::new();
+        r1.set(2, true);
+        let mut f1 = LinkBits::new();
+        f1.set(0, true);
+        let b = MSBitSetLogic::<4> {
+            base: MSJunctionLogic { myNLinks: 2 },
+            myLogic: vec![r0, r1],
+            myInternalLinksFoes: vec![f0, f1],
+            myConts: LinkBits::new(),
+        };
+        assert!(b.get_response_for(0).test(1));
+        assert!(!b.get_response_for(0).test(3));
+        assert!(b.get_foes_for(0).test(3));
+        assert!(!b.get_foes_for(0).test(1));
+        assert!(b.get_response_for(1).test(2));
+        assert!(b.get_foes_for(1).test(0));
+    }
 }
