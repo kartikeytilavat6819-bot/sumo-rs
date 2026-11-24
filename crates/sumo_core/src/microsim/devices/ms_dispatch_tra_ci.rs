@@ -8,8 +8,22 @@ fn tra_ci_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MS
     t.compute_dispatch(now, fleet);
 }
 
+fn tra_ci_add_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.add_reservation(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity)
+}
+
+fn tra_ci_remove_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.remove_reservation(person, from, fromPos, to, toPos, group)
+}
+
 pub(crate) const MS_DISPATCH_TRA_CI_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: tra_ci_compute_dispatch,
+    add_reservation: tra_ci_add_reservation,
+    remove_reservation: tra_ci_remove_reservation,
 };
 
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
@@ -71,7 +85,7 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn add_reservation(&mut self, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
-        let res = self.base.add_reservation(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity);
+        let res = self.base.add_reservation_base(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity);
         if !self.myReservationLookup.has(res) {
             self.myReservationLookup.insert(&res.id, res, true).unwrap_or_else(|e| std::panic::panic_any(e));
         }
@@ -95,7 +109,7 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn remove_reservation(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
-        let removedID = self.base.remove_reservation(person, from, fromPos, to, toPos, group);
+        let removedID = self.base.remove_reservation_base(person, from, fromPos, to, toPos, group);
         if self.myReservationLookup.has_string(&removedID) {
             // warning! res is already deleted
             let res = self.myReservationLookup.get(&removedID).unwrap_or_else(|e| std::panic::panic_any(e));

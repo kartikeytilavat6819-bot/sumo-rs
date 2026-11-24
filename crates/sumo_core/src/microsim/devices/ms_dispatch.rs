@@ -25,6 +25,18 @@ pub enum Reservation_ReservationState {
 /// Installed by each algorithm's constructor, so base-class calls reach the derived body.
 pub struct MSDispatchVt {
     pub compute_dispatch: fn(&mut MSDispatch, SUMOTime, &Vec<Ptr<MSDevice_Taxi>>),
+    /// C++ `virtual Reservation* MSDispatch::addReservation(...)` (MSDispatch_TraCI overrides it to fill its lookup)
+    pub add_reservation: fn(&mut MSDispatch, Ptr<MSTransportable>, SUMOTime, SUMOTime, SUMOTime, Ptr<MSEdge>, f64, Ptr<MSStoppingPlace>, Ptr<MSEdge>, f64, Ptr<MSStoppingPlace>, String, &str, i32, i32) -> Ptr<Reservation>,
+    /// C++ `virtual std::string MSDispatch::removeReservation(...)` (MSDispatch_TraCI overrides it to drop its lookup entry)
+    pub remove_reservation: fn(&mut MSDispatch, Ptr<MSTransportable>, Ptr<MSEdge>, f64, Ptr<MSEdge>, f64, String) -> String,
+}
+
+fn default_add_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
+    d.add_reservation_base(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity)
+}
+
+fn default_remove_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
+    d.remove_reservation_base(person, from, fromPos, to, toPos, group)
 }
 
 fn default_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
@@ -33,6 +45,8 @@ fn default_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<M
 
 pub(crate) const DEFAULT_MSDISPATCH_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: default_compute_dispatch,
+    add_reservation: default_add_reservation,
+    remove_reservation: default_remove_reservation,
 };
 
 /// An algorithm that performs distpach for a taxi fleet
@@ -239,7 +253,14 @@ impl MSDispatch {
     //     return result;
     // }
     #[allow(unused_variables)]
+    /// C++ virtual call `MSDispatch::addReservation`: reaches the algorithm's override through its vtable.
     pub fn add_reservation(&mut self, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, tostop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
+        let f = self.vt.add_reservation;
+        f(self, person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, tostop, group, line, maxCapacity, maxContainerCapacity)
+    }
+
+    /// C++ body of `MSDispatch::addReservation` (the base implementation).
+    pub fn add_reservation_base(&mut self, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, tostop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
         let personID = person.get_id().to_string();
         let personNumID = person.get_numerical_id();
         let mut resID = String::new();
@@ -396,7 +417,14 @@ impl MSDispatch {
     //     return removedID;
     // }
     #[allow(unused_variables)]
+    /// C++ virtual call `MSDispatch::removeReservation`: reaches the algorithm's override through its vtable.
     pub fn remove_reservation(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
+        let f = self.vt.remove_reservation;
+        f(self, person, from, fromPos, to, toPos, group)
+    }
+
+    /// C++ body of `MSDispatch::removeReservation` (the base implementation).
+    pub fn remove_reservation_base(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
         let personNumID = person.get_numerical_id();
         let mut group = group;
         if group.is_empty() {
