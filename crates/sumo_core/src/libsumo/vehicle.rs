@@ -168,6 +168,7 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
+
         // C++ TraCIPosition() defaults every coordinate to INVALID_DOUBLE_VALUE (TraCIDefs.h:194)
         TraCIPosition { base: TraCIResult::new(), x: INVALID_DOUBLE_VALUE, y: INVALID_DOUBLE_VALUE, z: INVALID_DOUBLE_VALUE }
     }

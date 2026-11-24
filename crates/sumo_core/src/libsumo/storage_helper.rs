@@ -155,7 +155,7 @@ impl StorageHelper {
                     if tisb {
                         Self::write_typed_int(&mut result, (pl[0].1 + 0.5) as i32);
                         Self::write_typed_string(&mut result, &pl[0].0);
-                        Self::write_typed_unsigned_byte(&mut result, (pl[1].1 + 0.5) as i32);
+                        Self::write_typed_byte(&mut result, (pl[1].1 + 0.5) as i32);
                     } else {
                         Self::write_typed_double(&mut result, pl[0].1);
                         Self::write_typed_double(&mut result, pl[1].1);
@@ -1034,5 +1034,25 @@ impl StorageHelper {
         StorageHelper::write_typed_string_list(content, &param_items);
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pair_list_hack_writes_typed_byte_not_unsigned_byte() {
+        // StorageHelper.h:84 writes writeTypedByte for the (string,double,byte)
+        // special case; the type tag on the wire must be TYPE_BYTE (0x08).
+        let v = TraCIStringDoublePairList {
+            base: TraCIResult { result_type: -1 },
+            value: vec![("veh".to_string(), 3.0), ("x".to_string(), 7.0)],
+        };
+        let out = StorageHelper::to_storage(&v.base);
+        let bytes = out.as_bytes();
+        // C++ StorageHelper.cpp writeTypedByte: type tag TYPE_BYTE (0x08), then the value byte.
+        assert_eq!(&bytes[bytes.len() - 2..], &[TYPE_BYTE as u8, 7]);
+        assert_ne!(bytes[bytes.len() - 2], TYPE_UBYTE as u8);
+    }
 }
 
