@@ -884,9 +884,13 @@ impl MSBaseVehicle {
     // virtual bool instantStopping() const {
     //         return false;
     //     }
+    /// The virtual is overridden by MSVehicle (MSVehicle.cpp:8469); reach it through the checked downcast.
     #[allow(unused_variables)]
     pub fn instant_stopping(&self) -> bool {
-        false
+        match self.as_micro_vehicle() {
+            Some(v) => v.instant_stopping(),
+            None => false,
+        }
     }
 
     /// C++: `double MSBaseVehicle::getMaxSpeed() const` [const, virtual]
@@ -1770,11 +1774,11 @@ impl MSBaseVehicle {
                 edges.insert(0, self.get_edge());
                 oldSize = edges.len() as i32;
             }
+            // edges.insert(edges.begin(), myRoute->begin(), myCurrEdge): only for non-insertion reroutes
+            let mut prefixed: ConstMSEdgeVector = self.myRoute.get_edges().get(..self.myCurrEdge).unwrap_or(&[]).to_vec();
+            prefixed.append(edges);
+            *edges = prefixed;
         }
-        // edges.insert(edges.begin(), myRoute->begin(), myCurrEdge)
-        let mut prefixed: ConstMSEdgeVector = self.myRoute.get_edges().get(..self.myCurrEdge).unwrap_or(&[]).to_vec();
-        prefixed.append(edges);
-        *edges = prefixed;
         if *edges == *self.myRoute.get_edges() && self.have_valid_stop_edges(true) {
             // re-assign stop iterators when rerouting to a new parkingArea / insertStop
             return true;
@@ -4051,7 +4055,13 @@ impl MSBaseVehicle {
             return false;
         }
 
-        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
+        // instantStopping() is virtual: MSVehicle overrides it (influencer), MEVehicle too
+        let instantStopping = if MSGlobals::use_meso_sim() {
+            true // MEVehicle::instantStopping()
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().instant_stopping()
+        };
+        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !instantStopping { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
 
         if prevStopEdge > stop.edge
             // a collision-stop happens after vehicle movement and may move the

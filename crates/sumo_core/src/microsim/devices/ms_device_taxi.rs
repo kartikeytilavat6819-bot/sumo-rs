@@ -349,10 +349,10 @@ impl MSDevice_Taxi {
         let kind = if person.is_person() { "person" } else { "container" };
         let pid = person.get_id().to_string();
         if (to.get_permissions() & g_taxi_classes() as SVCPermissions) == 0 {
-            panic!("{}", ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because destination edge '{}' does not permit taxi access", kind, pid, to.get_id())));
+            std::panic::panic_any(ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because destination edge '{}' does not permit taxi access", kind, pid, to.get_id())));
         }
         if (from.get_permissions() & g_taxi_classes() as SVCPermissions) == 0 {
-            panic!("{}", ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because origin edge '{}' does not permit taxi access", kind, pid, from.get_id())));
+            std::panic::panic_any(ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because origin edge '{}' does not permit taxi access", kind, pid, from.get_id())));
         }
         if MY_DISPATCH_COMMAND.with(|c| c.borrow().is_null()) {
             Self::init_dispatch(-1);
@@ -886,7 +886,7 @@ impl MSDevice_Taxi {
                     if self.myCustomers.contains(&person) {
                         *nOccur.entry(person).or_insert(0) += 1;
                         if !self.myCurrentReservations.contains(&res) {
-                            panic!("{}", ProcessError::new(format!("Invalid Re-dispatch for existing customer '{}' with a new reservation", person.get_id())));
+                            std::panic::panic_any(ProcessError::new(format!("Invalid Re-dispatch for existing customer '{}' with a new reservation", person.get_id())));
                         }
                     }
                 }
@@ -905,7 +905,7 @@ impl MSDevice_Taxi {
                     if count == 1 {
                         // customers must already be on board
                         if !onBoard.contains(&person) {
-                            panic!("{}", ProcessError::new(format!("Re-dispatch did not mention pickup for existing customer '{}'", person.get_id())));
+                            std::panic::panic_any(ProcessError::new(format!("Re-dispatch did not mention pickup for existing customer '{}'", person.get_id())));
                         }
                     } else if count == 2 {
                         if !onBoard.contains(&person) {
@@ -916,7 +916,7 @@ impl MSDevice_Taxi {
                             redundantPickup.insert(person);
                         }
                     } else {
-                        panic!("{}", ProcessError::new(format!("Re-dispatch mentions existing customer '{}' {} times", person.get_id(), count)));
+                        std::panic::panic_any(ProcessError::new(format!("Re-dispatch mentions existing customer '{}' {} times", person.get_id(), count)));
                     }
                 }
                 // remove redundancy
@@ -949,7 +949,7 @@ impl MSDevice_Taxi {
                         missing.push(c.get_id().to_string());
                     }
                 }
-                panic!("{}", ProcessError::new(format!("Re-dispatch did mention some customers but failed to mention {}", join_to_string_sorting(&missing, " "))));
+                std::panic::panic_any(ProcessError::new(format!("Re-dispatch did mention some customers but failed to mention {}", join_to_string_sorting(&missing, " "))));
             }
         }
 
@@ -998,7 +998,7 @@ impl MSDevice_Taxi {
 
         let t: SUMOTime = MSNet::get_instance().get_current_time_step();
         if !holder.replace_route_edges(&mut tmpEdges, -1.0, 0.0, "taxi:prepare_dispatch", false, false, false, Ptr::null()) {
-            panic!("{}", ProcessError::new(format!("Route replacement for taxi dispatch failed for vehicle '{}' at time={}.", holder.get_id(), time2string(t))));
+            std::panic::panic_any(ProcessError::new(format!("Route replacement for taxi dispatch failed for vehicle '{}' at time={}.", holder.get_id(), time2string(t))));
         }
         for stop in stops.iter() {
             let mut error = String::new();
@@ -1805,7 +1805,7 @@ impl MSDevice_Taxi {
         } else if algo == "traci" {
             Ptr::from_mut(Box::leak(Box::new(MSDispatch_TraCI::new(pm)))).cast::<MSDispatch>()
         } else {
-            panic!("{}", ProcessError::new(format!("Dispatch algorithm '{}' is not known", algo)));
+            std::panic::panic_any(ProcessError::new(format!("Dispatch algorithm '{}' is not known", algo)));
         };
         MY_DISPATCHER.with(|d| *d.borrow_mut() = dispatcher);
         let command: &mut MSDevice_Taxi_StaticCommand = Box::leak(Box::new(MSDevice_Taxi_StaticCommand::new(MSDevice_Taxi::trigger_dispatch)));
@@ -1914,15 +1914,15 @@ impl MSDevice_Taxi {
         } else if algo == "taxistand" {
             let rerouterID = holder.get_string_param("device.taxi.stands-rerouter", false, "");
             if rerouterID.is_empty() {
-                panic!("{}", ProcessError::new(format!("Idle algorithm '{}' requires a rerouter id to be defined using device param 'stands-rerouter' for vehicle '{}'", algo, holder.get_id())));
+                std::panic::panic_any(ProcessError::new(format!("Idle algorithm '{}' requires a rerouter id to be defined using device param 'stands-rerouter' for vehicle '{}'", algo, holder.get_id())));
             }
             if !MSTriggeredRerouter::get_instances().contains_key(&rerouterID) {
-                panic!("{}", ProcessError::new(format!("Unknown rerouter '{}' when loading taxi stands for vehicle '{}'", rerouterID, holder.get_id())));
+                std::panic::panic_any(ProcessError::new(format!("Unknown rerouter '{}' when loading taxi stands for vehicle '{}'", rerouterID, holder.get_id())));
             }
             let rerouter = *MSTriggeredRerouter::get_instances().get(&rerouterID).unwrap();
             idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_TaxiStand::new(rerouter)))).cast::<MSIdling>();
         } else {
-            panic!("{}", ProcessError::new(format!("Idle algorithm '{}' is not known for vehicle '{}'", algo, holder.get_id())));
+            std::panic::panic_any(ProcessError::new(format!("Idle algorithm '{}' is not known for vehicle '{}'", algo, holder.get_id())));
         }
         let serviceEnd = string2time_or_die(&holder.get_string_param("device.taxi.end", false, &defaultServiceEnd));
         let routing = MSDevice::get_device_by_name(&Ptr::from_mut(holder).cast::<MSVehicle>().m().myDevices, "rerouting").cast::<MSDevice_Routing>();
@@ -2213,7 +2213,7 @@ impl MSDevice_Taxi {
         let holder = holderPtr.m();
         let allowedLanes = edge.allowed_lanes_2(holder.get_v_class());
         if allowedLanes.is_null() {
-            panic!("{}", ProcessError::new(format!("Taxi vehicle '{}' cannot stop on edge '{}' ({})", holder.get_id(), edge.get_id(), action)));
+            std::panic::panic_any(ProcessError::new(format!("Taxi vehicle '{}' cannot stop on edge '{}' ({})", holder.get_id(), edge.get_id(), action)));
         }
         let lanes: &Vec<Ptr<MSLane>> = allowedLanes.get().unwrap();
         lanes[0]

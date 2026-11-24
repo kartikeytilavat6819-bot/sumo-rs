@@ -168,7 +168,9 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
-        TraCIPosition { base: TraCIResult::new(), x: 0.0, y: 0.0, z: 0.0 }
+
+        // C++ TraCIPosition() defaults every coordinate to INVALID_DOUBLE_VALUE (TraCIDefs.h:194)
+        TraCIPosition { base: TraCIResult::new(), x: INVALID_DOUBLE_VALUE, y: INVALID_DOUBLE_VALUE, z: INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
@@ -211,7 +213,17 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn get_road_id(vehID: &str) -> String {
         let veh = Helper::get_vehicle(vehID);
-        if veh.is_on_road() { micro_veh(veh).get_lane().get_edge().get_id().to_string() } else { String::new() }
+        // C++ isVisible(veh) (on road, parking, or remote controlled), not isOnRoad(): a taxi stopped
+        // at its pickup stop is parking-visible; CALL_MICRO_FUN falls back to veh->getEdge() in meso
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) {
+            if crate::microsim::ms_globals::use_meso_sim() {
+                veh.get_edge().get_id().to_string()
+            } else {
+                micro_veh(veh).get_lane().get_edge().get_id().to_string()
+            }
+        } else {
+            String::new()
+        }
     }
 
     /// C++: `std::string Vehicle::getLaneID(const std::string &)` [static]
@@ -2604,7 +2616,8 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         } else if param == "speed" {
             let speed = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
             if speed > 0. && pars.get_triggers().len() > 0 {
-                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, speed));
+                // TLF formats the double with toString (gPrecision), so 3.0 prints as "3.00"
+                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, utils::common::to_string::f64_to_string(speed)));
             }
             pars.speed = speed;
             pars.parametersSet |= STOP_SPEED_SET;
@@ -3550,7 +3563,16 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             }
         }
         let mut errorMsg = String::new();
-        if !veh.m().replace_route(r, "traci:setRouteID", veh.get_lane().is_null(), 0, true, true, Ptr::from_mut(&mut errorMsg)) {
+        // C++ calls the virtual replaceRoute: MSVehicle::replaceRoute refreshes the best lanes afterwards, the
+        // base body does not (the rerouted vehicle kept its old best lanes and stopped at the end of the old edge)
+        // shortcut: the vehicle class is told apart by the use_meso_sim flag, not by a type tag; upgrade when MSBaseVehicle carries one
+        let onInit = veh.get_lane().is_null();
+        let replaced = if crate::microsim::ms_globals::use_meso_sim() {
+            veh.cast::<MEVehicle>().m().replace_route(r, "traci:setRouteID", onInit, 0, true, true, Ptr::from_mut(&mut errorMsg))
+        } else {
+            micro_veh(veh).m().replace_route(r, "traci:setRouteID", onInit, 0, true, true, Ptr::from_mut(&mut errorMsg))
+        };
+        if !replaced {
             panic!("{}", format!("Route replacement failed for vehicle '{}' ({}).", veh.get_id(), errorMsg));
         }
     }

@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDispatch_Greedy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::devices::ms_dispatch::DEFAULT_MSDISPATCH_VT;
 use utils::common::time::SUMOTIME_MAX;
 
 /// Signature of the C++ virtual `MSDispatch_Greedy::dispatch()`; the base `computeDispatch` must reach the derived body (ride sharing).
@@ -46,6 +47,7 @@ fn greedy_dispatch(g: &mut MSDispatch_Greedy, taxi: Ptr<MSDevice_Taxi>, resIt: &
 
 pub(crate) const MS_DISPATCH_GREEDY_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: greedy_compute_dispatch,
+    ..DEFAULT_MSDISPATCH_VT
 };
 
 fn greedy_closest_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
@@ -56,6 +58,7 @@ fn greedy_closest_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Ve
 
 pub(crate) const MS_DISPATCH_GREEDY_CLOSEST_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: greedy_closest_compute_dispatch,
+    ..DEFAULT_MSDISPATCH_VT
 };
 
 impl MSDispatch_Greedy {

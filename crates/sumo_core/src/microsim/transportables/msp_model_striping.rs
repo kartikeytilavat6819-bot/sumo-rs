@@ -2,7 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{SVC_IGNORING, SVC_PEDESTRIAN};
-use utils::common::to_string::f64_to_string_prec;
 
 /// C++ enum `MSPModel_Striping::ObstacleType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -4504,11 +4503,11 @@ impl MSPModel_Striping_PState {
         out.push_str(&format!(
             " {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
             b.myLane.get_id(),
-            f64_to_string_prec(b.myEdgePos, 6),
-            f64_to_string_prec(b.myPosLat, 6),
+            utils::common::to_string::f64_to_string_default(b.myEdgePos),
+            utils::common::to_string::f64_to_string_default(b.myPosLat),
             b.myDir,
-            f64_to_string_prec(b.mySpeed, 6),
-            f64_to_string_prec(b.mySpeedLat, 6),
+            utils::common::to_string::f64_to_string_default(b.mySpeed),
+            utils::common::to_string::f64_to_string_default(b.mySpeedLat),
             b.myWaitingToEnter as i32,
             b.myWaitingTime,
             b.myTotalWaitingTime,
