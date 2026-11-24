@@ -159,10 +159,12 @@ fn drive_way_ids_sorted(v: &BTreeSet<Ptr<MSDriveWay>>) -> String {
 /// not less than key.
 // oc97-TEMP-TRACE (remove after measuring): records the first phase after which a driveway lists itself as foe
 fn oc97_self_foe_trace(phase: &str, dw: Ptr<MSDriveWay>) {
-    if dw.myFoes.contains(&dw) {
+    let id = dw.base2.get_id().to_string();
+    if id.starts_with("gneJ8.0") && dw.myFoes.iter().any(|f| f.base2.get_id().to_string() == id) {
         if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/dw_trace.txt") {
             use std::io::Write;
-            let _ = writeln!(tf, "selfFoe phase={} dw={} n_foes={}", phase, dw.base2.get_id(), dw.myFoes.len());
+            let _ = writeln!(tf, "selfFoeById phase={} dw={} ptr={:p} foes={:?}", phase, id, &*dw as *const MSDriveWay,
+                dw.myFoes.iter().map(|f| format!("{}@{:p}", f.base2.get_id(), &**f as *const MSDriveWay)).collect::<Vec<_>>());
         }
     }
 }
@@ -2132,6 +2134,11 @@ impl MSDriveWay {
             || (rs.is_null()
                 && (utils::options::options_cont::get_bool("railsignal-moving-block")
                     || MSRailSignalControl::is_moving_block(route[first].get_permissions())));
+        // oc97-TEMP-TRACE
+        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/dw_trace.txt") {
+            use std::io::Write;
+            let _ = writeln!(tf, "build id={} link_null={} rs_null={} rs_mb={} moving_block={}", id, link.is_null(), rs.is_null(), !rs.is_null() && rs.is_moving_block(), moving_block);
+        }
 
         dwm.check_flanks(link, &dwm.myForward, &visited, true, moving_block, &mut flank_switches);
         dwm.check_flanks(link, &dwm.myBidi, &visited, false, moving_block, &mut flank_switches);
@@ -2263,6 +2270,8 @@ impl MSDriveWay {
                 }
             }
         }
+        // oc97-TEMP-TRACE: scan all ending driveways after each build
+        MY_ENDING_DRIVEWAYS.with(|m| for (_, v) in m.borrow().iter() { for d in v.iter() { oc97_self_foe_trace(&format!("end_of_build({})", dw.base2.get_id()), *d); } });
         dw
     }
 
