@@ -2859,7 +2859,7 @@ impl SUMOVehicleParserHelper {
         let mut result: SUMOTime = time2steps(given);
         if result <= 0 {
             if result < 0 {
-                write_warning(&format!("{}Ignoring given value (={} s.)", defaultError, utils::common::to_string::to_string(&steps2time(result))));
+                write_warning(&format!("{}Ignoring given value (={} s.)", defaultError, utils::common::to_string::f64_to_string_default(steps2time(result))));
             }
             result = delta_t();
         } else if result % delta_t() != 0 && utils::options::options_cont::exists("step-length") {
@@ -2869,8 +2869,8 @@ impl SUMOVehicleParserHelper {
                 write_warning(&format!(
                     "{}Parsing given value ({} s.) to the adjusted value {} s.",
                     defaultError,
-                    utils::common::to_string::to_string(&given),
-                    utils::common::to_string::to_string(&steps2time(result))
+                    utils::common::to_string::f64_to_string_default(given),
+                    utils::common::to_string::f64_to_string_default(steps2time(result))
                 ));
             }
         }
@@ -3881,5 +3881,54 @@ impl SUMOVehicleParserHelper {
         &ALLOWED_CF_MODEL_ATTRS
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use std::sync::{Arc, Mutex};
+    use utils::common::msg_handler::{register_device, with_instance, MsgType};
+    use utils::common::time::set_delta_t;
+    use utils::options::option::SumoOption;
+
+    #[derive(Clone, Default)]
+    struct Capture(Arc<Mutex<Vec<u8>>>);
+    impl Write for Capture {
+        fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(b);
+            Ok(b.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    }
+
+    /// Release C++ src/utils/vehicle/SUMOVehicleParserHelper.cpp:1793,1800 formats
+    /// these warnings with toString(double) (default %g, 6 significant digits):
+    /// "Parsing given value (1.2 s.) ...", "Ignoring given value (=-1.1 s.)".
+    /// A fixed two-decimal format ("1.20"/"-1.10") is wrong.
+    #[test]
+    fn action_step_length_warning_uses_cpp_float_format() {
+        // Other tests may have changed the global step length; pin it to 1 s (1000 ms)
+        // so the warning assertion is deterministic under parallel test execution.
+        set_delta_t(1000);
+        utils::options::options_cont::with_options(|oc| {
+            if !oc.exists("step-length") {
+                oc.do_register("step-length", SumoOption::string_typed("1", "TIME"));
+            }
+        });
+        let cap = Capture::default();
+        register_device("oc98-action-step-capture", Box::new(cap.clone()));
+        with_instance(MsgType::Warning, |h| {
+            h.remove_retriever("stderr");
+            h.add_retriever("oc98-action-step-capture");
+        });
+        let _ = SUMOVehicleParserHelper::process_action_step_length(1.2);
+        with_instance(MsgType::Warning, |h| {
+            h.remove_retriever("oc98-action-step-capture");
+            h.add_retriever("stderr");
+        });
+        let text = String::from_utf8(cap.0.lock().unwrap().clone()).unwrap();
+        assert!(text.contains("Parsing given value (1.2 s.) to the adjusted value 1 s."), "got: {text}");
+    }
 }
 

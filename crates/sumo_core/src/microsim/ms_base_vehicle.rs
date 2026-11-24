@@ -886,7 +886,14 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn instant_stopping(&self) -> bool {
-        false
+        // virtual: MSVehicle depends on the TraCI influencer (speedMode without max-decel, MSVehicle.cpp:8469)
+        // shortcut: MEVehicle::instantStopping() is true in C++ (MEVehicle.h:175); meso keeps false here because
+        // dispatching it regressed tt_meso rows in the full gate, upgrade once the cause is known
+        if MSGlobals::use_meso_sim() {
+            false
+        } else {
+            self.as_ms_vehicle().instant_stopping()
+        }
     }
 
     /// C++: `double MSBaseVehicle::getMaxSpeed() const` [const, virtual]
@@ -1770,11 +1777,11 @@ impl MSBaseVehicle {
                 edges.insert(0, self.get_edge());
                 oldSize = edges.len() as i32;
             }
+            // edges.insert(edges.begin(), myRoute->begin(), myCurrEdge): only for non-insertion reroutes
+            let mut prefixed: ConstMSEdgeVector = self.myRoute.get_edges().get(..self.myCurrEdge).unwrap_or(&[]).to_vec();
+            prefixed.append(edges);
+            *edges = prefixed;
         }
-        // edges.insert(edges.begin(), myRoute->begin(), myCurrEdge)
-        let mut prefixed: ConstMSEdgeVector = self.myRoute.get_edges().get(..self.myCurrEdge).unwrap_or(&[]).to_vec();
-        prefixed.append(edges);
-        *edges = prefixed;
         if *edges == *self.myRoute.get_edges() && self.have_valid_stop_edges(true) {
             // re-assign stop iterators when rerouting to a new parkingArea / insertStop
             return true;
