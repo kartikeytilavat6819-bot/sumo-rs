@@ -58,12 +58,13 @@ for name in $RAIL; do
     if [ $side = ref ]; then BIN="$SUMO_PRISTINE_BIN/sumo"; else BIN="$CARGO_TARGET_DIR/debug/sumo"; fi
     o="$OUT/rail/$name/$side"
     mkdir -p "$o"
-    (cd "$d" && "$BIN" $args --net-file net.net.xml --route-files input_routes.rou.xml --tripinfo-output "$o/trip.xml" --fcd-output "$o/fcd.xml" --vehroute-output "$o/vehroute.xml" --vehroute-output.exit-times --no-step-log > "$o/stdout" 2> "$o/stderr"; echo $? > "$o/exit")
+    (cd "$d" && "$BIN" $args --net-file net.net.xml --route-files input_routes.rou.xml --tripinfo-output "$o/trip.xml" --fcd-output "$o/fcd.xml" --vehroute-output "$o/vehroute.xml" --vehroute-output.exit-times --no-step-log > "$o/stdout" 2> "$o/stderr"; echo $? > "$o/exit"; cp railsignal_blocks.xml "$o/blocks.xml" 2>/dev/null)
   done
   echo "== $name exit ref=$(cat "$OUT/rail/$name/ref/exit") ours=$(cat "$OUT/rail/$name/ours/exit")"
   diff "$OUT/rail/$name/ref/stderr" "$OUT/rail/$name/ours/stderr" | head -4 | cut -c1-200
   diff "$OUT/rail/$name/ref/trip.xml" "$OUT/rail/$name/ours/trip.xml" | head -6 | cut -c1-200
   for side in ref ours; do echo "-- $side vehroute (v_0):"; grep -A3 "vehicle id=\"v_0\"" "$OUT/rail/$name/$side/vehroute.xml" 2>/dev/null | head -4 | cut -c1-300; done
+  if [ "$name" = tt_rail_rail_signal_moving_block_protect_bidi ]; then echo "-- railsignal blocks diff (ref < > ours):"; diff "$OUT/rail/$name/ref/blocks.xml" "$OUT/rail/$name/ours/blocks.xml" | head -60 | cut -c1-260; fi
   if [ "$name" = tt_rail_rail_signal_moving_block_protect_bidi ]; then python3 "$ROOT/tools/kaggle/oc97_cmp.py" "$OUT/rail/$name/ref/fcd.xml" "$OUT/rail/$name/ours/fcd.xml" 0 400 WE1 WE0 EW; fi
   nn=4; for veh in v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -$nn | cut -c1-170; done
 done
