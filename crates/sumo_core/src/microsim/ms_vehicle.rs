@@ -8387,7 +8387,7 @@ impl MSVehicle {
         let time: SUMOTime = MSNet::get_instance().get_current_time_step();
         let me: Ptr<MSVehicle> = Ptr::from_mut(self);
         if stop.reached {
-            stop.m().duration -= self.get_action_step_length();
+            stop.m().duration = stop.duration.wrapping_sub(self.get_action_step_length()); // C++ int64 wraps
             if self.get_speed() > 0.0 {
                 // re-enter stopping places to correct waiting position (except for parkingArea since it's place-based)
                 if !stop.busstop.is_null() {
@@ -8588,7 +8588,7 @@ impl MSVehicle {
                     // compute stopping time
                     let duration = stop.get_min_duration(time);
                     stop.m().duration = duration;
-                    let endBoarding = if stop.pars.extension >= 0 { time + stop.duration + stop.pars.extension } else { SUMOTIME_MAX };
+                    let endBoarding = if stop.pars.extension >= 0 { time.wrapping_add(stop.duration).wrapping_add(stop.pars.extension) } else { SUMOTIME_MAX };
                     stop.m().endBoarding = endBoarding;
                     // getDevice(typeid(MSDevice_Taxi)) by id prefix, see above
                     let taxiDevice: Ptr<MSDevice_Taxi> = self
