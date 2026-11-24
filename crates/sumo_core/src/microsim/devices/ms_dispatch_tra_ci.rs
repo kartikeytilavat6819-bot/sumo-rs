@@ -20,10 +20,17 @@ fn tra_ci_remove_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, f
     t.remove_reservation(person, from, fromPos, to, toPos, group)
 }
 
+fn tra_ci_fulfilled_reservation(d: &mut MSDispatch, res: Ptr<Reservation>) {
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.fulfilled_reservation(res);
+}
+
 pub(crate) const MS_DISPATCH_TRA_CI_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: tra_ci_compute_dispatch,
     add_reservation: tra_ci_add_reservation,
     remove_reservation: tra_ci_remove_reservation,
+    fulfilled_reservation: tra_ci_fulfilled_reservation,
 };
 
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
@@ -293,7 +300,7 @@ impl MSDispatch_TraCI {
     #[allow(unused_variables)]
     pub fn fulfilled_reservation(&mut self, res: Ptr<Reservation>) {
         self.myReservationLookup.remove(&res.id, res);
-        self.base.fulfilled_reservation(res);
+        self.base.fulfilled_reservation_base(res);
         self.base.myHasServableReservations = self.myReservationLookup.size() > 0;
     }
 

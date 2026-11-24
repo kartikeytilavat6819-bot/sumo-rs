@@ -29,10 +29,16 @@ pub struct MSDispatchVt {
     pub add_reservation: fn(&mut MSDispatch, Ptr<MSTransportable>, SUMOTime, SUMOTime, SUMOTime, Ptr<MSEdge>, f64, Ptr<MSStoppingPlace>, Ptr<MSEdge>, f64, Ptr<MSStoppingPlace>, String, &str, i32, i32) -> Ptr<Reservation>,
     /// C++ `virtual std::string MSDispatch::removeReservation(...)` (MSDispatch_TraCI overrides it to drop its lookup entry)
     pub remove_reservation: fn(&mut MSDispatch, Ptr<MSTransportable>, Ptr<MSEdge>, f64, Ptr<MSEdge>, f64, String) -> String,
+    /// C++ `virtual void MSDispatch::fulfilledReservation(const Reservation*)` (MSDispatch_TraCI overrides it)
+    pub fulfilled_reservation: fn(&mut MSDispatch, Ptr<Reservation>),
 }
 
 fn default_add_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
     d.add_reservation_base(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity)
+}
+
+fn default_fulfilled_reservation(d: &mut MSDispatch, res: Ptr<Reservation>) {
+    d.fulfilled_reservation_base(res)
 }
 
 fn default_remove_reservation(d: &mut MSDispatch, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
@@ -47,6 +53,7 @@ pub(crate) const DEFAULT_MSDISPATCH_VT: MSDispatchVt = MSDispatchVt {
     compute_dispatch: default_compute_dispatch,
     add_reservation: default_add_reservation,
     remove_reservation: default_remove_reservation,
+    fulfilled_reservation: default_fulfilled_reservation,
 };
 
 /// An algorithm that performs distpach for a taxi fleet
@@ -553,7 +560,14 @@ impl MSDispatch {
     //     delete res;
     // }
     #[allow(unused_variables)]
+    /// C++ virtual call `MSDispatch::fulfilledReservation` (MSDispatch_TraCI overrides it to drop its lookup entry).
     pub fn fulfilled_reservation(&mut self, res: Ptr<Reservation>) {
+        let f = self.vt.fulfilled_reservation;
+        f(self, res)
+    }
+
+    /// C++ body of `MSDispatch::fulfilledReservation` (the base implementation).
+    pub fn fulfilled_reservation_base(&mut self, res: Ptr<Reservation>) {
         let group = res.group.clone();
         self.myRunningReservations.entry(group.clone()).or_default().remove(&res.id);
         if self.myRunningReservations[&group].is_empty() {
