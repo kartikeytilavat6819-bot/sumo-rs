@@ -4055,7 +4055,13 @@ impl MSBaseVehicle {
             return false;
         }
 
-        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
+        // instantStopping() is virtual: MSVehicle overrides it (influencer), MEVehicle too
+        let instantStopping = if MSGlobals::use_meso_sim() {
+            true // MEVehicle::instantStopping()
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().instant_stopping()
+        };
+        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !instantStopping { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
 
         if prevStopEdge > stop.edge
             // a collision-stop happens after vehicle movement and may move the
