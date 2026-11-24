@@ -1,0 +1,6 @@
+Error: The parameter 'DRAC' is not allowed in this context.
+ Switch or parameter name expected.
+Error: The parameter '3' is not allowed in this context.
+ Switch or parameter name expected.
+Error: Could not parse commandline options.
+Quitting (on error).
