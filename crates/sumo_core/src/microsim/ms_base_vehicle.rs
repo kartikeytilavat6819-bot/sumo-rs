@@ -884,9 +884,13 @@ impl MSBaseVehicle {
     // virtual bool instantStopping() const {
     //         return false;
     //     }
+    /// The virtual is overridden by MSVehicle (MSVehicle.cpp:8469); reach it through the checked downcast.
     #[allow(unused_variables)]
     pub fn instant_stopping(&self) -> bool {
-        false
+        match self.as_micro_vehicle() {
+            Some(v) => v.instant_stopping(),
+            None => false,
+        }
     }
 
     /// C++: `double MSBaseVehicle::getMaxSpeed() const` [const, virtual]
