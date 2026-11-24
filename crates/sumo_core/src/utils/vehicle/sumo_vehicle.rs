@@ -556,11 +556,7 @@ impl crate::utils::router::router_edge::RouterVehicle for SUMOVehicle {
         self.base.get_chosen_speed_factor()
     }
     fn ignore_transient_permissions(&self) -> bool {
-        // C++ MSBaseVehicle::ignoreTransientPermissions() (MSBaseVehicle.cpp:206-208)
-        // is virtual and checks routingMode & ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS.
-        // SUMOTrafficObject's inherent method dispatches through the vtable, so use it
-        // instead of returning false (which broke via-successor selection under mode 8).
-        self.base.ignore_transient_permissions()
+        false
     }
     fn length(&self) -> f64 {
         self.get_length()

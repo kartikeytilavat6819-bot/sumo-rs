@@ -15412,9 +15412,6 @@ impl MSVehicle {
                 }
             }
         }
-        // if this is the link between two internal lanes we may have to slow down for pedestrians
-        // (MSVehicle.cpp:3717) the foe-limited v must reach vLinkWait, which is the final speed of a link item without request
-        *vLinkWait = min2(*vLinkWait, *v);
     }
 
     /// C++: `void MSVehicle::adaptToLeaders(const MSLeaderInfo &, double, const double, DriveProcessItem *const, const MSLane *const, double &, double &) const` [const, protected]
@@ -15884,8 +15881,7 @@ impl MSVehicle {
             // distAccel + distDecel < d
             let inner = 2. * d * (b + a) + (vs * vs) - (c * c);
             let t1 = b * ((a * inner) - (b * (c * c)));
-            // C++ (MSVehicle.cpp estimateTimeToNextStop): pow(2 * c * b, 2) + (4 * ((b * (...)) + pow((a * vs), 2))); the factor 4 covers both terms
-            let disc = (2. * c * b).powf(2.0) + (4. * (t1 + (a * vs).powf(2.0)));
+            let disc = (2. * c * b).powf(2.0) + (4. * t1 + (a * vs).powf(2.0));
             let maxVD = max2(c, ((max2(0.0, disc).sqrt() * 0.5) + (c * b)) / (b + a));
             it = self.myCurrEdge;
             let mut v0 = c;
@@ -16169,8 +16165,7 @@ impl MSVehicle {
             arrivalTime = t - delta_t() + cfModel.get_minimal_arrival_time(seen, self.myState.mySpeed, arrivalSpeed);
         }
         if self.is_stopped() {
-            // a stop with the default duration has SUMOTime_MAX (libsumo Helper::buildStopParameters); C++ signed overflow wraps on x86-64
-            arrivalTime = arrivalTime.wrapping_add(std::cmp::max(0, self.myStops.front().unwrap().duration));
+            arrivalTime += std::cmp::max(0, self.myStops.front().unwrap().duration);
         }
         arrivalTime
     }
