@@ -113,3 +113,14 @@ for side in official ours; do
   if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
   (cd "$LK_DIR" && SUMO_BINARY="$bin" NETCONVERT_BINARY="${bin%sumo}netconvert" PYTHONPATH="$SUMO_HOME/tools" timeout 120 python3 runner.py 2>&1 | grep -E -m4 "^LINKS|Error|Traceback") | sed "s/^/$side: /"
 done
+
+# CASE probe: run one oracle case's own sim.args on both binaries (repo root) and diff stdout+stderr
+CASE_NAME="${CASE:-tt_rail_rerouter_overtaking_follower_delay_low}"
+CASE_OUT="$OUT/case_$CASE_NAME"
+rm -rf "$CASE_OUT"; mkdir -p "$CASE_OUT"
+for side in official ours; do
+  if [ "$side" = official ]; then bin="$SUMO_PRISTINE_BIN/sumo"; else bin="$CARGO_TARGET_DIR/debug/sumo"; fi
+  (cd tools/oracle/cases/$CASE_NAME && SUMO_HOME="$SUMO_HOME" timeout 120 "$bin" $(cat sim.args) --no-step-log > "$CASE_OUT/$side.out" 2>&1)
+done
+echo "--- case $CASE_NAME: first differing lines (official vs ours)"
+diff "$CASE_OUT/official.out" "$CASE_OUT/ours.out" | head -30
