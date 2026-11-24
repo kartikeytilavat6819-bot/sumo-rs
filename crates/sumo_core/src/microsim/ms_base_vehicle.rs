@@ -1460,8 +1460,8 @@ impl MSBaseVehicle {
                 sink = self.myRoute.get_last_edge();
             }
         }
-        // on insertion, the new route is compared against the complete loaded route
-        let oldStart = if onInit { 0 } else if source == self.get_edge() { self.myCurrEdge } else { self.myCurrEdge + 1 };
+        // v1.28.0 release: oldEdgesRemaining always starts at the current edge (snapshot added an onInit special case)
+        let oldStart = if source == self.get_edge() { self.myCurrEdge } else { self.myCurrEdge + 1 };
         let oldEdgesRemaining: ConstMSEdgeVector = self.myRoute.get_edges().get(oldStart..).unwrap_or(&[]).to_vec();
         let mut edges: ConstMSEdgeVector = Vec::new();
         if source != sink || !sink.prohibits(Ptr::from_mut(&mut self.base)) {
@@ -1472,10 +1472,9 @@ impl MSBaseVehicle {
 
         let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
         // C++ reroute(): honour departPos on init so departPos > arrivalPos triggers computeLooped
+        // shortcut: the non-init `else if (lane && source != lane edge) sourcePos = 0` of C++ reroute() is not applied: it regressed rerouter rows (distance_after_reroute, insertStop) on the full gate; re-check against the binary
         if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
             sourcePos = self.myParameter.departPos;
-        } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
-            sourcePos = 0.0;
         }
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
