@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 --no-duration-log --ignore-route-errors -a tools/oracle/cases/tt_extended_rerouter_closing_disallows_dest/input_additional.add.xml

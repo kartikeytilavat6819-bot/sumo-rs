@@ -779,7 +779,8 @@ impl ROVehicle {
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, net: Ptr<RONet>, errorHandler: Ptr<MsgHandler>) {
         let stopEdge = net.get_edge(&stopPar.edge);
         // assert(stopEdge != 0); // was checked when parsing the stop
-        if stopEdge.prohibits(Ptr::from_mut(self), true) {
+        // C++ ROEdge::prohibits(veh) defaults checkRestrictions=false (ROEdge.h:269)
+        if stopEdge.prohibits(Ptr::from_mut(self), false) {
             if !errorHandler.is_null() {
                 let args: [&dyn ToStringPrec; 2] = [&stopEdge.get_id().to_string(), &self.get_id().to_string()];
                 errorHandler.m().informf("Stop edge '%' does not allow vehicle '%'.", &args);

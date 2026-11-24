@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 --no-duration-log --seed 42 --ignore-route-errors -a tools/oracle/cases/tt_extended_rerouter_on_edge_when_activated/input_additional.add.xml

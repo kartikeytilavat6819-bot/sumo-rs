@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --end 7201 -a tools/oracle/cases/tt_extended_calibrator_high_flow/input_additional.add.xml
