@@ -2134,6 +2134,11 @@ impl MSDriveWay {
             || (rs.is_null()
                 && (utils::options::options_cont::get_bool("railsignal-moving-block")
                     || MSRailSignalControl::is_moving_block(route[first].get_permissions())));
+        // oc97-TEMP-TRACE
+        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/dw_trace.txt") {
+            use std::io::Write;
+            let _ = writeln!(tf, "build id={} link_null={} rs_null={} rs_mb={} moving_block={}", id, link.is_null(), rs.is_null(), !rs.is_null() && rs.is_moving_block(), moving_block);
+        }
 
         dwm.check_flanks(link, &dwm.myForward, &visited, true, moving_block, &mut flank_switches);
         dwm.check_flanks(link, &dwm.myBidi, &visited, false, moving_block, &mut flank_switches);
