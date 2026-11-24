@@ -157,6 +157,16 @@ fn drive_way_ids_sorted(v: &BTreeSet<Ptr<MSDriveWay>>) -> String {
 
 /// `std::lower_bound(v.begin(), v.end(), key)` for the pointer-sorted vector v: the first element that is
 /// not less than key.
+// oc97-TEMP-TRACE (remove after measuring): records the first phase after which a driveway lists itself as foe
+fn oc97_self_foe_trace(phase: &str, dw: Ptr<MSDriveWay>) {
+    if dw.myFoes.contains(&dw) {
+        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/dw_trace.txt") {
+            use std::io::Write;
+            let _ = writeln!(tf, "selfFoe phase={} dw={} n_foes={}", phase, dw.base2.get_id(), dw.myFoes.len());
+        }
+    }
+}
+
 fn lower_bound_lane(v: &[Ptr<MSLane>], key: Ptr<MSLane>) -> Option<&Ptr<MSLane>> {
     let mut lo = 0usize;
     let mut hi = v.len();
@@ -2111,6 +2121,7 @@ impl MSDriveWay {
         }
         let mut dwm = dw.m();
         dwm.build_route(route, link, first, end, &mut visited, &mut flank_switches);
+        oc97_self_foe_trace("build_route", dw);
         let bidi_ext = dwm.myBidiExtended.clone();
         dwm.myBidiExtendedSorted = bidi_ext;
         dwm.myBidiExtendedSorted.sort();
@@ -2142,12 +2153,14 @@ impl MSDriveWay {
         dwm.myConflictLanes.extend(dwm.myFlank.iter().copied());
         dwm.add_bidi_foes(rs, false);
         dwm.add_bidi_foes(rs, true);
+        oc97_self_foe_trace("add_bidi_foes", dw);
         if !moving_block {
             // add driveways that start on the same signal / lane
             dwm.add_parallel_foes(link, route[first]);
         }
         // add driveways that reverse along this driveways route
         dwm.add_reversal_foes(moving_block);
+        oc97_self_foe_trace("add_reversal_foes", dw);
         // make foes unique and symmetrical
         // determinism: std::set<MSDriveWay*, ComparatorNumericalIdLess> keeps the first driveway per numerical id
         // and iterates in numerical id order (this drives the sub-driveway ids "<parent>.<n>")
@@ -2189,6 +2202,7 @@ impl MSDriveWay {
                 }
             }
         }
+        oc97_self_foe_trace("self_intersect", dw);
         let mut unique_c_link: BTreeSet<Ptr<MSLink>> = dwm.myConflictLinks.iter().copied().collect();
         let last_edge = Ptr::new(dwm.myForward.last().unwrap().get_edge());
         for &foe in unique_foes.values() {
@@ -2232,6 +2246,7 @@ impl MSDriveWay {
                 }
             }
         }
+        oc97_self_foe_trace("foe_loop", dw);
         dwm.myConflictLinks.clear();
         dwm.myConflictLinks.extend(unique_c_link.iter().copied());
         MY_ENDING_DRIVEWAYS.with(|m| m.borrow_mut().entry(last_edge).or_default().push(dw));
