@@ -212,7 +212,8 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn get_road_id(vehID: &str) -> String {
         let veh = Helper::get_vehicle(vehID);
-        if veh.is_on_road() { micro_veh(veh).get_lane().get_edge().get_id().to_string() } else { String::new() }
+        // C++ Vehicle::getRoadID: visibility includes parking and remote control (Vehicle.cpp:82-84, 170-173)
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { micro_veh(veh).get_lane().get_edge().get_id().to_string() } else { String::new() }
     }
 
     /// C++: `std::string Vehicle::getLaneID(const std::string &)` [static]
