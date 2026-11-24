@@ -4053,9 +4053,6 @@ impl MSBaseVehicle {
         }
 
         let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
-        if self.myParameter.id == "ego" {
-            eprintln!("OC102S iter={} prevStopEdge={} stopEdge={} prevStopPos={:.3} endPos={:.3} brake={:.3} instant={} tooClose={}", iter, prevStopEdge, stop.edge, prevStopPos, stop.pars.endPos, self.get_brake_gap(false), self.instant_stopping(), tooClose);
-        }
 
         if prevStopEdge > stop.edge
             // a collision-stop happens after vehicle movement and may move the
