@@ -2876,6 +2876,11 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn wants_change_sublane_2(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, maneuverDist: &mut f64, blocked: &mut i32) -> i32 {
+        // oc97-TEMP-TRACE (remove after measuring)
+        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/lc_trace.txt") {
+            use std::io::Write;
+            let _ = writeln!(tf, "LC id={} speed={:.6} pos={:.6} lat={:.6} off={} ownState={}", self.myVehicle.get_id(), self.myVehicle.get_speed(), self.myVehicle.get_position_on_lane(), self.myVehicle.get_lateral_position_on_lane(), laneOffset, self.myOwnState);
+        }
         if laneOffset != 0 {
             // update mySafeLatDist w.r.t. the direction being checkd
             let halfWidth = self.get_width() * 0.5;
@@ -7058,5 +7063,30 @@ impl MSLCM_SL2015 {
         speedLat
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_lca_matches_cpp() {
+        // MSLCM_SL2015::getLCA: no reason or zero distance -> LCA_NONE,
+        // negative -> LCA_RIGHT, positive -> LCA_LEFT.
+        let reason = LCA_SPEEDGAIN as i32;
+        assert_eq!(MSLCM_SL2015::get_lca(reason, 0.), LCA_NONE);
+        assert_eq!(MSLCM_SL2015::get_lca(0, -2.4), LCA_NONE);
+        assert_eq!(MSLCM_SL2015::get_lca(reason, -2.4), LCA_RIGHT);
+        assert_eq!(MSLCM_SL2015::get_lca(reason, 1.2), LCA_LEFT);
+    }
+
+    #[test]
+    fn overlap_uses_numerical_epsilon_boundaries() {
+        // C++: left2 >= right + EPS && left >= right2 + EPS
+        let e = utils::geom::NUMERICAL_EPS;
+        assert!(MSLCM_SL2015::overlap(0., 2., 1. + e, 3.));
+        assert!(!MSLCM_SL2015::overlap(0., 2., 2., 3.));
+        assert!(!MSLCM_SL2015::overlap(0., 1., 2., 3.));
+    }
 }
 

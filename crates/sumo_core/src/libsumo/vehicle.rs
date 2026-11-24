@@ -168,6 +168,7 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
+
         // C++ TraCIPosition() defaults every coordinate to INVALID_DOUBLE_VALUE (TraCIDefs.h:194)
         TraCIPosition { base: TraCIResult::new(), x: INVALID_DOUBLE_VALUE, y: INVALID_DOUBLE_VALUE, z: INVALID_DOUBLE_VALUE }
     }
@@ -3562,7 +3563,16 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             }
         }
         let mut errorMsg = String::new();
-        if !veh.m().replace_route(r, "traci:setRouteID", veh.get_lane().is_null(), 0, true, true, Ptr::from_mut(&mut errorMsg)) {
+        // C++ calls the virtual replaceRoute: MSVehicle::replaceRoute refreshes the best lanes afterwards, the
+        // base body does not (the rerouted vehicle kept its old best lanes and stopped at the end of the old edge)
+        // shortcut: the vehicle class is told apart by the use_meso_sim flag, not by a type tag; upgrade when MSBaseVehicle carries one
+        let onInit = veh.get_lane().is_null();
+        let replaced = if crate::microsim::ms_globals::use_meso_sim() {
+            veh.cast::<MEVehicle>().m().replace_route(r, "traci:setRouteID", onInit, 0, true, true, Ptr::from_mut(&mut errorMsg))
+        } else {
+            micro_veh(veh).m().replace_route(r, "traci:setRouteID", onInit, 0, true, true, Ptr::from_mut(&mut errorMsg))
+        };
+        if !replaced {
             panic!("{}", format!("Route replacement failed for vehicle '{}' ({}).", veh.get_id(), errorMsg));
         }
     }
