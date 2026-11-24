@@ -79,6 +79,13 @@ the order; analysis of 2026-11-23, rows still counted as failing in the gate):
   entries built in pointer order (official `circuitVoltage` -2.9118, ours -3.6404).
 A fix would mean emulating the C++ allocation order; reopen only with a concrete measurement of it.
 
+Complex TraCI tests whose expected output cannot be reproduced by any other binary (analysis of 2026-11-24, still
+counted as failing):
+- `simulation/simulation`: differs only in the three `buildConfig.*` values, which describe how the official binary was
+  compiled (compiler, flags, optional libraries), not simulation behaviour;
+- `misc/concurrent`: several TraCI clients in parallel; the interleaving of their output depends on thread/socket
+  timing, so even two official runs need not agree line by line.
+
 ## 4. Known shortcuts inside ported code
 
 Search the code for `shortcut:` comments; each names its limit and when to upgrade. Notable ones:
