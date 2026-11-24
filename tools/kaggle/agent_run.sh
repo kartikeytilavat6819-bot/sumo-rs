@@ -66,4 +66,10 @@ for name in $RAIL; do
   for side in ref ours; do echo "-- $side vehroute (v_0):"; grep -A3 "vehicle id=\"v_0\"" "$OUT/rail/$name/$side/vehroute.xml" 2>/dev/null | head -4 | cut -c1-300; done
   for veh in WE1 v_0; do diff <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ref/fcd.xml") <(grep "vehicle id=\"$veh\"" "$OUT/rail/$name/ours/fcd.xml") | head -6 | cut -c1-200; done
 done
+# oc97: route costs for the train on the closing case, official vs ours (TraCI findRoute)
+for side in ref ours; do
+  if [ $side = ref ]; then BIN="$SUMO_PRISTINE_BIN/sumo"; else BIN="$CARGO_TARGET_DIR/debug/sumo"; fi
+  echo "-- findRoute $side:"
+  python3 "$ROOT/tools/kaggle/oc97_route_probe.py" "$BIN" "$ROOT/tools/oracle/cases/tt_rail_rerouter_closing_detour_onInit" 2>&1 | head -8 | cut -c1-300
+done
 echo "AGENT RUN DONE"
