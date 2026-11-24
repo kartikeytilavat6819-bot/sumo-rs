@@ -168,7 +168,8 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
-        TraCIPosition { base: TraCIResult::new(), x: 0.0, y: 0.0, z: 0.0 }
+        // C++ TraCIPosition() defaults every coordinate to INVALID_DOUBLE_VALUE (TraCIDefs.h:194)
+        TraCIPosition { base: TraCIResult::new(), x: INVALID_DOUBLE_VALUE, y: INVALID_DOUBLE_VALUE, z: INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
@@ -2604,7 +2605,8 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         } else if param == "speed" {
             let speed = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
             if speed > 0. && pars.get_triggers().len() > 0 {
-                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, speed));
+                // TLF formats the double with toString (gPrecision), so 3.0 prints as "3.00"
+                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, utils::common::to_string::f64_to_string(speed)));
             }
             pars.speed = speed;
             pars.parametersSet |= STOP_SPEED_SET;
