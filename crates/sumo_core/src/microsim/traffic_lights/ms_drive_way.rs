@@ -157,18 +157,6 @@ fn drive_way_ids_sorted(v: &BTreeSet<Ptr<MSDriveWay>>) -> String {
 
 /// `std::lower_bound(v.begin(), v.end(), key)` for the pointer-sorted vector v: the first element that is
 /// not less than key.
-// oc97-TEMP-TRACE (remove after measuring): records the first phase after which a driveway lists itself as foe
-fn oc97_self_foe_trace(phase: &str, dw: Ptr<MSDriveWay>) {
-    let id = dw.base2.get_id().to_string();
-    if id.starts_with("gneJ8.0") && dw.myFoes.iter().any(|f| f.base2.get_id().to_string() == id) {
-        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/dw_trace.txt") {
-            use std::io::Write;
-            let _ = writeln!(tf, "selfFoeById phase={} dw={} ptr={:p} foes={:?}", phase, id, &*dw as *const MSDriveWay,
-                dw.myFoes.iter().map(|f| format!("{}@{:p}", f.base2.get_id(), &**f as *const MSDriveWay)).collect::<Vec<_>>());
-        }
-    }
-}
-
 fn lower_bound_lane(v: &[Ptr<MSLane>], key: Ptr<MSLane>) -> Option<&Ptr<MSLane>> {
     let mut lo = 0usize;
     let mut hi = v.len();
@@ -2123,7 +2111,6 @@ impl MSDriveWay {
         }
         let mut dwm = dw.m();
         dwm.build_route(route, link, first, end, &mut visited, &mut flank_switches);
-        oc97_self_foe_trace("build_route", dw);
         let bidi_ext = dwm.myBidiExtended.clone();
         dwm.myBidiExtendedSorted = bidi_ext;
         dwm.myBidiExtendedSorted.sort();
@@ -2134,11 +2121,6 @@ impl MSDriveWay {
             || (rs.is_null()
                 && (utils::options::options_cont::get_bool("railsignal-moving-block")
                     || MSRailSignalControl::is_moving_block(route[first].get_permissions())));
-        // oc97-TEMP-TRACE
-        if let Ok(mut tf) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/oc97/dw_trace.txt") {
-            use std::io::Write;
-            let _ = writeln!(tf, "build id={} link_null={} rs_null={} rs_mb={} moving_block={}", id, link.is_null(), rs.is_null(), !rs.is_null() && rs.is_moving_block(), moving_block);
-        }
 
         dwm.check_flanks(link, &dwm.myForward, &visited, true, moving_block, &mut flank_switches);
         dwm.check_flanks(link, &dwm.myBidi, &visited, false, moving_block, &mut flank_switches);
@@ -2160,14 +2142,12 @@ impl MSDriveWay {
         dwm.myConflictLanes.extend(dwm.myFlank.iter().copied());
         dwm.add_bidi_foes(rs, false);
         dwm.add_bidi_foes(rs, true);
-        oc97_self_foe_trace("add_bidi_foes", dw);
         if !moving_block {
             // add driveways that start on the same signal / lane
             dwm.add_parallel_foes(link, route[first]);
         }
         // add driveways that reverse along this driveways route
         dwm.add_reversal_foes(moving_block);
-        oc97_self_foe_trace("add_reversal_foes", dw);
         // make foes unique and symmetrical
         // determinism: std::set<MSDriveWay*, ComparatorNumericalIdLess> keeps the first driveway per numerical id
         // and iterates in numerical id order (this drives the sub-driveway ids "<parent>.<n>")
@@ -2209,7 +2189,6 @@ impl MSDriveWay {
                 }
             }
         }
-        oc97_self_foe_trace("self_intersect", dw);
         let mut unique_c_link: BTreeSet<Ptr<MSLink>> = dwm.myConflictLinks.iter().copied().collect();
         let last_edge = Ptr::new(dwm.myForward.last().unwrap().get_edge());
         for &foe in unique_foes.values() {
@@ -2253,8 +2232,6 @@ impl MSDriveWay {
                 }
             }
         }
-        for f in unique_foes.values() { oc97_self_foe_trace("unique_foe_after_loop", *f); }
-        oc97_self_foe_trace("foe_loop", dw);
         dwm.myConflictLinks.clear();
         dwm.myConflictLinks.extend(unique_c_link.iter().copied());
         MY_ENDING_DRIVEWAYS.with(|m| m.borrow_mut().entry(last_edge).or_default().push(dw));
@@ -2270,8 +2247,6 @@ impl MSDriveWay {
                 }
             }
         }
-        // oc97-TEMP-TRACE: scan all ending driveways after each build
-        MY_ENDING_DRIVEWAYS.with(|m| for (_, v) in m.borrow().iter() { for d in v.iter() { oc97_self_foe_trace(&format!("end_of_build({})", dw.base2.get_id()), *d); } });
         dw
     }
 
@@ -4241,14 +4216,6 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn build_sub_foe(&mut self, foe: Ptr<MSDriveWay>, movingBlock: bool) -> bool {
-        // oc97-TEMP-TRACE wrapper (remove after measuring)
-        let r = self.build_sub_foe_inner(foe, movingBlock);
-        oc97_self_foe_trace("build_sub_foe(this)", Ptr::from_mut(self));
-        oc97_self_foe_trace("build_sub_foe(foe)", foe);
-        r
-    }
-
-    fn build_sub_foe_inner(&mut self, foe: Ptr<MSDriveWay>, movingBlock: bool) -> bool {
         // Subdriveways (Teilfahrstraße) model the resolution of a driving conflict
         // before a vehicle has left the driveway. This is possible when the driveway diverges from the foe
         // driveway at an earlier point (switch or crossing).
