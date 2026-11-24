@@ -512,20 +512,7 @@ impl OptionsCont {
         self.sub_topic_entries.insert(topic.to_string(), Vec::new());
     }
 
-    pub fn remove_sub_topic(&mut self, topic: &str) {
-        if let Some(i) = self.sub_topics.iter().position(|t| t == topic) {
-            self.sub_topics.remove(i);
-        }
-        self.sub_topic_entries.remove(topic);
-    }
-
-    pub fn remove_option(&mut self, name: &str) {
-        for entry in self.sub_topic_entries.values_mut() {
-            if let Some(i) = entry.iter().position(|n| n == name) {
-                entry.remove(i);
-            }
-        }
-    }
+    // v1.28.0 release has no removeSubTopic/removeOption (snapshot-only additions, unused here).
 
     fn split_lines(os: &mut String, what: &str, mut offset: i32, next_offset: i32) {
         // byte based like std::string; split points are ASCII so the pieces stay valid UTF-8

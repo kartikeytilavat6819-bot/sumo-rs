@@ -1,0 +1,1 @@
+TextTest expects 't1' duplicate error (ref.errors), but the imported inputs (net + input_routes.rou.xml + input_additional2.add.xml, the full TextTest command line) define t1 only once; the official binary runs cleanly on them (rc=0, measured by agent_run.sh). The second t1 source was not imported. Refs kept untouched; re-enable when that source is imported.

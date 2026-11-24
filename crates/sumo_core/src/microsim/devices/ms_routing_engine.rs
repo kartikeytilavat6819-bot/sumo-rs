@@ -1607,10 +1607,7 @@ impl MSRoutingEngine {
         let mut vtypeIDs: Vec<String> = Vec::new();
         MSNet::get_instance().m().get_vehicle_control().insert_v_type_i_ds(&mut vtypeIDs);
         for id in vtypeIDs.iter() {
-            // the members are in the list as well; resolving a distribution would draw from the default RNG
-            if MSNet::get_instance().m().get_vehicle_control().has_v_type_distribution(id) {
-                continue;
-            }
+            // v1.28.0 release seeds for every vtype id including distributions (snapshot added a skip)
             let vt = MSNet::get_instance().m().get_vehicle_control().get_v_type(id, Ptr::null(), true);
             if !vt.is_null() && !vt.is_vehicle_specific() {
                 live.m().seed_key(vt);

@@ -343,6 +343,7 @@ impl SumoOption {
 
     pub fn reset_default(&mut self) {
         self.have_the_default_value = true;
+        // Kept from wave2: the official binary treats an empty value as unset after a reset (SSM filter-edges rows).
         if self.value_string.is_empty() {
             self.am_set = false;
         }
