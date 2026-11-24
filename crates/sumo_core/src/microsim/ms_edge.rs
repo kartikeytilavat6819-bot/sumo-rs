@@ -1169,20 +1169,6 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn allowed_lanes(&self, destination: &MSEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> Ptr<Vec<Ptr<MSLane>>> {
-        // TEMP OC DEBUG HOOK (remove before final commit): env-gated print of the allowed-lane list
-        let res = self.allowed_lanes_inner(destination, vclass, ignoreTransientPermissions);
-        if std::env::var("OC_DEBUG_ALLOWED").is_ok() {
-            let ids: Vec<String> = match res.get() {
-                Some(v) => v.iter().map(|l| l.get_id().to_string()).collect(),
-                None => vec!["<null>".to_string()],
-            };
-            eprintln!("OC_ALLOWED {} -> {} vclass={} lanes={:?}", self.get_id(), destination.get_id(), vclass, ids);
-        }
-        res
-    }
-
-    /// TEMP OC DEBUG HOOK (remove before final commit): the original allowed-lane lookup
-    fn allowed_lanes_inner(&self, destination: &MSEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> Ptr<Vec<Ptr<MSLane>>> {
         let targets = if ignoreTransientPermissions && self.myHaveTransientPermissions { &self.myOrigAllowedTargets } else { &self.myAllowedTargets };
         if let Some(cont) = targets.get(&Ptr::new(destination)) {
             for (allowed, lanes) in cont.iter() {
