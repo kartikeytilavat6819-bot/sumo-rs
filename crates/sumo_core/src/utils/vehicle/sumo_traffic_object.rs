@@ -11,6 +11,7 @@ pub type SUMOTrafficObject_NumericalID = i64;
 
 /// Virtual dispatch table for the polymorphic methods of SUMOTrafficObject.
 /// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+#[derive(Clone, Copy)]
 pub struct SUMOTrafficObjectVt {
     pub is_vehicle: fn(&SUMOTrafficObject) -> bool,
     pub is_person: fn(&SUMOTrafficObject) -> bool,

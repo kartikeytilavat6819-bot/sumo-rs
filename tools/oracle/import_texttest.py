@@ -59,6 +59,7 @@ EXTRA_INPUT_OPTS = {
     "--device.ssm.filter-edges.input-file",
     "--fcd-output.filter-edges.input-file",
     "--astar.landmark-distances",
+    "--load-state",
     "-c", "--configuration-file",
 }
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
@@ -104,7 +105,7 @@ SKIP_MARKERS = (
     "--osg-view", "--netedit", "--duarouter", "--jtrrouter", "--marouter",
     "--od2trips", "--activitygen", "--polyconvert", "--java", "--jar",
     "--fmi", "--parquet", "--vtk", "--p2p", "--sumo-gui", "--gcf",
-    "--saved-state.input", "--load-state", "--sumo-state",
+    "--saved-state.input", "--sumo-state",
     # option removed from SUMO: the official binary itself rejects it
     "--meso-lookahead",
 )
@@ -419,6 +420,7 @@ def import_one(source, tests_sumo, force=False, include_errors=False):
     if not route_path:
         # Many meta/rail tests only check non-traffic output; the harness still
         # needs a routes file, so supply an empty one (as for additionals-only tests).
+        # This also covers state-only runs (no -r) imported with --load-state.
         empty_route = True
 
     # File-valued behaviour options (e.g. --weight-files): copy their inputs
