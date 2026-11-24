@@ -2265,6 +2265,8 @@ impl MSDriveWay {
                 }
             }
         }
+        // oc97-TEMP-TRACE: scan all ending driveways after each build
+        MY_ENDING_DRIVEWAYS.with(|m| for (_, v) in m.borrow().iter() { for d in v.iter() { oc97_self_foe_trace(&format!("end_of_build({})", dw.base2.get_id()), *d); } });
         dw
     }
 
